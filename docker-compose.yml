@@ -1,0 +1,105 @@
+# ─────────────────────────────────────────────────────────────────
+# docker-compose.yml — Mini BI Platform
+#
+# SERVICES:
+#   frontend  — React/Vite SPA (Nginx, port 80)
+#   backend   — Express API   (port 4000)
+#   postgres  — PostgreSQL 15 (port 5432)
+#   redis     — Redis 7       (port 6379)
+#
+# START:
+#   docker-compose up --build -d
+#
+# STOP:
+#   docker-compose down
+#
+# VPS DEPLOY:
+#   1. Push code to your VPS (git pull / scp)
+#   2. Copy .env.example to .env and fill in secrets
+#   3. docker-compose up --build -d
+#   4. Point your domain DNS to VPS IP
+#   5. Use Nginx on the host (or Traefik) to handle SSL (port 443 → 80)
+# ─────────────────────────────────────────────────────────────────
+
+version: "3.9"
+
+services:
+
+  # ── Frontend (Nginx serving built React app) ──────────────────
+  frontend:
+    build:
+      context: .                  # dashboard-mini-bi/
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ── Backend (Express API) ──────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "4000:4000"
+    environment:
+      PORT:          4000
+      FRONTEND_URL:  http://localhost
+      DB_HOST:       postgres
+      DB_PORT:       5432
+      DB_NAME:       minibi
+      DB_USER:       minibi
+      DB_PASSWORD:   minibi_secret
+      REDIS_URL:     redis://redis:6379
+      JWT_SECRET:    change_me_in_production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── PostgreSQL ─────────────────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB:       minibi
+      POSTGRES_USER:     minibi
+      POSTGRES_PASSWORD: minibi_secret
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Uncomment to auto-run schema:
+      # - ./backend/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U minibi -d minibi"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis (cache layer) ────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes  # persist to disk
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  postgres_data:
+  redis_data:

@@ -1,0 +1,36 @@
+/* src/styles.css */
+/* ═══════════════════════════════════════════════════════════════
+   MINI BI ELITE — STYLING ARCHITECTURE
+   ═══════════════════════════════════════════════════════════════ */
+
+/* 1. Core & Theme */
+@import "./styles/theme.css";
+
+/* 2. Layout & Shell */
+@import "./styles/layout.css";
+
+/* 3. Reusable Components */
+@import "./styles/components.css";
+
+/* 4. Feature Specifics */
+@import "./styles/charts.css";
+@import "./styles/builder.css";
+@import "./styles/dashboardWorkspace.css";
+
+/* 5. Vendor Customizations (React Grid Layout) */
+.react-grid-layout { position: relative; transition: height 220ms ease; }
+.react-grid-item { box-sizing: border-box; transition: transform 180ms ease, width 180ms ease, height 180ms ease; will-change: transform; }
+.react-grid-item.resizing { transition: none; z-index: 10; }
+.react-grid-item.react-draggable-dragging { transition: none; z-index: 20; }
+.react-grid-item.react-grid-placeholder { 
+  background: rgba(37, 99, 235, 0.08); 
+  border: 2px dashed rgba(37, 99, 235, 0.3); 
+  z-index: 2; 
+}
+.dashboard-rgl .react-grid-item > .chart-card {
+  height: 100%;
+}
+.dashboard-rgl .react-grid-item.react-grid-placeholder {
+  border-width: 1px;
+  background: rgba(59, 130, 246, 0.12);
+}
