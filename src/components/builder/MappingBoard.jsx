@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import RoleDropZone from "./RoleDropZone";
 
 function RoleSection({ title, note, roles, onDropField, onRemoveField, onClearRole, onReorderRole }) {
@@ -39,10 +39,11 @@ export default function MappingBoard({
 
   return (
     <div className="builder-mapping-board">
-      <div className="builder-mapping-board-summary">
-        <span className="builder-query-label">Fields</span>
-        {statusText ? <span className="builder-mapping-note">{statusText}</span> : null}
-      </div>
+      {statusText ? (
+        <div className="builder-mapping-board-summary">
+          <span className="builder-mapping-note">{statusText}</span>
+        </div>
+      ) : null}
 
       <RoleSection
         title="Required"

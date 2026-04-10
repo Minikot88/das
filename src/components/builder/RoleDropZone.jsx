@@ -1,24 +1,27 @@
-﻿import React, { useEffect, useMemo, useState } from "react";
-import { getFieldBadge } from "../../utils/builderMappingUtils";
+import React, { useEffect, useMemo, useState } from "react";
+import { getFieldBadge, getReadableFieldLabel, getReadableFieldName } from "../../utils/builderMappingUtils";
 
 const DRAG_KEY = "bi-field";
 
 function FieldChip({ field, canMoveLeft, canMoveRight, onRemove, onMoveLeft, onMoveRight }) {
+  const fieldLabel = getReadableFieldLabel(field) || "Field";
+  const fieldType = typeof field === "object" && !Array.isArray(field) ? field.type : null;
+
   return (
     <div className="builder-role-chip">
-      <span className="builder-role-chip-name">{field.name}</span>
-      <span className="builder-role-chip-type">{getFieldBadge(field.type)}</span>
+      <span className="builder-role-chip-name">{fieldLabel}</span>
+      <span className="builder-role-chip-type">{getFieldBadge(fieldType)}</span>
       {canMoveLeft ? (
-        <button type="button" className="builder-role-chip-action" onClick={onMoveLeft} aria-label={`Move ${field.name} left`}>
-          &lt;
+        <button type="button" className="builder-role-chip-action" onClick={onMoveLeft} aria-label={`Move ${fieldLabel} left`}>
+          {"<"}
         </button>
       ) : null}
       {canMoveRight ? (
-        <button type="button" className="builder-role-chip-action" onClick={onMoveRight} aria-label={`Move ${field.name} right`}>
-          &gt;
+        <button type="button" className="builder-role-chip-action" onClick={onMoveRight} aria-label={`Move ${fieldLabel} right`}>
+          {">"}
         </button>
       ) : null}
-      <button type="button" className="builder-role-chip-action" onClick={onRemove} aria-label={`Remove ${field.name}`}>
+      <button type="button" className="builder-role-chip-action" onClick={onRemove} aria-label={`Remove ${fieldLabel}`}>
         x
       </button>
     </div>
@@ -84,7 +87,7 @@ export default function RoleDropZone({
       if (result?.reason) setDropFeedback(result.reason);
       else setDropFeedback("");
     } catch {
-      setDropFeedback("Drop failed");
+      setDropFeedback("Can't drop here.");
     }
   }
 
@@ -99,7 +102,7 @@ export default function RoleDropZone({
 
   const zoneStateClass = role.state.status ? `is-${role.state.status}` : "";
   const dragClass = dragOver ? (dragDecision?.ok ? " is-drag-valid" : " is-drag-invalid") : "";
-  const helperText = dropFeedback || dragDecision?.reason || role.emptyHint || `Add ${role.label}`;
+  const helperText = dropFeedback || dragDecision?.reason || role.emptyHint || role.label;
 
   return (
     <div
@@ -112,6 +115,9 @@ export default function RoleDropZone({
         <div className="builder-role-zone-head-copy">
           <div className="builder-role-zone-title-row">
             <strong>{role.label}</strong>
+            <span className={`builder-role-zone-badge${role.required ? " is-required" : " is-optional"}`}>
+              {role.required ? "Required" : "Optional"}
+            </span>
           </div>
         </div>
         {role.fields.length ? (
@@ -123,17 +129,22 @@ export default function RoleDropZone({
 
       {role.fields.length ? (
         <div className="builder-role-zone-chips">
-          {role.fields.map((field, index) => (
-            <FieldChip
-              key={`${role.key}-${field.name}`}
-              field={field}
-              canMoveLeft={index > 0}
-              canMoveRight={index < role.fields.length - 1}
-              onMoveLeft={() => moveField(index, -1)}
-              onMoveRight={() => moveField(index, 1)}
-              onRemove={() => onRemoveField(role.key, field.name)}
-            />
-          ))}
+          {role.fields.map((field, index) => {
+            const fieldLabel = getReadableFieldLabel(field) || "Field";
+            const fieldName = getReadableFieldName(field) || fieldLabel;
+
+            return (
+              <FieldChip
+                key={`${role.key}-${fieldName}-${index}`}
+                field={field}
+                canMoveLeft={index > 0}
+                canMoveRight={index < role.fields.length - 1}
+                onMoveLeft={() => moveField(index, -1)}
+                onMoveRight={() => moveField(index, 1)}
+                onRemove={() => onRemoveField(role.key, fieldName)}
+              />
+            );
+          })}
         </div>
       ) : (
         <div className="builder-role-zone-empty">{helperText}</div>

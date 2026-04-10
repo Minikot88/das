@@ -1,5 +1,5 @@
 import React from "react";
-import ChartRenderer from "../charts/ChartRendererV2";
+import ChartRenderer from "../charts/ChartRenderer";
 
 const CHART_TYPE_LABELS = {
   line: "Line",
@@ -38,14 +38,11 @@ export default function ReadOnlyChartFrame({ chart }) {
             <span className="readonly-chart-tag">Read only</span>
           </div>
         </div>
-        <p className="readonly-chart-subtitle">
-          Presented in a polished read-only frame with editing controls disabled.
-        </p>
         <div className="readonly-chart-meta">
           <span>Dataset: <strong>{dataset}</strong></span>
-          <span>Dimension: <strong>{xField}</strong></span>
-          <span>Metric: <strong>{yField}</strong></span>
-          <span>Grouping: <strong>{groupField}</strong></span>
+          <span>X: <strong>{xField}</strong></span>
+          <span>Y: <strong>{yField}</strong></span>
+          <span>Group: <strong>{groupField}</strong></span>
         </div>
       </div>
       <div className="readonly-chart-body">

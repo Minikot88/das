@@ -1,34 +1,100 @@
-﻿import React, { useState } from "react";
+﻿import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { PageContainer, PageHeader, Toolbar } from "../components/layout/Layout";
+import Badge from "../components/ui/Badge";
+import Button from "../components/ui/Button";
+import EmptyState from "../components/ui/EmptyState";
+import Panel from "../components/ui/Panel";
 import ProjectCard from "../components/ui/ProjectCard";
+import SectionHeader from "../components/ui/SectionHeader";
 import CreateProjectModal from "../components/ui/CreateProjectModal";
 import { useStore } from "../store/useStore";
 import { useI18n } from "../utils/i18n";
+
+function formatLastUpdated(dateValue) {
+  if (!dateValue) return "No recent updates";
+
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return "No recent updates";
+
+  return new Intl.DateTimeFormat("th-TH", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
+
+function getProjectLastUpdated(project, charts) {
+  const projectCharts = charts.filter((chart) => chart.projectId === project.id);
+  const latestChart = projectCharts
+    .map((chart) => chart.createdAt)
+    .filter(Boolean)
+    .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0];
+
+  return latestChart ?? null;
+}
 
 export default function HomePage() {
   const { t } = useI18n();
   const navigate = useNavigate();
   const projects = useStore((state) => state.projects);
+  const charts = useStore((state) => state.charts);
   const ui = useStore((state) => state.ui);
   const activeProjectId = useStore((state) => state.activeProjectId);
+  const activeSheetId = useStore((state) => state.activeSheetId);
+  const activeDashboardId = useStore((state) => state.activeDashboardId);
   const createProject = useStore((state) => state.createProject);
   const renameProject = useStore((state) => state.renameProject);
   const deleteProject = useStore((state) => state.deleteProject);
   const setActiveProject = useStore((state) => state.setActiveProject);
   const [showModal, setShowModal] = useState(false);
+
   const totalSheets = projects.reduce((count, project) => count + (project.sheets?.length ?? 0), 0);
   const totalDashboards = projects.reduce(
     (count, project) => count + (project.sheets?.reduce((sheetCount, sheet) => sheetCount + (sheet.dashboards?.length ?? 0), 0) ?? 0),
     0
   );
   const recentProjectIds = ui?.recentProjectIds ?? [];
-  const sortedProjects = [...projects].sort((a, b) => {
-    const aIndex = recentProjectIds.indexOf(a.id);
-    const bIndex = recentProjectIds.indexOf(b.id);
-    const safeA = aIndex === -1 ? Number.MAX_SAFE_INTEGER : aIndex;
-    const safeB = bIndex === -1 ? Number.MAX_SAFE_INTEGER : bIndex;
-    return safeA - safeB;
-  });
+
+  const sortedProjects = useMemo(() => {
+    return [...projects].sort((a, b) => {
+      const aIndex = recentProjectIds.indexOf(a.id);
+      const bIndex = recentProjectIds.indexOf(b.id);
+      const safeA = aIndex === -1 ? Number.MAX_SAFE_INTEGER : aIndex;
+      const safeB = bIndex === -1 ? Number.MAX_SAFE_INTEGER : bIndex;
+      return safeA - safeB;
+    });
+  }, [projects, recentProjectIds]);
+
+  const activeProject = projects.find((project) => project.id === activeProjectId) ?? projects[0] ?? null;
+  const activeSheet = activeProject?.sheets.find((sheet) => sheet.id === activeSheetId) ?? activeProject?.sheets?.[0] ?? null;
+  const activeDashboard = activeSheet?.dashboards.find((dashboard) => dashboard.id === activeDashboardId) ?? activeSheet?.dashboards?.[0] ?? null;
+
+  const projectSummaries = useMemo(() => {
+    return Object.fromEntries(
+      projects.map((project) => {
+        const sheetCount = project.sheets?.length ?? 0;
+        const dashboardCount = project.sheets?.reduce((total, sheet) => total + (sheet.dashboards?.length ?? 0), 0) ?? 0;
+        const activeSheet = project.sheets?.[0] ?? null;
+        const activeDashboard = activeSheet?.dashboards?.[0] ?? null;
+        const lastOpened = ui?.lastOpenedContextByProject?.[project.id];
+        const lastOpenedSheet = project.sheets?.find((sheet) => sheet.id === lastOpened?.sheetId) ?? activeSheet;
+        const lastOpenedDashboard = lastOpenedSheet?.dashboards?.find((dashboard) => dashboard.id === lastOpened?.dashboardId) ?? activeDashboard;
+        const lastUpdated = getProjectLastUpdated(project, charts);
+
+        return [
+          project.id,
+          {
+            sheetCount,
+            dashboardCount,
+            activeSheetName: lastOpenedSheet?.name ?? "No sheet",
+            activeDashboardName: lastOpenedDashboard?.name ?? "No dashboard",
+            lastUpdatedLabel: formatLastUpdated(lastUpdated),
+          },
+        ];
+      })
+    );
+  }, [charts, projects, ui?.lastOpenedContextByProject]);
 
   const handleOpenProject = (id) => {
     setActiveProject(id);
@@ -41,47 +107,81 @@ export default function HomePage() {
   };
 
   return (
-    <div className="home-page" role="main">
-      <section className="home-panel">
-        <div className="home-header">
-          <div className="home-header-left">
-            <div className="home-kicker">ระบบสารสนเทศ</div>
-            <h1 className="home-title">{t("home.title")}</h1>
-            <p className="home-subtitle">{t("home.subtitle")}</p>
+    <PageContainer className="home-page" role="main">
+      <Panel className="home-panel home-command-center" compact>
+        <PageHeader
+          kicker="Workspace"
+          title="Workspace"
+          actions={(
+            <Button id="create-project-btn" variant="primary" className="home-create-btn" onClick={() => setShowModal(true)}>
+              New Project
+            </Button>
+          )}
+        >
+          <Toolbar
+            className="home-toolbar home-command-toolbar"
+            left={(
+              <div className="home-toolbar-status">
+                <Badge tone="primary">Active</Badge>
+                <span>{projects.length} projects</span>
+              </div>
+            )}
+            right={(
+              <div className="home-active-context">
+                <span>Current</span>
+                <strong>
+                  {activeProject?.name ?? "None"}
+                  {activeSheet ? ` / ${activeSheet.name}` : ""}
+                  {activeDashboard ? ` / ${activeDashboard.name}` : ""}
+                </strong>
+              </div>
+            )}
+          />
+        </PageHeader>
+
+        <div className="home-stats-grid">
+          <div className="home-stat-card">
+            <span className="home-stat-card-label">Projects</span>
+            <strong>{projects.length}</strong>
           </div>
-          <button id="create-project-btn" className="home-create-btn" onClick={() => setShowModal(true)}>
-            {t("home.newProject")}
-          </button>
-        </div>
-        <div className="home-toolbar">
-          <div className="home-count">จำนวนโครงการทั้งหมด {projects.length} รายการ</div>
-          <div className="home-stats">
-            <div className="home-stat-pill">
-              <strong>{totalSheets}</strong>
-              <span>{t("home.sheets")}</span>
-            </div>
-            <div className="home-stat-pill">
-              <strong>{totalDashboards}</strong>
-              <span>{t("home.dashboards")}</span>
-            </div>
+          <div className="home-stat-card">
+            <span className="home-stat-card-label">Sheets</span>
+            <strong>{totalSheets}</strong>
+          </div>
+          <div className="home-stat-card">
+            <span className="home-stat-card-label">Dashboards</span>
+            <strong>{totalDashboards}</strong>
+          </div>
+          <div className="home-stat-card is-highlight">
+            <span className="home-stat-card-label">Active Items</span>
+            <strong>{activeDashboard ? 3 : activeProject ? 2 : 1}</strong>
           </div>
         </div>
-      </section>
+      </Panel>
 
       {!projects.length ? (
-        <div className="home-empty">
-          <div className="home-empty-icon">PR</div>
-          <h2 className="home-empty-title">{t("home.noProjects")}</h2>
-          <p className="home-empty-sub">{t("home.noProjectsBody")}</p>
-          <button className="home-create-btn" onClick={() => setShowModal(true)}>{t("home.createProject")}</button>
-        </div>
+        <EmptyState
+          className="home-empty"
+          icon="PR"
+          title="No projects yet"
+          description="Create a project to start building dashboards."
+          actionText={t("home.createProject")}
+          onAction={() => setShowModal(true)}
+        />
       ) : (
-        <section className="home-section">
-          <div className="project-grid">
+        <section className="home-section home-section-shell">
+          <SectionHeader
+            kicker="Projects"
+            title="Projects"
+            actions={<Badge>Recent</Badge>}
+          />
+
+          <div className="project-grid project-grid-command-center">
             {sortedProjects.map((project) => (
               <ProjectCard
                 key={project.id}
                 project={project}
+                summary={projectSummaries[project.id]}
                 isActive={project.id === activeProjectId}
                 onOpen={handleOpenProject}
                 onRename={renameProject}
@@ -90,13 +190,16 @@ export default function HomePage() {
             ))}
             <button type="button" className="project-card project-card-new" onClick={() => setShowModal(true)}>
               <div className="project-card-new-icon">+</div>
-              <div className="project-card-new-label">{t("home.addProject")}</div>
+              <div className="project-card-new-copy">
+                <strong>{t("home.addProject")}</strong>
+                <span>Create a new workspace</span>
+              </div>
             </button>
           </div>
         </section>
       )}
 
       {showModal ? <CreateProjectModal onClose={() => setShowModal(false)} onCreate={handleCreate} /> : null}
-    </div>
+    </PageContainer>
   );
 }

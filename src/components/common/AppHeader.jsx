@@ -41,8 +41,15 @@ export default function AppHeader() {
         </button>
 
         <button type="button" className="appbar-logo" onClick={() => navigate("/")}>
-          <span className="logo">{t("app.name")}</span>
-          <span className="appbar-logo-sub">{t("app.brandLine")}</span>
+          <span className="appbar-logo-mark" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+            <span />
+          </span>
+          <span className="appbar-logo-copy">
+            <strong>{t("app.name")}</strong>
+          </span>
         </button>
       </div>
 
@@ -61,26 +68,32 @@ export default function AppHeader() {
       </div>
 
       <div className="appbar-right">
-        <input
-          className="appbar-search"
-          placeholder={t("app.searchPlaceholder")}
-          aria-label={t("app.searchPlaceholder")}
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-        />
+        <div className="appbar-search-wrap">
+          <span className="appbar-search-icon" aria-hidden="true">/</span>
+          <input
+            className="appbar-search"
+            placeholder={t("app.searchPlaceholder")}
+            aria-label={t("app.searchPlaceholder")}
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+        </div>
 
-        <select
-          className="appbar-select"
-          aria-label={t("app.projectSwitcher")}
-          value={activeProjectId}
-          onChange={(event) => setActiveProject(event.target.value)}
-        >
-          {projects.map((project) => (
-            <option key={project.id} value={project.id}>
-              {project.name}
-            </option>
-          ))}
-        </select>
+        <div className="appbar-project-switcher">
+          <span className="appbar-control-label">{t("home.title")}</span>
+          <select
+            className="appbar-select"
+            aria-label={t("home.title")}
+            value={activeProjectId}
+            onChange={(event) => setActiveProject(event.target.value)}
+          >
+            {projects.map((project) => (
+              <option key={project.id} value={project.id}>
+                {project.name}
+              </option>
+            ))}
+          </select>
+        </div>
 
         <LanguageSwitcher compact />
 
@@ -103,6 +116,9 @@ export default function AppHeader() {
         {user ? (
           <button type="button" className="appbar-user" onClick={handleLogout} title={t("app.signOut")} aria-label={t("app.signOut")}>
             <div className="avatar-circle">{user.name?.[0]?.toUpperCase() ?? "U"}</div>
+            <div className="appbar-user-copy">
+              <strong>{user.name ?? "User"}</strong>
+            </div>
           </button>
         ) : null}
       </div>

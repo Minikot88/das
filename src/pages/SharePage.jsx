@@ -1,8 +1,4 @@
-/**
- * pages/SharePage.jsx
- * Public, read-only view for dashboards.
- */
-import React, { useEffect, useMemo, useState } from "react";
+﻿import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useStore } from "../store/useStore";
 import { normalizeChartConfig } from "../utils/normalizeChartConfig";
@@ -15,27 +11,28 @@ export default function SharePage() {
   const projects = useStore((s) => s.projects);
   const chartsPool = useStore((s) => s.charts);
   const resolveShareLink = useStore((s) => s.resolveShareLink);
-
-  const [sheet, setSheet] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const sheet = useMemo(() => {
+    const shareRecord = resolveShareLink(sheetId);
+    const resolvedSheetId = shareRecord?.sheetId ?? sheetId;
+    if (!resolvedSheetId) return null;
+
+    for (const project of projects ?? []) {
+      const foundSheet = project?.sheets?.find((candidate) => candidate?.id === resolvedSheetId);
+      if (foundSheet) return foundSheet;
+    }
+
+    return null;
+  }, [projects, resolveShareLink, sheetId]);
+
   useEffect(() => {
-    const timer = setTimeout(() => {
-      const shareRecord = resolveShareLink(sheetId);
-      const resolvedSheetId = shareRecord?.sheetId ?? sheetId;
-      let found = null;
-
-      for (const project of projects) {
-        found = project.sheets.find((candidate) => candidate.id === resolvedSheetId);
-        if (found) break;
-      }
-
-      setSheet(found ?? null);
+    const timer = window.setTimeout(() => {
       setLoading(false);
-    }, 400);
+    }, 180);
 
-    return () => clearTimeout(timer);
-  }, [sheetId, projects, resolveShareLink]);
+    return () => window.clearTimeout(timer);
+  }, [sheetId, sheet]);
 
   const activeDashboard = sheet?.dashboards?.[0] ?? null;
   const dashboardCharts = useMemo(() => {
@@ -56,8 +53,8 @@ export default function SharePage() {
       return {
         chartCount: 0,
         chartTypes: 0,
-        primaryDataset: "Unavailable",
-        updatedLabel: "Ready for review",
+        primaryDataset: "ไม่พบข้อมูล",
+        updatedLabel: "พร้อมดู",
       };
     }
 
@@ -71,26 +68,26 @@ export default function SharePage() {
       }
     }
 
-    const primaryDataset = [...datasetCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "Unavailable";
+    const primaryDataset = [...datasetCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "ไม่พบข้อมูล";
 
     return {
       chartCount: dashboardCharts.length,
       chartTypes: typeSet.size,
       primaryDataset,
-      updatedLabel: activeDashboard?.name ? "Published shared view" : "Ready for review",
+      updatedLabel: activeDashboard?.name ? "เผยแพร่แล้ว" : "พร้อมดู",
     };
   }, [activeDashboard?.name, dashboardCharts]);
 
-  const dashboardTitle = activeDashboard?.name ?? "Shared View";
+  const dashboardTitle = activeDashboard?.name ?? "หน้าที่แชร์";
 
   if (loading) {
     return (
       <div className="share-page share-page-shell">
         <ReadOnlyStateCard
           loading
-          kicker="Preparing Shared View"
-          title="Loading dashboard"
-          description="Please wait while we prepare this read-only dashboard for viewing."
+          kicker="กำลังเตรียมหน้าที่แชร์"
+          title="กำลังโหลด Dashboard"
+          description="โปรดรอสักครู่"
         />
       </div>
     );
@@ -100,11 +97,11 @@ export default function SharePage() {
     return (
       <div className="share-page share-page-shell">
         <ReadOnlyStateCard
-          kicker="Link Unavailable"
-          title="Dashboard not found"
-          description="This shared link may have expired, been removed, or no longer has an available dashboard behind it."
+          kicker="ลิงก์ใช้งานไม่ได้"
+          title="ไม่พบ Dashboard"
+          description="ลิงก์นี้อาจหมดอายุหรือถูกลบแล้ว"
           linkTo="/login"
-          linkLabel="Go to sign in"
+          linkLabel="ไปหน้าเข้าสู่ระบบ"
         />
       </div>
     );
@@ -113,7 +110,7 @@ export default function SharePage() {
   return (
     <div className="share-page share-page-shell">
       <ReadOnlyDashboardHeader
-        title={sheet.name}
+        title={sheet?.name ?? "ชีตที่แชร์"}
         dashboardName={dashboardTitle}
         chartCount={dashboardCharts.length}
         chartTypes={shareSummary.chartTypes}
@@ -124,34 +121,28 @@ export default function SharePage() {
       <section className="share-content-shell">
         {dashboardCharts.length ? (
           <div className="readonly-overview-grid">
-            <div className="readonly-summary-strip" role="region" aria-label="Shared dashboard summary">
+            <div className="readonly-summary-strip" role="region" aria-label="สรุป Dashboard ที่แชร์">
               <div className="readonly-summary-card accent">
-                <span className="readonly-summary-label">Available charts</span>
+                <span className="readonly-summary-label">Charts</span>
                 <strong className="readonly-summary-value">{shareSummary.chartCount}</strong>
-                <p className="readonly-summary-note">Prepared for secure read-only review.</p>
               </div>
               <div className="readonly-summary-card">
-                <span className="readonly-summary-label">Visualization mix</span>
-                <strong className="readonly-summary-value">{shareSummary.chartTypes} types</strong>
-                <p className="readonly-summary-note">Clear framing across the current dashboard layout.</p>
+                <span className="readonly-summary-label">ประเภท</span>
+                <strong className="readonly-summary-value">{shareSummary.chartTypes} แบบ</strong>
               </div>
               <div className="readonly-summary-card">
-                <span className="readonly-summary-label">Primary dataset</span>
+                <span className="readonly-summary-label">Dataset หลัก</span>
                 <strong className="readonly-summary-value">{shareSummary.primaryDataset}</strong>
-                <p className="readonly-summary-note">Presented exactly as shared by the dashboard owner.</p>
               </div>
             </div>
 
-            <aside className="readonly-viewer-note" aria-label="Read-only viewer guidance">
-              <span className="readonly-viewer-note-kicker">Viewer Notes</span>
+            <aside className="readonly-viewer-note" aria-label="รายละเอียดมุมมองแบบอ่านอย่างเดียว">
+              <span className="readonly-viewer-note-kicker">อ่านอย่างเดียว</span>
               <h2 className="readonly-viewer-note-title">{dashboardTitle}</h2>
-              <p className="readonly-viewer-note-text">
-                This shared link opens a stable presentation view with editing, layout changes, and builder actions disabled.
-              </p>
               <div className="readonly-viewer-note-list">
-                <span>Read-only access only</span>
-                <span>Shared chart layout preserved</span>
-                <span>No sign-in required to review</span>
+                <span>แก้ไขไม่ได้</span>
+                <span>คง layout เดิม</span>
+                <span>ไม่ต้องเข้าสู่ระบบ</span>
               </div>
             </aside>
           </div>
@@ -159,14 +150,14 @@ export default function SharePage() {
 
         {!dashboardCharts.length ? (
           <ReadOnlyStateCard
-            kicker="No Charts Yet"
-            title="This shared dashboard has no charts"
-            description="The owner has not published any visualizations to this read-only view yet. Check back later or ask them to republish the dashboard when content is ready."
+            kicker="ยังไม่มี Chart"
+            title="Dashboard นี้ยังไม่มี Chart"
+            description="โปรดลองอีกครั้งภายหลัง"
             linkTo="/login"
-            linkLabel="Sign in"
+            linkLabel="เข้าสู่ระบบ"
           />
         ) : (
-          <div className="share-grid" role="list" aria-label="Shared dashboard charts">
+          <div className="share-grid" role="list" aria-label="Charts ที่แชร์">
             {dashboardCharts.map((chart) => (
               <ReadOnlyChartFrame key={chart.id} chart={chart} />
             ))}

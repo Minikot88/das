@@ -1,0 +1,7 @@
+export const heatmapCharts = { id: "heatmap", label: "Heatmap", iconKey: "heatmap", categories: ["distribution","statistical"], description: "Grid heatmaps and calendar heatmaps.", variants: [
+  { id: "cartesian-heatmap", label: "Cartesian Heatmap", description: "Grid heatmap on row and column axes.", family: "heatmap", exampleKey: "cartesian-heatmap", chartId: "heatmap", requiredRoles: ["column","row","value"], optionalRoles: ["series"], renderingStrategy: "heatmap", supportLevel: "supported" },
+  { id: "large-heatmap", label: "Large Heatmap", description: "Prepared for denser heatmap cells.", family: "heatmap", exampleKey: "large-heatmap", chartId: "heatmap", requiredRoles: ["column","row","value"], optionalRoles: ["series"], renderingStrategy: "heatmap", supportLevel: "supported" },
+  { id: "discrete-color-heatmap", label: "Discrete Color Heatmap", description: "Heatmap with stepped color meaning.", family: "heatmap", exampleKey: "discrete-color-heatmap", chartId: "heatmap", requiredRoles: ["column","row","value"], optionalRoles: ["series"], renderingStrategy: "heatmap", supportLevel: "partial" },
+  { id: "calendar-heatmap", label: "Calendar Heatmap", description: "Calendar-based heatmap layout.", family: "heatmap", exampleKey: "calendar-heatmap", chartId: "calendar-heatmap", requiredRoles: ["date","value"], optionalRoles: ["series"], renderingStrategy: "calendar", supportLevel: "supported" }
+] };
+export default heatmapCharts;

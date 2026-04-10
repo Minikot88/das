@@ -1,7 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { schema } from "../../data/mockData";
-import { getBuilderChartCatalog, getChartMeta, getRecommendedCharts } from "../../utils/chartCatalog";
-import { getChartCompatibility } from "../../utils/chartCompatibility";
+import {
+  getBuilderChartCatalog,
+  getChartFamilyMeta,
+  getChartMeta,
+  getChartSelectorCategories,
+  getChartSelectorDefaults,
+  getChartSelectorFamilies,
+  getRecommendedCharts,
+} from "../../utils/chartCatalog";
+import { getChartCompatibility, getChartSwitchPlan } from "../../utils/chartCompatibility";
 import { normalizeChartConfig } from "../../utils/normalizeChartConfig";
 import { buildQuery, formatSql, runQuery, runSqlQuery } from "../../utils/queryEngine";
 import {
@@ -30,6 +38,7 @@ import {
   createValidationSummary,
   findFieldInSchema,
 } from "./builderStateUtils";
+import { evaluatePreviewRows, getPreviewReadiness } from "../../utils/builderChartUtils";
 
 const AGGREGATION_BY_TYPE = {
   scatter: [],
@@ -41,6 +50,151 @@ const AGGREGATION_BY_TYPE = {
   donut: ["sum", "count"],
   rose: ["sum", "count"],
 };
+
+const DIRECT_PREVIEW_RENDER_TYPES = new Set([
+  "heatmap",
+  "matrix",
+  "tree",
+  "treemap",
+  "sunburst",
+  "sankey",
+  "graph",
+  "parallel",
+  "candlestick",
+  "calendar",
+  "theme-river",
+  "map",
+  "lines",
+  "boxplot",
+  "custom",
+  "table",
+  "pivot-table",
+]);
+
+const DISPLAY_STATE_DEFAULTS = {
+  colorTheme: "default",
+  showLegend: true,
+  legendPosition: "bottom",
+  showTooltip: true,
+  showGrid: true,
+  showAxis: true,
+  showLabels: false,
+  backgroundOpacity: 0,
+  padding: 24,
+};
+
+const LABEL_STATE_DEFAULTS = {
+  name: "",
+  title: "",
+  subtitle: "",
+  xLabel: "",
+  yLabel: "",
+  valueFormat: "default",
+  emptyStateLabel: "No rows available",
+};
+
+function getSettingsFamilyKey(chartType, familyId = null) {
+  const meta = getChartMeta(chartType);
+  const resolvedFamily = familyId ?? meta.selectorFamilyId ?? meta.family ?? meta.renderType ?? meta.id;
+
+  if (["line"].includes(resolvedFamily)) return "line";
+  if (["bar"].includes(resolvedFamily)) return "bar";
+  if (["pie", "richText"].includes(resolvedFamily)) return "pie";
+  if (["scatter"].includes(resolvedFamily)) return "scatter";
+  if (["gauge"].includes(resolvedFamily)) return "gauge";
+  if (["heatmap", "matrix"].includes(resolvedFamily)) return "heatmap";
+  if (["treemap"].includes(resolvedFamily)) return "treemap";
+  if (["sunburst"].includes(resolvedFamily)) return "sunburst";
+  if (["tree"].includes(resolvedFamily)) return "tree";
+  if (["sankey"].includes(resolvedFamily)) return "sankey";
+  if (["funnel"].includes(resolvedFamily)) return "funnel";
+  if (["radar"].includes(resolvedFamily)) return "radar";
+  if (["candlestick"].includes(resolvedFamily)) return "candlestick";
+  if (["boxplot"].includes(resolvedFamily)) return "boxplot";
+  if (["parallel"].includes(resolvedFamily)) return "parallel";
+  if (["calendar"].includes(resolvedFamily)) return "calendar";
+  if (["themeRiver"].includes(resolvedFamily) || meta.renderType === "theme-river") return "theme-river";
+  return "fallback";
+}
+
+function getChartSettingsDefaults(chartType, familyId = null) {
+  const settingsFamilyKey = getSettingsFamilyKey(chartType, familyId);
+
+  const defaultsByFamily = {
+    line: { smooth: false, area: false, stack: false, step: false, showSymbol: true, connectNulls: false, lineWidth: 3, curveTension: 0.35 },
+    bar: { horizontal: chartType === "horizontal-bar", stack: chartType === "stacked-bar", borderRadius: 6, barWidth: 34, sort: "none", groupGap: 30, barGap: 24 },
+    pie: { donut: chartType === "donut", rose: chartType === "rose", innerRadius: 48, outerRadius: 72, labelPosition: "outside", showPercent: false },
+    scatter: { symbolSize: 14, bubbleMode: chartType === "bubble", opacity: 0.72, regression: false },
+    gauge: { min: 0, max: 100, progress: true, splitNumber: 5, startAngle: 210, endAngle: -30, showPointer: true, showProgressRing: chartType === "progress-ring", detailFormatter: "value" },
+    heatmap: { cellGap: 1, visualMin: "auto", visualMax: "auto", colorScaleMode: "sequential" },
+    treemap: { leafDepth: 1, showParentLabels: true, breadcrumb: false, gapWidth: 2 },
+    sunburst: { radiusInner: 18, radiusOuter: 84, labelRotate: "radial", nodeClick: "rootToNode" },
+    tree: { orientation: "LR", radial: false, expandDepth: 2, edgeShape: "curve" },
+    sankey: { nodeAlign: "justify", nodeWidth: 18, nodeGap: 12, curveness: 0.5 },
+    funnel: { sortDirection: "descending", gap: 2, labelPosition: "inside" },
+    radar: { shape: "polygon", radius: 62, splitNumber: 4, areaFill: true },
+    candlestick: { showDataZoom: false, bullMode: "default", bearMode: "default" },
+    boxplot: { showOutliers: false, boxWidth: 50 },
+    parallel: { axisExpand: false, lineOpacity: 0.35, smooth: false },
+    calendar: { cellSize: 18, layout: "horizontal", rangeMode: "auto" },
+    "theme-river": { boundaryGap: true, showSeriesLabels: false },
+    fallback: {},
+  };
+
+  return {
+    settingsFamilyKey,
+    defaults: defaultsByFamily[settingsFamilyKey] ?? defaultsByFamily.fallback,
+  };
+}
+
+function normalizeDisplayState(builderState = {}) {
+  const nested = builderState.display ?? builderState.displayOptions ?? {};
+
+  return {
+    ...DISPLAY_STATE_DEFAULTS,
+    ...nested,
+    colorTheme: nested.colorTheme ?? builderState.colorTheme ?? DISPLAY_STATE_DEFAULTS.colorTheme,
+    showLegend: nested.showLegend ?? builderState.legendVisible ?? DISPLAY_STATE_DEFAULTS.showLegend,
+    showGrid: nested.showGrid ?? builderState.showGrid ?? DISPLAY_STATE_DEFAULTS.showGrid,
+    showLabels: nested.showLabels ?? builderState.showLabels ?? DISPLAY_STATE_DEFAULTS.showLabels,
+  };
+}
+
+function normalizeLabelState(builderState = {}) {
+  const nested = builderState.labels ?? builderState.labelSettings ?? {};
+
+  return {
+    ...LABEL_STATE_DEFAULTS,
+    ...nested,
+    name: nested.name ?? builderState.name ?? LABEL_STATE_DEFAULTS.name,
+    title: nested.title ?? builderState.title ?? LABEL_STATE_DEFAULTS.title,
+    subtitle: nested.subtitle ?? builderState.subtitle ?? LABEL_STATE_DEFAULTS.subtitle,
+    xLabel: nested.xLabel ?? builderState.xLabel ?? LABEL_STATE_DEFAULTS.xLabel,
+    yLabel: nested.yLabel ?? builderState.yLabel ?? LABEL_STATE_DEFAULTS.yLabel,
+  };
+}
+
+function normalizeChartSettingsState(builderState = {}, chartType, familyId = null) {
+  const nested = builderState.settings ?? builderState.chartSettings ?? {};
+  const profile = getChartSettingsDefaults(chartType, familyId);
+
+  return {
+    settingsFamilyKey: profile.settingsFamilyKey,
+    values: {
+      ...profile.defaults,
+      ...nested,
+      smooth: nested.smooth ?? builderState.smooth ?? profile.defaults.smooth,
+    },
+  };
+}
+
+function mergeChartSettingsState(previousSettings = {}, chartType, familyId = null) {
+  const profile = getChartSettingsDefaults(chartType, familyId);
+  return Object.keys(profile.defaults).reduce((accumulator, key) => {
+    accumulator[key] = previousSettings[key] !== undefined ? previousSettings[key] : profile.defaults[key];
+    return accumulator;
+  }, {});
+}
 
 function getAggregationOptions(type, activeAggregation = "sum") {
   const defaults = AGGREGATION_BY_TYPE[type] ?? ["sum", "count", "avg", "min", "max"];
@@ -57,6 +211,99 @@ function resolveSourceDb(tableName) {
   return Object.entries(schema).find(([, tables]) => tables?.[tableName])?.[0] ?? null;
 }
 
+function shouldUseDirectPreviewData(chartMeta, roleMapping = {}) {
+  const renderType = chartMeta?.renderType ?? chartMeta?.id;
+  if (DIRECT_PREVIEW_RENDER_TYPES.has(renderType)) return true;
+
+  return ["values", "ys", "dimensions", "hierarchy", "nodes", "edges", "open", "close", "low", "high", "min", "q1", "median", "q3", "max", "targetValue"]
+    .some((roleKey) => (roleMapping?.[roleKey]?.length ?? 0) > 0);
+}
+
+function createSerializableQueryResult(result = {}, selectedTable = null) {
+  return {
+    rows: Array.isArray(result?.data) ? result.data : Array.isArray(result?.rows) ? result.rows : [],
+    columns: Array.isArray(result?.columns) ? result.columns : [],
+    fieldMeta: Array.isArray(result?.fieldMeta) ? result.fieldMeta : [],
+    rowCount: result?.meta?.rowCount ?? result?.rowCount ?? result?.data?.length ?? result?.rows?.length ?? 0,
+    columnCount: result?.meta?.columnCount ?? result?.columnCount ?? result?.columns?.length ?? 0,
+    sourceTable: result?.meta?.table ?? result?.sourceTable ?? selectedTable,
+  };
+}
+
+function areArraysEqual(left = [], right = []) {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function isSameQueryResult(left = null, right = null) {
+  if (!left && !right) return true;
+  if (!left || !right) return false;
+
+  return (
+    left.rowCount === right.rowCount &&
+    left.columnCount === right.columnCount &&
+    left.sourceTable === right.sourceTable &&
+    areArraysEqual(left.columns, right.columns) &&
+    areArraysEqual(left.fieldMeta, right.fieldMeta) &&
+    areArraysEqual(left.rows, right.rows)
+  );
+}
+
+function isSamePreviewState(left = null, right = null) {
+  if (!left && !right) return true;
+  if (!left || !right) return false;
+  return left.status === right.status && left.error === right.error;
+}
+
+function isSameMapping(left = {}, right = {}) {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function createBuilderStateSnapshot(builderState = {}) {
+  return {
+    selectedDb: builderState.selectedDb ?? null,
+    selectedTable: builderState.selectedTable ?? null,
+    chartType: builderState.chartType ?? "bar",
+    aggregation: builderState.aggregation ?? "sum",
+    xField: builderState.xField ?? null,
+    xType: builderState.xType ?? null,
+    yField: builderState.yField ?? null,
+    yType: builderState.yType ?? null,
+    groupField: builderState.groupField ?? null,
+    sizeField: builderState.sizeField ?? null,
+    sizeType: builderState.sizeType ?? null,
+    queryMode: builderState.queryMode ?? "visual",
+    generatedSql: builderState.generatedSql ?? "",
+    customSql: builderState.customSql ?? "",
+    lastExecutedSql: builderState.lastExecutedSql ?? "",
+    queryResult: builderState.queryResult ?? null,
+    queryError: builderState.queryError ?? "",
+    queryStatus: builderState.queryStatus ?? "idle",
+    isDirtySql: builderState.isDirtySql ?? false,
+    lastRunAt: builderState.lastRunAt ?? "",
+    roleMapping: builderState.roleMapping ?? {},
+    selectedChartCategory: builderState.selectedChartCategory ?? null,
+    selectedChartFamily: builderState.selectedChartFamily ?? null,
+    selectedChartVariant: builderState.selectedChartVariant ?? null,
+    title: builderState.title ?? "",
+    subtitle: builderState.subtitle ?? "",
+    name: builderState.name ?? "",
+    labels: builderState.labels ?? builderState.labelSettings ?? null,
+    colorTheme: builderState.colorTheme ?? "default",
+    legendVisible: builderState.legendVisible,
+    showTooltip: builderState.showTooltip,
+    showGrid: builderState.showGrid,
+    showAxis: builderState.showAxis,
+    showLabels: builderState.showLabels,
+    smooth: builderState.smooth,
+    display: builderState.display ?? builderState.displayOptions ?? null,
+    settings: builderState.settings ?? builderState.chartSettings ?? null,
+    meta: builderState.meta ?? null,
+    xLabel: builderState.xLabel ?? "",
+    yLabel: builderState.yLabel ?? "",
+    editingChartId: builderState.editingChartId ?? null,
+  };
+}
+
 export default function useBuilderWorkspace({
   builderState,
   setBuilderState,
@@ -68,59 +315,124 @@ export default function useBuilderWorkspace({
   clearPreviewChart,
   navigate,
 }) {
+  const builderSnapshot = useMemo(() => createBuilderStateSnapshot(builderState), [builderState]);
   const isEditing = !!builderState.editingChartId;
   const [chartSelectionMode, setChartSelectionMode] = useState("auto");
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [previewRows, setPreviewRows] = useState([]);
+  const [previewState, setPreviewState] = useState({ status: "idle", error: "" });
   const [lastMappingNotice, setLastMappingNotice] = useState("");
+  const previewSignatureRef = useRef("");
+  const visualQuerySignatureRef = useRef("");
+  const autoMappingContextRef = useRef("");
+  const latestQueryStoreRef = useRef({
+    generatedSql: builderSnapshot.generatedSql,
+    queryResult: builderSnapshot.queryResult,
+    queryError: builderSnapshot.queryError,
+    queryStatus: builderSnapshot.queryStatus,
+    lastRunAt: builderSnapshot.lastRunAt,
+  });
 
-  const selectedDb = builderState.selectedDb;
-  const selectedTable = builderState.selectedTable;
-  const chartType = builderState.chartType;
-  const queryMode = builderState.queryMode ?? "visual";
+  const selectedDb = builderSnapshot.selectedDb;
+  const selectedTable = builderSnapshot.selectedTable;
+  const chartType = builderSnapshot.chartType;
+  const queryMode = builderSnapshot.queryMode;
   const tableInfo = selectedDb && selectedTable ? schema[selectedDb]?.[selectedTable] : null;
   const tableData = tableInfo?.data ?? [];
-  const tableFields = resolveRuntimeFields(builderState, tableInfo?.fields ?? []);
+  const tableFields = resolveRuntimeFields(builderSnapshot, tableInfo?.fields ?? []);
+  const mappingSeed = useMemo(
+    () => ({
+      roleMapping: builderSnapshot.roleMapping,
+      xField: builderSnapshot.xField,
+      xType: builderSnapshot.xType,
+      yField: builderSnapshot.yField,
+      yType: builderSnapshot.yType,
+      groupField: builderSnapshot.groupField,
+      sizeField: builderSnapshot.sizeField,
+      sizeType: builderSnapshot.sizeType,
+      x: builderSnapshot.xField,
+      y: builderSnapshot.yField,
+      groupBy: builderSnapshot.groupField,
+    }),
+    [
+      builderSnapshot.groupField,
+      builderSnapshot.roleMapping,
+      builderSnapshot.sizeField,
+      builderSnapshot.sizeType,
+      builderSnapshot.xField,
+      builderSnapshot.xType,
+      builderSnapshot.yField,
+      builderSnapshot.yType,
+    ]
+  );
   const availableFields = useMemo(
     () => createFieldLookupFromTable(tableFields, selectedDb, selectedTable),
     [selectedDb, selectedTable, tableFields]
   );
   const chartCatalog = useMemo(() => getBuilderChartCatalog(), []);
   const chartMeta = useMemo(() => getChartMeta(chartType), [chartType]);
+  const selectorDefaults = useMemo(() => getChartSelectorDefaults(chartType), [chartType]);
+  const [selectedChartCategory, setSelectedChartCategory] = useState(builderSnapshot.selectedChartCategory ?? selectorDefaults.categoryId);
+  const [selectedChartFamily, setSelectedChartFamily] = useState(builderSnapshot.selectedChartFamily ?? selectorDefaults.familyId);
+  const [selectedChartVariant, setSelectedChartVariant] = useState(builderSnapshot.selectedChartVariant ?? selectorDefaults.variantId);
+  const displayOptions = useMemo(() => normalizeDisplayState(builderSnapshot), [builderSnapshot]);
+  const labelSettings = useMemo(() => normalizeLabelState(builderSnapshot), [builderSnapshot]);
+  const chartSettingsState = useMemo(
+    () => normalizeChartSettingsState(builderSnapshot, chartType, builderSnapshot.selectedChartFamily ?? selectorDefaults.familyId),
+    [builderSnapshot, chartType, selectorDefaults.familyId]
+  );
+  const chartSettings = chartSettingsState.values;
   const roleConfig = useMemo(() => getChartRoleConfig(chartType), [chartType]);
   const roleMapping = useMemo(
     () =>
-      createRoleMappingFromConfig(builderState, chartType, {
+      createRoleMappingFromConfig(mappingSeed, chartType, {
         tableFields,
         selectedDb,
         selectedTable,
       }),
-    [builderState, chartType, selectedDb, selectedTable, tableFields]
+    [chartType, mappingSeed, selectedDb, selectedTable, tableFields]
   );
   const mappedState = useMemo(
     () => createBuilderStateFromRoleMapping(chartType, roleMapping, { selectedDb, selectedTable }),
     [chartType, roleMapping, selectedDb, selectedTable]
   );
+  const configMeta = useMemo(
+    () => ({
+      ...(builderSnapshot.meta ?? {}),
+      supportLevel: builderSnapshot.meta?.supportLevel ?? chartMeta.supportLevel ?? "supported",
+      family: selectedChartFamily ?? selectorDefaults.familyId,
+      variant: selectedChartVariant ?? selectorDefaults.variantId,
+      runtimeType: chartMeta.renderType ?? chartMeta.id,
+      selectedChartBaseType: chartMeta.chartId ?? chartMeta.renderType ?? chartType,
+    }),
+    [builderSnapshot.meta, chartMeta, chartType, selectedChartFamily, selectedChartVariant, selectorDefaults.familyId, selectorDefaults.variantId]
+  );
   const previewConfig = useMemo(
     () =>
       normalizeChartConfig({
-        ...builderState,
+        ...builderSnapshot,
         ...mappedState,
+        family: selectedChartFamily ?? selectorDefaults.familyId,
+        variant: selectedChartVariant ?? selectorDefaults.variantId,
+        settings: chartSettings,
+        display: displayOptions,
+        labels: labelSettings,
+        meta: configMeta,
         ...createBuilderQueryInput({
-          ...builderState,
+          ...builderSnapshot,
           ...mappedState,
           chartType,
         }),
       }),
-    [builderState, chartType, mappedState]
+    [builderSnapshot, chartSettings, chartType, configMeta, displayOptions, labelSettings, mappedState, selectedChartFamily, selectedChartVariant, selectorDefaults.familyId, selectorDefaults.variantId]
   );
   const catalogWithCompatibility = useMemo(
     () =>
       chartCatalog.map((chart) => ({
         ...chart,
-        compatibility: getChartCompatibility(chart.id, { ...builderState, ...previewConfig }, tableFields),
+        compatibility: getChartCompatibility(chart.id, { ...builderSnapshot, ...previewConfig }, tableFields),
       })),
-    [builderState, chartCatalog, previewConfig, tableFields]
+    [builderSnapshot, chartCatalog, previewConfig, tableFields]
   );
   const chartDefinition = useMemo(
     () => ({
@@ -134,9 +446,9 @@ export default function useBuilderWorkspace({
     () =>
       getRecommendedCharts(previewConfig, tableFields).map((chart) => ({
         ...chart,
-        compatibility: getChartCompatibility(chart.id, { ...builderState, ...previewConfig }, tableFields),
+        compatibility: getChartCompatibility(chart.id, { ...builderSnapshot, ...previewConfig }, tableFields),
       })),
-    [builderState, previewConfig, tableFields]
+    [builderSnapshot, previewConfig, tableFields]
   );
   const suggestionResult = useMemo(() => {
     if (!recommendedCharts.length) return null;
@@ -147,14 +459,55 @@ export default function useBuilderWorkspace({
       confidence: "medium",
     };
   }, [recommendedCharts]);
+  const selectorCategories = useMemo(() => getChartSelectorCategories(), []);
+  const selectorFamilyCatalog = useMemo(() => {
+    const chartById = new Map(catalogWithCompatibility.map((chart) => [chart.id, chart]));
+    const recommendedIds = new Set((recommendedCharts ?? []).map((chart) => chart.id));
+
+    return getChartSelectorFamilies().map((family) => ({
+      ...family,
+      variants: family.variants.map((variant) => {
+        const variantChart = chartById.get(variant.id) ?? getChartMeta(variant.id);
+        return {
+          ...variant,
+          chart: variantChart,
+          supported: variantChart.supported,
+          previewSupported: variantChart.previewSupported,
+          recommended: recommendedIds.has(variant.id) || recommendedIds.has(variant.chartId),
+        };
+      }),
+      recommended: family.variants.some((variant) => recommendedIds.has(variant.id) || recommendedIds.has(variant.chartId)),
+    }));
+  }, [catalogWithCompatibility, recommendedCharts]);
+  const visibleChartFamilies = useMemo(
+    () => selectorFamilyCatalog.filter((family) => family.categories.includes(selectedChartCategory)),
+    [selectedChartCategory, selectorFamilyCatalog]
+  );
+  const activeChartFamilyMeta = useMemo(
+    () =>
+      selectorFamilyCatalog.find((family) => family.id === selectedChartFamily) ??
+      getChartFamilyMeta(selectedChartFamily),
+    [selectedChartFamily, selectorFamilyCatalog]
+  );
+  const visibleChartVariants = activeChartFamilyMeta?.variants ?? [];
+  const activeChartVariantMeta = useMemo(
+    () =>
+      visibleChartVariants.find((variant) => variant.id === selectedChartVariant) ??
+      visibleChartVariants.find((variant) => variant.id === chartType) ??
+      visibleChartVariants.find((variant) => variant.chartId === chartType) ??
+      visibleChartVariants[0] ??
+      null,
+    [chartType, selectedChartVariant, visibleChartVariants]
+  );
   const roleAssignments = useMemo(() => getRoleAssignments(chartType, roleMapping), [chartType, roleMapping]);
   const roleValidation = useMemo(
     () =>
       validateRoleMapping(chartType, roleMapping, {
         selectedTable,
         previewSupported: chartMeta.previewSupported,
+        availableFields,
       }),
-    [chartMeta.previewSupported, chartType, roleMapping, selectedTable]
+    [availableFields, chartMeta.previewSupported, chartType, roleMapping, selectedTable]
   );
   const validationSummary = useMemo(
     () => createValidationSummary(roleValidation, selectedTable),
@@ -164,7 +517,7 @@ export default function useBuilderWorkspace({
     () =>
       createSlotAssignments({
         builderState: {
-          ...builderState,
+          ...builderSnapshot,
           ...mappedState,
           xField: previewConfig.x,
           xType: previewConfig.xType,
@@ -178,78 +531,387 @@ export default function useBuilderWorkspace({
         tableFields,
         schema,
       }),
-    [builderState, chartMeta.slots, mappedState, previewConfig, tableFields]
+    [builderSnapshot, chartMeta.slots, mappedState, previewConfig, tableFields]
   );
   const builderQueryInput = useMemo(
     () => ({
       ...createBuilderQueryInput({
-        ...builderState,
+        ...builderSnapshot,
         ...mappedState,
         chartType,
-        aggregation: builderState.aggregation,
+        aggregation: builderSnapshot.aggregation,
       }),
       chartType: chartMeta.renderType ?? chartType,
     }),
-    [builderState, chartMeta.renderType, chartType, mappedState]
+    [builderSnapshot, chartMeta.renderType, chartType, mappedState]
+  );
+  const requiredRoleCount = roleAssignments.filter((role) => role.required).length;
+  const completedRequiredRoleCount = roleAssignments.filter(
+    (role) => role.required && role.state.status === "valid"
+  ).length;
+  const useDirectPreviewData = useMemo(
+    () => shouldUseDirectPreviewData(chartMeta, roleMapping),
+    [chartMeta, roleMapping]
+  );
+  const sourcePreviewRows = useMemo(
+    () => (queryMode === "sql" ? builderSnapshot.queryResult?.rows ?? [] : tableData),
+    [builderSnapshot.queryResult?.rows, queryMode, tableData]
+  );
+  const previewReadiness = useMemo(
+    () =>
+      getPreviewReadiness({
+        chartId: chartType,
+        chartMeta,
+        roleMapping,
+        validation: roleValidation,
+        selectedTable,
+        rows: sourcePreviewRows,
+      }),
+    [chartMeta, chartType, roleMapping, roleValidation, selectedTable, sourcePreviewRows]
   );
   const previewReady = useMemo(
     () =>
-      Boolean(selectedTable) &&
-      chartMeta.previewSupported &&
-      validationSummary.blockers.length === 0 &&
-      slotAssignments.some((slot) => slot.field) &&
-      (queryMode === "visual" || (builderState.queryResult?.rows?.length ?? 0) > 0),
-    [builderState.queryResult?.rows?.length, chartMeta.previewSupported, queryMode, selectedTable, slotAssignments, validationSummary.blockers.length]
+      previewReadiness.shouldRender &&
+      completedRequiredRoleCount === requiredRoleCount &&
+      (queryMode !== "sql" || builderSnapshot.queryStatus === "success"),
+    [builderSnapshot.queryStatus, completedRequiredRoleCount, previewReadiness.shouldRender, queryMode, requiredRoleCount]
   );
+  const previewSignature = useMemo(
+    () =>
+      JSON.stringify({
+        previewReady,
+        chartType: previewConfig.chartType,
+        dataset: previewConfig.dataset,
+        x: previewConfig.x,
+        y: previewConfig.y,
+        groupBy: previewConfig.groupBy,
+        sizeField: previewConfig.sizeField,
+        aggregate: previewConfig.aggregate,
+        title: previewConfig.title,
+        subtitle: previewConfig.subtitle,
+        xLabel: previewConfig.xLabel,
+        yLabel: previewConfig.yLabel,
+        legendVisible: previewConfig.legendVisible,
+        showGrid: previewConfig.showGrid,
+        showLabels: previewConfig.showLabels,
+        colorTheme: previewConfig.colorTheme,
+        smooth: previewConfig.smooth,
+        settings: previewConfig.settings,
+        display: previewConfig.display,
+        labels: previewConfig.labels,
+      }),
+    [previewConfig, previewReady]
+  );
+  const visualQuerySignature = useMemo(
+    () =>
+      JSON.stringify({
+        queryMode,
+        selectedTable,
+      chartType: builderQueryInput.chartType,
+      dataset: builderQueryInput.dataset,
+      x: builderQueryInput.x,
+      y: builderQueryInput.y,
+      groupBy: builderQueryInput.groupBy,
+      sizeField: builderQueryInput.sizeField,
+      aggregate: builderQueryInput.aggregate,
+      direct: useDirectPreviewData,
+      blockers: validationSummary.blockers.map((item) => item.code),
+    }),
+    [builderQueryInput, queryMode, selectedTable, useDirectPreviewData, validationSummary.blockers]
+  );
+  const mappingSignature = useMemo(
+    () =>
+      JSON.stringify({
+        selectedDb,
+        selectedTable,
+        chartType,
+        queryMode,
+        roleMapping,
+      }),
+    [chartType, queryMode, roleMapping, selectedDb, selectedTable]
+  );
+  const generatedQueryPreview = useMemo(() => buildQuery(builderQueryInput), [builderQueryInput]);
 
   useEffect(() => {
-    if (!isEditing) setChartSelectionMode("auto");
-  }, [chartType, isEditing, roleMapping]);
+    latestQueryStoreRef.current = {
+      generatedSql: builderSnapshot.generatedSql,
+      queryResult: builderSnapshot.queryResult,
+      queryError: builderSnapshot.queryError,
+      queryStatus: builderSnapshot.queryStatus,
+      lastRunAt: builderSnapshot.lastRunAt,
+    };
+  }, [
+    builderSnapshot.generatedSql,
+    builderSnapshot.lastRunAt,
+    builderSnapshot.queryError,
+    builderSnapshot.queryResult,
+    builderSnapshot.queryStatus,
+  ]);
+
+  function syncPreviewRows(nextRows) {
+    setPreviewRows((currentRows) => (areArraysEqual(currentRows, nextRows) ? currentRows : nextRows));
+  }
+
+  function syncPreviewState(nextState) {
+    setPreviewState((currentState) => (isSamePreviewState(currentState, nextState) ? currentState : nextState));
+  }
+
+  function commitQueryStatePatch(patch) {
+    const currentQueryState = latestQueryStoreRef.current;
+    const nextQueryState = {
+      ...currentQueryState,
+      ...patch,
+    };
+    const hasChanges =
+      currentQueryState.generatedSql !== nextQueryState.generatedSql ||
+      currentQueryState.queryError !== nextQueryState.queryError ||
+      currentQueryState.queryStatus !== nextQueryState.queryStatus ||
+      currentQueryState.lastRunAt !== nextQueryState.lastRunAt ||
+      !isSameQueryResult(currentQueryState.queryResult, nextQueryState.queryResult);
+
+    if (!hasChanges) return false;
+
+    latestQueryStoreRef.current = nextQueryState;
+    setBuilderState(patch);
+    return true;
+  }
+
+  useEffect(() => {
+    const selectedFamilyMeta = selectorFamilyCatalog.find((family) => family.id === selectedChartFamily);
+    const selectedVariantMeta = selectedFamilyMeta?.variants.find((variant) => variant.id === selectedChartVariant) ?? null;
+    if (selectedVariantMeta && (selectedVariantMeta.id === chartType || selectedVariantMeta.chartId === chartType)) return;
+
+    setSelectedChartCategory((current) =>
+      current === selectorDefaults.categoryId ? current : selectorDefaults.categoryId
+    );
+    setSelectedChartFamily((current) =>
+      current === selectorDefaults.familyId ? current : selectorDefaults.familyId
+    );
+    setSelectedChartVariant((current) =>
+      current === selectorDefaults.variantId ? current : selectorDefaults.variantId
+    );
+  }, [chartType, selectedChartFamily, selectedChartVariant, selectorDefaults, selectorFamilyCatalog]);
+
+  useEffect(() => {
+    const contextSignature = JSON.stringify({
+      selectedDb,
+      selectedTable,
+      chartType,
+      fieldNames: availableFields.map((field) => field.name),
+      queryMode,
+    });
+
+    if (!selectedTable || !availableFields.length) {
+      autoMappingContextRef.current = contextSignature;
+      return;
+    }
+
+    const sourceChanged = autoMappingContextRef.current !== contextSignature;
+    const missingRequiredRoles = roleAssignments.some(
+      (role) => role.required && (roleMapping[role.key]?.length ?? 0) < role.min
+    );
+    const missingSourceFields = Object.values(roleValidation.roleStates ?? {}).some(
+      (state) => (state?.missingFields?.length ?? 0) > 0
+    );
+    const shouldAutoMap = sourceChanged || !Object.keys(builderSnapshot.roleMapping ?? {}).length || missingRequiredRoles || missingSourceFields;
+
+    if (!shouldAutoMap) {
+      autoMappingContextRef.current = contextSignature;
+      return;
+    }
+
+    const preservedMapping = preserveCompatibleMapping(chartType, roleMapping, availableFields);
+    const suggestedMapping = autoMapFieldsForChart(chartType, availableFields, preservedMapping);
+
+    if (!isSameMapping(suggestedMapping, roleMapping)) {
+      const missingRoles = getMissingRoleSummary(chartType, suggestedMapping);
+      setLastMappingNotice(
+        missingRoles.length
+          ? `${chartMeta.name} still needs ${missingRoles.join(", ")}.`
+          : "Mapped likely fields automatically."
+      );
+      commitRoleMapping(suggestedMapping, { selectedDb, selectedTable });
+    }
+
+    autoMappingContextRef.current = contextSignature;
+  }, [
+    availableFields,
+    builderSnapshot.roleMapping,
+    chartMeta.name,
+    chartType,
+    queryMode,
+    roleAssignments,
+    roleMapping,
+    roleValidation.roleStates,
+    selectedDb,
+    selectedTable,
+  ]);
+
+  useEffect(() => {
+    if (!isEditing) {
+      setChartSelectionMode("auto");
+    }
+  }, [isEditing]);
 
   useEffect(() => {
     const suggested = suggestionResult?.suggested;
     if (!suggested || chartSelectionMode === "manual" || isEditing || chartType === suggested) return;
     handleChartTypeChange(suggested, "auto");
-  }, [chartSelectionMode, chartType, isEditing, suggestionResult]);
+  }, [chartSelectionMode, chartType, isEditing, suggestionResult?.suggested]);
 
   useEffect(() => {
-    if (previewReady) setPreviewChart({ config: previewConfig });
-    else clearPreviewChart();
-  }, [clearPreviewChart, previewConfig, previewReady, setPreviewChart]);
+    if (!previewReady) {
+      if (previewSignatureRef.current) {
+        previewSignatureRef.current = "";
+        clearPreviewChart();
+      }
+      if (
+        previewReadiness.canAttemptPreview &&
+        previewReadiness.rowAssessment.hasRows &&
+        !previewReadiness.rowAssessment.canRender
+      ) {
+        syncPreviewRows([]);
+        syncPreviewState({
+          status: "error",
+          error: previewReadiness.rowAssessment.emptyReason,
+        });
+      }
+      return;
+    }
+
+    if (previewSignatureRef.current === previewSignature) return;
+    previewSignatureRef.current = previewSignature;
+    setPreviewChart({ config: previewConfig });
+  }, [clearPreviewChart, previewConfig, previewReadiness, previewReady, previewSignature, setPreviewChart]);
 
   useEffect(() => () => clearPreviewChart(), [clearPreviewChart]);
 
   useEffect(() => {
+    if (queryMode !== "visual" || useDirectPreviewData) return;
+
+    if (
+      previewReadiness.canAttemptPreview &&
+      previewReadiness.rowAssessment.hasRows &&
+      !previewReadiness.rowAssessment.canRender
+    ) {
+      syncPreviewRows([]);
+      syncPreviewState({
+        status: "error",
+        error: previewReadiness.rowAssessment.emptyReason,
+      });
+      return;
+    }
+
+    syncPreviewRows([]);
+    syncPreviewState({ status: "idle", error: "" });
+
+    const nextGeneratedSql = formatSql(generatedQueryPreview.sql || "");
+    commitQueryStatePatch({
+      generatedSql: nextGeneratedSql,
+      queryResult: null,
+      queryError: "",
+      queryStatus: "idle",
+    });
+  }, [generatedQueryPreview.sql, mappingSignature, previewReadiness, queryMode, useDirectPreviewData]);
+
+  useEffect(() => {
+    if (!previewReady || queryMode !== "visual" || !useDirectPreviewData) return;
+
+    const nextRows = Array.isArray(tableData) ? tableData : [];
+    const directPreviewAssessment = evaluatePreviewRows(chartType, roleMapping, nextRows);
+    const nextStatus = directPreviewAssessment.canRender ? "success" : "empty";
+    const nextGeneratedSql = formatSql(generatedQueryPreview.sql || "");
+    const nextQueryResult = createSerializableQueryResult(
+      {
+        data: nextRows,
+        columns: tableFields.map((field) => field.name),
+        fieldMeta: tableFields,
+        rowCount: nextRows.length,
+        columnCount: tableFields.length,
+        sourceTable: selectedTable,
+      },
+      selectedTable
+    );
+
+    syncPreviewRows(nextRows);
+    syncPreviewState({
+      status: nextStatus,
+      error: nextStatus === "empty" ? directPreviewAssessment.emptyReason : "",
+    });
+    visualQuerySignatureRef.current = visualQuerySignature;
+
+    commitQueryStatePatch({
+      generatedSql: nextGeneratedSql,
+      queryResult: nextQueryResult,
+      queryError: nextStatus === "empty" ? directPreviewAssessment.emptyReason : "",
+      queryStatus: nextStatus,
+    });
+  }, [
+    chartType,
+    generatedQueryPreview.sql,
+    previewReady,
+    queryMode,
+    selectedTable,
+    tableData,
+    tableFields,
+    useDirectPreviewData,
+    visualQuerySignature,
+    roleMapping,
+  ]);
+
+  useEffect(() => {
     let cancelled = false;
-    if (!previewReady || queryMode === "sql") {
-      setPreviewRows([]);
+    if (!previewReady || queryMode === "sql" || useDirectPreviewData) {
+      syncPreviewRows([]);
+      syncPreviewState({ status: "idle", error: "" });
+      visualQuerySignatureRef.current = "";
       return undefined;
     }
+
+    if (visualQuerySignatureRef.current === visualQuerySignature) {
+      return undefined;
+    }
+
+    visualQuerySignatureRef.current = visualQuerySignature;
+    syncPreviewState({ status: "loading", error: "" });
+
+    commitQueryStatePatch({
+      queryError: "",
+      queryStatus: "running",
+    });
+
     runQuery(builderQueryInput)
       .then((result) => {
         if (!cancelled) {
-          setPreviewRows(result.data ?? []);
-          setBuilderState({
-            generatedSql: formatSql(result.sql ?? ""),
-            queryResult: {
-              rows: result.data ?? [],
-              columns: result.columns ?? [],
-              fieldMeta: result.fieldMeta ?? [],
-              rowCount: result.meta?.rowCount ?? result.data?.length ?? 0,
-              columnCount: result.meta?.columnCount ?? result.columns?.length ?? 0,
-              sourceTable: result.meta?.table ?? selectedTable,
-            },
-            queryError: "",
-            queryStatus: "success",
+          const nextRows = Array.isArray(result.data) ? result.data : [];
+          const queryPreviewAssessment = evaluatePreviewRows(chartType, roleMapping, nextRows);
+          const nextQueryResult = createSerializableQueryResult(result, selectedTable);
+          const nextGeneratedSql = formatSql(result.sql ?? "");
+          const nextQueryStatus = queryPreviewAssessment.canRender ? "success" : "empty";
+          const nextQueryError = queryPreviewAssessment.canRender ? "" : queryPreviewAssessment.emptyReason;
+
+          syncPreviewRows(nextRows);
+          syncPreviewState({
+            status: nextQueryStatus,
+            error: nextQueryError,
+          });
+
+          commitQueryStatePatch({
+            generatedSql: nextGeneratedSql,
+            queryResult: nextQueryResult,
+            queryError: nextQueryError,
+            queryStatus: nextQueryStatus,
             lastRunAt: new Date().toISOString(),
           });
         }
       })
       .catch((error) => {
         if (!cancelled) {
-          setPreviewRows([]);
-          setBuilderState({
-            queryError: error?.message || "Unable to run visual query.",
+          syncPreviewRows([]);
+          const nextError = error?.message || "Unable to run visual query.";
+          syncPreviewState({ status: "error", error: nextError });
+          commitQueryStatePatch({
+            queryError: nextError,
             queryStatus: "error",
             lastRunAt: new Date().toISOString(),
           });
@@ -258,10 +920,19 @@ export default function useBuilderWorkspace({
     return () => {
       cancelled = true;
     };
-  }, [builderQueryInput, previewReady, queryMode, selectedTable, setBuilderState]);
+  }, [
+    builderQueryInput,
+    chartType,
+    previewReady,
+    queryMode,
+    roleMapping,
+    selectedTable,
+    useDirectPreviewData,
+    visualQuerySignature,
+  ]);
 
   const canAddChart = validationSummary.blockers.length === 0
-    && (queryMode !== "sql" || builderState.queryStatus === "success");
+    && (queryMode !== "sql" || builderSnapshot.queryStatus === "success");
   const mappedCount = roleAssignments.filter((role) => role.fields.length).length;
   const mappedTarget = roleAssignments.filter((role) => role.required).length;
   const readinessLabel = createReadinessLabel({
@@ -270,49 +941,117 @@ export default function useBuilderWorkspace({
     cautionCount: validationSummary.cautions.length,
   });
   const aggregationOptions = useMemo(
-    () => getAggregationOptions(chartType, builderState.aggregation),
-    [builderState.aggregation, chartType]
+    () => getAggregationOptions(chartType, builderSnapshot.aggregation),
+    [builderSnapshot.aggregation, chartType]
   );
-  const generatedQueryPreview = useMemo(() => buildQuery(builderQueryInput), [builderQueryInput]);
   const queryPreview = useMemo(
     () => ({
       ...(queryMode === "sql"
         ? {
-            sql: builderState.customSql || builderState.generatedSql || formatSql(generatedQueryPreview.sql || ""),
+            sql: builderSnapshot.customSql || builderSnapshot.generatedSql || formatSql(generatedQueryPreview.sql || ""),
             params: [],
-            columns: builderState.queryResult?.columns ?? [],
+            columns: builderSnapshot.queryResult?.columns ?? [],
           }
         : {
             ...generatedQueryPreview,
-            sql: builderState.generatedSql || formatSql(generatedQueryPreview.sql || ""),
+            sql: builderSnapshot.generatedSql || formatSql(generatedQueryPreview.sql || ""),
           }),
-      aggregate: builderState.aggregation,
+      aggregate: builderSnapshot.aggregation,
       mode: queryMode,
-      rowCount: builderState.queryResult?.rowCount ?? 0,
-      columnCount: builderState.queryResult?.columnCount ?? 0,
-      status: builderState.queryStatus ?? "idle",
-      error: builderState.queryError ?? "",
-      lastRunAt: builderState.lastRunAt ?? "",
+      rowCount: builderSnapshot.queryResult?.rowCount ?? 0,
+      columnCount: builderSnapshot.queryResult?.columnCount ?? 0,
+      status: builderSnapshot.queryStatus ?? "idle",
+      error: builderSnapshot.queryError ?? "",
+      lastRunAt: builderSnapshot.lastRunAt ?? "",
     }),
-    [builderState, generatedQueryPreview, queryMode]
+    [builderSnapshot, generatedQueryPreview, queryMode]
   );
-  const requiredRoleCount = roleAssignments.filter((role) => role.required).length;
-  const completedRequiredRoleCount = roleAssignments.filter(
-    (role) => role.required && role.state.status === "valid"
-  ).length;
-
+  function createConfigSectionsPatch({
+    nextChartType = chartType,
+    nextFamily = selectedChartFamily ?? selectorDefaults.familyId,
+    nextVariant = selectedChartVariant ?? selectorDefaults.variantId,
+    nextSettings = chartSettings,
+    nextDisplay = displayOptions,
+    nextLabels = labelSettings,
+    nextMeta = configMeta,
+  } = {}) {
+    return {
+      settings: nextSettings,
+      chartSettings: nextSettings,
+      display: nextDisplay,
+      displayOptions: nextDisplay,
+      labels: nextLabels,
+      labelSettings: nextLabels,
+      meta: {
+        ...nextMeta,
+        family: nextFamily,
+        variant: nextVariant,
+        chartType: nextChartType,
+      },
+      selectedChartFamily: nextFamily,
+      selectedChartVariant: nextVariant,
+      name: nextLabels.name ?? "",
+      title: nextLabels.title ?? "",
+      subtitle: nextLabels.subtitle ?? "",
+      xLabel: nextLabels.xLabel ?? "",
+      yLabel: nextLabels.yLabel ?? "",
+      valueFormat: nextLabels.valueFormat ?? "default",
+      emptyStateLabel: nextLabels.emptyStateLabel ?? "No rows available",
+      colorTheme: nextDisplay.colorTheme ?? "default",
+      legendVisible: nextDisplay.showLegend,
+      showTooltip: nextDisplay.showTooltip,
+      showGrid: nextDisplay.showGrid,
+      showAxis: nextDisplay.showAxis,
+      showLabels: nextDisplay.showLabels,
+      backgroundOpacity: nextDisplay.backgroundOpacity,
+      padding: nextDisplay.padding,
+      smooth: nextSettings.smooth ?? false,
+    };
+  }
   function commitRoleMapping(nextMapping, overrides = {}) {
     const bridgeState = createBuilderStateFromRoleMapping(overrides.chartType ?? chartType, nextMapping, {
       selectedDb: overrides.selectedDb ?? selectedDb,
       selectedTable: overrides.selectedTable ?? selectedTable,
     });
-
-    setBuilderState({
+    const nextSettings = overrides.settings ?? chartSettings;
+    const nextDisplay = overrides.display ?? displayOptions;
+    const nextLabels = overrides.labels ?? labelSettings;
+    const nextMeta = overrides.meta ?? configMeta;
+    const nextState = {
       ...overrides,
       ...clearBuilderMappings(),
       ...bridgeState,
       roleMapping: bridgeState.roleMapping,
-    });
+      selectedChartCategory: overrides.selectedChartCategory ?? builderSnapshot.selectedChartCategory ?? selectedChartCategory,
+      ...createConfigSectionsPatch({
+        nextChartType: overrides.chartType ?? chartType,
+        nextFamily: overrides.selectedChartFamily ?? builderSnapshot.selectedChartFamily ?? selectedChartFamily,
+        nextVariant: overrides.selectedChartVariant ?? builderSnapshot.selectedChartVariant ?? selectedChartVariant,
+        nextSettings,
+        nextDisplay,
+        nextLabels,
+        nextMeta,
+      }),
+    };
+    const noChange =
+      nextState.selectedDb === builderSnapshot.selectedDb &&
+      nextState.selectedTable === builderSnapshot.selectedTable &&
+      nextState.chartType === (overrides.chartType ?? builderSnapshot.chartType) &&
+      nextState.selectedChartCategory === (builderSnapshot.selectedChartCategory ?? selectedChartCategory) &&
+      nextState.selectedChartFamily === (builderSnapshot.selectedChartFamily ?? selectedChartFamily) &&
+      nextState.selectedChartVariant === (builderSnapshot.selectedChartVariant ?? selectedChartVariant) &&
+      JSON.stringify(nextState.settings) === JSON.stringify(chartSettings) &&
+      JSON.stringify(nextState.display) === JSON.stringify(displayOptions) &&
+      JSON.stringify(nextState.labels) === JSON.stringify(labelSettings) &&
+      JSON.stringify(nextState.roleMapping) === JSON.stringify(builderSnapshot.roleMapping) &&
+      nextState.xField === builderSnapshot.xField &&
+      nextState.yField === builderSnapshot.yField &&
+      nextState.groupField === builderSnapshot.groupField &&
+      nextState.sizeField === builderSnapshot.sizeField;
+
+    if (!noChange) {
+      setBuilderState(nextState);
+    }
   }
 
   function getDefaultRoleKey(fieldRef) {
@@ -321,6 +1060,50 @@ export default function useBuilderWorkspace({
       (role) => role.required && (roleMapping[role.key]?.length ?? 0) < role.min
     );
     return nextRequired?.key ?? compatibleRoles[0]?.key ?? roleAssignments[0]?.key ?? "category";
+  }
+
+  function handleAggregationChange(nextAggregation) {
+    if (builderSnapshot.aggregation === nextAggregation) return;
+    setBuilderState({ aggregation: nextAggregation });
+  }
+
+  function handleChartSettingChange(key, value) {
+    const nextSettings = {
+      ...chartSettings,
+      [key]: value,
+    };
+
+    setBuilderState(
+      createConfigSectionsPatch({
+        nextSettings,
+      })
+    );
+  }
+
+  function handleDisplayChange(key, value) {
+    const nextDisplay = {
+      ...displayOptions,
+      [key]: value,
+    };
+
+    setBuilderState(
+      createConfigSectionsPatch({
+        nextDisplay,
+      })
+    );
+  }
+
+  function handleLabelChange(key, value) {
+    const nextLabels = {
+      ...labelSettings,
+      [key]: value,
+    };
+
+    setBuilderState(
+      createConfigSectionsPatch({
+        nextLabels,
+      })
+    );
   }
 
   function handleFieldAssign(db, tbl, field, targetRole) {
@@ -361,44 +1144,129 @@ export default function useBuilderWorkspace({
     commitRoleMapping(reorderRoleFields(roleMapping, roleKey, nextOrder));
   }
 
-  function handleChartTypeChange(nextChartType, source = "manual") {
+  function handleChartTypeChange(nextChartType, source = "manual", selectorState = {}) {
     if (source === "manual") setChartSelectionMode("manual");
     const nextMeta = getChartMeta(nextChartType);
+    const nextSelectorDefaults = getChartSelectorDefaults(nextChartType);
+    const nextCategoryId = selectorState.selectedCategory ?? nextSelectorDefaults.categoryId;
+    const nextFamilyId = selectorState.selectedFamily ?? nextSelectorDefaults.familyId;
+    const nextVariantId = selectorState.selectedVariant ?? nextSelectorDefaults.variantId;
+    const switchPlan = getChartSwitchPlan(
+      nextChartType,
+      { ...builderSnapshot, roleMapping, x: previewConfig.x, y: previewConfig.y, groupBy: previewConfig.groupBy, sizeField: previewConfig.sizeField },
+      tableFields
+    );
     const preservedMapping = preserveCompatibleMapping(nextChartType, roleMapping, availableFields);
-    const nextMapping = autoMapFieldsForChart(nextChartType, availableFields, preservedMapping);
-    const nextAggregationOptions = getAggregationOptions(nextChartType, builderState.aggregation);
+    const nextMapping = autoMapFieldsForChart(
+      nextChartType,
+      availableFields,
+      preserveCompatibleMapping(nextChartType, switchPlan.nextMapping ?? preservedMapping, availableFields)
+    );
+    const nextAggregationOptions = getAggregationOptions(nextChartType, builderSnapshot.aggregation);
+    const nextSettings = mergeChartSettingsState(chartSettings, nextChartType, nextFamilyId);
 
     commitRoleMapping(nextMapping, {
       chartType: nextChartType,
-      legendVisible: nextMeta.defaultConfig?.legendVisible ?? builderState.legendVisible,
-      showGrid: nextMeta.defaultConfig?.showGrid ?? builderState.showGrid,
-      smooth: nextMeta.defaultConfig?.smooth ?? builderState.smooth,
-      aggregation: nextAggregationOptions[0] ?? builderState.aggregation,
+      selectedChartCategory: nextCategoryId,
+      selectedChartFamily: nextFamilyId,
+      selectedChartVariant: nextVariantId,
+      settings: nextSettings,
+      display: {
+        ...displayOptions,
+        showLegend: nextMeta.defaultConfig?.legendVisible ?? displayOptions.showLegend,
+        showGrid: nextMeta.defaultConfig?.showGrid ?? displayOptions.showGrid,
+      },
+      aggregation: nextAggregationOptions[0] ?? builderSnapshot.aggregation,
     });
+    setSelectedChartCategory(nextCategoryId);
+    setSelectedChartFamily(nextFamilyId);
+    setSelectedChartVariant(nextVariantId);
 
     const missingRoles = getMissingRoleSummary(nextChartType, nextMapping);
-    setLastMappingNotice(
-      missingRoles.length
-        ? `${nextMeta.name} still needs ${missingRoles.join(", ")}.`
-        : `${nextMeta.name} preserved compatible mappings.`
+    setLastMappingNotice(missingRoles.length ? `${nextMeta.name} still needs ${missingRoles.join(", ")}.` : switchPlan.message);
+  }
+
+  function handleChartCategoryChange(nextCategory) {
+    if (!nextCategory) return;
+    const nextFamilies = selectorFamilyCatalog.filter((family) => family.categories.includes(nextCategory));
+    const nextFamily =
+      nextFamilies.find((family) => family.id === selectedChartFamily) ??
+      nextFamilies[0] ??
+      null;
+    const nextVariant =
+      nextFamily?.variants.find((variant) => variant.id === selectedChartVariant) ??
+      nextFamily?.variants.find((variant) => variant.id === chartType) ??
+      nextFamily?.variants.find((variant) => variant.chartId === chartType) ??
+      nextFamily?.variants?.[0] ??
+      null;
+
+    setSelectedChartCategory(nextCategory);
+    setSelectedChartFamily(nextFamily?.id ?? null);
+    setSelectedChartVariant(nextVariant?.id ?? null);
+  }
+
+  function handleChartFamilyChange(nextFamilyId) {
+    const nextFamily = selectorFamilyCatalog.find((family) => family.id === nextFamilyId);
+    if (!nextFamily) return;
+
+    const nextVariant =
+      nextFamily.variants.find((variant) => variant.id === selectedChartVariant) ??
+      nextFamily.variants.find((variant) => variant.id === chartType) ??
+      nextFamily.variants.find((variant) => variant.chartId === chartType) ??
+      nextFamily.variants[0] ??
+      null;
+
+    setSelectedChartCategory((current) =>
+      nextFamily.categories.includes(current) ? current : (nextFamily.primaryCategory ?? nextFamily.categories?.[0] ?? current)
     );
+    setSelectedChartFamily(nextFamilyId);
+    setSelectedChartVariant(nextVariant?.id ?? null);
+  }
+
+  function handleChartVariantChange(nextVariantId) {
+    const family =
+      selectorFamilyCatalog.find((familyItem) => familyItem.id === selectedChartFamily) ??
+      selectorFamilyCatalog.find((familyItem) =>
+        familyItem.variants.some((variant) => variant.id === nextVariantId)
+      ) ??
+      null;
+    const variant = family?.variants.find((variantItem) => variantItem.id === nextVariantId) ?? null;
+    if (!family || !variant) return;
+
+    handleChartTypeChange(variant.id, "manual", {
+      selectedCategory: family.categories.includes(selectedChartCategory)
+        ? selectedChartCategory
+        : (family.primaryCategory ?? selectedChartCategory),
+      selectedFamily: family.id,
+      selectedVariant: variant.id,
+    });
   }
 
   function handleQueryModeChange(nextMode) {
     if (nextMode === queryMode) return;
     const nextGeneratedSql = formatSql(generatedQueryPreview.sql || "");
+    const nextCustomSql =
+      nextMode === "sql"
+        ? (builderSnapshot.isDirtySql ? builderSnapshot.customSql : builderSnapshot.customSql || nextGeneratedSql)
+        : builderSnapshot.customSql;
+
+    if (
+      builderSnapshot.generatedSql === nextGeneratedSql &&
+      builderSnapshot.customSql === nextCustomSql
+    ) {
+      setBuilderState({ queryMode: nextMode });
+      return;
+    }
 
     setBuilderState({
       queryMode: nextMode,
       generatedSql: nextGeneratedSql,
-      customSql:
-        nextMode === "sql"
-          ? (builderState.isDirtySql ? builderState.customSql : builderState.customSql || nextGeneratedSql)
-          : builderState.customSql,
+      customSql: nextCustomSql,
     });
   }
 
   function handleSqlChange(nextSql) {
+    if (builderSnapshot.customSql === nextSql && builderSnapshot.queryMode === "sql") return;
     setBuilderState({
       queryMode: "sql",
       customSql: nextSql,
@@ -431,7 +1299,7 @@ export default function useBuilderWorkspace({
   }
 
   async function handleRunSql() {
-    const sqlText = builderState.customSql || builderState.generatedSql || generatedQueryPreview.sql;
+    const sqlText = builderSnapshot.customSql || builderSnapshot.generatedSql || generatedQueryPreview.sql;
     const formattedSql = formatSql(sqlText);
 
     setBuilderState({
@@ -443,14 +1311,15 @@ export default function useBuilderWorkspace({
 
     try {
       const result = await runSqlQuery(formattedSql);
+      const sqlPreviewAssessment = evaluatePreviewRows(chartType, roleMapping, result.data ?? []);
       setPreviewRows([]);
       applySqlResult(result);
       setBuilderState({
         generatedSql: formatSql(generatedQueryPreview.sql || ""),
         customSql: formattedSql,
         lastExecutedSql: formattedSql,
-        queryError: result.data?.length ? "" : "Query returned no rows.",
-        queryStatus: result.data?.length ? "success" : "empty",
+        queryError: sqlPreviewAssessment.canRender ? "" : sqlPreviewAssessment.emptyReason,
+        queryStatus: sqlPreviewAssessment.canRender ? "success" : "empty",
         isDirtySql: true,
         lastRunAt: new Date().toISOString(),
       });
@@ -466,7 +1335,7 @@ export default function useBuilderWorkspace({
   }
 
   function handleFormatSql() {
-    const sqlText = builderState.customSql || builderState.generatedSql || generatedQueryPreview.sql;
+    const sqlText = builderSnapshot.customSql || builderSnapshot.generatedSql || generatedQueryPreview.sql;
     setBuilderState({
       customSql: formatSql(sqlText),
       isDirtySql: true,
@@ -485,15 +1354,15 @@ export default function useBuilderWorkspace({
   }
 
   function handleUseSqlResultForChart() {
-    if (!builderState.queryResult?.rows?.length) return;
+    if (!builderSnapshot.queryResult?.rows?.length) return;
     applySqlResult({
-      data: builderState.queryResult.rows,
-      columns: builderState.queryResult.columns,
-      fieldMeta: builderState.queryResult.fieldMeta,
+      data: builderSnapshot.queryResult.rows,
+      columns: builderSnapshot.queryResult.columns,
+      fieldMeta: builderSnapshot.queryResult.fieldMeta,
       meta: {
-        rowCount: builderState.queryResult.rowCount,
-        columnCount: builderState.queryResult.columnCount,
-        table: builderState.queryResult.sourceTable,
+        rowCount: builderSnapshot.queryResult.rowCount,
+        columnCount: builderSnapshot.queryResult.columnCount,
+        table: builderSnapshot.queryResult.sourceTable,
       },
     });
   }
@@ -501,7 +1370,7 @@ export default function useBuilderWorkspace({
   async function handleSave() {
     const chartConfig = createBuilderSaveConfig({
       builderState: {
-        ...builderState,
+        ...builderSnapshot,
         ...mappedState,
         chartType,
         xField: previewConfig.x,
@@ -520,6 +1389,10 @@ export default function useBuilderWorkspace({
         colorTheme: previewConfig.colorTheme,
         xLabel: previewConfig.xLabel,
         yLabel: previewConfig.yLabel,
+        settings: chartSettings,
+        display: displayOptions,
+        labels: labelSettings,
+        meta: configMeta,
         roleMapping,
       },
       selectedTable,
@@ -527,7 +1400,7 @@ export default function useBuilderWorkspace({
     });
 
     if (isEditing) {
-      updateChart(builderState.editingChartId, chartConfig);
+      updateChart(builderSnapshot.editingChartId, chartConfig);
       navigate("/dashboard");
     } else {
       await saveChartAction({ name: chartConfig.name, config: chartConfig });
@@ -546,7 +1419,7 @@ export default function useBuilderWorkspace({
       tableData,
       tableFields,
       queryMode,
-      queryResult: builderState.queryResult,
+      queryResult: builderSnapshot.queryResult,
       availableFields,
       roleAssignments,
       roleMapping,
@@ -566,6 +1439,7 @@ export default function useBuilderWorkspace({
       roleAssignments,
       validationSummary,
       previewSupported: chartMeta.previewSupported,
+      previewState,
       completedRequiredRoleCount,
       requiredRoleCount,
     },
@@ -574,35 +1448,51 @@ export default function useBuilderWorkspace({
       suggestionResult,
       chartType,
       activeChartMeta: chartMeta,
+      activeChartFamilyMeta,
+      activeChartVariantMeta,
       chartCatalog: catalogWithCompatibility,
+      chartSelectorFamilies: selectorFamilyCatalog,
+      chartSelectorCategories: selectorCategories.map((category) => ({
+        ...category,
+        count: selectorFamilyCatalog.filter((family) => family.categories.includes(category.id)).length,
+      })),
+      visibleChartFamilies,
+      visibleChartVariants,
+      selectedChartCategory,
+      selectedChartFamily,
+      selectedChartVariant,
       recommendedCharts,
       saveSuccess,
       canAddChart,
       validationSummary,
-      aggregation: builderState.aggregation,
+      aggregation: builderSnapshot.aggregation,
       aggregationOptions,
       queryMode,
-      generatedSql: builderState.generatedSql || formatSql(generatedQueryPreview.sql || ""),
-      customSql: builderState.customSql || "",
-      lastExecutedSql: builderState.lastExecutedSql || "",
-      queryResult: builderState.queryResult,
-      queryError: builderState.queryError || "",
-      queryStatus: builderState.queryStatus || "idle",
-      isDirtySql: builderState.isDirtySql || false,
-      lastRunAt: builderState.lastRunAt || "",
+      generatedSql: builderSnapshot.generatedSql || formatSql(generatedQueryPreview.sql || ""),
+      customSql: builderSnapshot.customSql || "",
+      lastExecutedSql: builderSnapshot.lastExecutedSql || "",
+      queryResult: builderSnapshot.queryResult,
+      queryError: builderSnapshot.queryError || "",
+      queryStatus: builderSnapshot.queryStatus || "idle",
+      isDirtySql: builderSnapshot.isDirtySql || false,
+      lastRunAt: builderSnapshot.lastRunAt || "",
       slotAssignments,
       roleAssignments,
       roleConfig,
       roleValidation,
-      name: builderState.name,
-      title: builderState.title,
-      subtitle: builderState.subtitle ?? "",
-      colorTheme: builderState.colorTheme ?? "default",
-      legendVisible: builderState.legendVisible,
-      showGrid: builderState.showGrid,
-      showLabels: builderState.showLabels ?? false,
-      xLabel: builderState.xLabel ?? "",
-      yLabel: builderState.yLabel ?? "",
+      chartSettings,
+      displayOptions,
+      labelSettings,
+      normalizedConfig: previewConfig,
+      name: labelSettings.name,
+      title: labelSettings.title,
+      subtitle: labelSettings.subtitle ?? "",
+      colorTheme: displayOptions.colorTheme ?? "default",
+      legendVisible: displayOptions.showLegend,
+      showGrid: displayOptions.showGrid,
+      showLabels: displayOptions.showLabels ?? false,
+      xLabel: labelSettings.xLabel ?? "",
+      yLabel: labelSettings.yLabel ?? "",
       lastMappingNotice,
     },
     workspaceSummary: {
@@ -618,6 +1508,13 @@ export default function useBuilderWorkspace({
       mappedTarget,
     },
     handleChartTypeChange,
+    handleChartCategoryChange,
+    handleChartFamilyChange,
+    handleChartVariantChange,
+    handleChartSettingChange,
+    handleDisplayChange,
+    handleLabelChange,
+    handleAggregationChange,
     handleFieldAssign,
     clearSlot: handleClearRole,
     handleRoleFieldRemove,

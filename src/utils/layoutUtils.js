@@ -112,11 +112,12 @@ const AUTO_LAYOUT_PRESETS = {
 };
 
 export function buildResponsiveLayouts(layout = []) {
+  const safeLayout = Array.isArray(layout) ? layout : [];
   return {
-    lg: layout,
-    md: layout.map((item) => ({ ...item, x: Math.min(item.x, 6), w: Math.min(item.w, 6) })),
-    sm: layout.map((item) => ({ ...item, x: 0, w: 6 })),
-    xs: layout.map((item) => ({ ...item, x: 0, w: 1 })),
+    lg: safeLayout,
+    md: safeLayout.map((item) => ({ ...item, x: Math.min(item.x ?? 0, 6), w: Math.min(item.w ?? 6, 6) })),
+    sm: safeLayout.map((item) => ({ ...item, x: 0, w: 6 })),
+    xs: safeLayout.map((item) => ({ ...item, x: 0, w: 1 })),
   };
 }
 
@@ -198,8 +199,10 @@ export function tryCreateAdjacentLayoutItem(layout = [], sourceItem, chartId) {
 }
 
 export function sanitizeLayout(layout = [], existingLayout = []) {
-  const existingMap = new Map(existingLayout.map((item) => [item.i, item]));
-  return layout.map((item) => {
+  const safeLayout = Array.isArray(layout) ? layout : [];
+  const safeExistingLayout = Array.isArray(existingLayout) ? existingLayout : [];
+  const existingMap = new Map(safeExistingLayout.filter(Boolean).map((item) => [item.i, item]));
+  return safeLayout.filter(Boolean).map((item) => {
     const existing = existingMap.get(item.i);
     return {
       i: item.i,
@@ -230,9 +233,11 @@ export function getAutoLayoutPreset(count = 0) {
 }
 
 export function normalizeLayoutItems(layout = [], widgets = []) {
-  const widgetMap = new Map(widgets.map((widget) => [widget.id, widget]));
-  const normalized = layout.map((item, index) => {
-    const widget = widgetMap.get(item.i) ?? widgets[index];
+  const safeLayout = Array.isArray(layout) ? layout.filter(Boolean) : [];
+  const safeWidgets = Array.isArray(widgets) ? widgets.filter(Boolean) : [];
+  const widgetMap = new Map(safeWidgets.map((widget) => [widget.id, widget]));
+  const normalized = safeLayout.map((item, index) => {
+    const widget = widgetMap.get(item.i) ?? safeWidgets[index];
     const width = Math.max(1, Math.min(item.w ?? widget?.layout?.w ?? 4, DASHBOARD_GRID_COLS));
     const height = Math.max(1, item.h ?? widget?.layout?.h ?? 4);
     const safeX = Math.max(0, Math.min(item.x ?? 0, DASHBOARD_GRID_COLS - width));

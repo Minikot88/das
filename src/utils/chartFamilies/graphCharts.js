@@ -1,0 +1,7 @@
+export const graphCharts = { id: "graph", label: "Graph", iconKey: "graph", categories: ["relationship"], description: "Networks, dependency graphs, and node-link views.", variants: [
+  { id: "basic-graph", label: "Basic Graph", description: "Simple node-link graph.", family: "graph", exampleKey: "basic-graph", chartId: "graph", requiredRoles: ["source","target"], optionalRoles: ["value","label","size"], renderingStrategy: "graph", supportLevel: "supported" },
+  { id: "force-graph", label: "Force Graph", description: "Force-directed network layout.", family: "graph", exampleKey: "force-graph", chartId: "force-graph", requiredRoles: ["source","target"], optionalRoles: ["value","label","size"], renderingStrategy: "graph", supportLevel: "supported" },
+  { id: "dependency-graph", label: "Dependency Graph", description: "Directed dependency relationships.", family: "graph", exampleKey: "dependency-graph", chartId: "dependency-graph", requiredRoles: ["source","target"], optionalRoles: ["value","label"], renderingStrategy: "graph", supportLevel: "supported" },
+  { id: "dynamic-graph", label: "Dynamic Graph", description: "Graph layout prepared for live updates.", family: "graph", exampleKey: "dynamic-graph", chartId: "graph", requiredRoles: ["source","target"], optionalRoles: ["value","label"], renderingStrategy: "graph", supportLevel: "metadata-ready" }
+] };
+export default graphCharts;

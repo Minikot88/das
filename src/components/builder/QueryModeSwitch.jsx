@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 
 export default function QueryModeSwitch({ queryMode, onChange }) {
   return (
@@ -10,7 +10,7 @@ export default function QueryModeSwitch({ queryMode, onChange }) {
         className={`builder-query-mode-btn${queryMode === "visual" ? " is-active" : ""}`}
         onClick={() => onChange("visual")}
       >
-        Visual
+        <span>Visual</span>
       </button>
       <button
         type="button"
@@ -19,7 +19,7 @@ export default function QueryModeSwitch({ queryMode, onChange }) {
         className={`builder-query-mode-btn${queryMode === "sql" ? " is-active" : ""}`}
         onClick={() => onChange("sql")}
       >
-        SQL
+        <span>SQL</span>
       </button>
     </div>
   );

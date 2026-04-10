@@ -13,12 +13,12 @@ function formatValue(value) {
   return value ?? "";
 }
 
-export default function KPIWidget({ title, value }) {
+export default function KPIWidget({ title, value, showTitle = true, showCaption = true }) {
   return (
     <div className="kpi-widget">
-      <div className="kpi-label">{title}</div>
+      {showTitle ? <div className="kpi-label">{title}</div> : null}
       <div className="kpi-value">{formatValue(value)}</div>
-      <div className="kpi-caption">Single metric snapshot</div>
+      {showCaption ? <div className="kpi-caption">Single metric snapshot</div> : null}
     </div>
   );
 }

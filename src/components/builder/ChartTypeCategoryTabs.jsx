@@ -1,5 +1,23 @@
 import React from "react";
 
+const CATEGORY_LABELS = {
+  comparison: "Comparison",
+  trend: "Trend",
+  distribution: "Distribution",
+  composition: "Composition",
+  relationship: "Relationship",
+  hierarchy: "Hierarchy",
+  flow: "Flow",
+  statistical: "Statistical",
+  geo: "Geo",
+  matrix: "Matrix",
+  summary: "Summary",
+  table: "Table",
+  advanced: "Advanced",
+  custom: "Custom",
+  recommended: "Recommended",
+};
+
 export default function ChartTypeCategoryTabs({
   categories = [],
   activeCategory,
@@ -16,7 +34,7 @@ export default function ChartTypeCategoryTabs({
           className={`builder-chart-category-tab${activeCategory === category.id ? " is-active" : ""}`}
           onClick={() => onChange(category.id)}
         >
-          <span>{category.label}</span>
+          <span>{CATEGORY_LABELS[category.id] ?? category.label}</span>
         </button>
       ))}
     </div>

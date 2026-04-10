@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import ChartCard from "./ChartCardV2";
+import ChartCard from "./ChartCard";
 
 function getFullscreenHeight() {
   if (typeof window === "undefined") return 640;

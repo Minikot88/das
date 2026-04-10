@@ -1,5 +1,7 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import { useI18n } from "../../utils/i18n";
+import Button from "./Button";
+import Input from "./Input";
 
 export default function CreateProjectModal({ onClose, onCreate }) {
   const { t } = useI18n();
@@ -18,23 +20,31 @@ export default function CreateProjectModal({ onClose, onCreate }) {
 
   return (
     <div className="modal-backdrop" onClick={onClose} role="dialog" aria-modal="true">
-      <div className="modal-box" onClick={(event) => event.stopPropagation()}>
+      <div className="modal-box ui-surface" onClick={(event) => event.stopPropagation()}>
         <div className="modal-header">
           <div className="modal-header-copy">
             <h2 className="modal-title">{t("home.newProject")}</h2>
-            <p className="modal-subtitle">{t("home.projectNamePlaceholder")}</p>
           </div>
-          <button type="button" className="modal-close-btn" onClick={onClose} aria-label={t("common.close")}>×</button>
+          <button type="button" className="modal-close-btn" onClick={onClose} aria-label={t("common.close")}>x</button>
         </div>
         <form onSubmit={handleSubmit} className="modal-body">
-          <div className="modal-field">
-            <label className="modal-label" htmlFor="project-name-input">{t("home.projectName")}</label>
-            <input id="project-name-input" className="modal-input" type="text" placeholder={t("home.projectNamePlaceholder")} value={name} onChange={(event) => { setName(event.target.value); setError(""); }} autoFocus />
-          </div>
-          {error ? <div className="modal-error">{error}</div> : null}
+          <Input
+            id="project-name-input"
+            className="modal-field"
+            label={t("home.projectName")}
+            error={error || undefined}
+            type="text"
+            placeholder=""
+            value={name}
+            onChange={(event) => {
+              setName(event.target.value);
+              setError("");
+            }}
+            autoFocus
+          />
           <div className="modal-actions">
-            <button type="button" className="modal-btn cancel" onClick={onClose}>{t("common.cancel")}</button>
-            <button type="submit" className="modal-btn primary">{t("home.createProject")}</button>
+            <Button type="button" variant="ghost" className="modal-btn cancel" onClick={onClose}>{t("common.cancel")}</Button>
+            <Button type="submit" variant="primary" className="modal-btn primary">{t("home.createProject")}</Button>
           </div>
         </form>
       </div>

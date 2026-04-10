@@ -1,4 +1,4 @@
-import { normalizeChartConfig } from "./normalizeChartConfig";
+﻿import { normalizeChartConfig } from "./normalizeChartConfig";
 import { buildChartOptionByType, createDefaultWidgetName, getChartTypeLabel } from "./builderChartUtils";
 
 export function createBuilderContextForDashboard({
@@ -45,6 +45,25 @@ export function readBuilderReturnState(routeState) {
   const payload = routeState?.builderReturn;
   if (!payload?.projectId || !payload?.sheetId || !payload?.dashboardId) return null;
   return payload;
+}
+
+export function toDashboardChartModel(widget) {
+  if (!widget) return null;
+
+  const config = normalizeChartConfig(widget.config ?? {});
+  const title = widget.name || config.title || config.name || "Chart";
+
+  return {
+    ...config,
+    id: widget.id,
+    chartId: widget.chartId,
+    sheetId: widget.sheetId,
+    title,
+    name: title,
+    createdAt: widget.createdAt,
+    colorTheme: config.colorTheme,
+    dataset: config.dataset,
+  };
 }
 
 export function resolveDashboardWidgets(layout = [], charts = []) {

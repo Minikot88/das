@@ -1,11 +1,11 @@
 ﻿import React from "react";
 
 export default function Button({ children, variant = "secondary", icon, className = "", ...props }) {
-  let styles = "button-base";
-  if (variant === "primary") styles += " button-primary";
-  if (variant === "secondary") styles += " button-secondary";
-  if (variant === "ghost") styles += " button-ghost";
-  if (variant === "danger") styles += " button-danger";
+  let styles = "ui-button button-base";
+  if (variant === "primary") styles += " is-primary button-primary";
+  if (variant === "secondary") styles += " is-secondary button-secondary";
+  if (variant === "ghost") styles += " is-ghost button-ghost";
+  if (variant === "danger") styles += " is-danger button-danger";
   if (props.disabled) styles += " is-disabled";
   if (className) styles += ` ${className}`;
 

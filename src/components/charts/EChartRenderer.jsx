@@ -2,7 +2,7 @@
  * components/charts/EChartRenderer.jsx
  * Unified Apache ECharts visualization engine for the active app.
  */
-import React, { memo, useCallback, useEffect, useMemo, useState } from "react";
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactECharts from "echarts-for-react";
 import * as echarts from "echarts";
 import { runQuery } from "../../utils/queryEngine";
@@ -28,16 +28,30 @@ const GRAPHICAL_TYPES = new Set([
   "donut",
   "rose",
   "scatter",
+  "effect-scatter",
   "bubble",
   "heatmap",
   "histogram",
+  "tree",
   "radar",
   "gauge",
   "progress-ring",
   "funnel",
+  "sankey",
+  "theme-river",
+  "pictorial-bar",
   "treemap",
   "sunburst",
   "waterfall",
+  "candlestick",
+  "boxplot",
+  "parallel",
+  "graph",
+  "lines",
+  "map",
+  "calendar",
+  "matrix",
+  "custom",
 ]);
 
 const CHART_TYPE_LABELS = {
@@ -54,16 +68,30 @@ const CHART_TYPE_LABELS = {
   donut: "Donut chart",
   rose: "Rose chart",
   scatter: "Scatter plot",
+  "effect-scatter": "Effect scatter plot",
   bubble: "Bubble chart",
   heatmap: "Heatmap",
   histogram: "Histogram",
+  tree: "Tree",
   radar: "Radar chart",
   gauge: "Gauge",
   "progress-ring": "Progress ring",
   funnel: "Funnel chart",
+  sankey: "Sankey diagram",
+  "theme-river": "Theme river",
+  "pictorial-bar": "Pictorial bar chart",
   treemap: "Treemap",
   sunburst: "Sunburst",
   waterfall: "Waterfall chart",
+  candlestick: "Candlestick chart",
+  boxplot: "Boxplot",
+  parallel: "Parallel coordinates",
+  graph: "Graph network",
+  lines: "Geo lines",
+  map: "Map",
+  calendar: "Calendar heatmap",
+  matrix: "Matrix heatmap",
+  custom: "Custom series",
   table: "Table",
   kpi: "KPI",
 };
@@ -191,8 +219,17 @@ const EChartRenderer = memo(function EChartRenderer({
   onDrilldown,
   onDataReady,
   mode = "default",
+  chrome = "default",
 }) {
   const [themeRevision, setThemeRevision] = useState(0);
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+  const chartWrapperRef = useRef(null);
+  const echartsRef = useRef(null);
+  const resizeFrameRef = useRef(0);
+  const lastResizeRef = useRef({ width: 0, height: 0 });
+  const isBuilderPreview = mode === "builder-preview";
+  const containerH = containerHeight ?? (isBuilderPreview ? "100%" : 350);
+  const hasContainerSize = containerSize.width > 0 && containerSize.height > 0;
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -204,6 +241,60 @@ const EChartRenderer = memo(function EChartRenderer({
     observer.observe(document.body, { attributes: true, attributeFilter: ["class"] });
     return () => observer.disconnect();
   }, []);
+
+  const resizeChart = useCallback(() => {
+    const container = chartWrapperRef.current;
+    const echartsInstance = echartsRef.current?.getEchartsInstance?.();
+    if (!container) return;
+
+    const width = Math.round(container.clientWidth);
+    const height = Math.round(container.clientHeight);
+    const nextSize = { width, height };
+
+    setContainerSize((currentSize) =>
+      currentSize.width === nextSize.width && currentSize.height === nextSize.height
+        ? currentSize
+        : nextSize
+    );
+
+    if (!echartsInstance || !width || !height) return;
+
+    if (lastResizeRef.current.width === width && lastResizeRef.current.height === height) return;
+
+    lastResizeRef.current = { width, height };
+    echartsInstance.resize({ width, height, animation: { duration: 120 } });
+  }, []);
+
+  useEffect(() => {
+    const container = chartWrapperRef.current;
+    if (!container) return undefined;
+
+    const scheduleResize = () => {
+      if (resizeFrameRef.current) cancelAnimationFrame(resizeFrameRef.current);
+      resizeFrameRef.current = requestAnimationFrame(() => {
+        resizeFrameRef.current = 0;
+        resizeChart();
+      });
+    };
+
+    scheduleResize();
+
+    const resizeObserver = typeof ResizeObserver !== "undefined"
+      ? new ResizeObserver(() => {
+          scheduleResize();
+        })
+      : null;
+
+    resizeObserver?.observe(container);
+    window.addEventListener("resize", scheduleResize);
+
+    return () => {
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", scheduleResize);
+      if (resizeFrameRef.current) cancelAnimationFrame(resizeFrameRef.current);
+      resizeFrameRef.current = 0;
+    };
+  }, [containerH, resizeChart]);
 
   const normalizedChart = useMemo(
     () =>
@@ -230,10 +321,10 @@ const EChartRenderer = memo(function EChartRenderer({
   const showLegend = normalizedChart.legendVisible !== false;
   const isSmooth = normalizedChart.smooth === true;
   const isReadOnly = mode === "readonly";
+  const isMinimalChrome = chrome === "minimal";
   const sourceField = xField || yField || groupField || "Not configured";
   const drilldownEnabled = !isReadOnly && canChartDrilldown(normalizedChart);
   const isDrilled = Boolean(drilldown?.filters?.length);
-  const containerH = containerHeight ?? 350;
 
   const [fetchedData, setFetchedData] = useState([]);
   const [loading, setLoading] = useState(!propData);
@@ -350,6 +441,7 @@ const EChartRenderer = memo(function EChartRenderer({
             showLegend,
             isSmooth,
             isReadOnly,
+            mode,
             themeRevision,
           })
         : null,
@@ -359,6 +451,7 @@ const EChartRenderer = memo(function EChartRenderer({
       groupField,
       isReadOnly,
       isSmooth,
+      mode,
       normalizedChart,
       seriesKeys,
       showLegend,
@@ -369,6 +462,11 @@ const EChartRenderer = memo(function EChartRenderer({
       yField,
     ]
   );
+
+  useEffect(() => {
+    lastResizeRef.current = { width: 0, height: 0 };
+    resizeChart();
+  }, [resizeChart, themeRevision, chartData, containerH, isDrilled, type]);
 
   if (loading) return <ChartSkeleton height={containerH} />;
 
@@ -414,8 +512,9 @@ const EChartRenderer = memo(function EChartRenderer({
     return (
       <ChartErrorBoundary key={chart?.id ?? xField ?? type}>
         <div
-          className={`chart-renderer-root chart-renderer-root-drilled${isReadOnly ? " is-readonly" : ""}`}
-          style={{ height: containerH }}
+          ref={chartWrapperRef}
+          className={`chart-renderer-root chart-renderer-root-drilled${isReadOnly ? " is-readonly" : ""}${isBuilderPreview ? " is-builder-preview" : ""}`}
+          style={{ height: containerH, minHeight: isBuilderPreview ? 280 : undefined }}
         >
           <DrilldownTable data={activeData} title={displayTitle} drilldown={drilldown} />
         </div>
@@ -426,8 +525,13 @@ const EChartRenderer = memo(function EChartRenderer({
   if (type === "table") {
     return (
       <ChartErrorBoundary key={chart?.id ?? xField ?? type}>
-        <div className={`chart-renderer-root${isReadOnly ? " is-readonly" : ""}`} style={{ height: containerH }}>
-          <DataTable data={chartData} />
+        <div
+          className={`chart-renderer-root${isReadOnly ? " is-readonly" : ""}${isBuilderPreview ? " is-builder-preview" : ""}`}
+          style={{ height: containerH, minHeight: isBuilderPreview ? 280 : undefined }}
+        >
+          <div ref={chartWrapperRef} className="chart-renderer-surface">
+            <DataTable data={chartData} />
+          </div>
         </div>
       </ChartErrorBoundary>
     );
@@ -437,8 +541,18 @@ const EChartRenderer = memo(function EChartRenderer({
     const total = chartData.reduce((sum, datum) => sum + (Number(datum[yField]) || 0), 0);
     return (
       <ChartErrorBoundary key={chart?.id ?? xField ?? type}>
-        <div className={`chart-renderer-root${isReadOnly ? " is-readonly" : ""}`} style={{ height: containerH }}>
-          <KPIWidget title={displayTitle} value={total} />
+        <div
+          className={`chart-renderer-root${isReadOnly ? " is-readonly" : ""}${isBuilderPreview ? " is-builder-preview" : ""}`}
+          style={{ height: containerH, minHeight: isBuilderPreview ? 280 : undefined }}
+        >
+          <div ref={chartWrapperRef} className="chart-renderer-surface">
+            <KPIWidget
+              title={displayTitle}
+              value={total}
+              showTitle={!isMinimalChrome}
+              showCaption={!isMinimalChrome}
+            />
+          </div>
         </div>
       </ChartErrorBoundary>
     );
@@ -447,19 +561,26 @@ const EChartRenderer = memo(function EChartRenderer({
   return (
     <ChartErrorBoundary key={chart?.id ?? xField ?? type}>
       <div
-        className={`chart-renderer-root${isReadOnly ? " is-readonly" : ""}${drilldownEnabled ? " is-drillable" : ""}`}
-        style={{ height: containerH }}
+        ref={chartWrapperRef}
+        className={`chart-renderer-root${isReadOnly ? " is-readonly" : ""}${drilldownEnabled ? " is-drillable" : ""}${isBuilderPreview ? " is-builder-preview" : ""}`}
+        style={{ height: containerH, minHeight: isBuilderPreview ? 280 : undefined }}
       >
-        <ReactECharts
-          echarts={echarts}
-          option={chartOption ?? {}}
-          notMerge
-          lazyUpdate
-          onEvents={drilldownEnabled ? { click: handleChartClick } : undefined}
-          style={{ width: "100%", height: "100%" }}
-          className="chart-echarts-surface"
-          opts={{ renderer: "canvas" }}
-        />
+        {hasContainerSize ? (
+          <ReactECharts
+            ref={echartsRef}
+            echarts={echarts}
+            option={chartOption ?? {}}
+            notMerge
+            lazyUpdate
+            autoResize={false}
+            onEvents={drilldownEnabled ? { click: handleChartClick } : undefined}
+            style={{ width: "100%", height: "100%" }}
+            className={`chart-echarts-surface${isBuilderPreview ? " is-builder-preview" : ""}`}
+            opts={{ renderer: "canvas" }}
+          />
+        ) : (
+          <div className="chart-echarts-placeholder" aria-hidden="true" />
+        )}
       </div>
     </ChartErrorBoundary>
   );

@@ -16,7 +16,7 @@ function SqlResultFieldList({ selectedDb, selectedTable, fields = [], onFieldAss
   }
 
   return (
-    <div className="builder-sql-field-list">
+    <div className="builder-sql-field-list" style={{ gap: 5 }}>
       {fields.map((field) => {
         const roleHints = getFieldRoleHints?.({
           id: `${selectedDb}.${selectedTable}.${field.name}`,
@@ -34,6 +34,7 @@ function SqlResultFieldList({ selectedDb, selectedTable, fields = [], onFieldAss
             onDragStart={(event) => handleDragStart(event, field)}
             onDragEnd={handleDragEnd}
             onClick={() => onFieldAssign(selectedDb, selectedTable, field)}
+            style={{ padding: "6px 8px" }}
           >
             <div className="builder-sql-field-copy">
               <strong>{field.name}</strong>
@@ -50,6 +51,7 @@ function SqlResultFieldList({ selectedDb, selectedTable, fields = [], onFieldAss
                       event.stopPropagation();
                       onFieldAssign(selectedDb, selectedTable, field, role.key);
                     }}
+                    style={{ minHeight: 22, padding: "0 7px", fontSize: 10 }}
                   >
                     {role.label}
                   </button>
@@ -78,15 +80,21 @@ export default function BuilderDataPane({
 }) {
   const requiredRoles = (roleAssignments ?? []).filter((role) => role.required);
   const completedRoles = requiredRoles.filter((role) => role.state.status === "valid").length;
+  const explorerLabel = queryMode === "sql" ? "Query Result" : "Explorer";
+  const explorerCount = queryMode === "sql" ? `${queryResult?.fieldMeta?.length ?? 0} fields` : `${tableFields?.length ?? 0} fields`;
 
   return (
     <aside className="builder-pane-shell builder-pane-shell-left">
-      <div className="builder-pane-frame builder-pane-frame-left">
-        <div className="builder-pane-header">
-          <div className="builder-pane-header-copy">
-            <h2 className="builder-pane-title">Data</h2>
+      <div
+        className="builder-pane-frame builder-pane-frame-left"
+        style={{ minHeight: 0, height: "100%", overflow: "hidden", gap: 6 }}
+      >
+        <div className="builder-pane-header" style={{ paddingBottom: 6 }}>
+          <div className="builder-pane-header-copy" style={{ gap: 8, flexWrap: "wrap" }}>
+            <h2 className="builder-pane-title">Data Source</h2>
+            <span className="builder-preview-chip is-soft" style={{ minHeight: 20 }}>{explorerLabel}</span>
           </div>
-          <span className="builder-pane-status">{selectedTable ? "Connected" : "Pending"}</span>
+          <span className="builder-pane-status">{selectedTable ? "Ready" : "Select"}</span>
         </div>
 
         <BuilderSourceSummary
@@ -96,29 +104,59 @@ export default function BuilderDataPane({
           tableFields={tableFields}
         />
 
-        <div className="builder-data-pane-chart-brief">
+        <div
+          className="builder-data-pane-chart-brief"
+          style={{
+            padding: "7px 8px",
+            borderRadius: 5,
+            background: "var(--surface)",
+            borderStyle: "dashed",
+          }}
+        >
           <div>
-            <span className="builder-query-label">Current chart</span>
+            <span className="builder-query-label">Selection</span>
             <strong>{chartDefinition?.title ?? "Chart"}</strong>
           </div>
           <span className={`builder-status-badge${completedRoles === requiredRoles.length && requiredRoles.length ? " ready" : ""}`}>
-            {completedRoles}/{requiredRoles.length}
+            {completedRoles}/{requiredRoles.length} ready
           </span>
         </div>
 
-        {lastMappingNotice ? <div className="builder-data-pane-note">{lastMappingNotice}</div> : null}
-
-        <div className="builder-left-section-label">{queryMode === "sql" ? "Result Fields" : "Schema"}</div>
-        {queryMode === "sql" && queryResult?.fieldMeta?.length ? (
-          <SqlResultFieldList
-            selectedDb={selectedDb}
-            selectedTable={selectedTable}
-            fields={queryResult.fieldMeta}
-            onFieldAssign={onFieldAssign}
-            getFieldRoleHints={getFieldRoleHints}
-          />
-        ) : null}
-        <div className="builder-pane-body builder-pane-body-scroll">
+        <div
+          className="builder-left-section-label"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            paddingInline: 2,
+            marginTop: 2,
+          }}
+        >
+          <span>{explorerLabel}</span>
+          <span>{explorerCount}</span>
+        </div>
+        <div
+          className="builder-pane-body builder-pane-body-scroll"
+          style={{
+            minHeight: 0,
+            overflowY: "auto",
+            paddingRight: 2,
+            borderTop: "1px solid var(--divider)",
+            paddingTop: 6,
+            display: "grid",
+            gap: 8,
+            alignContent: "start",
+          }}
+        >
+          {queryMode === "sql" && queryResult?.fieldMeta?.length ? (
+            <SqlResultFieldList
+              selectedDb={selectedDb}
+              selectedTable={selectedTable}
+              fields={queryResult.fieldMeta}
+              onFieldAssign={onFieldAssign}
+              getFieldRoleHints={getFieldRoleHints}
+            />
+          ) : null}
           <SchemaTree
             onFieldAssign={onFieldAssign}
             selectedDb={selectedDb}
@@ -130,4 +168,3 @@ export default function BuilderDataPane({
     </aside>
   );
 }
-

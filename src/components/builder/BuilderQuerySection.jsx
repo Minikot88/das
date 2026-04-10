@@ -2,7 +2,7 @@
 
 function getShapeLabel(chartDefinition, slots) {
   const mapped = slots.filter((slot) => slot.field).map((slot) => slot.label);
-  if (!mapped.length) return "Pending";
+  if (!mapped.length) return "รอการแมป";
   return `${chartDefinition.family} · ${mapped.join(" / ")}`;
 }
 
@@ -14,41 +14,44 @@ export default function BuilderQuerySection({
   slotAssignments,
 }) {
   const sql = queryPreview?.sql ?? "";
-  const params = queryPreview?.params ?? [];
-  const columns = queryPreview?.columns ?? [];
   const rowCount = queryPreview?.rowCount ?? 0;
-  const columnCount = queryPreview?.columnCount ?? columns.length;
+  const columnCount = queryPreview?.columnCount ?? (queryPreview?.columns?.length ?? 0);
   const hasSql = Boolean(sql);
+  const isSqlMode = queryPreview?.mode === "sql";
 
   const handleCopySql = async () => {
     if (!sql) return;
     try {
       await navigator.clipboard?.writeText(sql);
     } catch {
-      // Ignore clipboard failures in unsupported environments.
+      // Ignore clipboard failures.
     }
   };
 
   return (
-    <div className="builder-query-panel">
-      <div className="builder-query-header">
+    <details className="builder-query-panel" open={isSqlMode} style={{ gap: 6 }}>
+      <summary
+        className="builder-query-header"
+        style={{
+          listStyle: "none",
+          cursor: "pointer",
+        }}
+      >
         <div className="builder-query-header-copy">
           <span className="builder-query-label">Query</span>
-          <p className="builder-section-description">{queryPreview?.mode === "sql" ? "SQL mode" : "Visual mode"}</p>
+          <p className="builder-section-description">{isSqlMode ? "SQL mode" : "Visual mode"}</p>
         </div>
         <div className="builder-query-header-actions">
           <span className={`builder-query-status${hasSql ? " ready" : ""}`}>{rowCount} rows</span>
-          <button type="button" className="builder-query-copy-btn" onClick={handleCopySql} disabled={!hasSql}>
-            Copy SQL
-          </button>
+          <span className="builder-query-sql-badge">{hasSql ? `${sql.split("\n").length} lines` : "Waiting"}</span>
         </div>
-      </div>
+      </summary>
 
       <div className="builder-query-summary">
         <div className="builder-query-row builder-query-row-compact">
           <div className="builder-query-tags">
             <span className="builder-query-tag">{selectedTable ?? "No table"}</span>
-            {slotAssignments.filter((slot) => slot.field).map((slot) => (
+            {slotAssignments.filter((slot) => slot.field).slice(0, 3).map((slot) => (
               <span key={slot.key} className="builder-query-tag">{slot.label}: {slot.field}</span>
             ))}
             {queryPreview?.aggregate ? (
@@ -59,29 +62,28 @@ export default function BuilderQuerySection({
           </div>
         </div>
 
-        {queryPreview?.error ? (
-          <div className="builder-query-sql-empty">{queryPreview.error}</div>
-        ) : null}
+        {queryPreview?.error ? <div className="builder-query-sql-empty">{queryPreview.error}</div> : null}
 
         <div className="builder-query-sql-panel">
           <div className="builder-query-sql-header">
             <div>
               <span className="builder-query-label">SQL</span>
             </div>
-            <span className="builder-query-sql-badge">{hasSql ? `${sql.split("\n").length} lines` : "Incomplete"}</span>
+            <div className="builder-query-header-actions" style={{ gap: 6 }}>
+              <button type="button" className="builder-query-copy-btn" onClick={handleCopySql} disabled={!hasSql}>
+                Copy SQL
+              </button>
+            </div>
           </div>
           {hasSql ? (
             <pre className="builder-query-sql-block">
               <code>{sql}</code>
             </pre>
           ) : (
-            <div className="builder-query-sql-empty">
-              Pending
-            </div>
+            <div className="builder-query-sql-empty">Waiting for a complete mapping.</div>
           )}
         </div>
       </div>
-    </div>
+    </details>
   );
 }
-

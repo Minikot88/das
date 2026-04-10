@@ -1,44 +1,95 @@
-/**
- * components/builder/FieldZone.jsx
- * Drag-and-drop drop zone for Builder axes.
- */
-import React, { useState } from "react";
+﻿import React, { useEffect, useState } from "react";
 
 const DRAG_KEY = "bi-field";
 
-export default function FieldZone({ label, field, onClear, zone, onDrop }) {
+export default function FieldZone({
+  label,
+  badge,
+  field,
+  fieldType,
+  helper,
+  tagPrefix,
+  onClear,
+  zone,
+  required = false,
+  onDrop,
+}) {
   const [dragOver, setDragOver] = useState(false);
+  const [activeDragField, setActiveDragField] = useState(null);
 
-  function handleDragOver(e) {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "copy";
+  useEffect(() => {
+    function handleFieldDrag(event) {
+      setActiveDragField(event.detail?.field ?? null);
+    }
+
+    function handleFieldDragEnd() {
+      setActiveDragField(null);
+      setDragOver(false);
+    }
+
+    window.addEventListener("builder-field-drag", handleFieldDrag);
+    window.addEventListener("builder-field-drag-end", handleFieldDragEnd);
+
+    return () => {
+      window.removeEventListener("builder-field-drag", handleFieldDrag);
+      window.removeEventListener("builder-field-drag-end", handleFieldDragEnd);
+    };
+  }, []);
+
+  function handleDragOver(event) {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
     setDragOver(true);
   }
 
-  function handleDrop(e) {
-    e.preventDefault();
+  function handleDrop(event) {
+    event.preventDefault();
     setDragOver(false);
     try {
-      const payload = JSON.parse(e.dataTransfer.getData(DRAG_KEY));
+      const payload = JSON.parse(event.dataTransfer.getData(DRAG_KEY));
       if (payload?.field) onDrop(payload.field, zone);
-    } catch { /* ignore */ }
+    } catch {
+      // Ignore invalid drag payloads.
+    }
   }
+
+  const emptyTitle = activeDragField ? `Drop ${activeDragField.name}` : helper ?? "Drag a field here";
 
   return (
     <div
-      className={`field-drop-zone${dragOver ? " drag-over" : ""}`}
+      className={`field-drop-zone compact${dragOver ? " drag-over" : ""}${field ? " has-value" : ""}`}
       onDragOver={handleDragOver}
       onDragLeave={() => setDragOver(false)}
       onDrop={handleDrop}
     >
-      <div className="zone-label-mini">{label}</div>
+      <div className="zone-header compact">
+        <div className="zone-label-row">
+          <div className="zone-label-mini">{label}</div>
+          {badge ? <span className="zone-role-badge">{badge}</span> : null}
+          {required ? <span className="zone-required-badge">Req</span> : null}
+        </div>
+        {field ? (
+          <button type="button" className="zone-remove" onClick={onClear} aria-label={`Clear ${label}`}>
+            Clear
+          </button>
+        ) : null}
+      </div>
+
       {field ? (
-        <div className="zone-filled-content">
-          <span className="zone-field-name">{field}</span>
-          <button className="zone-remove" onClick={onClear}>×</button>
+        <div className="zone-filled-content compact">
+          <div className="zone-tag-stack">
+            {tagPrefix ? <span className="zone-field-tag zone-field-tag-accent">{tagPrefix}</span> : null}
+            <span className="zone-field-name">{field}</span>
+            {fieldType ? <span className="zone-field-tag">{fieldType}</span> : null}
+          </div>
         </div>
       ) : (
-        <div className="zone-placeholder">Drop Column</div>
+        <div className="zone-empty-state compact">
+          <span className="zone-drop-icon">+</span>
+          <div className="zone-empty-copy">
+            <strong className="zone-empty-title">{emptyTitle}</strong>
+          </div>
+        </div>
       )}
     </div>
   );

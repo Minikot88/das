@@ -36,13 +36,14 @@ function toCode(value, indent = 0) {
 }
 
 export function buildWidgetExportCode(widget) {
-  const componentName = safeComponentName(widget.name, "EmbeddedChart");
+  const safeWidget = widget ?? {};
+  const componentName = safeComponentName(safeWidget.name, "EmbeddedChart");
 
   return [
     "import React from \"react\";",
     "import ReactECharts from \"echarts-for-react\";",
     "",
-    `const option = ${toCode(widget.echartsOption)};`,
+    `const option = ${toCode(safeWidget.echartsOption ?? {})};`,
     "",
     `export default function ${componentName}() {`,
     "  return (",
@@ -56,12 +57,13 @@ export function buildWidgetExportCode(widget) {
 
 export function buildDashboardExportCode(dashboardName, widgets) {
   const componentName = safeComponentName(dashboardName, "EmbeddedDashboard");
-  const widgetBlocks = widgets
+  const safeWidgets = Array.isArray(widgets) ? widgets.filter(Boolean) : [];
+  const widgetBlocks = safeWidgets
     .map((widget, index) => {
       const optionName = `option${index + 1}`;
       const styleValue = {
-        gridColumn: `${widget.layout.x + 1} / span ${widget.layout.w}`,
-        gridRow: `${widget.layout.y + 1} / span ${widget.layout.h}`,
+        gridColumn: `${(widget.layout?.x ?? 0) + 1} / span ${widget.layout?.w ?? 4}`,
+        gridRow: `${(widget.layout?.y ?? 0) + 1} / span ${widget.layout?.h ?? 4}`,
       };
 
       return [
@@ -77,7 +79,7 @@ export function buildDashboardExportCode(dashboardName, widgets) {
     })
     .join("\n\n");
 
-  const widgetArray = `[${widgets.map((_, index) => `widget${index + 1}`).join(", ")}]`;
+  const widgetArray = `[${safeWidgets.map((_, index) => `widget${index + 1}`).join(", ")}]`;
 
   return [
     "import React from \"react\";",

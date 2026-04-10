@@ -4,9 +4,14 @@ const AUTOSAVE_DELAY_MS = 400;
 
 let workspaceSaveTimer = null;
 
+function canUseStorage() {
+  return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
+}
+
 function readJson(key) {
+  if (!canUseStorage()) return null;
   try {
-    const raw = localStorage.getItem(key);
+    const raw = window.localStorage.getItem(key);
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -14,8 +19,9 @@ function readJson(key) {
 }
 
 function writeJson(key, value) {
+  if (!canUseStorage()) return;
   try {
-    localStorage.setItem(key, JSON.stringify(value));
+    window.localStorage.setItem(key, JSON.stringify(value));
   } catch {
     // ignore storage failures for now
   }
@@ -51,6 +57,8 @@ export function saveWorkspaceState(state) {
 }
 
 export function queueWorkspaceSave(state) {
+  if (typeof window === "undefined") return;
+
   if (workspaceSaveTimer) {
     window.clearTimeout(workspaceSaveTimer);
   }
@@ -62,6 +70,8 @@ export function queueWorkspaceSave(state) {
 }
 
 export function flushWorkspaceSave(state) {
+  if (typeof window === "undefined") return;
+
   if (workspaceSaveTimer) {
     window.clearTimeout(workspaceSaveTimer);
     workspaceSaveTimer = null;
@@ -78,8 +88,9 @@ export function saveBuilderDraft(draft) {
 }
 
 export function clearBuilderDraft() {
+  if (!canUseStorage()) return;
   try {
-    localStorage.removeItem(BUILDER_DRAFT_STORAGE_KEY);
+    window.localStorage.removeItem(BUILDER_DRAFT_STORAGE_KEY);
   } catch {
     // ignore storage failures for now
   }

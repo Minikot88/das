@@ -1,14 +1,4 @@
-/**
- * useStore.js — Enterprise BI global state (v7)
- *
- * Structure:
- *   Project → Sheets → Dashboards → Charts
- *
- * PRODUCTION PLAN:
- *   - Replace mock login with: POST /api/auth/login → JWT
- *   - Replace localStorage with server-side session + react-query sync
- *   - Projects/sheets/dashboards keyed by userId on backend
- */
+﻿
 import { create } from "zustand";
 import { normalizeChartConfig } from "../utils/normalizeChartConfig";
 import { schema } from "../data/mockData";
@@ -26,7 +16,6 @@ import {
 } from "../utils/layoutUtils";
 import { createCopyName, createEntityId, createTimestampId } from "../utils/id";
 
-// ─── Defaults ─────────────────────────────────────────────────────
 const defaultDashboard = (id = "dash-1", name = "Dashboard 1") => ({
   id,
   name,
@@ -105,7 +94,6 @@ function normalizeFilters(filters = {}) {
 
 const defaultFilters = normalizeFilters();
 
-// ─── Persistence ──────────────────────────────────────────────────
 function loadState() {
   return loadWorkspaceState();
 }
@@ -114,14 +102,11 @@ function saveState(s) {
   queueWorkspaceSave(s);
 }
 
-// ─── Migration: convert old v6 state (sheets[]) to v7 projects[] ──
 function migrateState(saved) {
   if (!saved) return null;
 
-  // Already v7 format
   if (saved.projects) return saved;
 
-  // v6 had flat sheets[] — migrate into a default project
   if (saved.sheets) {
     const sheets = saved.sheets.map((sh) => ({
       id:   sh.id,
@@ -154,8 +139,6 @@ function migrateState(saved) {
 const saved = migrateState(loadState());
 const savedBuilderDraft = loadBuilderDraft();
 
-// Active frontend store persists charts in one canonical config shape while
-// still reading legacy localStorage/chart payloads safely.
 function normalizeStoredChart(chart) {
   if (!chart) return chart;
 
@@ -247,7 +230,6 @@ function saveBuilderDraftState(draft) {
   saveBuilderDraft(draft);
 }
 
-// ─── Helpers ───────────────────────────────────────────────────────
 function getActiveProject(s) {
   return s.projects.find((p) => p.id === s.activeProjectId) ?? s.projects[0];
 }
@@ -262,28 +244,23 @@ function _getActiveDashboard(s) {
   return sheet?.dashboards.find((d) => d.id === s.activeDashboardId) ?? sheet?.dashboards[0];
 }
 
-// ─── Store ─────────────────────────────────────────────────────────
+
 export const useStore = create((set, get) => ({
 
-  // ── Auth
   user:            saved?.user            ?? null,
-  isAuthenticated: saved?.isAuthenticated ?? false,
+  isAuthenticated: saved?.isAuthenticated ?? true,
 
-  // ── Projects (top-level)
   projects:          saved?.projects          ?? [defaultProject()],
   activeProjectId:   saved?.activeProjectId   ?? "project-1",
   activeSheetId:     saved?.activeSheetId     ?? "sheet-1",
   activeDashboardId: saved?.activeDashboardId ?? "dash-1",
 
-  // ── Saved charts (root-level pool)
   charts: (saved?.charts ?? []).map(normalizeStoredChart),
   shareLinks: saved?.shareLinks ?? {},
 
-  // ── Theme
   theme: saved?.theme ?? "light",
-  locale: saved?.locale ?? "en",
+  locale: saved?.locale ?? "th",
 
-  // ── Filters
   filters: normalizeFilters(saved?.filters),
   filterPresets: saved?.filterPresets ?? [],
   ui: {
@@ -296,13 +273,11 @@ export const useStore = create((set, get) => ({
         : [],
   },
 
-  // ── UI state
   sidebarCollapsed: saved?.sidebarCollapsed ?? false,
   kpiBarVisible:    saved?.kpiBarVisible    ?? true,
   mobileMenuOpen:   false,
   rightPanelOpen:   saved?.ui?.rightSidebarOpen ?? false,
 
-  // ── Transient
   builderState:      savedBuilderDraft?.draft ?? defaultBuilderState,
   aiInsights:        [],
   isLoadingInsights: false,
@@ -310,10 +285,6 @@ export const useStore = create((set, get) => ({
   previewChart:      null,
   builderNavigationContext: defaultBuilderNavigationContext,
   builderDraft:      savedBuilderDraft ?? null,
-
-  // ════════════════════════════════════════════════════════════════
-  // AUTH
-  // ════════════════════════════════════════════════════════════════
 
   login: (email, password, name) => set((s) => {
     void password;
@@ -346,10 +317,6 @@ export const useStore = create((set, get) => ({
     clearBuilderDraft();
     return { user: null, isAuthenticated: false, aiInsights: [], builderState: defaultBuilderState, builderDraft: null };
   }),
-
-  // ════════════════════════════════════════════════════════════════
-  // PROJECTS
-  // ════════════════════════════════════════════════════════════════
 
   createProject: (name) => set((s) => {
     const id      = createEntityId("project");
@@ -431,10 +398,6 @@ export const useStore = create((set, get) => ({
     };
   }),
 
-  // ════════════════════════════════════════════════════════════════
-  // SHEETS (within active project)
-  // ════════════════════════════════════════════════════════════════
-
   createSheet: (name) => set((s) => {
     const id    = createEntityId("sheet");
     const dashId = createEntityId("dash");
@@ -459,7 +422,6 @@ export const useStore = create((set, get) => ({
     return { projects, activeSheetId: id, activeDashboardId: dashId, ui };
   }),
 
-  // Kept for backwards compat (Dashboard.jsx calls addSheet)
   addSheet: () => {
     const s = get();
     const project = getActiveProject(s);
@@ -587,10 +549,6 @@ export const useStore = create((set, get) => ({
     saveState({ ...s, activeSheetId: id, activeDashboardId: dashId, ui });
     return { activeSheetId: id, activeDashboardId: dashId ?? null, aiInsights: [], ui };
   }),
-
-  // ════════════════════════════════════════════════════════════════
-  // DASHBOARDS (within active sheet)
-  // ════════════════════════════════════════════════════════════════
 
   createDashboard: (name) => set((s) => {
     const id   = createEntityId("dash");
@@ -757,10 +715,6 @@ export const useStore = create((set, get) => ({
     return { projects, activeDashboardId: id, aiInsights: [], ui };
   }),
 
-  // ════════════════════════════════════════════════════════════════
-  // CHARTS (within active dashboard)
-  // ════════════════════════════════════════════════════════════════
-
   saveChart: (chart) => set((state) => {
     if (!state.activeProjectId) {
       console.error("Missing active context");
@@ -877,7 +831,6 @@ export const useStore = create((set, get) => ({
               const layout = [...d.layout, nextItem];
               return { 
                 ...d, 
-                // We no longer store full config in d.charts
                 layout 
               };
             }),
@@ -902,7 +855,6 @@ export const useStore = create((set, get) => ({
   }),
 
   addChart: (chart) => {
-    // Legacy support or direct add if needed, but we now prefer saveChart -> addChartToDashboard
     set((s) => {
       const projects = s.projects.map((p) =>
         p.id !== s.activeProjectId ? p : {
@@ -1059,7 +1011,7 @@ export const useStore = create((set, get) => ({
     return { projects, aiInsights: [] };
   }),
 
-  // Backwards compat: clearSheet(sheetId) → clears active dashboard
+  // Backwards compat: clearSheet(sheetId) â†’ clears active dashboard
   clearSheet: (sheetId) => {
     const s = get();
     get().clearDashboard(sheetId, s.activeDashboardId);
@@ -1084,10 +1036,6 @@ export const useStore = create((set, get) => ({
     saveState({ ...s, projects });
     return { projects };
   }),
-
-  // ════════════════════════════════════════════════════════════════
-  // FILTERS
-  // ════════════════════════════════════════════════════════════════
 
   setFilters: (updates) => set((s) => {
     const filters = normalizeFilters({ ...s.filters, ...updates });
@@ -1154,10 +1102,6 @@ export const useStore = create((set, get) => ({
     return { filterPresets };
   }),
 
-  // ════════════════════════════════════════════════════════════════
-  // AI INSIGHTS
-  // ════════════════════════════════════════════════════════════════
-
   setAiInsights:      (insights) => set({ aiInsights: insights, isLoadingInsights: false }),
   setLoadingInsights: (v)        => set({ isLoadingInsights: v }),
   generateShareLink: (sheetId) => {
@@ -1181,10 +1125,6 @@ export const useStore = create((set, get) => ({
     const state = get();
     return state.shareLinks?.[shareId] ?? null;
   },
-
-  // ════════════════════════════════════════════════════════════════
-  // BUILDER STATE (transient — not persisted)
-  // ════════════════════════════════════════════════════════════════
 
   startBuilderDraft: (context, seedState = null) => set((s) => {
     const matchesExistingDraft =
@@ -1306,10 +1246,6 @@ export const useStore = create((set, get) => ({
     })(),
   }),
 
-  // ════════════════════════════════════════════════════════════════
-  // UI
-  // ════════════════════════════════════════════════════════════════
-
   toggleTheme: () => set((s) => {
     const theme = s.theme === "light" ? "dark" : "light";
     saveState({ ...s, theme });
@@ -1353,7 +1289,6 @@ export const useStore = create((set, get) => ({
     return { kpiBarVisible };
   }),
 
-  // ── Preview Chart (transient)
   setPreviewChart: (chart) => set({ previewChart: chart }),
   clearPreviewChart: () => set({ previewChart: null }),
   setBuilderNavigationContext: (context) => set({ builderNavigationContext: context ?? null }),
@@ -1370,3 +1305,4 @@ export const useStore = create((set, get) => ({
     return { ui };
   }),
 }));
+

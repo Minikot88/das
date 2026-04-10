@@ -13,7 +13,6 @@ export default function MainLayout() {
   const theme = useStore((s) => s.theme);
   const sidebarCollapsed = useStore((s) => s.sidebarCollapsed);
   const setMobileMenuOpen = useStore((s) => s.setMobileMenuOpen);
-  const setRightPanelOpen = useStore((s) => s.setRightPanelOpen);
   const location = useLocation();
 
   useEffect(() => {
@@ -22,8 +21,7 @@ export default function MainLayout() {
 
   useEffect(() => {
     setMobileMenuOpen(false);
-    setRightPanelOpen(false);
-  }, [location.pathname, setMobileMenuOpen, setRightPanelOpen]);
+  }, [location.pathname, setMobileMenuOpen]);
 
   const isWorkspaceRoute = location.pathname === "/builder" || location.pathname === "/dashboard";
 

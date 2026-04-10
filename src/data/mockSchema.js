@@ -1,45 +1,36 @@
-/**
- * mockSchema.js
- * Simulates a PostgreSQL-like database schema tree.
- * Structure: database → table → field[]
- */
-import { TYPE_COLOR, TYPE_BADGE } from "../utils/chartUtils";
+import { TYPE_BADGE, TYPE_COLOR, schema as dataSchema } from "./mockData";
 
-export { TYPE_COLOR, TYPE_BADGE };
+export { TYPE_BADGE, TYPE_COLOR };
 
-export const schema = {
-  research: {
-    label: "research",
-    tables: {
-      scopus: {
-        label: "scopus",
-        dataKey: "scopus",            // maps to datasets[dataKey]
-        fields: [
-          { name: "id",              type: "string" },
-          { name: "dc_title",        type: "string" },
-          { name: "citedby_count",   type: "number" },
-          { name: "prism_coverDate", type: "date"   },
-        ],
-      },
+function toLabel(value) {
+  return String(value)
+    .replace(/[_-]+/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function buildTableSchema(tableName, table) {
+  return {
+    label: toLabel(tableName),
+    dataKey: tableName,
+    fields: table.fields,
+  };
+}
+
+export const schema = Object.fromEntries(
+  Object.entries(dataSchema).map(([dbName, tables]) => [
+    dbName,
+    {
+      label: toLabel(dbName),
+      tables: Object.fromEntries(
+        Object.entries(tables).map(([tableName, table]) => [
+          tableName,
+          buildTableSchema(tableName, table),
+        ])
+      ),
     },
-  },
+  ])
+);
 
-  business: {
-    label: "business",
-    tables: {
-      revenue: {
-        label: "revenue",
-        dataKey: "revenue",
-        fields: [
-          { name: "month", type: "string" },
-          { name: "value", type: "number" },
-        ],
-      },
-    },
-  },
-};
-
-/** Flatten into an array for easy lookup */
-export function findTable(db, table) {
-  return schema[db]?.tables?.[table] ?? null;
+export function findTable(dbName, tableName) {
+  return schema[dbName]?.tables?.[tableName] ?? null;
 }

@@ -25,7 +25,12 @@ export default function SidebarLeft() {
         aria-label={t("app.navigation")}
       >
         <div className="sidebar-top">
-          <div className="sidebar-label">{sidebarCollapsed ? "" : t("app.navigation")}</div>
+          {sidebarCollapsed ? null : (
+            <div className="sidebar-label">
+              <span>{t("app.name")}</span>
+              <strong>{t("app.navigation")}</strong>
+            </div>
+          )}
           <button
             type="button"
             className="sidebar-collapse-btn"
@@ -36,19 +41,28 @@ export default function SidebarLeft() {
           </button>
         </div>
 
-        {navItems.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.exact}
-            className={({ isActive }) => `nav-link${isActive ? " active" : ""}${sidebarCollapsed ? " icon-only" : ""}`}
-            onClick={() => setMobileMenuOpen(false)}
-            title={sidebarCollapsed ? item.label : undefined}
-          >
-            <span className="nav-icon">{item.icon}</span>
-            {sidebarCollapsed ? null : <span className="nav-label">{item.label}</span>}
-          </NavLink>
-        ))}
+        {sidebarCollapsed ? null : (
+          <div className="sidebar-workspace-card">
+            <span className="sidebar-workspace-kicker">Mini BI</span>
+            <strong>Mini BI</strong>
+          </div>
+        )}
+
+        <div className="sidebar-nav-group">
+          {navItems.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.exact}
+              className={({ isActive }) => `nav-link${isActive ? " active" : ""}${sidebarCollapsed ? " icon-only" : ""}`}
+              onClick={() => setMobileMenuOpen(false)}
+              title={sidebarCollapsed ? item.label : undefined}
+            >
+              <span className="nav-icon">{item.icon}</span>
+              {sidebarCollapsed ? null : <span className="nav-label">{item.label}</span>}
+            </NavLink>
+          ))}
+        </div>
       </nav>
     </>
   );

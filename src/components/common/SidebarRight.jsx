@@ -1,7 +1,3 @@
-/**
- * components/common/SidebarRight.jsx
- * Elite context-sensitive side panel.
- */
 import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useStore } from "../../store/useStore";
@@ -18,23 +14,27 @@ function SharePanel({ sheetId }) {
 
   return (
     <div className="share-panel">
-      <div className="filter-panel-header">🔗 Share Dashboard</div>
+      <div className="filter-panel-header">Share Dashboard</div>
       <div className="share-url" title={shareUrl}>{shareUrl}</div>
       <button className="rp-btn" onClick={handleCopy}>
-        {copied ? "✔ Copied!" : "📋 Copy Link"}
+        {copied ? "Copied" : "Copy Link"}
       </button>
     </div>
   );
 }
 
 function DashboardControls({ activeSheet }) {
-  const navigate   = useNavigate();
-  const clearSheet = useStore((s) => s.clearSheet);
+  const navigate = useNavigate();
+  const clearSheet = useStore((state) => state.clearSheet);
   const [showShare, setShowShare] = useState(false);
 
   return (
     <div className="right-panel-section">
-      <div className="panel-section-title">Dashboard Dashboard Controls</div>
+      <div className="panel-section-head">
+        <div>
+          <div className="panel-section-title">Quick Actions</div>
+        </div>
+      </div>
 
       <button
         id="rp-add-chart"
@@ -42,11 +42,11 @@ function DashboardControls({ activeSheet }) {
         onClick={() => navigate("/builder")}
         aria-label="Open chart builder"
       >
-        ＋ New Chart
+        New Chart
       </button>
 
-      <button className="rp-btn" onClick={() => setShowShare((v) => !v)}>
-        {showShare ? "▲ Hide Share" : "🔗 Share Dashboard"}
+      <button className="rp-btn" onClick={() => setShowShare((value) => !value)}>
+        {showShare ? "Hide Share" : "Share Dashboard"}
       </button>
 
       <button
@@ -57,38 +57,37 @@ function DashboardControls({ activeSheet }) {
           }
         }}
       >
-        🗑 Clear Sheet
+        Clear Sheet
       </button>
 
-      {showShare && activeSheet && <SharePanel sheetId={activeSheet.id} />}
+      {showShare && activeSheet ? <SharePanel sheetId={activeSheet.id} /> : null}
     </div>
   );
 }
 
 export default function SidebarRight() {
-  const location        = useLocation();
-  const projects        = useStore((s) => s.projects);
-  const activeProjectId = useStore((s) => s.activeProjectId);
-  const activeSheetId   = useStore((s) => s.activeSheetId);
+  const location = useLocation();
+  const projects = useStore((state) => state.projects);
+  const activeProjectId = useStore((state) => state.activeProjectId);
+  const activeSheetId = useStore((state) => state.activeSheetId);
 
-  const activeProject = projects.find((p) => p.id === activeProjectId) ?? projects[0];
-  const activeSheet   = activeProject?.sheets.find((sh) => sh.id === activeSheetId) ?? activeProject?.sheets[0];
-
+  const activeProject = projects.find((project) => project.id === activeProjectId) ?? projects[0];
+  const activeSheet = activeProject?.sheets.find((sheet) => sheet.id === activeSheetId) ?? activeProject?.sheets[0];
   const isDashboard = location.pathname === "/dashboard";
 
   return (
     <aside className="sidebar-right" aria-label="Control panel">
-      {isDashboard && (
+      {isDashboard ? (
         <>
-          <DashboardControls activeSheet={activeSheet} />
-          <div className="right-panel-section">
-            <div className="panel-section-title">Analysis</div>
-            <p style={{ opacity: 0.5, fontSize: "12px", padding: "0 10px" }}>
-              Global insights and filters moved to the dashboard toolbar for better accessibility.
-            </p>
+          <div className="sidebar-right-header">
+            <div className="sidebar-right-header-copy">
+              <span className="panel-section-title">Inspector</span>
+            </div>
           </div>
+
+          <DashboardControls activeSheet={activeSheet} />
         </>
-      )}
+      ) : null}
     </aside>
   );
 }

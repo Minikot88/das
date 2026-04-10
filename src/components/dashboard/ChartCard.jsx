@@ -1,75 +1,115 @@
-/**
- * components/dashboard/ChartCard.jsx
- * Wrapper for individual chart components in the dashboard.
- */
-import React, { useState, useEffect, useRef, memo } from "react";
+﻿import React, { memo, useCallback, useEffect, useRef, useState } from "react";
 import ChartRenderer from "../charts/ChartRenderer";
 import ChartSkeleton from "../charts/ChartSkeleton";
-import CardActions from "./CardActions";
-
-const CHART_TYPE_ICONS = {
-  line: "📈", area: "📉", bar: "📊", stacked_bar: "📦", grouped_bar: "🗂",
-  pie: "🥧", donut: "🍩", scatter: "✦", heatmap: "🟥", kpi: "💎"
-};
 
 const THEME_ACCENTS = {
-  default: "#1677ff", vibrant: "#ff4d4f", pastel: "#aec6cf",
-  dark: "#4fc3f7", ocean: "#0a9396", warm: "#e63946",
+  default: "#1677ff",
+  vibrant: "#ff4d4f",
+  pastel: "#aec6cf",
+  dark: "#4fc3f7",
+  ocean: "#0a9396",
+  warm: "#e63946",
 };
 
-const ChartCard = memo(function ChartCard({ 
-  chart, 
-  pixelHeight, 
-  sheetId, 
-  filters, 
-  onExportCSV, 
-  onExportPNG 
+const ChartCard = memo(function ChartCard({
+  chart,
+  pixelHeight,
+  filters,
+  onInsightData,
+  drilldown = null,
+  onDrilldown,
+  isFullscreen = false,
+  onToggleFullscreen,
 }) {
   const [loaded, setLoaded] = useState(false);
-  const cardRef             = useRef(null);
+  const lastRowsKeyRef = useRef("");
+  const bodyRef = useRef(null);
+  const resizeFrameRef = useRef(0);
+  const [bodyHeight, setBodyHeight] = useState(0);
 
   useEffect(() => {
-    const t = setTimeout(() => setLoaded(true), 100);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setLoaded(true), 100);
+    return () => clearTimeout(timer);
   }, []);
 
+  useEffect(() => {
+    const bodyElement = bodyRef.current;
+    if (!bodyElement) return undefined;
+
+    const updateBodyHeight = () => {
+      if (resizeFrameRef.current) cancelAnimationFrame(resizeFrameRef.current);
+      resizeFrameRef.current = requestAnimationFrame(() => {
+        resizeFrameRef.current = 0;
+        const nextHeight = Math.round(bodyElement.clientHeight);
+        if (!nextHeight) return;
+        setBodyHeight((current) => (current === nextHeight ? current : nextHeight));
+      });
+    };
+
+    updateBodyHeight();
+
+    const resizeObserver = typeof ResizeObserver !== "undefined"
+      ? new ResizeObserver(() => {
+          updateBodyHeight();
+        })
+      : null;
+
+    resizeObserver?.observe(bodyElement);
+    window.addEventListener("resize", updateBodyHeight);
+
+    return () => {
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", updateBodyHeight);
+      if (resizeFrameRef.current) cancelAnimationFrame(resizeFrameRef.current);
+      resizeFrameRef.current = 0;
+    };
+  }, [pixelHeight]);
+
   const accent = THEME_ACCENTS[chart.colorTheme] ?? THEME_ACCENTS.default;
+  const contentHeight = Math.max(180, bodyHeight || (pixelHeight - 42));
+
+  const handleDataReady = useCallback((rows) => {
+    const nextRows = rows ?? [];
+    const nextKey = JSON.stringify(nextRows);
+
+    if (lastRowsKeyRef.current === nextKey) return;
+
+    lastRowsKeyRef.current = nextKey;
+    onInsightData?.(chart, nextRows);
+  }, [chart, onInsightData]);
 
   return (
     <div
-      className="chart-card"
-      ref={cardRef}
+      className={`chart-card${isFullscreen ? " is-fullscreen" : ""}`}
       style={{ height: pixelHeight, "--card-accent": accent }}
       role="article"
       aria-label={`Chart: ${chart.title}`}
     >
       <div className="chart-card-accent-bar" style={{ background: accent }} />
 
-      <div className="chart-card-header card-drag-handle">
+      <div
+        className={`chart-card-header${isFullscreen ? "" : " card-drag-handle"}`}
+        onDoubleClick={onToggleFullscreen}
+      >
         <div className="chart-card-title">
-          <span className="drag-dots" aria-hidden="true">⠿</span>
           <span className="chart-title-text">{chart.title}</span>
-          <span className="chart-type-badge" title={chart.type}>
-            {CHART_TYPE_ICONS[chart.type] ?? "📊"} {chart.type}
-          </span>
-          {chart.colorTheme && chart.colorTheme !== "default" && (
-            <span className="chart-theme-badge">{chart.colorTheme}</span>
-          )}
         </div>
-        <CardActions 
-          chart={chart} 
-          sheetId={sheetId} 
-          cardRef={cardRef} 
-          onExportCSV={onExportCSV} 
-          onExportPNG={onExportPNG} 
-        />
       </div>
 
-      <div className="chart-card-body">
-        {!loaded
-          ? <ChartSkeleton height={pixelHeight - 52} />
-          : <ChartRenderer chart={chart} containerHeight={pixelHeight - 52} filters={filters} />
-        }
+      <div ref={bodyRef} className="chart-card-body">
+        {!loaded ? (
+          <ChartSkeleton height={contentHeight} />
+        ) : (
+          <ChartRenderer
+            chart={chart}
+            containerHeight={contentHeight}
+            filters={filters}
+            drilldown={drilldown}
+            onDrilldown={onDrilldown}
+            onDataReady={handleDataReady}
+            chrome="minimal"
+          />
+        )}
       </div>
     </div>
   );

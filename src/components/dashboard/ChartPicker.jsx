@@ -21,15 +21,14 @@ const ChartPicker = memo(function ChartPicker({ charts, onSelect, onClose }) {
       <div className="chart-picker" onClick={(event) => event.stopPropagation()}>
         <div className="chart-picker-header">
           <div>
-            <h3>Saved Charts</h3>
-            <p>Add an existing chart from the active project.</p>
+            <h3>Saved charts</h3>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close picker">X</button>
+          <button type="button" onClick={onClose} aria-label="Close">X</button>
         </div>
 
         <div className="chart-picker-list">
           {charts.length === 0 ? (
-            <div className="chart-picker-empty">No charts available in this project.</div>
+            <div className="chart-picker-empty">No saved charts.</div>
           ) : (
             charts.map((chart) => {
               const chartType = chart.config?.chartType || chart.config?.type || "bar";

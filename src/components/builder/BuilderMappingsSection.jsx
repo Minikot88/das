@@ -1,5 +1,6 @@
-﻿import React from "react";
+import React from "react";
 import MappingBoard from "./MappingBoard";
+import { getReadableFieldLabel } from "../../utils/builderMappingUtils";
 
 export default function BuilderMappingsSection({
   roleAssignments,
@@ -12,11 +13,21 @@ export default function BuilderMappingsSection({
 }) {
   const rolesWithValidation = roleAssignments.map((role) => ({
     ...role,
+    fields: (role.fields ?? []).map((field) => {
+      if (!field || typeof field !== "object" || Array.isArray(field)) return field;
+      return {
+        ...field,
+        __displayLabel: getReadableFieldLabel(field),
+      };
+    }),
     onValidateField: (field) => canAssignFieldToRole(role.key, field),
   }));
 
   return (
     <div className="builder-config-section builder-inspector-section">
+      <div className="builder-section-head">
+        <strong className="builder-section-title">Mappings</strong>
+      </div>
       <MappingBoard
         roles={rolesWithValidation}
         statusText={lastMappingNotice || ""}

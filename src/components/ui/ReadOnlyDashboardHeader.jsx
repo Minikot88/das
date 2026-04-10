@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { Link } from "react-router-dom";
 
 function Stat({ label, value }) {
@@ -23,45 +23,39 @@ export default function ReadOnlyDashboardHeader({
       <div className="readonly-hero-main">
         <div className="readonly-brand-row">
           <div className="readonly-brand">Mini BI</div>
-          <span className="readonly-badge">View Only</span>
-          <span className="readonly-trust-pill">Trusted share link</span>
+          <span className="readonly-badge">อ่านอย่างเดียว</span>
+          <span className="readonly-trust-pill">ลิงก์ที่แชร์</span>
         </div>
 
         <div className="readonly-copy">
-          <div className="readonly-kicker">Shared Dashboard</div>
+          <div className="readonly-kicker">Dashboard ที่แชร์</div>
           <h1 className="readonly-title">{title}</h1>
-          <p className="readonly-subtitle">
-            A polished dashboard presentation prepared for external review. Viewing is enabled, while editing, dashboard changes, and builder interactions remain disabled.
-          </p>
         </div>
 
         <div className="readonly-hero-panel">
           <div className="readonly-hero-panel-copy">
-            <span className="readonly-hero-panel-kicker">Presentation status</span>
+            <span className="readonly-hero-panel-kicker">สถานะ</span>
             <strong className="readonly-hero-panel-title">{dashboardName}</strong>
-            <p className="readonly-hero-panel-text">
-              Charts below are presented in a stable read-only layout so external viewers can focus on the information being shared, not the tooling around it.
-            </p>
           </div>
-          <div className="readonly-hero-panel-badges" aria-label="Share page status">
+          <div className="readonly-hero-panel-badges" aria-label="สถานะหน้าที่แชร์">
             <span className="readonly-inline-badge">{statusLabel}</span>
-            <span className="readonly-inline-badge muted">{chartCount} charts visible</span>
-            <span className="readonly-inline-badge muted">{chartTypes ?? 0} visualization types</span>
+            <span className="readonly-inline-badge muted">{chartCount} Charts</span>
+            <span className="readonly-inline-badge muted">{chartTypes ?? 0} ประเภท</span>
           </div>
         </div>
       </div>
 
       <div className="readonly-hero-side">
         <div className="readonly-meta-grid">
-          <Stat label="Sheet" value={title} />
-          <Stat label="View" value={dashboardName} />
+          <Stat label="ชีต" value={title} />
+          <Stat label="Dashboard" value={dashboardName} />
           <Stat label="Charts" value={chartCount} />
-          <Stat label="Types" value={chartTypes ?? 0} />
-          <Stat label="Dataset" value={primaryDataset ?? "Unavailable"} />
-          <Stat label="Access" value="Read only" />
+          <Stat label="ประเภท" value={chartTypes ?? 0} />
+          <Stat label="Dataset" value={primaryDataset ?? "ไม่พบข้อมูล"} />
+          <Stat label="สิทธิ์" value="อ่านอย่างเดียว" />
         </div>
         <Link to="/login" className="share-signin-link readonly-signin-link">
-          Sign in for workspace access
+          เข้าสู่ระบบ
         </Link>
       </div>
     </header>

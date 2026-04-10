@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+﻿import React, { useEffect, useMemo, useState } from "react";
 import { getChartCategories } from "../../utils/chartCatalog";
 import ChartTypeCategoryTabs from "./ChartTypeCategoryTabs";
 import ChartTypeHoverPreview from "./ChartTypeHoverPreview";
@@ -6,11 +6,11 @@ import ChartTypeHoverPreview from "./ChartTypeHoverPreview";
 function ChartTypeListItem({ chart, active, recommended, hovered, onSelect, onHover }) {
   const disabled = !chart.supported;
   const statusLabel = recommended
-    ? "Recommended"
+    ? "แนะนำ"
     : chart.previewSupported === false && chart.supported
-      ? "Preview limited"
+      ? "Preview จำกัด"
       : chart.experimental
-        ? "Experimental"
+        ? "ทดลอง"
         : chart.badges?.[0] ?? "";
 
   return (
@@ -70,15 +70,15 @@ export default function BuilderVisualSectionV2({
     <div className="builder-config-section builder-visual-section">
       <div className="builder-section-head">
         <div>
-          <span className="builder-query-label">Visuals</span>
-          <p className="builder-section-description">Category and chart type</p>
+          <span className="builder-query-label">ประเภทกราฟ</span>
+          <strong className="builder-section-title">เลือกหมวด แล้วค่อยเลือก visual</strong>
         </div>
       </div>
 
       <div className="builder-visual-compact-stack">
         <div className="builder-visual-current-strip">
           <div>
-            <span className="builder-query-label">Current</span>
+            <span className="builder-query-label">ที่เลือก</span>
             <strong>{activeChartMeta?.name ?? "Chart"}</strong>
           </div>
           <span className="builder-chart-inline-badge">{chartDefinition?.family}</span>
@@ -105,8 +105,8 @@ export default function BuilderVisualSectionV2({
         </div>
 
         <div className="builder-visual-mini-help">
-          <span>{hoveredChart ? "Previewing on hover" : "Hover a chart name to preview"}</span>
-          <span>{categoryCharts.length} chart types</span>
+          <span>{hoveredChart ? "กำลังดูตัวอย่างกราฟ" : "ชี้ชื่อกราฟเพื่อดูตัวอย่าง"}</span>
+          <span>{categoryCharts.length} แบบ</span>
         </div>
       </div>
     </div>
