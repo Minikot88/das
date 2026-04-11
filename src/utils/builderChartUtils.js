@@ -1,5 +1,6 @@
 import { resolveChartRuntimeType } from "./chartCatalog";
 import { getChartRequirements } from "./chartRequirements";
+import { getLineAreaMappingMode } from "./builderMappingUtils";
 
 function ensureArray(value) {
   return Array.isArray(value) ? value : [];
@@ -34,8 +35,32 @@ function hasAnyNumericRoleValue(row, roleMapping, roleKey) {
   return getRoleValues(row, roleMapping, roleKey).some(isFiniteNumber);
 }
 
+function getLineAreaPreviewReason(chartId, roleMapping = {}, rows = []) {
+  const mode = getLineAreaMappingMode(chartId, roleMapping);
+  if (mode.blockers.length) return mode.blockers[0].message;
+
+  if (mode.mode === "multi-measure") {
+    const hasUsableMeasure = ensureArray(rows).some((row) => hasAnyNumericRoleValue(row, roleMapping, "ys"));
+    if (!hasUsableMeasure) {
+      return "Rows exist, but the selected Y Measures do not contain usable numeric values for this chart.";
+    }
+  }
+
+  if (mode.mode === "grouped-series") {
+    const hasUsableValue = ensureArray(rows).some((row) => hasAnyNumericRoleValue(row, roleMapping, "y"));
+    if (!hasUsableValue) {
+      return "Rows exist, but the selected Y Axis field does not contain usable numeric values for this chart.";
+    }
+  }
+
+  return "Rows exist, but the mapped fields do not contain usable values for this line or area chart.";
+}
+
 function countUsableRows(chartId, roleMapping = {}, rows = []) {
   const runtimeType = resolveChartRuntimeType(chartId);
+  const lineAreaMode = getLineAreaMappingMode(chartId, roleMapping);
+
+  if (lineAreaMode.blockers.length) return 0;
 
   return ensureArray(rows).filter((row) => {
     switch (runtimeType) {
@@ -61,6 +86,17 @@ function countUsableRows(chartId, roleMapping = {}, rows = []) {
       case "histogram":
       case "table":
       case "pivot-table":
+        if (["line", "multi-line", "smooth-line", "step-line", "area", "stacked-line", "stacked-area"].includes(runtimeType)) {
+          const hasDomain = hasAnyRoleValue(row, roleMapping, "x")
+            || hasAnyRoleValue(row, roleMapping, "category")
+            || hasAnyRoleValue(row, roleMapping, "time")
+            || hasAnyRoleValue(row, roleMapping, "date");
+          if (!hasDomain) return false;
+          if (lineAreaMode.mode === "multi-measure") {
+            return hasAnyNumericRoleValue(row, roleMapping, "ys");
+          }
+          return hasAnyNumericRoleValue(row, roleMapping, "y");
+        }
         return (
           (hasAnyRoleValue(row, roleMapping, "x")
             || hasAnyRoleValue(row, roleMapping, "category")
@@ -162,16 +198,22 @@ function getEmptyReason(chartId) {
 
 export function evaluatePreviewRows(chartId, roleMapping = {}, rows = []) {
   const safeRows = ensureArray(rows);
+  const lineAreaMode = getLineAreaMappingMode(chartId, roleMapping);
   const usableRowCount = countUsableRows(chartId, roleMapping, safeRows);
+  const emptyReason = lineAreaMode.blockers.length
+    ? lineAreaMode.blockers[0].message
+    : ["line", "multi-line", "smooth-line", "step-line", "area", "stacked-line", "stacked-area"].includes(resolveChartRuntimeType(chartId))
+      ? getLineAreaPreviewReason(chartId, roleMapping, safeRows)
+      : safeRows.length
+        ? getEmptyReason(chartId)
+        : "No rows returned for this chart.";
 
   return {
     rowCount: safeRows.length,
     usableRowCount,
     hasRows: safeRows.length > 0,
     canRender: usableRowCount > 0,
-    emptyReason: safeRows.length
-      ? getEmptyReason(chartId)
-      : "No rows returned for this chart.",
+    emptyReason,
   };
 }
 

@@ -89,80 +89,83 @@ export default function BuilderDataPane({
         className="builder-pane-frame builder-pane-frame-left"
         style={{ minHeight: 0, height: "100%", overflow: "hidden", gap: 6 }}
       >
-        <div className="builder-pane-header" style={{ paddingBottom: 6 }}>
-          <div className="builder-pane-header-copy" style={{ gap: 8, flexWrap: "wrap" }}>
-            <h2 className="builder-pane-title">Data Source</h2>
-            <span className="builder-preview-chip is-soft" style={{ minHeight: 20 }}>{explorerLabel}</span>
-          </div>
-          <span className="builder-pane-status">{selectedTable ? "Ready" : "Select"}</span>
-        </div>
+        <div className="builder-data-pane">
+          <div className="builder-data-pane__header">
+            <div className="builder-pane-header" style={{ paddingBottom: 6 }}>
+              <div className="builder-pane-header-copy" style={{ gap: 8, flexWrap: "wrap" }}>
+                <h2 className="builder-pane-title">Data Source</h2>
+                <span className="builder-preview-chip is-soft" style={{ minHeight: 20 }}>{explorerLabel}</span>
+              </div>
+              <span className="builder-pane-status">{selectedTable ? "Ready" : "Select"}</span>
+            </div>
 
-        <BuilderSourceSummary
-          selectedDb={selectedDb}
-          selectedTable={selectedTable}
-          tableData={tableData}
-          tableFields={tableFields}
-        />
-
-        <div
-          className="builder-data-pane-chart-brief"
-          style={{
-            padding: "7px 8px",
-            borderRadius: 5,
-            background: "var(--surface)",
-            borderStyle: "dashed",
-          }}
-        >
-          <div>
-            <span className="builder-query-label">Selection</span>
-            <strong>{chartDefinition?.title ?? "Chart"}</strong>
-          </div>
-          <span className={`builder-status-badge${completedRoles === requiredRoles.length && requiredRoles.length ? " ready" : ""}`}>
-            {completedRoles}/{requiredRoles.length} ready
-          </span>
-        </div>
-
-        <div
-          className="builder-left-section-label"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            paddingInline: 2,
-            marginTop: 2,
-          }}
-        >
-          <span>{explorerLabel}</span>
-          <span>{explorerCount}</span>
-        </div>
-        <div
-          className="builder-pane-body builder-pane-body-scroll"
-          style={{
-            minHeight: 0,
-            overflowY: "auto",
-            paddingRight: 2,
-            borderTop: "1px solid var(--divider)",
-            paddingTop: 6,
-            display: "grid",
-            gap: 8,
-            alignContent: "start",
-          }}
-        >
-          {queryMode === "sql" && queryResult?.fieldMeta?.length ? (
-            <SqlResultFieldList
+            <BuilderSourceSummary
               selectedDb={selectedDb}
               selectedTable={selectedTable}
-              fields={queryResult.fieldMeta}
+              tableData={tableData}
+              tableFields={tableFields}
+            />
+
+            <div
+              className="builder-data-pane-chart-brief"
+              style={{
+                padding: "7px 8px",
+                borderRadius: 5,
+                background: "var(--surface)",
+                borderStyle: "dashed",
+              }}
+            >
+              <div>
+                <span className="builder-query-label">Selection</span>
+                <strong>{chartDefinition?.title ?? "Chart"}</strong>
+              </div>
+              <span className={`builder-status-badge${completedRoles === requiredRoles.length && requiredRoles.length ? " ready" : ""}`}>
+                {completedRoles}/{requiredRoles.length} ready
+              </span>
+            </div>
+
+            <div
+              className="builder-left-section-label"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                paddingInline: 2,
+                marginTop: 2,
+              }}
+            >
+              <span>{explorerLabel}</span>
+              <span>{explorerCount}</span>
+            </div>
+          </div>
+
+          <div
+            className="builder-data-pane__body builder-pane-body builder-pane-body-scroll"
+            style={{
+              paddingRight: 2,
+              borderTop: "1px solid var(--divider)",
+              paddingTop: 6,
+              display: "grid",
+              gap: 8,
+              alignContent: "start",
+            }}
+          >
+            {queryMode === "sql" && queryResult?.fieldMeta?.length ? (
+              <SqlResultFieldList
+                selectedDb={selectedDb}
+                selectedTable={selectedTable}
+                fields={queryResult.fieldMeta}
+                onFieldAssign={onFieldAssign}
+                getFieldRoleHints={getFieldRoleHints}
+              />
+            ) : null}
+            <SchemaTree
               onFieldAssign={onFieldAssign}
+              selectedDb={selectedDb}
+              selectedTable={selectedTable}
               getFieldRoleHints={getFieldRoleHints}
             />
-          ) : null}
-          <SchemaTree
-            onFieldAssign={onFieldAssign}
-            selectedDb={selectedDb}
-            selectedTable={selectedTable}
-            getFieldRoleHints={getFieldRoleHints}
-          />
+          </div>
         </div>
       </div>
     </aside>

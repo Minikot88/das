@@ -24,6 +24,8 @@ const Q1_PATTERN = /(^|[_\s-])(q1|quartile1|quartile_1|p25|percentile25)([_\s-]|
 const MEDIAN_PATTERN = /(^|[_\s-])(median|q2|p50|percentile50)([_\s-]|$)/i;
 const Q3_PATTERN = /(^|[_\s-])(q3|quartile3|quartile_3|p75|percentile75)([_\s-]|$)/i;
 const TARGET_VALUE_PATTERN = /(^|[_\s-])(target|goal|max|quota|benchmark|plan)([_\s-]|$)/i;
+const TEMPORAL_BUCKET_PATTERN = /(^|[_\s-])(day|week|month|quarter|year)([_\s-]|$)/i;
+const LINE_AREA_RUNTIME_TYPES = new Set(["line", "multi-line", "smooth-line", "step-line", "area", "stacked-line", "stacked-area"]);
 
 function ensureArray(value) {
   return Array.isArray(value) ? value : [];
@@ -85,13 +87,15 @@ export function classifyFieldSemantics(field) {
   const type = field?.type ?? null;
   const isNumeric = type === "number";
   const isDate = type === "date" || TIME_PATTERN.test(name);
+  const isTemporalBucket = isNumeric && TEMPORAL_BUCKET_PATTERN.test(name);
   const isTextLike = type === "string" || type === "boolean" || type === "date";
 
   return {
     isNumeric,
     isDate,
+    isTemporalBucket,
     isTextLike,
-    isMetric: isNumeric || METRIC_PATTERN.test(name),
+    isMetric: ((!isDate && !isTemporalBucket && isNumeric) || METRIC_PATTERN.test(name)),
     isCategory: isTextLike || CATEGORY_PATTERN.test(name),
     isSeries: SERIES_PATTERN.test(name),
     isSource: SOURCE_PATTERN.test(name),
@@ -106,6 +110,96 @@ export function classifyFieldSemantics(field) {
     isMedian: MEDIAN_PATTERN.test(name),
     isQ3: Q3_PATTERN.test(name),
     hasTargetValueSignal: TARGET_VALUE_PATTERN.test(name),
+  };
+}
+
+function isLineAreaRuntimeType(chartId) {
+  return LINE_AREA_RUNTIME_TYPES.has(resolveChartRuntimeType(chartId));
+}
+
+function getMappedFields(mapping = {}, roleKey) {
+  return ensureArray(mapping[roleKey]).filter(Boolean);
+}
+
+function listFieldNames(fields = []) {
+  return fields.map((field) => field?.name).filter(Boolean);
+}
+
+export function getLineAreaMappingMode(chartId, mapping = {}) {
+  if (!isLineAreaRuntimeType(chartId)) {
+    return {
+      supported: true,
+      mode: "default",
+      blockers: [],
+      cautions: [],
+      hasY: false,
+      hasYs: false,
+      hasSeries: false,
+      yFields: [],
+      yMeasureFields: [],
+      seriesFields: [],
+      temporalMeasureFields: [],
+    };
+  }
+
+  const yFields = getMappedFields(mapping, "y");
+  const yMeasureFields = getMappedFields(mapping, "ys");
+  const seriesFields = getMappedFields(mapping, "series");
+  const temporalMeasureFields = yMeasureFields.filter((field) => classifyFieldSemantics(field).isTemporalBucket);
+  const blockers = [];
+  const cautions = [];
+  const hasY = yFields.length > 0;
+  const hasYs = yMeasureFields.length > 0;
+  const hasSeries = seriesFields.length > 0;
+
+  if (!hasY && !hasYs) {
+    blockers.push({
+      code: "line-measure-missing",
+      title: "Add a Y Axis or Y Measures",
+      message: "Line and area charts need either one Y Axis field or one or more Y Measures.",
+      action: "Map one numeric Y Axis field, or add one or more Y Measures.",
+    });
+  }
+
+  if (hasY && hasYs) {
+    blockers.push({
+      code: "line-measure-conflict",
+      title: "Use either Y Axis or Y Measures",
+      message: "This chart supports either a single Y Axis field or multiple Y Measures, but not both at the same time.",
+      action: "Keep Y Axis for grouped series charts, or remove it and use Y Measures instead.",
+    });
+  }
+
+  if (hasYs && hasSeries) {
+    blockers.push({
+      code: "line-series-measure-conflict",
+      title: "Use either Series or Y Measures",
+      message: "This line or area variant supports grouped series mode or multi-measure mode, but not both together.",
+      action: "Use Series with one Y Axis field, or remove Series and keep Y Measures.",
+    });
+  }
+
+  if (temporalMeasureFields.length) {
+    cautions.push({
+      code: "line-temporal-measure",
+      title: "Remove calendar fields from Y Measures",
+      message: `${listFieldNames(temporalMeasureFields).join(", ")} look like calendar dimensions and usually belong on the X Axis, not in Y Measures.`,
+      action: "Keep calendar fields on X Axis or Series, and use numeric metrics in Y Measures.",
+    });
+  }
+
+  return {
+    supported: blockers.length === 0,
+    mode: hasYs ? "multi-measure" : hasY ? "grouped-series" : "unconfigured",
+    blockers,
+    cautions,
+    hasY,
+    hasYs,
+    hasSeries,
+    yFields,
+    yMeasureFields,
+    seriesFields,
+    temporalMeasureFields,
   };
 }
 
@@ -381,6 +475,20 @@ export function validateRoleMapping(chartId, mapping = {}, options = {}) {
   });
 
   const runtimeType = resolveChartRuntimeType(chartId);
+  const lineAreaMode = getLineAreaMappingMode(chartId, mapping);
+
+  if (isLineAreaRuntimeType(chartId)) {
+    const valueBlockerIndex = blockers.findIndex((item) => item.code === "missing-y");
+    if (valueBlockerIndex >= 0) blockers.splice(valueBlockerIndex, 1);
+    if (roleStates.y?.status === "empty") {
+      roleStates.y = {
+        ...roleStates.y,
+        status: "empty-optional",
+        missingCount: 0,
+        message: "Optional when Y Measures are used",
+      };
+    }
+  }
 
   if (runtimeType === "boxplot") {
     const hasRawValue = (mapping.value?.length ?? 0) > 0;
@@ -430,6 +538,28 @@ export function validateRoleMapping(chartId, mapping = {}, options = {}) {
         action: "Use a date field on the time role if one is available.",
       });
     }
+  }
+
+  if (isLineAreaRuntimeType(chartId)) {
+    lineAreaMode.blockers.forEach((item) => {
+      blockers.push({
+        level: "error",
+        code: item.code,
+        title: item.title,
+        message: item.message,
+        action: item.action,
+      });
+    });
+
+    lineAreaMode.cautions.forEach((item) => {
+      cautions.push({
+        level: "warning",
+        code: item.code,
+        title: item.title,
+        message: item.message,
+        action: item.action,
+      });
+    });
   }
 
   if (!previewSupported) {
@@ -552,6 +682,9 @@ function scoreFieldForRole(role, field, chartId) {
     if (["x", "time", "date", "category"].includes(role.key) && semantics.isDate) score += 10;
   }
 
+  if (semantics.isTemporalBucket && ["value", "values", "y", "ys"].includes(role.key)) score -= 20;
+  if (semantics.isTemporalBucket && ["x", "time", "date", "category", "series"].includes(role.key)) score += 8;
+
   return score;
 }
 
@@ -568,6 +701,7 @@ function getFieldBuckets(fields = []) {
   const typed = fields.map((field) => ({ field, semantics: classifyFieldSemantics(field) }));
   return {
     numeric: typed.filter((item) => item.semantics.isNumeric).map((item) => item.field),
+    numericMetrics: typed.filter((item) => item.semantics.isMetric).map((item) => item.field),
     dateLike: typed.filter((item) => item.semantics.isDate).map((item) => item.field),
     categoryLike: typed.filter((item) => item.semantics.isCategory || item.semantics.isTextLike).map((item) => item.field),
   };
@@ -649,15 +783,15 @@ function applyChartSpecificSuggestions(chartId, roleConfig, availableFields, nex
     assignOne("time", [...buckets.dateLike, ...buckets.categoryLike]);
     assignOne("date", [...buckets.dateLike, ...buckets.categoryLike]);
     assignOne("x", [...buckets.dateLike, ...buckets.categoryLike]);
-    assignOne("y", buckets.numeric);
-    assignMany("ys", buckets.numeric);
+    assignOne("y", buckets.numericMetrics);
+    assignMany("ys", buckets.numericMetrics);
     assignOne("series", buckets.categoryLike);
   }
 
   if (["bar", "grouped-bar", "stacked-bar", "horizontal-bar", "waterfall", "funnel", "pie", "donut", "rose", "radar"].includes(runtimeType)) {
     assignOne("category", [...buckets.categoryLike, ...buckets.dateLike]);
-    assignOne("value", buckets.numeric);
-    assignMany("values", buckets.numeric);
+    assignOne("value", buckets.numericMetrics);
+    assignMany("values", buckets.numericMetrics);
     assignOne("series", buckets.categoryLike);
   }
 

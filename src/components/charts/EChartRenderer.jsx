@@ -96,6 +96,8 @@ const CHART_TYPE_LABELS = {
   kpi: "KPI",
 };
 
+const BUILDER_PREVIEW_FALLBACK_HEIGHT = 320;
+
 function formatTooltipValue(value) {
   return typeof value === "number" ? value.toLocaleString() : value;
 }
@@ -248,7 +250,8 @@ const EChartRenderer = memo(function EChartRenderer({
     if (!container) return;
 
     const width = Math.round(container.clientWidth);
-    const height = Math.round(container.clientHeight);
+    const measuredHeight = Math.round(container.clientHeight);
+    const height = measuredHeight || (isBuilderPreview && width ? BUILDER_PREVIEW_FALLBACK_HEIGHT : 0);
     const nextSize = { width, height };
 
     setContainerSize((currentSize) =>
@@ -514,7 +517,7 @@ const EChartRenderer = memo(function EChartRenderer({
         <div
           ref={chartWrapperRef}
           className={`chart-renderer-root chart-renderer-root-drilled${isReadOnly ? " is-readonly" : ""}${isBuilderPreview ? " is-builder-preview" : ""}`}
-          style={{ height: containerH, minHeight: isBuilderPreview ? 280 : undefined }}
+          style={{ height: containerH, minHeight: isBuilderPreview ? BUILDER_PREVIEW_FALLBACK_HEIGHT : undefined }}
         >
           <DrilldownTable data={activeData} title={displayTitle} drilldown={drilldown} />
         </div>
@@ -527,7 +530,7 @@ const EChartRenderer = memo(function EChartRenderer({
       <ChartErrorBoundary key={chart?.id ?? xField ?? type}>
         <div
           className={`chart-renderer-root${isReadOnly ? " is-readonly" : ""}${isBuilderPreview ? " is-builder-preview" : ""}`}
-          style={{ height: containerH, minHeight: isBuilderPreview ? 280 : undefined }}
+          style={{ height: containerH, minHeight: isBuilderPreview ? BUILDER_PREVIEW_FALLBACK_HEIGHT : undefined }}
         >
           <div ref={chartWrapperRef} className="chart-renderer-surface">
             <DataTable data={chartData} />
@@ -543,7 +546,7 @@ const EChartRenderer = memo(function EChartRenderer({
       <ChartErrorBoundary key={chart?.id ?? xField ?? type}>
         <div
           className={`chart-renderer-root${isReadOnly ? " is-readonly" : ""}${isBuilderPreview ? " is-builder-preview" : ""}`}
-          style={{ height: containerH, minHeight: isBuilderPreview ? 280 : undefined }}
+          style={{ height: containerH, minHeight: isBuilderPreview ? BUILDER_PREVIEW_FALLBACK_HEIGHT : undefined }}
         >
           <div ref={chartWrapperRef} className="chart-renderer-surface">
             <KPIWidget
@@ -563,7 +566,7 @@ const EChartRenderer = memo(function EChartRenderer({
       <div
         ref={chartWrapperRef}
         className={`chart-renderer-root${isReadOnly ? " is-readonly" : ""}${drilldownEnabled ? " is-drillable" : ""}${isBuilderPreview ? " is-builder-preview" : ""}`}
-        style={{ height: containerH, minHeight: isBuilderPreview ? 280 : undefined }}
+        style={{ height: containerH, minHeight: isBuilderPreview ? BUILDER_PREVIEW_FALLBACK_HEIGHT : undefined }}
       >
         {hasContainerSize ? (
           <ReactECharts

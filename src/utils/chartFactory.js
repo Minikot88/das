@@ -1,6 +1,7 @@
 import { normalizeChartConfig } from "./normalizeChartConfig";
 import { getChartMeta, getChartTypeLabel, getChartVariantMeta, resolveChartRuntimeType } from "./chartCatalog";
 import { getChartTemplateById, getChartTemplates } from "./chartTemplates";
+import { getLineAreaMappingMode } from "./builderMappingUtils";
 
 function asLabel(value) {
   if (value === null || value === undefined || value === "") return "Unknown";
@@ -403,6 +404,19 @@ function createStatus(code, message, level = "info") {
   return { code, message, level };
 }
 
+function isLineAreaRuntimeType(type) {
+  return ["line", "multi-line", "smooth-line", "step-line", "area", "stacked-line", "stacked-area"].includes(type);
+}
+
+function getLineAreaModelType(runtimeType, mappingMode) {
+  if (mappingMode === "multi-measure") {
+    if (["area", "stacked-area"].includes(runtimeType)) return "stacked-area";
+    return "multi-line";
+  }
+  if (runtimeType === "stacked-line") return "multi-line";
+  return runtimeType;
+}
+
 export function createChartRuntimeModel({
   chart: rawChart = {},
   type,
@@ -437,6 +451,10 @@ export function createChartRuntimeModel({
   const fields = resolveModelFields(chart);
   const rows = ensureArray(chartData);
   const status = [];
+  const lineAreaMode = getLineAreaMappingMode(selectedType, chart.roleMapping ?? {});
+  const modelType = isLineAreaRuntimeType(runtimeType)
+    ? getLineAreaModelType(runtimeType, lineAreaMode.mode)
+    : runtimeType;
 
   if (!rows.length) status.push(createStatus("no-data", "No rows returned for this chart."));
 
@@ -455,7 +473,12 @@ export function createChartRuntimeModel({
     }));
   }
 
-  switch (runtimeType) {
+  if (isLineAreaRuntimeType(runtimeType) && lineAreaMode.blockers.length) {
+    status.push(createStatus(lineAreaMode.blockers[0].code, lineAreaMode.blockers[0].message, "warning"));
+    prepared = [];
+  }
+
+  switch (modelType) {
     case "grouped-bar":
     case "stacked-bar":
     case "multi-line":
@@ -463,9 +486,11 @@ export function createChartRuntimeModel({
     case "stacked-area":
       extras = {
         ...extras,
-        grouped: fields.seriesField
-          ? pivotGroupedRows(prepared, fields.categoryField ?? fields.timeField ?? fields.xField, fields.valueField, fields.seriesField)
-          : buildMultiMeasureGroupedRows(prepared, fields.categoryField ?? fields.timeField ?? fields.xField, multiMeasureFields),
+        grouped: lineAreaMode.mode === "multi-measure"
+          ? buildMultiMeasureGroupedRows(prepared, fields.categoryField ?? fields.timeField ?? fields.xField, lineAreaMode.yMeasureFields.map((field) => field.name))
+          : fields.seriesField
+            ? pivotGroupedRows(prepared, fields.categoryField ?? fields.timeField ?? fields.xField, fields.valueField, fields.seriesField)
+            : buildMultiMeasureGroupedRows(prepared, fields.categoryField ?? fields.timeField ?? fields.xField, multiMeasureFields),
       };
       break;
     case "heatmap":
@@ -535,22 +560,22 @@ export function createChartRuntimeModel({
       break;
   }
 
-  if (["map", "lines", "custom"].includes(runtimeType) && meta.previewSupported === false) {
+  if (["map", "lines", "custom"].includes(modelType) && meta.previewSupported === false) {
     status.push(createStatus("config-needed", `${meta.name} needs additional runtime configuration to render fully.`, "warning"));
   }
 
-  if (runtimeType === "candlestick" && (!fields.openField || !fields.closeField || !fields.lowField || !fields.highField)) {
+  if (modelType === "candlestick" && (!fields.openField || !fields.closeField || !fields.lowField || !fields.highField)) {
     status.push(createStatus("ohlc-missing", "Candlestick needs open, close, low, and high fields.", "warning"));
   }
 
-  if (runtimeType === "parallel" && fields.dimensionsFields.length < 2) {
+  if (modelType === "parallel" && fields.dimensionsFields.length < 2) {
     status.push(createStatus("dimensions-missing", "Parallel needs at least two numeric dimensions.", "warning"));
   }
 
   return {
     chart,
     meta,
-    type: runtimeType,
+    type: modelType,
     selectedType,
     variantId: chart.selectedChartVariant ?? variantMeta?.id ?? null,
     familyId: chart.selectedChartFamily ?? variantMeta?.familyId ?? meta.selectorFamilyId ?? meta.family,
