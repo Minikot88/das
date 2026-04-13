@@ -132,6 +132,12 @@ export default function BuilderPreviewPane({
         : previewChart
           ? "Ready"
           : "Waiting";
+  const mappingTone = blockerCount ? "var(--warning)" : "var(--success)";
+  const mappingBackground = blockerCount ? "var(--warning-soft)" : "var(--success-soft)";
+  const previewStageBackground =
+    "linear-gradient(180deg, color-mix(in srgb, var(--surface) 96%, transparent) 0%, color-mix(in srgb, var(--surface-secondary) 90%, transparent) 100%)";
+  const previewCanvasBackground =
+    "linear-gradient(180deg, color-mix(in srgb, var(--surface) 98%, transparent) 0%, color-mix(in srgb, var(--surface-secondary) 94%, transparent) 100%)";
 
   return (
     <main className="builder-pane-shell builder-pane-shell-center">
@@ -218,8 +224,8 @@ export default function BuilderPreviewPane({
                   padding: "0 7px",
                   border: "1px solid var(--border)",
                   borderRadius: 999,
-                  background: blockerCount ? "var(--warning-soft)" : "var(--success-soft)",
-                  color: blockerCount ? "var(--warning)" : "var(--success)",
+                  background: mappingBackground,
+                  color: mappingTone,
                   fontSize: 9,
                   fontWeight: 700,
                   letterSpacing: "0.06em",
@@ -292,8 +298,7 @@ export default function BuilderPreviewPane({
                   gridTemplateRows: "auto minmax(0, 1fr)",
                   gap: 10,
                   padding: 10,
-                  background:
-                    "linear-gradient(180deg, color-mix(in srgb, var(--surface) 98%, #ffffff 2%) 0%, color-mix(in srgb, var(--surface-secondary) 86%, #eef4fb 14%) 100%)",
+                  background: previewStageBackground,
                 }}
               >
                 <div
@@ -330,10 +335,10 @@ export default function BuilderPreviewPane({
                       width: "100%",
                       display: "flex",
                       flexDirection: "column",
-                      border: "1px solid color-mix(in srgb, var(--border) 82%, #d7e3f4 18%)",
+                      border: "1px solid var(--border)",
                       borderRadius: 6,
-                      background: "linear-gradient(180deg, #ffffff 0%, #f8fbff 100%)",
-                      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.8)",
+                      background: previewCanvasBackground,
+                      boxShadow: "inset 0 1px 0 color-mix(in srgb, var(--surface) 86%, transparent)",
                       overflow: "hidden",
                     }}
                   >

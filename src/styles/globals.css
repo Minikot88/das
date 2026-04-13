@@ -553,3 +553,16 @@
     grid-template-columns: 1fr;
   }
 }
+
+body.dark .ui-button.is-danger,
+body.dark .button-danger {
+  background: color-mix(in srgb, var(--danger-soft) 52%, var(--surface));
+  border-color: color-mix(in srgb, var(--danger) 28%, var(--border));
+  color: #fecaca;
+}
+
+body.dark .ui-button.is-danger:hover,
+body.dark .button-danger:hover {
+  background: color-mix(in srgb, var(--danger-soft) 72%, var(--surface));
+  border-color: color-mix(in srgb, var(--danger) 44%, var(--border));
+}

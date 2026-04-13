@@ -297,6 +297,47 @@
   font-weight: 700;
 }
 
+.builder-validation-role-list {
+  display: grid;
+  gap: 8px;
+}
+
+.builder-validation-role-card {
+  padding: 8px 10px;
+  display: grid;
+  gap: 3px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  border-radius: 8px;
+}
+
+.builder-validation-role-card.is-valid {
+  border-color: color-mix(in srgb, var(--success) 30%, var(--border));
+  background: color-mix(in srgb, var(--success) 10%, var(--bg-surface));
+}
+
+.builder-validation-role-card.is-invalid {
+  border-color: color-mix(in srgb, var(--danger) 30%, var(--border));
+  background: color-mix(in srgb, var(--danger) 10%, var(--bg-surface));
+}
+
+.builder-validation-role-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.builder-validation-role-title {
+  font-size: 12px;
+  color: var(--text-base);
+}
+
+.builder-validation-role-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
 .builder-action-tray.compact {
   padding: 0;
   border: 0;
@@ -3662,6 +3703,110 @@
   padding: 12px 14px;
 }
 
+body.dark .builder-controls-panel,
+body.dark .builder-preview-header-upgraded,
+body.dark .builder-preview-health,
+body.dark .builder-validation-empty,
+body.dark .builder-data-pane-chart-brief,
+body.dark .builder-data-pane-note,
+body.dark .builder-role-zone,
+body.dark .builder-role-chip,
+body.dark .builder-role-zone-pill,
+body.dark .builder-role-chip-type,
+body.dark .builder-role-zone-clear,
+body.dark .builder-role-chip-action,
+body.dark .builder-toggle-row,
+body.dark .builder-toggle-pill,
+body.dark .builder-mini-stat,
+body.dark .builder-pane-shell,
+body.dark .builder-pane-frame-left,
+body.dark .builder-pane-shell-right,
+body.dark .builder-workspace-header,
+body.dark .builder-workspace-metric,
+body.dark .builder-workspace-summary-card,
+body.dark .builder-controls-card,
+body.dark .builder-query-mode-switch,
+body.dark .builder-query-mode-btn.is-active,
+body.dark .builder-preview-summary-strip > div,
+body.dark .builder-sql-run-meta,
+body.dark .builder-inspector-hero,
+body.dark .builder-inspector-hero-icon,
+body.dark .builder-data-rail-item,
+body.dark .schema-group,
+body.dark .schema-db-icon,
+body.dark .schema-table-icon,
+body.dark .builder-role-zone.is-empty-optional,
+body.dark .builder-role-zone-empty,
+body.dark .builder-schema-role-btn,
+body.dark .builder-schema-search-input,
+body.dark .builder-form-input,
+body.dark .builder-sql-editor {
+  background: var(--bg-surface) !important;
+}
+
+body.dark .builder-shell,
+body.dark .builder-preview-panel,
+body.dark .builder-pane-shell-center {
+  background: var(--bg-body) !important;
+}
+
+body.dark .builder-preview-stage {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--bg-surface) 98%, black), color-mix(in srgb, var(--bg-body) 92%, black)),
+    linear-gradient(90deg, color-mix(in srgb, var(--border) 72%, transparent) 1px, transparent 1px),
+    linear-gradient(180deg, color-mix(in srgb, var(--border) 72%, transparent) 1px, transparent 1px) !important;
+  background-size: auto, 32px 32px, 32px 32px !important;
+}
+
+body.dark .builder-controls-panel,
+body.dark .builder-preview-header-upgraded,
+body.dark .builder-data-pane-chart-brief,
+body.dark .builder-data-pane-note,
+body.dark .builder-mini-stat,
+body.dark .builder-pane-shell,
+body.dark .builder-workspace-header,
+body.dark .builder-workspace-metric,
+body.dark .builder-workspace-summary-card,
+body.dark .builder-controls-card,
+body.dark .builder-query-mode-switch,
+body.dark .builder-preview-summary-strip > div,
+body.dark .builder-sql-run-meta,
+body.dark .builder-inspector-hero,
+body.dark .builder-inspector-hero-icon,
+body.dark .builder-data-rail-item,
+body.dark .schema-group,
+body.dark .schema-db-title,
+body.dark .schema-table-title,
+body.dark .schema-item,
+body.dark .builder-role-zone,
+body.dark .builder-role-chip,
+body.dark .builder-role-zone-pill,
+body.dark .builder-role-chip-type,
+body.dark .builder-role-zone-clear,
+body.dark .builder-role-chip-action,
+body.dark .builder-toggle-row,
+body.dark .builder-toggle-pill,
+body.dark .builder-schema-role-btn,
+body.dark .builder-schema-search-input,
+body.dark .builder-form-input,
+body.dark .builder-sql-editor {
+  border-color: var(--border) !important;
+}
+
+body.dark .builder-data-pane-note {
+  color: color-mix(in srgb, var(--primary) 76%, white);
+}
+
+body.dark .builder-schema-role-btn,
+body.dark .builder-role-zone-clear,
+body.dark .builder-role-chip-action {
+  color: var(--text-base);
+}
+
+body.dark .builder-toggle-knob {
+  background: var(--bg-elevated);
+}
+
 @media (max-width: 1180px) {
   .builder-workspace-grid-compact {
     grid-template-columns: 1fr;
@@ -4138,4 +4283,178 @@
 .builder-inline-validation,
 .builder-validation-inline-item {
   border-radius: 10px;
+}
+
+body.dark .builder-page-header,
+body.dark .builder-page-toolbar-note,
+body.dark .builder-page-context-item,
+body.dark .builder-page-toolbar-btn,
+body.dark .builder-pane-shell,
+body.dark .builder-pane-shell-center,
+body.dark .builder-pane-shell-right,
+body.dark .builder-pane-frame-left,
+body.dark .builder-controls-panel,
+body.dark .builder-preview-panel,
+body.dark .builder-preview-header-upgraded,
+body.dark .builder-preview-stage,
+body.dark .builder-preview-empty,
+body.dark .builder-preview-no-data,
+body.dark .builder-query-panel,
+body.dark .builder-query-row,
+body.dark .builder-query-sql-panel,
+body.dark .builder-mini-stat,
+body.dark .builder-preview-status-card,
+body.dark .builder-inspector-topline-item,
+body.dark .builder-inspector-subrow,
+body.dark .builder-data-pane-chart-brief,
+body.dark .builder-inspector-hero,
+body.dark .builder-visual-current,
+body.dark .builder-chart-type-card,
+body.dark .schema-group,
+body.dark .schema-db-title,
+body.dark .schema-table-title,
+body.dark .schema-item,
+body.dark .schema-type-badge,
+body.dark .builder-schema-search-input,
+body.dark .builder-visual-search-input,
+body.dark .builder-visual-select,
+body.dark .builder-save-form .input-control,
+body.dark .builder-role-chip,
+body.dark .builder-role-chip-action,
+body.dark .builder-role-zone-clear,
+body.dark .builder-schema-role-btn,
+body.dark .builder-preview-canvas,
+body.dark .builder-query-sql-block,
+body.dark .builder-validation-pill-row,
+body.dark .builder-validation-empty {
+  background: var(--bg-surface) !important;
+}
+
+body.dark .builder-shell {
+  background: var(--bg-body) !important;
+}
+
+body.dark .builder-page-header,
+body.dark .builder-page-toolbar-note,
+body.dark .builder-page-context-item,
+body.dark .builder-page-toolbar-btn,
+body.dark .builder-pane-shell,
+body.dark .builder-pane-header,
+body.dark .builder-controls-panel,
+body.dark .builder-preview-stage,
+body.dark .builder-preview-empty,
+body.dark .builder-preview-no-data,
+body.dark .builder-query-panel,
+body.dark .builder-mini-stat,
+body.dark .builder-preview-status-card,
+body.dark .builder-inspector-topline-item,
+body.dark .builder-inspector-subrow,
+body.dark .builder-data-pane-chart-brief,
+body.dark .builder-inspector-header,
+body.dark .builder-inspector-hero,
+body.dark .builder-visual-current,
+body.dark .builder-chart-type-card,
+body.dark .schema-group,
+body.dark .schema-db-title,
+body.dark .schema-table-title,
+body.dark .schema-item,
+body.dark .schema-type-badge,
+body.dark .builder-schema-search-input,
+body.dark .builder-visual-search-input,
+body.dark .builder-visual-select,
+body.dark .builder-save-form .input-control,
+body.dark .builder-role-zone,
+body.dark .builder-role-chip,
+body.dark .builder-role-chip-action,
+body.dark .builder-role-zone-clear,
+body.dark .builder-schema-role-btn,
+body.dark .builder-preview-canvas,
+body.dark .builder-validation-pill-row,
+body.dark .builder-validation-empty {
+  border-color: var(--border) !important;
+}
+
+body.dark .builder-page-kicker,
+body.dark .builder-page-context-label,
+body.dark .builder-page-subtitle,
+body.dark .builder-pane-subtitle,
+body.dark .builder-section-description,
+body.dark .builder-preview-status-card p,
+body.dark .builder-chart-type-card-description,
+body.dark .builder-chart-type-card-meta,
+body.dark .builder-chart-type-card-warning,
+body.dark .builder-visual-category-description,
+body.dark .builder-visual-current span:last-child,
+body.dark .builder-role-zone-empty,
+body.dark .builder-role-zone-helper,
+body.dark .builder-role-zone-meta,
+body.dark .builder-preview-sub.compact,
+body.dark .builder-preview-no-data-copy p,
+body.dark .empty-state-description {
+  color: var(--text-muted) !important;
+}
+
+body.dark .builder-page-title,
+body.dark .builder-pane-title,
+body.dark .builder-mini-stat strong,
+body.dark .builder-inspector-topline-item strong,
+body.dark .builder-preview-status-card strong,
+body.dark .builder-data-pane-chart-brief strong,
+body.dark .builder-inspector-hero-copy strong,
+body.dark .builder-visual-current strong,
+body.dark .builder-chart-type-card-title,
+body.dark .builder-visual-category-title,
+body.dark .builder-preview-no-data-copy strong,
+body.dark .empty-state-title {
+  color: var(--text-strong) !important;
+}
+
+body.dark .builder-page-toolbar-btn:hover,
+body.dark .schema-item:hover,
+body.dark .schema-table-title:hover,
+body.dark .schema-db-title:hover,
+body.dark .builder-chart-type-card:hover {
+  background: var(--bg-hover) !important;
+}
+
+body.dark .builder-preview-chip,
+body.dark .builder-preview-overview-pill,
+body.dark .builder-query-tag,
+body.dark .builder-pane-status,
+body.dark .builder-page-toolbar-note,
+body.dark .builder-page-context-item,
+body.dark .builder-role-chip,
+body.dark .builder-validation-empty {
+  background: var(--bg-elevated) !important;
+  color: var(--text-base) !important;
+}
+
+body.dark .builder-preview-chip:first-child,
+body.dark .builder-status-badge.ready,
+body.dark .builder-inspector-summary-pill,
+body.dark .builder-query-status.ready,
+body.dark .builder-role-zone-pill.is-required,
+body.dark .builder-schema-role-btn.is-required {
+  background: color-mix(in srgb, var(--primary) 16%, var(--bg-surface)) !important;
+  border-color: color-mix(in srgb, var(--primary) 34%, var(--border)) !important;
+  color: color-mix(in srgb, var(--primary) 76%, white) !important;
+}
+
+body.dark .builder-preview-alert-pill,
+body.dark .builder-validation-pill.error {
+  background: color-mix(in srgb, var(--danger) 10%, var(--bg-surface)) !important;
+  border-color: color-mix(in srgb, var(--danger) 34%, var(--border)) !important;
+  color: color-mix(in srgb, var(--danger) 76%, white) !important;
+}
+
+body.dark .builder-query-sql-block {
+  border-color: color-mix(in srgb, var(--border) 90%, black) !important;
+  background: color-mix(in srgb, var(--bg-body) 82%, black) !important;
+  color: var(--text-strong) !important;
+}
+
+body.dark .builder-preview-empty,
+body.dark .builder-preview-no-data,
+body.dark .builder-role-zone.is-empty-optional {
+  background: var(--bg-elevated) !important;
 }

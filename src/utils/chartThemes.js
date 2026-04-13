@@ -59,12 +59,12 @@ export function getChartTheme() {
     text: readCssVar("--text-primary", "#0f172a"),
     textMuted: readCssVar("--text-secondary", "#64748b"),
     textStrong: readCssVar("--text-primary", "#0f172a"),
-    axis: "#9fb0c7",
+    axis: readCssVar("--border-strong", "#9fb0c7"),
     axisLabel: readCssVar("--text-secondary", "#64748b"),
-    splitLine: "#dbe5f0",
+    splitLine: readCssVar("--divider", "#dbe5f0"),
     border: readCssVar("--border", "#e3eaf3"),
-    pointer: "#bfdbfe",
-    shadowPointer: "rgba(37, 99, 235, 0.08)",
+    pointer: readCssVar("--primary", "#3b82f6"),
+    shadowPointer: withOpacity(readCssVar("--primary", "#3b82f6"), 0.14),
     background: "transparent",
   };
 }
@@ -160,7 +160,7 @@ export function getTooltipStyle({
   return {
     trigger,
     confine: true,
-    backgroundColor: "#ffffff",
+    backgroundColor: theme.surface,
     borderColor: theme.border,
     borderWidth: 1,
     textStyle: { color: theme.text, fontSize: 12 },

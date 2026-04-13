@@ -726,3 +726,121 @@
     height: 44px;
   }
 }
+
+body.dark .dashboard-workspace-page,
+body.dark .dashboard-workspace-canvas {
+  background: var(--bg-body);
+}
+
+body.dark .dashboard-workspace-header,
+body.dark .dashboard-workspace-tabs,
+body.dark .dashboard-workspace-tab.is-active,
+body.dark .dashboard-workspace-tab-add,
+body.dark .dashboard-workspace-tab-input,
+body.dark .dashboard-empty-state,
+body.dark .dashboard-widget-frame,
+body.dark .dashboard-workspace-context-menu,
+body.dark .dashboard-context-menu-item,
+body.dark .dashboard-sidebar,
+body.dark .dashboard-sidebar-rail-button,
+body.dark .dashboard-sidebar-toggle,
+body.dark .dashboard-sidebar-btn,
+body.dark .dashboard-sidebar-chart-item,
+body.dark .dashboard-sidebar-delete-btn,
+body.dark .dashboard-sidebar-copy-btn,
+body.dark .dashboard-sidebar-code,
+body.dark .chart-picker,
+body.dark .chart-picker-header button,
+body.dark .chart-picker-item,
+body.dark .dashboard-workspace-page .chart-card,
+body.dark .dashboard-workspace-page .chart-card-header,
+body.dark .dashboard-workspace-page .chart-renderer-root {
+  background: var(--bg-surface);
+}
+
+body.dark .dashboard-workspace-header,
+body.dark .dashboard-workspace-tabs,
+body.dark .dashboard-workspace-status,
+body.dark .dashboard-toolbar-btn,
+body.dark .dashboard-workspace-tab:hover,
+body.dark .dashboard-workspace-tab-add:hover,
+body.dark .dashboard-workspace-tab.is-active,
+body.dark .dashboard-empty-state,
+body.dark .dashboard-widget-frame,
+body.dark .dashboard-workspace-context-menu,
+body.dark .dashboard-sidebar,
+body.dark .dashboard-sidebar-header,
+body.dark .dashboard-sidebar-section,
+body.dark .dashboard-sidebar-btn,
+body.dark .dashboard-sidebar-chart-item,
+body.dark .dashboard-sidebar-empty,
+body.dark .dashboard-sidebar-code,
+body.dark .chart-picker,
+body.dark .chart-picker-header,
+body.dark .chart-picker-item,
+body.dark .chart-picker-item-code,
+body.dark .dashboard-workspace-page .chart-card,
+body.dark .dashboard-workspace-page .chart-card-header,
+body.dark .dashboard-workspace-page .chart-renderer-root {
+  border-color: var(--border);
+}
+
+body.dark .dashboard-workspace-breadcrumb,
+body.dark .dashboard-workspace-meta,
+body.dark .dashboard-workspace-status,
+body.dark .dashboard-workspace-tab,
+body.dark .dashboard-sidebar-kicker,
+body.dark .dashboard-sidebar-meta,
+body.dark .dashboard-sidebar-chart-meta,
+body.dark .dashboard-empty-state-copy,
+body.dark .chart-picker-header p,
+body.dark .chart-picker-item-copy span,
+body.dark .chart-picker-empty,
+body.dark .dashboard-widget-frame-meta {
+  color: var(--text-muted);
+}
+
+body.dark .dashboard-workspace-title,
+body.dark .dashboard-toolbar-btn,
+body.dark .dashboard-context-menu-item,
+body.dark .dashboard-sidebar-title,
+body.dark .dashboard-sidebar-section-title,
+body.dark .dashboard-sidebar-chart-title,
+body.dark .dashboard-sidebar-export-title,
+body.dark .dashboard-empty-state-title,
+body.dark .dashboard-widget-frame-title,
+body.dark .chart-picker-header h3,
+body.dark .chart-picker-item-copy strong {
+  color: var(--text-strong);
+}
+
+body.dark .dashboard-toolbar-btn:hover,
+body.dark .dashboard-workspace-tab:hover,
+body.dark .dashboard-workspace-tab-add:hover,
+body.dark .dashboard-context-menu-item:hover,
+body.dark .dashboard-sidebar-btn:hover:not(:disabled),
+body.dark .dashboard-sidebar-chart-item:hover,
+body.dark .chart-picker-item:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-strong);
+}
+
+body.dark .dashboard-sidebar-chart-item.is-active {
+  background: color-mix(in srgb, var(--primary) 14%, var(--bg-surface));
+  border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
+}
+
+body.dark .dashboard-sidebar-empty,
+body.dark .dashboard-workspace-status,
+body.dark .chart-picker-item-code {
+  background: var(--bg-elevated);
+}
+
+body.dark .dashboard-sidebar-empty-title {
+  color: var(--text-strong);
+}
+
+body.dark .dashboard-canvas-grid .react-resizable-handle::after {
+  border-right-color: var(--text-muted);
+  border-bottom-color: var(--text-muted);
+}

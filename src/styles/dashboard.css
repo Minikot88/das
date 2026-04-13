@@ -1666,6 +1666,105 @@
   }
 }
 
+body.dark .dashboard-workspace-page,
+body.dark .dashboard-workspace-canvas {
+  background: var(--bg-body);
+}
+
+body.dark .dashboard-workspace-header,
+body.dark .dashboard-workspace-tabs-section,
+body.dark .dashboard-workspace-canvas,
+body.dark .dashboard-sidebar,
+body.dark .dashboard-sidebar.is-collapsed,
+body.dark .dashboard-workspace-stat,
+body.dark .dashboard-toolbar-btn,
+body.dark .dashboard-workspace-tab,
+body.dark .dashboard-workspace-tab-pill,
+body.dark .dashboard-workspace-tab-add,
+body.dark .dashboard-widget-frame,
+body.dark .dashboard-empty-state-inner,
+body.dark .dashboard-sidebar-chart-item,
+body.dark .dashboard-sidebar-empty,
+body.dark .dashboard-sidebar-code,
+body.dark .dashboard-workspace-context-menu,
+body.dark .dashboard-context-menu-item {
+  background: var(--bg-surface) !important;
+}
+
+body.dark .dashboard-workspace-header,
+body.dark .dashboard-workspace-tabs-section,
+body.dark .dashboard-workspace-canvas,
+body.dark .dashboard-sidebar,
+body.dark .dashboard-workspace-stat,
+body.dark .dashboard-toolbar-btn,
+body.dark .dashboard-workspace-tab,
+body.dark .dashboard-widget-frame,
+body.dark .dashboard-empty-state-inner,
+body.dark .dashboard-sidebar-chart-item,
+body.dark .dashboard-sidebar-empty,
+body.dark .dashboard-sidebar-code,
+body.dark .dashboard-workspace-context-menu,
+body.dark .dashboard-context-menu-item {
+  border-color: var(--border) !important;
+}
+
+body.dark .dashboard-workspace-title,
+body.dark .dashboard-toolbar-btn,
+body.dark .dashboard-widget-frame-title,
+body.dark .dashboard-sidebar-chart-title,
+body.dark .dashboard-empty-state-title,
+body.dark .dashboard-sidebar-title {
+  color: var(--text-strong) !important;
+}
+
+body.dark .dashboard-workspace-breadcrumb,
+body.dark .dashboard-workspace-kicker,
+body.dark .dashboard-workspace-meta,
+body.dark .dashboard-workspace-tabs-helper,
+body.dark .dashboard-workspace-canvas-meta,
+body.dark .dashboard-sidebar-meta,
+body.dark .dashboard-sidebar-chart-type,
+body.dark .dashboard-sidebar-chart-meta,
+body.dark .dashboard-widget-frame-subtitle,
+body.dark .dashboard-widget-frame-meta,
+body.dark .dashboard-empty-state-copy,
+body.dark .dashboard-sidebar-empty-copy,
+body.dark .dashboard-workspace-stat span,
+body.dark .dashboard-sidebar-rail-text {
+  color: var(--text-muted) !important;
+}
+
+body.dark .dashboard-workspace-tab.is-active,
+body.dark .dashboard-sidebar-chart-item.is-active,
+body.dark .dashboard-widget-frame.is-selected {
+  background: color-mix(in srgb, var(--primary) 14%, var(--bg-surface)) !important;
+  border-color: color-mix(in srgb, var(--primary) 34%, var(--border)) !important;
+}
+
+body.dark .dashboard-toolbar-btn:hover,
+body.dark .dashboard-sidebar-btn:hover,
+body.dark .dashboard-sidebar-toggle:hover,
+body.dark .dashboard-sidebar-delete-btn:hover,
+body.dark .dashboard-sidebar-copy-btn:hover,
+body.dark .dashboard-context-menu-item:hover {
+  background: var(--bg-hover) !important;
+}
+
+body.dark .dashboard-workspace-canvas,
+body.dark .dashboard-workspace-canvas-frame {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--bg-surface) 98%, black), color-mix(in srgb, var(--bg-body) 92%, black)),
+    linear-gradient(90deg, color-mix(in srgb, var(--border) 70%, transparent) 1px, transparent 1px),
+    linear-gradient(180deg, color-mix(in srgb, var(--border) 70%, transparent) 1px, transparent 1px) !important;
+  background-size: auto, 28px 28px, 28px 28px !important;
+}
+
+body.dark .dashboard-workspace-page .chart-card,
+body.dark .dashboard-workspace-page .chart-card-header {
+  background: var(--bg-surface) !important;
+  border-color: var(--border) !important;
+}
+
 @media (max-width: 840px) {
   .dashboard-workspace-header,
   .dashboard-workspace-toolbar,
@@ -2146,6 +2245,25 @@
 
 .chart-picker-item {
   border-radius: 8px;
+}
+
+body.dark .dashboard-sidebar-overview-card,
+body.dark .dashboard-sidebar-selection-card,
+body.dark .dashboard-sidebar-overview-grid > div {
+  background: color-mix(in srgb, var(--bg-surface) 94%, var(--primary) 6%) !important;
+  border-color: var(--border) !important;
+}
+
+body.dark .dashboard-sidebar-overview-label,
+body.dark .dashboard-sidebar-overview-grid span,
+body.dark .dashboard-sidebar-selection-row span {
+  color: var(--text-muted) !important;
+}
+
+body.dark .dashboard-sidebar-overview-title,
+body.dark .dashboard-sidebar-overview-grid strong,
+body.dark .dashboard-sidebar-selection-row strong {
+  color: var(--text-strong) !important;
 }
 
 @media (max-width: 900px) {

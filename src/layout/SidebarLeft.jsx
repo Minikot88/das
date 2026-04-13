@@ -23,6 +23,7 @@ export default function SidebarLeft() {
   const activeDashboard =
     activeSheet?.dashboards.find((dashboard) => dashboard.id === activeDashboardId) ??
     activeSheet?.dashboards[0];
+  const isCollapsed = sidebarCollapsed && !mobileMenuOpen;
 
   return (
     <>
@@ -35,12 +36,12 @@ export default function SidebarLeft() {
       ) : null}
 
       <nav
-        className={`sidebar-left${sidebarCollapsed ? " collapsed" : ""}${mobileMenuOpen ? " mobile-open" : ""}`}
+        className={`sidebar-left${isCollapsed ? " collapsed" : ""}${mobileMenuOpen ? " mobile-open" : ""}`}
         aria-label="เมนูหลัก"
       >
         <div className="sidebar-top">
           <div className="sidebar-label">
-            {!sidebarCollapsed ? (
+            {!isCollapsed ? (
               <>
                 <span>Menu</span>
                 <strong>Workspace</strong>
@@ -53,14 +54,14 @@ export default function SidebarLeft() {
             type="button"
             className="sidebar-collapse-btn"
             onClick={toggleSidebar}
-            aria-label={sidebarCollapsed ? "ขยายแถบด้านข้าง" : "ย่อแถบด้านข้าง"}
-            title={sidebarCollapsed ? "ขยาย" : "ย่อ"}
+            aria-label={isCollapsed ? "ขยายแถบด้านข้าง" : "ย่อแถบด้านข้าง"}
+            title={isCollapsed ? "ขยาย" : "ย่อ"}
           >
-            {sidebarCollapsed ? ">" : "<"}
+            {isCollapsed ? ">" : "<"}
           </button>
         </div>
 
-        {!sidebarCollapsed ? (
+        {!isCollapsed ? (
           <div className="sidebar-workspace-card">
             <span className="sidebar-workspace-kicker">Current</span>
             <strong>{activeProject?.name ?? "โปรเจกต์"}</strong>
@@ -75,13 +76,13 @@ export default function SidebarLeft() {
               to={to}
               end={exact}
               className={({ isActive }) =>
-                `nav-link${isActive ? " active" : ""}${sidebarCollapsed ? " icon-only" : ""}`
+                `nav-link${isActive ? " active" : ""}${isCollapsed ? " icon-only" : ""}`
               }
               onClick={() => setMobileMenuOpen(false)}
-              title={sidebarCollapsed ? label : undefined}
+              title={isCollapsed ? label : undefined}
             >
               <span className="nav-icon">{icon}</span>
-              {!sidebarCollapsed ? (
+              {!isCollapsed ? (
                 <span className="nav-copy">
                   <span className="nav-label">{label}</span>
                   <small>{hint}</small>
@@ -91,7 +92,7 @@ export default function SidebarLeft() {
           ))}
         </div>
 
-        {!sidebarCollapsed ? (
+        {!isCollapsed ? (
           <div className="sidebar-footer">
             <div className="sidebar-footer-block">
               <span className="sidebar-footer-label">Active Context</span>

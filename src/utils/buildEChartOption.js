@@ -52,6 +52,7 @@ function buildBaseOption({ chart, chartType, showLegend, categories = [], xName 
 }
 
 function buildPlaceholderOption(title, message, warning = false) {
+  const theme = getChartTheme();
   return {
     animation: false,
     graphic: [
@@ -60,12 +61,35 @@ function buildPlaceholderOption(title, message, warning = false) {
         left: "center",
         top: "middle",
         children: [
-          { type: "text", style: { text: title, fill: warning ? "#b45309" : "#475569", font: "600 15px IBM Plex Sans, Segoe UI, sans-serif", textAlign: "center" }, top: -18 },
-          { type: "text", style: { text: message, fill: "#64748b", font: "12px IBM Plex Sans, Segoe UI, sans-serif", textAlign: "center" }, top: 8 },
+          {
+            type: "text",
+            style: {
+              text: title,
+              fill: warning ? readWarningColor(theme) : theme.textStrong,
+              font: "600 15px IBM Plex Sans, Segoe UI, sans-serif",
+              textAlign: "center",
+            },
+            top: -18,
+          },
+          {
+            type: "text",
+            style: {
+              text: message,
+              fill: theme.textMuted,
+              font: "12px IBM Plex Sans, Segoe UI, sans-serif",
+              textAlign: "center",
+            },
+            top: 8,
+          },
         ],
       },
     ],
   };
+}
+
+function readWarningColor(theme) {
+  if (typeof window === "undefined") return "#d97706";
+  return window.getComputedStyle(document.body).getPropertyValue("--warning").trim() || theme.textStrong;
 }
 
 function buildSingleSeriesData(rows = [], categoryField, valueField) {
@@ -226,7 +250,7 @@ function buildOptionFromModel(model) {
           roseType: type === "rose" ? "radius" : undefined,
           data: rows.map((row) => ({ name: asLabel(row[categoryField]), value: Number(row[valueField]) || 0, rawDatum: row })),
           label: { show: chart.showLabels !== false, color: getChartTheme().axisLabel, fontSize: 11 },
-          itemStyle: { borderColor: "#ffffff", borderWidth: 1 },
+          itemStyle: { borderColor: getChartTheme().surface, borderWidth: 1 },
         }],
       };
     }

@@ -55,7 +55,7 @@ export default function BuilderValidationPanel({
       </div>
 
       {roleAssignments?.length ? (
-        <div style={{ display: "grid", gap: "8px", marginBottom: activeIssues.length ? "10px" : "0" }}>
+        <div className="builder-validation-role-list" style={{ marginBottom: activeIssues.length ? "10px" : "0" }}>
           {roleAssignments.filter((role) => role.required).map((role) => {
             const hasValue = Boolean(role.fields?.length);
             const invalid = Array.from(invalidCodes).some((code) => code.includes(role.key));
@@ -64,21 +64,15 @@ export default function BuilderValidationPanel({
             return (
               <div
                 key={role.key}
-                style={{
-                  border: "1px solid #e5e7eb",
-                  background: invalid ? "#fef2f2" : hasValue ? "#f0fdf4" : "#fff",
-                  padding: "8px 10px",
-                  display: "grid",
-                  gap: "3px",
-                }}
+                className={`builder-validation-role-card ${invalid ? "is-invalid" : hasValue ? "is-valid" : "is-empty"}`}
               >
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
-                  <strong style={{ fontSize: "12px", color: "#111827" }}>{role.label}</strong>
+                <div className="builder-validation-role-head">
+                  <strong className="builder-validation-role-title">{role.label}</strong>
                   <span className={`builder-validation-pill ${invalid ? "error" : hasValue ? "success" : "warning"}`}>
                     {invalid ? "Invalid" : hasValue ? "Mapped" : "Missing"}
                   </span>
                 </div>
-                <div style={{ fontSize: "11px", color: "#64748b" }}>
+                <div className="builder-validation-role-meta">
                   {hasValue
                     ? role.fields.map((field) => `${field.name}${field.type ? ` · ${field.type}` : ""}`).join(", ")
                     : roleState?.message ?? role.emptyHint}
@@ -88,7 +82,7 @@ export default function BuilderValidationPanel({
           })}
         </div>
       ) : chartMeta?.requiredFields?.length ? (
-        <div style={{ fontSize: "11px", color: "#64748b" }}>
+        <div className="builder-validation-role-meta">
           {chartMeta.requiredFields.map((field) => field.roleLabel).join(", ")}
         </div>
       ) : null}

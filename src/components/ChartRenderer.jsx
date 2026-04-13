@@ -76,10 +76,10 @@ const KPIWidget = ({ title, value }) => (
     height: "100%",
     minHeight: "140px"
   }}>
-    <div className="kpi-label" style={{ fontSize: "12px", color: "#6b7280", marginBottom: "4px" }}>
+    <div className="kpi-label" style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px" }}>
       {title}
     </div>
-    <div className="kpi-value" style={{ fontSize: "32px", fontWeight: "700", color: "#2563eb" }}>
+    <div className="kpi-value" style={{ fontSize: "32px", fontWeight: "700", color: "var(--primary)" }}>
       {formatValue(value)}
     </div>
   </div>
@@ -226,7 +226,7 @@ const ChartRenderer = memo(
           return <KPIWidget title={displayTitle} value={total} />;
 
         case "heatmap":
-          return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#9ca3af' }}>Heatmap visualization (coming soon)</div>;
+          return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)' }}>Heatmap visualization (coming soon)</div>;
 
         default:
           return (

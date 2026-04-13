@@ -520,3 +520,52 @@
   .dashboard-sidebar-header,
   .dashboard-widget-frame-head { flex-direction: column; align-items: flex-start; }
 }
+
+body.dark .dashboard-workspace-header,
+body.dark .dashboard-workspace-stat,
+body.dark .dashboard-workspace-header-panel,
+body.dark .dashboard-workspace-toolbar,
+body.dark .dashboard-workspace-toolbar-meta,
+body.dark .dashboard-workspace-tab,
+body.dark .dashboard-workspace-tab.is-active,
+body.dark .dashboard-workspace-tab-pill,
+body.dark .dashboard-workspace-canvas-frame,
+body.dark .dashboard-empty-state,
+body.dark .dashboard-empty-state-visual,
+body.dark .dashboard-empty-state-notes span,
+body.dark .dashboard-sidebar,
+body.dark .dashboard-sidebar-overview-card,
+body.dark .dashboard-sidebar-selection-card,
+body.dark .dashboard-sidebar-overview-grid div,
+body.dark .dashboard-sidebar-chart-item,
+body.dark .dashboard-workspace-page .chart-card,
+body.dark .dashboard-workspace-page .chart-card-header {
+  background: var(--bg-surface) !important;
+}
+
+body.dark .dashboard-workspace-header,
+body.dark .dashboard-workspace-stat,
+body.dark .dashboard-workspace-header-panel,
+body.dark .dashboard-workspace-toolbar,
+body.dark .dashboard-workspace-toolbar-meta,
+body.dark .dashboard-workspace-canvas-frame,
+body.dark .dashboard-empty-state,
+body.dark .dashboard-empty-state-visual,
+body.dark .dashboard-empty-state-notes span,
+body.dark .dashboard-sidebar,
+body.dark .dashboard-sidebar-overview-card,
+body.dark .dashboard-sidebar-selection-card,
+body.dark .dashboard-sidebar-overview-grid div,
+body.dark .dashboard-sidebar-chart-item,
+body.dark .dashboard-workspace-page .chart-card,
+body.dark .dashboard-workspace-page .chart-card-header {
+  border-color: var(--border) !important;
+}
+
+body.dark .dashboard-workspace-canvas-frame {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--bg-surface) 98%, black), color-mix(in srgb, var(--bg-body) 92%, black)),
+    linear-gradient(90deg, color-mix(in srgb, var(--border) 70%, transparent) 1px, transparent 1px),
+    linear-gradient(180deg, color-mix(in srgb, var(--border) 70%, transparent) 1px, transparent 1px) !important;
+  background-size: auto, 28px 28px, 28px 28px !important;
+}

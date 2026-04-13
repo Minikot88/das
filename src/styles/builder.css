@@ -2245,3 +2245,73 @@
   overflow-y: auto;
   overflow-x: hidden;
 }
+
+body.dark .builder-shell,
+body.dark .builder-top-action-bar,
+body.dark .builder-pane-frame-left,
+body.dark .builder-preview-panel,
+body.dark .builder-controls-panel,
+body.dark .builder-mini-stat,
+body.dark .builder-data-pane-chart-brief,
+body.dark .builder-data-pane-note,
+body.dark .builder-preview-summary-strip > div,
+body.dark .builder-query-panel,
+body.dark .builder-query-sql-panel,
+body.dark .builder-config-section,
+body.dark .builder-role-zone,
+body.dark .builder-sql-field-item,
+body.dark .schema-group,
+body.dark .builder-chart-list-item,
+body.dark .builder-chart-family-item,
+body.dark .builder-chart-variant-item,
+body.dark .builder-chart-hover-preview,
+body.dark .builder-chart-hover-preview-canvas,
+body.dark .builder-role-zone-empty,
+body.dark .builder-query-sql-block,
+body.dark .builder-query-generated-preview,
+body.dark .builder-sql-editor,
+body.dark .builder-pane-frame-left .builder-schema-search,
+body.dark .builder-preview-stage,
+body.dark .builder-preview-canvas,
+body.dark .chart-echarts-placeholder {
+  background-color: #0f1a2b !important;
+  border-color: rgba(96, 165, 250, 0.14) !important;
+  color: var(--text-primary) !important;
+}
+
+body.dark .builder-shell {
+  background: #0a1220 !important;
+}
+
+body.dark .builder-preview-stage,
+body.dark .chart-echarts-placeholder {
+  background:
+    linear-gradient(180deg, rgba(17, 31, 51, 0.98), rgba(10, 18, 32, 0.98)),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 23px,
+      rgba(53, 80, 110, 0.22) 24px
+    ),
+    repeating-linear-gradient(
+      180deg,
+      transparent,
+      transparent 23px,
+      rgba(53, 80, 110, 0.22) 24px
+    ) !important;
+}
+
+body.dark .builder-chart-list-item.is-active,
+body.dark .builder-chart-family-item.is-active,
+body.dark .builder-chart-variant-item.is-active,
+body.dark .builder-query-mode-btn.is-active,
+body.dark .builder-chart-category-tab.is-active,
+body.dark .builder-aggregation-btn.active {
+  background: #15253b !important;
+  color: var(--text-primary) !important;
+}
+
+body.dark .builder-pane-frame-left .builder-schema-search,
+body.dark .builder-top-action-bar {
+  backdrop-filter: blur(14px);
+}
