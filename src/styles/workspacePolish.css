@@ -1,6 +1,6 @@
 .dashboard-workspace-page,
 .builder-shell {
-  background: #f3f6fa;
+  background: var(--background);
 }
 
 .dashboard-workspace-page {
@@ -8,13 +8,13 @@
 }
 
 .dashboard-workspace-shell {
-  gap: 12px;
-  padding: 12px;
+  gap: 16px;
+  padding: 16px;
 }
 
 .dashboard-workspace-main,
 .builder-workspace-grid.builder-workspace-grid-compact {
-  gap: 12px;
+  gap: 16px;
 }
 
 .dashboard-workspace-header,
@@ -36,18 +36,18 @@
 .dashboard-workspace-tabs-section,
 .dashboard-workspace-canvas,
 .dashboard-sidebar {
-  border-color: color-mix(in srgb, var(--border) 88%, white);
-  background: color-mix(in srgb, var(--surface) 98%, #f9fbff 2%);
+  border-color: var(--border);
+  background: var(--surface);
 }
 
 .dashboard-workspace-header {
-  grid-template-columns: minmax(0, 1fr) 280px;
-  gap: 14px;
-  padding: 14px;
+  grid-template-columns: minmax(0, 1fr) 296px;
+  gap: 16px;
+  padding: 18px;
 }
 
 .dashboard-workspace-header-copy {
-  gap: 6px;
+  gap: 10px;
 }
 
 .dashboard-workspace-breadcrumb,
@@ -56,7 +56,7 @@
 .dashboard-workspace-canvas-strip-item,
 .builder-top-action-breadcrumb {
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .dashboard-workspace-title,
@@ -66,14 +66,14 @@
 }
 
 .dashboard-workspace-title {
-  font-size: 24px;
+  font-size: 28px;
 }
 
 .builder-top-action-bar {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
-  padding: 10px 12px;
+  gap: 14px;
+  padding: 12px 14px;
   border: 1px solid var(--border);
   background: var(--surface);
 }
@@ -113,9 +113,9 @@
 .builder-status-badge,
 .builder-pane-status,
 .builder-chart-inline-badge {
-  min-height: 22px;
-  padding: 0 7px;
-  border-radius: 4px !important;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 6px !important;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -162,8 +162,8 @@
 .builder-page-toolbar-btn,
 .builder-top-save-btn,
 .dashboard-toolbar-btn {
-  min-height: 32px;
-  padding: 0 10px;
+  min-height: 36px;
+  padding: 0 12px;
   font-size: 12px;
 }
 
@@ -176,12 +176,13 @@
 
 .dashboard-workspace-stat {
   min-width: 0;
-  min-height: 62px;
-  gap: 3px;
-  padding: 10px;
+  min-height: 68px;
+  gap: 4px;
+  padding: 12px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  background: var(--surface-secondary);
+  background: var(--surface);
+  box-shadow: inset 0 3px 0 transparent;
 }
 
 .dashboard-workspace-stat span {
@@ -193,12 +194,42 @@
 }
 
 .dashboard-workspace-stat strong {
-  font-size: 15px;
+  font-size: 17px;
   color: var(--text-primary);
 }
 
+.dashboard-workspace-stat.is-blue {
+  border-color: var(--border);
+  background: var(--surface);
+  box-shadow: inset 0 3px 0 var(--primary);
+}
+
+.dashboard-workspace-stat.is-cyan {
+  border-color: var(--border);
+  background: var(--surface);
+  box-shadow: inset 0 3px 0 var(--info);
+}
+
+.dashboard-workspace-stat.is-violet {
+  border-color: var(--border);
+  background: var(--surface);
+  box-shadow: inset 0 3px 0 #4f46e5;
+}
+
+.dashboard-workspace-stat.is-green {
+  border-color: var(--border);
+  background: var(--surface);
+  box-shadow: inset 0 3px 0 var(--success);
+}
+
+.dashboard-workspace-status.is-live {
+  border-color: var(--border);
+  background: var(--surface-secondary);
+  color: var(--primary);
+}
+
 .dashboard-workspace-toolbar {
-  padding: 10px 12px;
+  padding: 12px 14px;
 }
 
 .dashboard-workspace-toolbar-summary {
@@ -206,8 +237,8 @@
 }
 
 .dashboard-workspace-tabs-section {
-  gap: 8px;
-  padding: 12px;
+  gap: 10px;
+  padding: 14px;
 }
 
 .dashboard-workspace-tabs-head,
@@ -218,13 +249,14 @@
 
 .dashboard-workspace-tab,
 .dashboard-workspace-tab-add {
-  min-height: 34px;
-  padding: 0 10px;
+  min-height: 36px;
+  padding: 0 12px;
   background: var(--surface);
 }
 
 .dashboard-workspace-tab.is-active {
-  background: color-mix(in srgb, var(--primary-soft) 38%, white);
+  background: var(--surface-secondary);
+  box-shadow: inset 0 -2px 0 var(--primary);
 }
 
 .dashboard-workspace-tab-accent {
@@ -238,20 +270,20 @@
 }
 
 .dashboard-workspace-canvas {
-  gap: 10px;
-  padding: 12px;
+  gap: 12px;
+  padding: 16px;
 }
 
 .dashboard-workspace-canvas-title {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
   letter-spacing: -0.02em;
 }
 
 .dashboard-workspace-canvas-frame {
-  min-height: 520px;
-  gap: 10px;
-  padding: 12px;
+  min-height: 560px;
+  gap: 12px;
+  padding: 16px;
   border-radius: 6px;
   border: 1px solid var(--divider);
   background:
@@ -267,16 +299,16 @@
 }
 
 .dashboard-empty-state {
-  min-height: 340px;
+  min-height: 420px;
   border-radius: 6px;
   border-color: color-mix(in srgb, var(--border-strong) 78%, white);
   background: color-mix(in srgb, var(--surface-muted) 56%, white);
 }
 
 .dashboard-empty-state-inner {
-  gap: 8px;
-  max-width: 360px;
-  padding: 20px;
+  gap: 10px;
+  max-width: 420px;
+  padding: 28px 24px;
 }
 
 .dashboard-empty-state-visual {
@@ -288,13 +320,13 @@
 }
 
 .dashboard-empty-state-title {
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 700;
 }
 
 .dashboard-empty-state-copy {
-  font-size: 12px;
-  line-height: 1.55;
+  font-size: 13px;
+  line-height: 1.65;
 }
 
 .dashboard-empty-state-actions {
@@ -302,17 +334,17 @@
 }
 
 .dashboard-sidebar {
-  top: 12px;
-  max-height: calc(100vh - var(--appbar-h) - 24px);
+  top: 16px;
+  max-height: calc(100vh - var(--appbar-h) - 32px);
 }
 
 .dashboard-sidebar-header,
 .dashboard-sidebar-section {
-  padding: 12px;
+  padding: 14px;
 }
 
 .dashboard-sidebar-title {
-  font-size: 16px;
+  font-size: 18px;
   letter-spacing: -0.02em;
 }
 
@@ -333,7 +365,7 @@
 .dashboard-sidebar-btn,
 .dashboard-sidebar-delete-btn,
 .dashboard-sidebar-copy-btn {
-  min-height: 30px;
+  min-height: 34px;
   font-size: 12px;
 }
 
@@ -353,8 +385,8 @@
 
 .dashboard-workspace-page .chart-card {
   display: grid;
-  grid-template-rows: 34px minmax(0, 1fr);
-  border: 1px solid color-mix(in srgb, var(--border) 90%, white);
+  grid-template-rows: 38px minmax(0, 1fr);
+  border: 1px solid var(--border);
   background: var(--surface);
 }
 
@@ -375,13 +407,13 @@
 .dashboard-workspace-page .chart-card-header {
   display: flex;
   align-items: center;
-  padding: 7px 10px;
-  border-bottom: 1px solid #e7edf4;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--divider);
   background: var(--surface);
 }
 
 .dashboard-workspace-page .chart-card-body {
-  padding: 10px;
+  padding: 12px;
   min-width: 0;
   min-height: 0;
   overflow: hidden;
@@ -389,7 +421,7 @@
 }
 
 .dashboard-workspace-page .chart-card-title {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   line-height: 1.15;
 }
@@ -578,9 +610,259 @@
   font-size: 10px !important;
 }
 
+.home-page {
+  gap: 16px;
+}
+
 .home-page .ui-panel,
-.home-section-shell {
+.home-section-shell,
+.modal-box {
+  border-color: var(--border);
+  border-radius: 6px;
+  background: var(--surface);
   box-shadow: none;
+}
+
+.home-panel {
+  padding: 16px;
+}
+
+.home-section-shell {
+  gap: 14px;
+  padding: 16px;
+}
+
+.home-page .ui-page-header {
+  gap: 14px;
+}
+
+.home-page .ui-page-header-main {
+  gap: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--divider);
+}
+
+.home-page .ui-page-header-copy {
+  gap: 6px;
+}
+
+.home-page .ui-page-title {
+  font-size: 30px;
+  letter-spacing: -0.04em;
+}
+
+.home-page .ui-page-subtitle {
+  max-width: 680px;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.home-page .ui-badge {
+  border-radius: 4px;
+}
+
+.home-page .ui-badge.is-primary {
+  border-color: var(--border);
+  background: var(--surface-secondary);
+  color: var(--primary);
+}
+
+.home-toolbar {
+  padding-top: 0;
+  border-top: 0;
+  align-items: flex-end;
+}
+
+.home-stats-grid {
+  gap: 10px;
+}
+
+.home-stat-card {
+  min-height: 86px;
+  padding: 12px;
+  border-radius: 6px;
+  border-color: var(--border);
+  background: var(--surface);
+}
+
+.home-stat-card.is-highlight {
+  border-color: var(--border);
+  background: var(--surface);
+  box-shadow: inset 0 3px 0 var(--primary);
+}
+
+.home-stat-card-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.home-stat-card strong {
+  font-size: 24px;
+  letter-spacing: -0.04em;
+}
+
+.project-grid {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.project-card {
+  min-height: 0;
+  padding: 14px 14px 14px 16px;
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.project-card:hover {
+  background: var(--surface);
+  border-color: var(--border-strong);
+}
+
+.project-card.active {
+  border-color: var(--border-strong);
+  background: var(--surface);
+  box-shadow: inset 4px 0 0 var(--primary);
+}
+
+.project-card-accent {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: auto;
+  width: 4px;
+  height: auto;
+  opacity: 1;
+  background: var(--border-strong);
+}
+
+.project-card.active .project-card-accent {
+  background: var(--primary);
+}
+
+.project-card-body {
+  gap: 12px;
+}
+
+.project-card-heading {
+  width: 100%;
+  gap: 8px;
+}
+
+.project-card-topline {
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.project-card-icon,
+.project-card-new-icon,
+.home-empty-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  background: var(--surface-secondary);
+}
+
+.project-card-status,
+.project-card-meta span {
+  min-height: 22px;
+  padding: 0 8px;
+  border-radius: 4px;
+  background: var(--surface-secondary);
+}
+
+.project-card-status.is-active {
+  border-color: var(--border);
+  background: var(--surface-secondary);
+  color: var(--primary);
+}
+
+.project-card-status.is-ready {
+  border-color: var(--border);
+  background: var(--surface-secondary);
+  color: var(--text-secondary);
+}
+
+.project-card-name {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.project-card-context {
+  gap: 6px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--divider);
+}
+
+.project-card-context-value {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.project-card-metrics {
+  gap: 8px;
+}
+
+.project-card-metric {
+  padding: 10px;
+  border-radius: 4px;
+  background: var(--surface-secondary);
+}
+
+.project-card-metric strong {
+  font-size: 18px;
+}
+
+.project-card-footer {
+  align-items: flex-start;
+  padding-top: 10px;
+}
+
+.project-card-menu-btn,
+.modal-close-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 4px;
+  background: var(--surface-secondary);
+}
+
+.project-card-menu {
+  border-radius: 6px;
+}
+
+.project-card-new {
+  min-height: 220px;
+  border-radius: 6px;
+  background: var(--surface-secondary);
+}
+
+.project-card-new-copy strong {
+  font-size: 14px;
+}
+
+.home-empty {
+  border-radius: 6px;
+  padding: 36px 24px;
+}
+
+.modal-header {
+  padding: 16px 18px;
+}
+
+.modal-body {
+  gap: 14px;
+  padding: 16px 18px;
+}
+
+.modal-btn {
+  min-height: 36px;
+  border-radius: 4px;
+}
+
+.modal-btn.cancel {
+  background: var(--surface-secondary);
 }
 
 @media (max-width: 1180px) {
@@ -640,4 +922,106 @@
     flex: 1 1 132px;
     justify-content: center;
   }
+}
+
+body.dark .dashboard-workspace-page,
+body.dark .builder-shell,
+body.dark .dashboard-workspace-header,
+body.dark .dashboard-workspace-toolbar,
+body.dark .dashboard-workspace-tabs-section,
+body.dark .dashboard-workspace-canvas,
+body.dark .dashboard-sidebar,
+body.dark .chart-picker,
+body.dark .builder-top-action-bar,
+body.dark .builder-pane-frame-left,
+body.dark .builder-preview-panel,
+body.dark .builder-controls-panel,
+body.dark .dashboard-sidebar-overview-card,
+body.dark .dashboard-sidebar-selection-card,
+body.dark .dashboard-sidebar-chart-item,
+body.dark .dashboard-sidebar-empty,
+body.dark .dashboard-sidebar-code,
+body.dark .dashboard-empty-state,
+body.dark .dashboard-empty-state-inner,
+body.dark .dashboard-workspace-page .chart-card,
+body.dark .dashboard-workspace-page .chart-card-header,
+body.dark .dashboard-workspace-page .chart-card-body,
+body.dark .dashboard-workspace-canvas-frame,
+body.dark .builder-preview-stage,
+body.dark .builder-preview-canvas,
+body.dark .builder-query-panel,
+body.dark .builder-query-sql-panel,
+body.dark .builder-controls-card,
+body.dark .builder-config-section,
+body.dark .builder-role-zone,
+body.dark .builder-sql-field-item,
+body.dark .builder-inline-validation,
+body.dark .builder-validation-inline-item,
+body.dark .schema-group,
+body.dark .chart-echarts-placeholder {
+  border-color: rgba(96, 165, 250, 0.14) !important;
+  background: #0f1a2b !important;
+}
+
+body.dark .dashboard-workspace-page,
+body.dark .builder-shell {
+  background: #0a1220 !important;
+}
+
+body.dark .dashboard-workspace-canvas-frame {
+  background:
+    linear-gradient(180deg, rgba(15, 26, 43, 0.98), rgba(10, 18, 32, 0.98)),
+    linear-gradient(90deg, rgba(53, 80, 110, 0.28) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(53, 80, 110, 0.28) 1px, transparent 1px) !important;
+  background-size: auto, 24px 24px, 24px 24px !important;
+}
+
+body.dark .builder-preview-stage,
+body.dark .chart-echarts-placeholder {
+  background:
+    linear-gradient(180deg, rgba(17, 31, 51, 0.98), rgba(10, 18, 32, 0.98)),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 23px,
+      rgba(53, 80, 110, 0.22) 24px
+    ),
+    repeating-linear-gradient(
+      180deg,
+      transparent,
+      transparent 23px,
+      rgba(53, 80, 110, 0.22) 24px
+    ) !important;
+}
+
+body.dark .dashboard-workspace-title,
+body.dark .dashboard-sidebar-title,
+body.dark .dashboard-sidebar-section-title,
+body.dark .dashboard-sidebar-chart-title,
+body.dark .dashboard-widget-frame-title,
+body.dark .dashboard-empty-state-title,
+body.dark .builder-top-action-title,
+body.dark .builder-pane-title,
+body.dark .builder-section-title,
+body.dark .schema-item-name,
+body.dark .builder-role-zone-title-row strong,
+body.dark .builder-chart-list-item-title-row strong {
+  color: var(--text-primary) !important;
+}
+
+body.dark .dashboard-workspace-breadcrumb,
+body.dark .dashboard-workspace-meta,
+body.dark .dashboard-workspace-canvas-meta,
+body.dark .dashboard-empty-state-copy,
+body.dark .dashboard-sidebar-meta,
+body.dark .dashboard-sidebar-chart-meta,
+body.dark .dashboard-sidebar-empty-copy,
+body.dark .builder-top-action-breadcrumb,
+body.dark .builder-top-action-context,
+body.dark .builder-data-pane-note,
+body.dark .builder-preview-inline-empty p,
+body.dark .builder-role-zone-empty,
+body.dark .builder-chart-list-item-main p,
+body.dark .schema-item-meta {
+  color: var(--text-secondary) !important;
 }

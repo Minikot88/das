@@ -28,11 +28,11 @@
   display: grid;
   grid-template-columns: minmax(220px, auto) minmax(220px, 1fr) minmax(420px, auto);
   align-items: center;
-  gap: 10px;
-  min-height: 56px;
-  padding: 8px 12px;
+  gap: 12px;
+  min-height: 60px;
+  padding: 10px 14px;
   border-bottom: 1px solid var(--divider);
-  background: color-mix(in srgb, var(--surface) 98%, var(--background));
+  background: var(--surface);
 }
 
 .appbar-left,
@@ -54,7 +54,7 @@
 }
 
 .appbar-hamburger {
-  display: inline-flex;
+  display: none;
   align-items: center;
   justify-content: center;
   flex-direction: column;
@@ -99,11 +99,11 @@
   grid-template-rows: repeat(2, 6px);
   gap: 2px;
   place-content: center;
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 92%, var(--primary-soft)) 0%, var(--surface) 100%);
+  background: var(--surface-secondary);
 }
 
 .appbar-logo-mark span {
@@ -141,34 +141,35 @@
 .appbar-nav {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
-  padding: 2px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--surface-secondary) 92%, var(--surface));
+  gap: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .appbar-nav-link {
   display: grid;
-  gap: 1px;
-  min-width: 88px;
-  min-height: 34px;
-  padding: 4px 10px;
-  border: 1px solid transparent;
-  border-radius: var(--radius-sm);
+  gap: 2px;
+  min-width: 96px;
+  min-height: 40px;
+  padding: 6px 12px 7px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
   color: var(--text-secondary);
   transition: var(--transition-color);
 }
 
 .appbar-nav-link:hover {
-  background: color-mix(in srgb, var(--surface-soft) 82%, var(--surface));
+  background: var(--surface-secondary);
   color: var(--text-primary);
 }
 
 .appbar-nav-link.active {
-  border-color: color-mix(in srgb, var(--primary) 24%, var(--border));
-  background: color-mix(in srgb, var(--primary-soft) 92%, var(--surface));
-  color: var(--primary);
+  border-bottom-color: var(--primary);
+  background: transparent;
+  color: var(--text-primary);
 }
 
 .appbar-nav-link:focus-visible,
@@ -191,10 +192,10 @@
   gap: var(--space-2);
   width: min(220px, 100%);
   min-width: 150px;
-  min-height: 34px;
+  min-height: 36px;
   padding: 0 10px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   background: var(--surface);
   transition: var(--transition-color);
 }
@@ -237,10 +238,10 @@
 
 .appbar-select {
   min-width: 148px;
-  min-height: 34px;
+  min-height: 36px;
   padding: 0 10px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   background: var(--surface);
   color: var(--text-primary);
   transition: var(--transition-color);
@@ -257,7 +258,7 @@
 .appbar-btn,
 .appbar-theme-btn,
 .appbar-user {
-  min-height: 34px;
+  min-height: 36px;
   cursor: pointer;
   transition: var(--transition-color);
 }
@@ -266,12 +267,12 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  padding: 0 10px;
+  padding: 0 12px;
   border-color: var(--primary);
   background: var(--primary);
   color: #fff;
   border: 1px solid var(--primary);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   font-size: var(--font-size-12);
   font-weight: var(--font-weight-semibold);
 }
@@ -293,11 +294,11 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  min-width: 34px;
+  min-width: 36px;
   padding: 0 10px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
+  border-radius: var(--radius-md);
+  background: var(--surface-secondary);
   color: var(--text-primary);
 }
 
@@ -323,8 +324,8 @@
   gap: 8px;
   padding: 0 8px 0 0;
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
+  border-radius: var(--radius-md);
+  background: var(--surface-secondary);
 }
 
 .appbar-select:hover,
@@ -338,11 +339,11 @@
 .avatar-circle {
   display: inline-grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   border-right: 1px solid var(--divider);
-  background: color-mix(in srgb, var(--primary-soft) 72%, var(--surface));
-  color: var(--primary);
+  background: color-mix(in srgb, var(--surface-secondary) 82%, white);
+  color: var(--text-primary);
   font-size: var(--font-size-13);
   font-weight: var(--font-weight-bold);
 }
@@ -369,13 +370,13 @@
 }
 
 .sidebar-left {
-  width: 192px;
+  width: 208px;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 10px 8px;
+  padding: 10px;
   border-right: 1px solid var(--divider);
-  background: color-mix(in srgb, var(--surface-secondary) 88%, var(--background));
+  background: var(--surface);
 }
 
 .sidebar-left.collapsed {
@@ -419,10 +420,11 @@
 .sidebar-workspace-card {
   display: grid;
   gap: 2px;
-  padding: 8px;
+  padding: 10px 10px 10px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--surface) 92%, var(--surface-secondary));
+  background: var(--surface-secondary);
+  box-shadow: inset 3px 0 0 var(--primary);
 }
 
 .sidebar-workspace-kicker,
@@ -448,15 +450,16 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 34px;
-  padding: 0 6px;
+  min-height: 38px;
+  padding: 0 8px;
   border: 1px solid transparent;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
 }
 
 .sidebar-left .nav-link.active {
-  border-color: color-mix(in srgb, var(--primary) 14%, transparent);
-  background: color-mix(in srgb, var(--primary-soft) 40%, white);
+  border-color: var(--border);
+  background: var(--surface-secondary);
+  box-shadow: inset 3px 0 0 var(--primary);
 }
 
 .sidebar-left .nav-link.icon-only {
@@ -465,17 +468,17 @@
 }
 
 .sidebar-left .nav-link:hover {
-  background: color-mix(in srgb, var(--surface-secondary) 78%, white);
+  background: var(--surface-secondary);
   color: var(--text-primary);
 }
 
 .nav-icon {
   display: inline-grid;
   place-items: center;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-secondary);
   font-size: 9px;
@@ -486,7 +489,7 @@
 .sidebar-left .nav-link.active .nav-icon {
   background: var(--surface);
   color: var(--primary);
-  border-color: color-mix(in srgb, var(--primary) 12%, transparent);
+  border-color: var(--divider);
 }
 
 .nav-copy {
@@ -524,6 +527,10 @@
     padding: 8px 10px;
   }
 
+  .appbar-hamburger {
+    display: inline-flex;
+  }
+
   .appbar-center { display: none; }
 
   .appbar-right {
@@ -543,6 +550,10 @@
     transform: translateX(-100%);
     transition: transform 180ms ease;
     box-shadow: var(--shadow-sm);
+  }
+
+  .sidebar-left.mobile-open {
+    width: 192px;
   }
 
   .sidebar-left.mobile-open { transform: translateX(0); }
@@ -591,7 +602,7 @@
 
 /* Practical app shell alignment */
 .appbar {
-  grid-template-columns: minmax(180px, auto) minmax(160px, 1fr) minmax(360px, auto);
+  grid-template-columns: minmax(200px, auto) minmax(160px, 1fr) minmax(360px, auto);
 }
 
 .appbar-left,
@@ -615,7 +626,7 @@
 }
 
 .appbar-nav-link {
-  min-width: 80px;
+  min-width: 92px;
 }
 
 .appbar-nav-meta {
@@ -623,7 +634,7 @@
 }
 
 .appbar-right {
-  gap: 6px;
+  gap: 8px;
 }
 
 .appbar-search-wrap,
@@ -631,21 +642,21 @@
 .appbar-btn,
 .appbar-theme-btn,
 .appbar-user {
-  min-height: 32px;
+  min-height: 36px;
 }
 
 .appbar-user {
-  padding-right: 6px;
+  padding-right: 8px;
 }
 
 .avatar-circle {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
 }
 
 .sidebar-left {
-  gap: 8px;
-  padding-top: 8px;
+  gap: 10px;
+  padding-top: 10px;
 }
 
 .sidebar-workspace-card {
@@ -653,7 +664,7 @@
 }
 
 .sidebar-left .nav-link {
-  min-height: 32px;
+  min-height: 38px;
 }
 
 .nav-copy {
