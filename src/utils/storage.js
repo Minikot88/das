@@ -8,11 +8,43 @@ function canUseStorage() {
   return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
 }
 
+function repairMojibakeString(value) {
+  if (typeof value !== "string") return value;
+
+  if (/[àâÃ]/.test(value)) {
+    try {
+      const bytes = Uint8Array.from(value, (char) => char.charCodeAt(0) & 0xff);
+      const decoded = new TextDecoder("utf-8").decode(bytes);
+      if (/[\u0E00-\u0E7F]/.test(decoded)) {
+        return decoded;
+      }
+    } catch {
+      // fall through to original value
+    }
+  }
+
+  return value;
+}
+
+function normalizeStoredText(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => normalizeStoredText(item));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, nestedValue]) => [key, normalizeStoredText(nestedValue)])
+    );
+  }
+
+  return repairMojibakeString(value);
+}
+
 function readJson(key) {
   if (!canUseStorage()) return null;
   try {
     const raw = window.localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : null;
+    return raw ? normalizeStoredText(JSON.parse(raw)) : null;
   } catch {
     return null;
   }
@@ -28,7 +60,7 @@ function writeJson(key, value) {
 }
 
 export function createWorkspaceSnapshot(state) {
-  return {
+  return normalizeStoredText({
     version: 8,
     projects: state.projects,
     activeProjectId: state.activeProjectId,
@@ -45,7 +77,7 @@ export function createWorkspaceSnapshot(state) {
     charts: state.charts,
     shareLinks: state.shareLinks,
     ui: state.ui,
-  };
+  });
 }
 
 export function loadWorkspaceState() {
