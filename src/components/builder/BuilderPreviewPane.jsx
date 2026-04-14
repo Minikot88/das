@@ -140,10 +140,21 @@ export default function BuilderPreviewPane({
     "linear-gradient(180deg, color-mix(in srgb, var(--surface) 98%, transparent) 0%, color-mix(in srgb, var(--surface-secondary) 94%, transparent) 100%)";
 
   return (
-    <main className="builder-pane-shell builder-pane-shell-center">
+    <main
+      className="builder-pane-shell builder-pane-shell-center"
+      style={{
+        flex: "1 1 auto",
+        minHeight: 0,
+        height: "100%",
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
       <section
         className="builder-preview-panel builder-preview-panel-compact"
         style={{
+          flex: "1 1 auto",
           minHeight: 0,
           height: "100%",
           overflow: "hidden",
@@ -279,14 +290,19 @@ export default function BuilderPreviewPane({
           >
             {previewSupported === false ? (
               <div
-                className="builder-preview-stage builder-preview-inline-empty"
+                className="builder-preview-stage"
                 style={{
                   width: "100%",
-                  minHeight: 260,
+                  minHeight: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
               >
-                <strong>Preview unavailable</strong>
-                <p>{activeChartMeta?.disabledReason || "Preview is not available for this chart yet."}</p>
+                <div className="builder-preview-inline-empty" style={{ maxWidth: 320, margin: 0 }}>
+                  <strong>Preview unavailable</strong>
+                  <p>{activeChartMeta?.disabledReason || "Preview is not available for this chart yet."}</p>
+                </div>
               </div>
             ) : previewChart ? (
               <div
@@ -365,15 +381,20 @@ export default function BuilderPreviewPane({
               </div>
             ) : (
               <div
-                className="builder-preview-stage builder-preview-inline-empty"
+                className="builder-preview-stage"
                 style={{
                   width: "100%",
                   maxWidth: "100%",
-                  minHeight: 260,
+                  minHeight: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
               >
-                <strong>{selectedTable ? "Map required fields" : "Select a table"}</strong>
-                {emptyMessage ? <p>{emptyMessage}</p> : null}
+                <div className="builder-preview-inline-empty" style={{ maxWidth: 320, margin: 0 }}>
+                  <strong>{selectedTable ? "Map required fields" : "Select a table"}</strong>
+                  {emptyMessage ? <p>{emptyMessage}</p> : null}
+                </div>
               </div>
             )}
           </div>

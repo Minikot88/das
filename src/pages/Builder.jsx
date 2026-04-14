@@ -216,7 +216,6 @@ export default function BuilderPage() {
   const compactContextLabel = contextLabels
     ? `${contextLabels.project} / ${contextLabels.sheet} / ${contextLabels.dashboard}`
     : (contextError || "Unavailable");
-
   function handleSaveDraft() {
     setBuilderState({});
     setDraftFeedback("Draft saved");
@@ -304,10 +303,13 @@ export default function BuilderPage() {
         flex: 1,
         minHeight: 0,
         height: "100%",
+        maxHeight: "100%",
         overflow: "hidden",
-        padding: 12,
-        gap: 12,
+        padding: 0,
+        gap: 0,
         boxSizing: "border-box",
+        display: "flex",
+        flexDirection: "column",
       }}
     >
       <header
@@ -411,9 +413,12 @@ export default function BuilderPage() {
       </header>
 
       <div
+        className="builder-workspace-region"
         style={{
           flex: 1,
           minHeight: 0,
+          height: "100%",
+          maxHeight: "100%",
           overflow: "hidden",
           display: "flex",
           flexDirection: "column",
@@ -426,6 +431,7 @@ export default function BuilderPage() {
             flex: 1,
             minHeight: 0,
             height: "100%",
+            maxHeight: "100%",
             overflow: "hidden",
             display: "flex",
             flexDirection: "row",
@@ -440,6 +446,7 @@ export default function BuilderPage() {
               maxWidth: 288,
               minHeight: 0,
               height: "100%",
+              maxHeight: "100%",
               overflow: "hidden",
               flexShrink: 0,
               display: "flex",
@@ -467,6 +474,7 @@ export default function BuilderPage() {
               minWidth: 0,
               minHeight: 0,
               height: "100%",
+              maxHeight: "100%",
               overflow: "hidden",
               display: "flex",
               flexDirection: "column",
@@ -489,6 +497,7 @@ export default function BuilderPage() {
               maxWidth: 344,
               minHeight: 0,
               height: "100%",
+              maxHeight: "100%",
               overflow: "hidden",
               display: "flex",
               flexDirection: "column",

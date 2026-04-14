@@ -4,6 +4,20 @@ import BuilderSourceSummary from "./BuilderSourceSummary";
 
 const DRAG_KEY = "bi-field";
 
+function findScrollableElement(startNode, boundaryNode) {
+  let node = startNode;
+  while (node && node !== boundaryNode) {
+    if (node instanceof HTMLElement) {
+      const style = window.getComputedStyle(node);
+      const overflowY = style.overflowY || style.overflow;
+      const canScroll = (overflowY === "auto" || overflowY === "scroll") && node.scrollHeight > node.clientHeight + 1;
+      if (canScroll) return node;
+    }
+    node = node.parentElement;
+  }
+  return null;
+}
+
 function SqlResultFieldList({ selectedDb, selectedTable, fields = [], onFieldAssign, getFieldRoleHints }) {
   function handleDragStart(event, field) {
     event.dataTransfer.effectAllowed = "copy";
@@ -83,13 +97,53 @@ export default function BuilderDataPane({
   const explorerLabel = queryMode === "sql" ? "Query Result" : "Explorer";
   const explorerCount = queryMode === "sql" ? `${queryResult?.fieldMeta?.length ?? 0} fields` : `${tableFields?.length ?? 0} fields`;
 
+  function handleBodyWheel(event) {
+    const root = event.currentTarget;
+    const start = event.target instanceof HTMLElement ? event.target : null;
+    const directScrollable = start ? findScrollableElement(start, root) : null;
+    const fallbackScrollable =
+      root.querySelector(".schema-table-fields") ??
+      root.querySelector(".schema-explorer-list") ??
+      root.querySelector(".builder-sql-field-list");
+    const scroller = directScrollable ?? fallbackScrollable;
+    if (!(scroller instanceof HTMLElement)) return;
+
+    const previousTop = scroller.scrollTop;
+    scroller.scrollTop += event.deltaY;
+    if (scroller.scrollTop !== previousTop) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  }
+
   return (
-    <aside className="builder-pane-shell builder-pane-shell-left">
+    <aside
+      className="builder-pane-shell builder-pane-shell-left"
+      style={{
+        flex: "1 1 auto",
+        minHeight: 0,
+        height: "100%",
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
       <div
         className="builder-pane-frame builder-pane-frame-left"
-        style={{ minHeight: 0, height: "100%", overflow: "hidden", gap: 6 }}
+        style={{ flex: "1 1 auto", minHeight: 0, height: "100%", overflow: "hidden", gap: 6 }}
       >
-        <div className="builder-data-pane">
+        <div
+          className="builder-data-pane"
+          style={{
+            flex: "1 1 auto",
+            minHeight: 0,
+            height: "100%",
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
+            gap: 6,
+          }}
+        >
           <div className="builder-data-pane__header">
             <div className="builder-pane-header" style={{ paddingBottom: 6 }}>
               <div className="builder-pane-header-copy" style={{ gap: 8, flexWrap: "wrap" }}>
@@ -141,13 +195,18 @@ export default function BuilderDataPane({
 
           <div
             className="builder-data-pane__body builder-pane-body builder-pane-body-scroll"
+            onWheelCapture={handleBodyWheel}
             style={{
+              flex: 1,
+              minHeight: 0,
+              height: 0,
+              overflow: "hidden",
               paddingRight: 2,
               borderTop: "1px solid var(--divider)",
               paddingTop: 6,
-              display: "grid",
+              display: "flex",
+              flexDirection: "column",
               gap: 8,
-              alignContent: "start",
             }}
           >
             {queryMode === "sql" && queryResult?.fieldMeta?.length ? (

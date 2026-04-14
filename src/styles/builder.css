@@ -257,7 +257,7 @@
   padding: 0 2px;
 }
 
-.builder-pane-body-scroll,
+.builder-pane-body-scroll { min-height: 0; overflow: hidden; }
 .builder-chart-list { min-height: 0; overflow: auto; }
 
 .builder-schema-search {
@@ -307,6 +307,17 @@
   border-top: 1px solid var(--divider);
   cursor: grab;
   flex-wrap: wrap;
+}
+
+.schema-table-fields {
+  display: grid;
+  align-content: start;
+  min-height: 0;
+  max-height: min(44vh, 420px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .schema-item-copy { display: grid; gap: 2px; min-width: 0; flex: 1; }
@@ -406,10 +417,11 @@
 }
 
 .builder-data-pane__body {
+  display: flex;
+  flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
 .builder-data-pane__body .builder-schema-search {
@@ -531,10 +543,11 @@
 }
 
 .builder-data-pane__body {
+  display: flex;
+  flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
 .builder-chart-list-item.is-active {
@@ -1114,13 +1127,17 @@
   padding-bottom: 8px;
 }
 
-.builder-pane-body-scroll,
 .builder-controls-grid,
 .builder-chart-list,
 .builder-query-summary,
 .builder-sql-field-list {
   min-height: 0;
   overflow: auto;
+}
+
+.builder-pane-body-scroll {
+  min-height: 0;
+  overflow: hidden;
 }
 
 .builder-controls-grid,
@@ -1587,7 +1604,7 @@
 .builder-pane-body-scroll {
   flex: 1 1 auto;
   min-height: 0;
-  overflow-y: auto !important;
+  overflow: hidden !important;
 }
 
 .schema-db-title,
@@ -1714,81 +1731,16 @@
   }
 }
 
-/* Builder data source panel explorer scrolling */
-.builder-pane-frame-left {
-  overflow: hidden !important;
-}
-
-.builder-pane-frame-left .builder-pane-body-scroll {
-  display: flex !important;
-  flex-direction: column !important;
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: hidden !important;
-}
-
-.builder-pane-frame-left .builder-source-summary,
-.builder-pane-frame-left .builder-data-pane-chart-brief,
-.builder-pane-frame-left .builder-data-pane-note,
-.builder-pane-frame-left .builder-left-section-label,
-.builder-pane-frame-left .builder-schema-search {
-  flex: 0 0 auto;
-}
-
-.builder-pane-frame-left .builder-schema-search {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  padding-bottom: 6px;
-  background: var(--surface);
-}
-
-.builder-pane-frame-left .schema-explorer {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto !important;
-  overflow-x: hidden;
-  align-content: start;
-  padding-right: 4px;
-  scrollbar-width: thin;
-  scrollbar-color: color-mix(in srgb, var(--border) 78%, var(--text-secondary) 22%) transparent;
-}
-
-.builder-pane-frame-left .schema-explorer::-webkit-scrollbar {
-  width: 8px;
-}
-
-.builder-pane-frame-left .schema-explorer::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.builder-pane-frame-left .schema-explorer::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--border) 78%, var(--text-secondary) 22%);
-  border-radius: 999px;
-}
-
-.builder-pane-frame-left .schema-explorer::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in srgb, var(--border-strong) 72%, var(--text-secondary) 28%);
-}
-
-@media (max-width: 1180px) {
-  .builder-pane-frame-left {
-    overflow: visible !important;
-  }
-
-  .builder-pane-frame-left .builder-pane-body-scroll,
-  .builder-pane-frame-left .schema-explorer {
-    overflow: visible !important;
-  }
-
-  .builder-pane-frame-left .builder-schema-search {
-    position: static;
-    padding-bottom: 0;
-  }
-}
-
 /* Active Builder stabilization overrides */
 .builder-shell {
+  min-height: 0 !important;
+  height: 100% !important;
+  overflow: hidden !important;
+}
+
+.main-content > .builder-shell.ui-page-container,
+.builder-shell.ui-page-container {
+  flex: 1 1 auto !important;
   min-height: 0 !important;
   height: 100% !important;
   overflow: hidden !important;
@@ -1829,28 +1781,6 @@
 .chart-renderer-surface,
 .chart-echarts-surface {
   min-height: 0 !important;
-}
-
-.builder-pane-frame-left .builder-pane-body-scroll {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
-}
-
-.builder-pane-frame-left .schema-explorer {
-  display: grid !important;
-  gap: 6px !important;
-  overflow: visible !important;
-  padding-right: 0 !important;
-}
-
-.builder-pane-frame-left .builder-schema-search {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  padding-bottom: 6px;
-  background: var(--surface);
 }
 
 .builder-controls-grid {
@@ -1919,12 +1849,28 @@
   .builder-controls-panel,
   .builder-controls-grid {
     height: auto !important;
-    overflow: visible !important;
+    min-height: 0 !important;
+  }
+
+  .builder-pane-frame-left {
+    overflow: hidden !important;
+  }
+
+  .builder-pane-frame-left .builder-pane-body-scroll,
+  .builder-pane-frame-left .schema-explorer,
+  .builder-pane-frame-left .schema-explorer-list {
+    min-height: 0 !important;
   }
 
   .builder-pane-frame-left .builder-pane-body-scroll,
   .builder-pane-frame-left .schema-explorer {
-    overflow: visible !important;
+    overflow: hidden !important;
+  }
+
+  .builder-pane-frame-left .schema-explorer-list {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    overscroll-behavior: auto !important;
   }
 
   .builder-pane-frame-left .builder-schema-search {
@@ -1949,16 +1895,58 @@
 }
 
 .builder-pane-frame-left .builder-pane-body-scroll {
-  display: grid !important;
-  align-content: start !important;
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  height: 0 !important;
+  max-height: 100% !important;
   gap: 8px !important;
-  overflow-y: auto !important;
+  overflow: hidden !important;
 }
 
 .builder-pane-frame-left .schema-explorer {
-  flex: none !important;
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
   min-height: 0 !important;
-  overflow: visible !important;
+  overflow: hidden !important;
+}
+
+.builder-pane-frame-left .schema-explorer-list {
+  display: grid;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 0;
+  max-height: 100%;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: auto !important;
+  scrollbar-gutter: stable !important;
+  padding-right: 4px;
+  gap: 6px;
+  align-content: start;
+  scrollbar-width: auto;
+  scrollbar-color: color-mix(in srgb, var(--border-strong) 70%, var(--text-secondary) 30%) color-mix(in srgb, var(--surface-secondary) 88%, transparent);
+}
+
+.builder-pane-frame-left .schema-explorer-list::-webkit-scrollbar {
+  width: 10px;
+}
+
+.builder-pane-frame-left .schema-explorer-list::-webkit-scrollbar-track {
+  background: color-mix(in srgb, var(--surface-secondary) 92%, transparent);
+  border-radius: 999px;
+}
+
+.builder-pane-frame-left .schema-explorer-list::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--border-strong) 72%, var(--text-secondary) 28%);
+  border-radius: 999px;
+  border: 2px solid color-mix(in srgb, var(--surface-secondary) 92%, transparent);
+}
+
+.builder-pane-frame-left .schema-explorer-list::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--primary) 48%, var(--border-strong) 52%);
 }
 
 .builder-controls-panel,
@@ -2227,23 +2215,12 @@
     );
 }
 
-/* Builder data source panel final scroll lock */
-.builder-data-pane {
+.builder-data-pane__body {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 140px);
-  overflow: hidden;
-}
-
-.builder-data-pane__header {
-  flex: 0 0 auto;
-}
-
-.builder-data-pane__body {
   flex: 1 1 auto;
   min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
 body.dark .builder-shell,
@@ -2314,4 +2291,116 @@ body.dark .builder-aggregation-btn.active {
 body.dark .builder-pane-frame-left .builder-schema-search,
 body.dark .builder-top-action-bar {
   backdrop-filter: blur(14px);
+}
+
+/* Builder explorer hard scroll lock */
+.main-content:has(> .builder-shell.ui-page-container) {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden !important;
+  padding: 0 !important;
+}
+
+.main-content:has(> .builder-shell.ui-page-container) > .builder-shell.ui-page-container {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
+}
+
+.main-content:has(> .builder-shell.ui-page-container) .builder-workspace-grid-compact {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
+}
+
+.main-content:has(> .builder-shell.ui-page-container) .builder-pane-shell-left,
+.main-content:has(> .builder-shell.ui-page-container) .builder-pane-frame-left,
+.main-content:has(> .builder-shell.ui-page-container) .builder-data-pane,
+.main-content:has(> .builder-shell.ui-page-container) .schema-explorer {
+  min-height: 0 !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
+}
+
+.main-content:has(> .builder-shell.ui-page-container) .builder-data-pane__body,
+.main-content:has(> .builder-shell.ui-page-container) .builder-pane-body-scroll {
+  display: flex !important;
+  flex: 1 1 auto !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+  height: 0 !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
+}
+
+.main-content:has(> .builder-shell.ui-page-container) .schema-explorer {
+  display: flex !important;
+  flex: 1 1 auto !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
+}
+
+.main-content:has(> .builder-shell.ui-page-container) .schema-explorer-list {
+  display: grid !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  height: 0 !important;
+  max-height: 100% !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: auto !important;
+  scrollbar-gutter: stable !important;
+  align-content: start !important;
+}
+
+@media (max-width: 1180px) {
+  .main-content:has(> .builder-shell.ui-page-container) {
+    overflow: auto !important;
+  }
+
+  .main-content:has(> .builder-shell.ui-page-container) > .builder-shell.ui-page-container,
+  .main-content:has(> .builder-shell.ui-page-container) .builder-workspace-grid-compact,
+  .main-content:has(> .builder-shell.ui-page-container) .builder-pane-shell-left,
+  .main-content:has(> .builder-shell.ui-page-container) .builder-pane-frame-left,
+  .main-content:has(> .builder-shell.ui-page-container) .builder-data-pane {
+    max-height: none !important;
+    height: auto !important;
+  }
+
+  .main-content:has(> .builder-shell.ui-page-container) .builder-pane-frame-left,
+  .main-content:has(> .builder-shell.ui-page-container) .builder-data-pane,
+  .main-content:has(> .builder-shell.ui-page-container) .builder-data-pane__body,
+  .main-content:has(> .builder-shell.ui-page-container) .schema-explorer {
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .main-content:has(> .builder-shell.ui-page-container) .schema-explorer-list {
+    min-height: 0 !important;
+    max-height: min(58vh, 620px) !important;
+    height: auto !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    overscroll-behavior: auto !important;
+  }
+}
+
+/* Builder viewport fill */
+.main-content:has(> .builder-shell.ui-page-container) > .builder-shell.ui-page-container {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.main-content:has(> .builder-shell.ui-page-container) .builder-workspace-region {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
 }

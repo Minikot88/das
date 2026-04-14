@@ -1025,3 +1025,16 @@ body.dark .builder-chart-list-item-main p,
 body.dark .schema-item-meta {
   color: var(--text-secondary) !important;
 }
+
+/* Global page-height fill */
+.main-content > .ui-page-container.home-page,
+.main-content > .ui-page-container.dashboard-workspace-page,
+.main-content > .ui-page-container.builder-shell {
+  min-height: 100%;
+}
+
+.main-content > .dashboard-workspace-page .dashboard-workspace-shell,
+.main-content > .dashboard-workspace-page .dashboard-workspace-main {
+  min-height: 0 !important;
+  height: 100% !important;
+}
