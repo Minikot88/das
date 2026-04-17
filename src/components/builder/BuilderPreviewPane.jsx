@@ -87,7 +87,8 @@ export default function BuilderPreviewPane({
   const previewStatusState = previewState?.status ?? "idle";
   const previewError = previewState?.error ?? "";
   const isPreviewLoading = previewStatusState === "loading";
-  const hasPreviewError = previewStatusState === "error" && Boolean(previewError);
+  const isPreviewSuccess = previewStatusState === "success";
+  const hasPreviewError = ["invalid_config", "render_error"].includes(previewStatusState) && Boolean(previewError);
   const previewKey = previewChart?.config
     ? JSON.stringify({
         chartType: previewChart.config.chartType,
@@ -99,41 +100,31 @@ export default function BuilderPreviewPane({
       })
     : "empty";
 
-  let emptyMessage = "Preview unavailable.";
-  if (blockerCount) {
-    emptyMessage = validationSummary?.blockers?.[0]?.title ?? "Map required fields.";
-  } else if (hasPreviewError) {
-    emptyMessage = previewError;
-  } else if (!selectedTable) {
-    emptyMessage = "Select a table.";
-  } else if (isPreviewLoading) {
-    emptyMessage = "Preparing preview.";
-  } else if (!hasPreviewData) {
-    emptyMessage = "No data.";
-  }
+  const previewStatusMeta = {
+    idle: { label: "Idle", title: selectedTable ? "Select a chart" : "Select a table", message: selectedTable ? "Choose a working chart and map the required fields." : "Choose a table to begin building a chart." },
+    loading: { label: "Loading", title: "Preparing preview", message: "Applying the latest chart settings and query." },
+    missing_required_mappings: { label: "Needs mapping", title: "Map required fields", message: previewError || validationSummary?.blockers?.[0]?.title || "Map the required roles before preview can render." },
+    no_rows: { label: "No rows", title: "No rows", message: previewError || "The current chart settings returned no rows." },
+    unsupported_chart: { label: "Unsupported", title: "Preview not available", message: previewError || activeChartMeta?.disabledReason || "This chart is not available for preview in the current runtime." },
+    invalid_config: { label: "Invalid", title: "Preview unavailable", message: previewError || "The current mapping does not produce a renderable chart." },
+    render_error: { label: "Error", title: "Preview error", message: previewError || "The preview could not be generated." },
+    success: { label: "Preview", title: "Live Preview", message: "" },
+  };
+  const currentPreviewStatus = previewStatusMeta[previewStatusState] ?? previewStatusMeta.idle;
 
   const requiredRoles = (roleAssignments ?? []).filter((role) => role.required);
   const optionalRoles = (roleAssignments ?? []).filter((role) => !role.required && role.fields?.length);
+  const isPreviewRenderable = previewStatusState === "success" && hasPreviewData;
   const mappingHeadline = blockerCount
     ? validationSummary?.blockers?.[0]?.title ?? "Mapping required"
     : requiredRoleCount
       ? `${completedRequiredRoleCount}/${requiredRoleCount} required mappings ready`
-      : "Preview ready";
-  const previewStatus = previewSupported === false
-    ? "Unavailable"
-    : blockerCount
-      ? "Needs mapping"
-      : hasPreviewError
-        ? "Query error"
-        : isPreviewLoading
-          ? "Loading"
-      : hasPreviewData
-        ? "Live preview"
-        : previewChart
-          ? "Ready"
-          : "Waiting";
-  const mappingTone = blockerCount ? "var(--warning)" : "var(--success)";
-  const mappingBackground = blockerCount ? "var(--warning-soft)" : "var(--success-soft)";
+      : isPreviewRenderable
+        ? "Preview ready"
+        : currentPreviewStatus.title;
+  const previewStatus = currentPreviewStatus.label;
+  const mappingTone = blockerCount || !isPreviewRenderable ? "var(--warning)" : "var(--success)";
+  const mappingBackground = blockerCount || !isPreviewRenderable ? "var(--warning-soft)" : "var(--success-soft)";
   const previewStageBackground =
     "linear-gradient(180deg, color-mix(in srgb, var(--surface) 96%, transparent) 0%, color-mix(in srgb, var(--surface-secondary) 90%, transparent) 100%)";
   const previewCanvasBackground =
@@ -288,7 +279,7 @@ export default function BuilderPreviewPane({
               display: "flex",
             }}
           >
-            {previewSupported === false ? (
+            {previewStatusState === "unsupported_chart" || previewSupported === false ? (
               <div
                 className="builder-preview-stage"
                 style={{
@@ -300,8 +291,8 @@ export default function BuilderPreviewPane({
                 }}
               >
                 <div className="builder-preview-inline-empty" style={{ maxWidth: 320, margin: 0 }}>
-                  <strong>Preview unavailable</strong>
-                  <p>{activeChartMeta?.disabledReason || "Preview is not available for this chart yet."}</p>
+                  <strong>{currentPreviewStatus.title}</strong>
+                  <p>{currentPreviewStatus.message}</p>
                 </div>
               </div>
             ) : previewChart ? (
@@ -342,7 +333,7 @@ export default function BuilderPreviewPane({
                   </div>
                 </div>
 
-                {hasPreviewData ? (
+                {isPreviewSuccess && hasPreviewData ? (
                   <div
                     className="builder-preview-canvas builder-preview-canvas-compact"
                     style={{
@@ -369,13 +360,13 @@ export default function BuilderPreviewPane({
                   </div>
                 ) : isPreviewLoading ? (
                   <div className="builder-preview-inline-empty" style={{ maxWidth: 320 }}>
-                    <strong>Preparing preview</strong>
-                    <p>Applying the latest query and mappings.</p>
+                    <strong>{currentPreviewStatus.title}</strong>
+                    <p>{currentPreviewStatus.message}</p>
                   </div>
                 ) : (
                   <div className="builder-preview-inline-empty" style={{ maxWidth: 280 }}>
-                    <strong>{hasPreviewError ? "Preview error" : blockerCount ? "Map required fields" : "Preview ready"}</strong>
-                    {emptyMessage ? <p>{emptyMessage}</p> : null}
+                    <strong>{currentPreviewStatus.title}</strong>
+                    {currentPreviewStatus.message ? <p>{currentPreviewStatus.message}</p> : null}
                   </div>
                 )}
               </div>
@@ -392,8 +383,8 @@ export default function BuilderPreviewPane({
                 }}
               >
                 <div className="builder-preview-inline-empty" style={{ maxWidth: 320, margin: 0 }}>
-                  <strong>{selectedTable ? "Map required fields" : "Select a table"}</strong>
-                  {emptyMessage ? <p>{emptyMessage}</p> : null}
+                  <strong>{currentPreviewStatus.title}</strong>
+                  {currentPreviewStatus.message ? <p>{currentPreviewStatus.message}</p> : null}
                 </div>
               </div>
             )}

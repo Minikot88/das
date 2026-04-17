@@ -1038,3 +1038,424 @@ body.dark .schema-item-meta {
   min-height: 0 !important;
   height: 100% !important;
 }
+
+/* Premium workspace refinement */
+.app-shell {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--background) 97%, black 3%) 0%, var(--background) 100%);
+}
+
+.appbar {
+  border-bottom: 1px solid color-mix(in srgb, var(--border-strong) 74%, transparent);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface) 98%, transparent) 0%, color-mix(in srgb, var(--surface-secondary) 94%, transparent) 100%);
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.08);
+}
+
+.appbar-center-link,
+.sidebar-link,
+.dashboard-toolbar-btn,
+.builder-page-toolbar-btn,
+.builder-top-save-btn,
+.dashboard-sidebar-btn,
+.dashboard-workspace-tab,
+.dashboard-workspace-tab-add,
+.builder-top-action-badge,
+.builder-top-action-summary-chip,
+.builder-preview-chip,
+.builder-status-badge,
+.builder-pane-status,
+.dashboard-workspace-status,
+.dashboard-workspace-canvas-strip-item,
+.dashboard-sidebar-overview-badge,
+.dashboard-sidebar-chart-item,
+.builder-chart-support-badge,
+.builder-chart-type-category-chip,
+.builder-query-mode-btn,
+.builder-sql-btn,
+.builder-aggregation-btn {
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease, transform 140ms ease, box-shadow 140ms ease;
+}
+
+.dashboard-workspace-header,
+.dashboard-workspace-toolbar,
+.dashboard-workspace-tabs-section,
+.dashboard-workspace-canvas,
+.dashboard-sidebar,
+.builder-top-action-bar,
+.builder-pane-frame-left,
+.builder-preview-panel,
+.builder-controls-panel {
+  border: 1px solid color-mix(in srgb, var(--border-strong) 76%, transparent) !important;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface) 98%, transparent) 0%, color-mix(in srgb, var(--surface-secondary) 94%, transparent) 100%) !important;
+}
+
+.dashboard-workspace-header {
+  padding: 16px 18px;
+}
+
+.dashboard-workspace-breadcrumb,
+.builder-top-action-breadcrumb,
+.dashboard-sidebar-kicker,
+.builder-page-kicker,
+.builder-query-label,
+.builder-left-section-label,
+.dashboard-sidebar-overview-label {
+  font-size: 10px !important;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.dashboard-workspace-title {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.dashboard-workspace-meta {
+  gap: 12px;
+}
+
+.dashboard-workspace-stat {
+  min-height: 72px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface) 96%, transparent) 0%, color-mix(in srgb, var(--surface-secondary) 92%, transparent) 100%);
+}
+
+.dashboard-workspace-stat strong {
+  font-size: 18px;
+}
+
+.dashboard-workspace-toolbar {
+  align-items: center;
+}
+
+.dashboard-workspace-toolbar-meta strong,
+.dashboard-sidebar-selection-row strong,
+.dashboard-sidebar-overview-title,
+.builder-preview-summary-strip strong {
+  font-weight: 700;
+}
+
+.dashboard-workspace-tabs-section {
+  padding: 12px 14px;
+}
+
+.dashboard-workspace-tab,
+.dashboard-workspace-tab-add {
+  border: 1px solid color-mix(in srgb, var(--border-strong) 72%, transparent);
+}
+
+.dashboard-workspace-tab:hover,
+.dashboard-workspace-tab-add:hover {
+  border-color: color-mix(in srgb, var(--accent) 58%, var(--border-strong));
+  background: color-mix(in srgb, var(--surface) 82%, var(--accent) 18%);
+  transform: translateY(-1px);
+}
+
+.dashboard-workspace-tab.is-active {
+  border-color: color-mix(in srgb, var(--accent) 70%, var(--border-strong));
+  background: color-mix(in srgb, var(--surface) 76%, var(--accent) 24%);
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.dashboard-workspace-canvas {
+  padding: 14px 16px;
+}
+
+.dashboard-workspace-canvas-frame {
+  border: 1px solid color-mix(in srgb, var(--border-strong) 74%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+}
+
+.dashboard-workspace-page .chart-card {
+  border: 1px solid color-mix(in srgb, var(--border-strong) 78%, transparent);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface) 99%, transparent) 0%, color-mix(in srgb, var(--surface-secondary) 94%, transparent) 100%);
+}
+
+.dashboard-workspace-page .chart-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 58%, var(--border-strong));
+  box-shadow: 0 14px 36px rgba(2, 6, 23, 0.12) !important;
+}
+
+.dashboard-workspace-page .chart-card-header {
+  padding: 10px 12px;
+  background: transparent;
+}
+
+.dashboard-workspace-page .chart-card-title {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.dashboard-empty-state {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface) 96%, transparent) 0%, color-mix(in srgb, var(--surface-secondary) 88%, transparent) 100%);
+}
+
+.dashboard-empty-state-title {
+  font-size: 20px;
+}
+
+.dashboard-empty-state-copy {
+  max-width: 320px;
+  line-height: 1.5;
+}
+
+.dashboard-sidebar {
+  border-left: 1px solid color-mix(in srgb, var(--border-strong) 76%, transparent);
+}
+
+.dashboard-sidebar-header {
+  border-bottom: 1px solid var(--divider);
+}
+
+.dashboard-sidebar-section {
+  border-bottom: 1px solid color-mix(in srgb, var(--divider) 80%, transparent);
+}
+
+.dashboard-sidebar-section:last-child {
+  border-bottom: 0;
+}
+
+.dashboard-sidebar-btn,
+.dashboard-sidebar-toggle,
+.dashboard-sidebar-delete-btn,
+.dashboard-sidebar-copy-btn,
+.dashboard-toolbar-btn,
+.builder-page-toolbar-btn,
+.builder-top-save-btn {
+  border: 1px solid color-mix(in srgb, var(--border-strong) 74%, transparent);
+  background: color-mix(in srgb, var(--surface) 94%, var(--surface-secondary) 6%);
+}
+
+.dashboard-sidebar-btn:hover,
+.dashboard-toolbar-btn:hover,
+.builder-page-toolbar-btn:hover,
+.builder-top-save-btn:hover,
+.dashboard-sidebar-toggle:hover,
+.dashboard-sidebar-copy-btn:hover {
+  border-color: color-mix(in srgb, var(--accent) 56%, var(--border-strong));
+  background: color-mix(in srgb, var(--surface) 80%, var(--accent) 20%);
+}
+
+.dashboard-sidebar-btn.is-primary,
+.dashboard-toolbar-btn.is-primary,
+.builder-top-save-btn {
+  border-color: color-mix(in srgb, var(--accent) 72%, var(--border-strong));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 84%, white 16%) 0%, color-mix(in srgb, var(--accent) 94%, black 6%) 100%);
+  color: white;
+}
+
+.builder-shell {
+  gap: 12px;
+}
+
+.builder-top-action-bar {
+  padding: 10px 12px;
+}
+
+.builder-top-action-title {
+  font-size: 17px;
+}
+
+.builder-top-action-summary-chip,
+.builder-top-action-badge,
+.builder-preview-chip,
+.builder-status-badge,
+.builder-pane-status,
+.builder-chart-inline-badge,
+.dashboard-workspace-status,
+.dashboard-workspace-canvas-strip-item,
+.dashboard-sidebar-overview-badge,
+.builder-chart-support-badge,
+.builder-chart-type-category-chip {
+  border: 1px solid color-mix(in srgb, var(--border-strong) 72%, transparent);
+  background: color-mix(in srgb, var(--surface) 90%, var(--surface-secondary) 10%);
+}
+
+.builder-top-action-badge.is-ready,
+.builder-status-badge.ready,
+.builder-chart-support-badge.is-supported,
+.dashboard-workspace-status.is-live,
+.dashboard-sidebar-overview-badge.is-live {
+  color: color-mix(in srgb, var(--accent) 74%, white 26%);
+  border-color: color-mix(in srgb, var(--accent) 34%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface) 88%);
+}
+
+.builder-top-action-badge.is-blocked,
+.builder-chart-support-badge.is-partial {
+  background: color-mix(in srgb, var(--warning) 12%, var(--surface) 88%);
+}
+
+.builder-pane-frame-left,
+.builder-preview-panel,
+.builder-controls-panel {
+  position: relative;
+}
+
+.builder-pane-frame-left::before,
+.builder-preview-panel::before,
+.builder-controls-panel::before,
+.dashboard-workspace-canvas::before,
+.dashboard-sidebar::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, color-mix(in srgb, var(--accent) 30%, transparent) 45%, transparent 100%);
+  pointer-events: none;
+}
+
+.builder-preview-summary-strip,
+.builder-query-panel,
+.builder-query-sql-panel,
+.builder-controls-card,
+.builder-config-section,
+.builder-role-zone,
+.builder-inline-validation,
+.builder-validation-inline-item,
+.schema-group,
+.builder-sql-field-item {
+  border: 1px solid color-mix(in srgb, var(--border-strong) 74%, transparent) !important;
+  background: color-mix(in srgb, var(--surface) 96%, var(--surface-secondary) 4%) !important;
+}
+
+.builder-preview-stage,
+.builder-preview-canvas {
+  border-radius: 6px;
+}
+
+.builder-preview-stage {
+  border: 1px solid color-mix(in srgb, var(--border-strong) 72%, transparent);
+}
+
+.builder-preview-canvas {
+  background: color-mix(in srgb, var(--surface) 98%, var(--surface-secondary) 2%);
+}
+
+.builder-data-pane__body,
+.builder-controls-panel,
+.builder-preview-panel {
+  scrollbar-gutter: stable;
+}
+
+.builder-schema-role-btn:hover,
+.builder-role-chip:hover,
+.builder-sql-field-hint-btn:hover,
+.builder-query-mode-btn:hover,
+.builder-sql-btn:hover,
+.builder-aggregation-btn:hover {
+  border-color: color-mix(in srgb, var(--accent) 58%, var(--border-strong));
+  background: color-mix(in srgb, var(--surface) 80%, var(--accent) 20%);
+}
+
+.builder-inline-validation,
+.builder-validation-inline-item,
+.builder-preview-inline-empty {
+  border-radius: 6px;
+}
+
+body.dark .app-shell {
+  background:
+    radial-gradient(circle at top, rgba(37, 99, 235, 0.12), transparent 34%),
+    linear-gradient(180deg, #08111f 0%, #0b1322 100%);
+}
+
+body.dark .appbar {
+  border-bottom-color: rgba(96, 165, 250, 0.14);
+  background:
+    linear-gradient(180deg, rgba(12, 20, 34, 0.98) 0%, rgba(9, 16, 28, 0.94) 100%);
+  box-shadow: 0 16px 34px rgba(2, 6, 23, 0.34);
+}
+
+body.dark .dashboard-workspace-page,
+body.dark .builder-shell {
+  background:
+    radial-gradient(circle at top right, rgba(37, 99, 235, 0.08), transparent 26%),
+    linear-gradient(180deg, #09111e 0%, #0a1220 100%) !important;
+}
+
+body.dark .dashboard-workspace-header,
+body.dark .dashboard-workspace-toolbar,
+body.dark .dashboard-workspace-tabs-section,
+body.dark .dashboard-workspace-canvas,
+body.dark .dashboard-sidebar,
+body.dark .builder-top-action-bar,
+body.dark .builder-pane-frame-left,
+body.dark .builder-preview-panel,
+body.dark .builder-controls-panel,
+body.dark .dashboard-workspace-page .chart-card,
+body.dark .builder-preview-summary-strip,
+body.dark .builder-query-panel,
+body.dark .builder-query-sql-panel,
+body.dark .builder-controls-card,
+body.dark .builder-config-section,
+body.dark .builder-role-zone,
+body.dark .builder-inline-validation,
+body.dark .builder-validation-inline-item,
+body.dark .schema-group,
+body.dark .builder-sql-field-item {
+  border-color: rgba(96, 165, 250, 0.14) !important;
+  background:
+    linear-gradient(180deg, rgba(12, 21, 36, 0.98) 0%, rgba(11, 18, 31, 0.94) 100%) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+}
+
+body.dark .dashboard-workspace-canvas-frame {
+  border-color: rgba(96, 165, 250, 0.12);
+  background:
+    linear-gradient(180deg, rgba(10, 19, 33, 0.98), rgba(8, 15, 27, 0.98)),
+    linear-gradient(90deg, rgba(43, 62, 89, 0.32) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(43, 62, 89, 0.32) 1px, transparent 1px) !important;
+  background-size: auto, 24px 24px, 24px 24px !important;
+}
+
+body.dark .dashboard-workspace-tab,
+body.dark .dashboard-workspace-tab-add,
+body.dark .dashboard-sidebar-btn,
+body.dark .dashboard-toolbar-btn,
+body.dark .builder-page-toolbar-btn,
+body.dark .builder-top-save-btn,
+body.dark .dashboard-sidebar-toggle,
+body.dark .dashboard-sidebar-copy-btn,
+body.dark .builder-query-mode-btn,
+body.dark .builder-sql-btn,
+body.dark .builder-aggregation-btn,
+body.dark .builder-schema-role-btn,
+body.dark .builder-role-chip,
+body.dark .builder-sql-field-hint-btn {
+  border-color: rgba(96, 165, 250, 0.16);
+  background: rgba(15, 26, 43, 0.92);
+}
+
+body.dark .dashboard-workspace-tab:hover,
+body.dark .dashboard-workspace-tab-add:hover,
+body.dark .dashboard-sidebar-btn:hover,
+body.dark .dashboard-toolbar-btn:hover,
+body.dark .builder-page-toolbar-btn:hover,
+body.dark .dashboard-sidebar-toggle:hover,
+body.dark .dashboard-sidebar-copy-btn:hover,
+body.dark .builder-query-mode-btn:hover,
+body.dark .builder-sql-btn:hover,
+body.dark .builder-aggregation-btn:hover,
+body.dark .builder-schema-role-btn:hover,
+body.dark .builder-role-chip:hover,
+body.dark .builder-sql-field-hint-btn:hover {
+  border-color: rgba(96, 165, 250, 0.34);
+  background: rgba(21, 37, 61, 0.96);
+}
+
+body.dark .dashboard-workspace-tab.is-active,
+body.dark .builder-top-action-badge.is-ready,
+body.dark .builder-status-badge.ready,
+body.dark .dashboard-workspace-status.is-live,
+body.dark .dashboard-sidebar-overview-badge.is-live,
+body.dark .builder-chart-support-badge.is-supported {
+  border-color: rgba(96, 165, 250, 0.34) !important;
+  background: rgba(30, 64, 175, 0.22) !important;
+  color: #bfdbfe !important;
+}

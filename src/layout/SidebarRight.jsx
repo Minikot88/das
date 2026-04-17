@@ -125,7 +125,7 @@ export default function SidebarRight({
           <div className="dashboard-sidebar-header-copy">
             <div className="dashboard-sidebar-kicker">Workspace</div>
             <div className="dashboard-sidebar-title">Status</div>
-            <div className="dashboard-sidebar-meta">Current context</div>
+            <div className="dashboard-sidebar-meta">Workspace context</div>
           </div>
         </div>
 
@@ -172,9 +172,9 @@ export default function SidebarRight({
           </div>
         </SidebarSection>
 
-        <SidebarSection title="Notes" compact>
+        <SidebarSection title="Status" compact>
           <div className="dashboard-sidebar-empty is-subtle">
-            Open a project to continue in Dashboard or Builder.
+            Open a workspace to continue.
           </div>
         </SidebarSection>
       </InspectorLayout>
@@ -196,7 +196,7 @@ export default function SidebarRight({
         </button>
       </div>
 
-      <SidebarSection title="Overview">
+      <SidebarSection title="Canvas">
         <div className="dashboard-sidebar-overview-card">
           <div className="dashboard-sidebar-overview-topline">
             <span className="dashboard-sidebar-overview-label">Canvas</span>
@@ -218,15 +218,15 @@ export default function SidebarRight({
         </div>
       </SidebarSection>
 
-      <SidebarSection title="Quick Actions">
+      <SidebarSection title="Actions">
         <div className="dashboard-sidebar-button-stack">
-          <ActionButton primary onClick={onBuildChart}>Create New Chart</ActionButton>
-          <ActionButton onClick={onOpenSavedCharts}>Add Saved Chart</ActionButton>
-          <ActionButton onClick={onAutoArrange} disabled={!widgets.length}>Auto Arrange</ActionButton>
+          <ActionButton primary onClick={onBuildChart}>New Chart</ActionButton>
+          <ActionButton onClick={onOpenSavedCharts}>Saved Charts</ActionButton>
+          <ActionButton onClick={onAutoArrange} disabled={!widgets.length}>Auto Layout</ActionButton>
         </div>
       </SidebarSection>
 
-      <SidebarSection title="Selection">
+      <SidebarSection title="Active">
         {selectedWidget ? (
           <div className="dashboard-sidebar-selection-card">
             <div className="dashboard-sidebar-selection-row">
@@ -244,12 +244,12 @@ export default function SidebarRight({
           </div>
         ) : (
           <div className="dashboard-sidebar-empty is-subtle">
-            Select a chart.
+            Select a widget.
           </div>
         )}
       </SidebarSection>
 
-      <SidebarSection title={`Charts ${widgets.length ? `(${widgets.length})` : ""}`}>
+      <SidebarSection title={`Widgets ${widgets.length ? `(${widgets.length})` : ""}`}>
         {widgets.length ? (
           <div className="dashboard-sidebar-chart-list">
             {widgets.map((widget) => (
@@ -264,7 +264,7 @@ export default function SidebarRight({
           </div>
         ) : (
           <div className="dashboard-sidebar-empty">
-            <div className="dashboard-sidebar-empty-title">No charts yet</div>
+            <div className="dashboard-sidebar-empty-title">No widgets yet</div>
             <div className="dashboard-sidebar-empty-copy">Create your first chart.</div>
           </div>
         )}
@@ -272,8 +272,8 @@ export default function SidebarRight({
 
       <SidebarSection title="Export" compact>
         <div className="dashboard-sidebar-button-grid">
-          <ActionButton disabled={!selectedWidget} onClick={onExportSelected}>Export Selection</ActionButton>
-          <ActionButton disabled={!widgets.length} onClick={onExportDashboard}>Export Dashboard</ActionButton>
+          <ActionButton disabled={!selectedWidget} onClick={onExportSelected}>Export Widget</ActionButton>
+          <ActionButton disabled={!widgets.length} onClick={onExportDashboard}>Export Canvas</ActionButton>
         </div>
 
         {exportState?.code ? (
@@ -286,7 +286,7 @@ export default function SidebarRight({
           </>
         ) : (
           <div className="dashboard-sidebar-empty is-subtle">
-            {selectedWidget ? "Ready to export." : "Select a chart."}
+            {selectedWidget ? "Ready to export." : "Select a widget."}
           </div>
         )}
       </SidebarSection>

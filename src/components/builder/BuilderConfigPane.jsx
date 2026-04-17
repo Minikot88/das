@@ -522,6 +522,7 @@ export default function BuilderConfigPane({
   queryError,
   queryStatus,
   lastRunAt,
+  previewState,
   chartSettings,
   displayOptions,
   labelSettings,
@@ -545,7 +546,9 @@ export default function BuilderConfigPane({
   handleUseSqlResultForChart,
 }) {
   const blockerCount = validationSummary?.blockers?.length ?? 0;
-  const inlineIssue = queryError || validationSummary?.blockers?.[0]?.title || "";
+  const previewStatus = previewState?.status ?? "idle";
+  const previewIssue = previewState?.error ?? "";
+  const inlineIssue = queryError || previewIssue || validationSummary?.blockers?.[0]?.title || "";
   const optionalRoleAssignments = roleAssignments.filter((role) => !role.required);
   const roleValidationItems = Array.isArray(roleValidation)
     ? roleValidation
@@ -555,6 +558,7 @@ export default function BuilderConfigPane({
       ];
   const requiredIssues = roleValidationItems.filter((issue) => issue?.severity !== "caution" && issue?.level !== "warning");
   const chartSettingsDefinition = getChartSettingsDefinition(activeChartMeta, activeChartFamilyMeta);
+  const settingsReady = blockerCount === 0 && previewStatus === "success";
 
   return (
     <InspectorLayout
@@ -586,8 +590,8 @@ export default function BuilderConfigPane({
           <div>
             <h2 className="builder-pane-title">Settings</h2>
           </div>
-          <span className={`builder-status-badge${blockerCount ? " is-alert" : " ready"}`}>
-            {blockerCount ? `${blockerCount} issues` : "Ready"}
+          <span className={`builder-status-badge${settingsReady ? " ready" : " is-alert"}`}>
+            {settingsReady ? "Preview ready" : blockerCount ? `${blockerCount} issues` : "Preview pending"}
           </span>
         </div>
 

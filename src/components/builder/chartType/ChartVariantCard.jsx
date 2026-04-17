@@ -1,19 +1,24 @@
 import React from "react";
 
-function formatSupportLabel(level) {
-  if (level === "metadata-ready") return "Metadata";
+function formatSupportLabel(level, variant) {
+  if (variant?.supported === false) return "Disabled";
+  if (variant?.previewSupported === false) return "Unavailable";
+  if (level === "metadata-ready") return "Unavailable";
   if (level === "partial") return "Partial";
   return "Supported";
 }
 
 export default function ChartVariantCard({ variant, active, onSelect }) {
   const supportLevel = variant.supportLevel ?? "supported";
+  const isDisabled = variant.isSelectable === false;
 
   return (
     <button
       type="button"
-      className={`builder-chart-variant-card${active ? " is-active" : ""}`}
+      className={`builder-chart-variant-card${active ? " is-active" : ""}${isDisabled ? " is-disabled" : ""}`}
       onClick={() => onSelect(variant.id)}
+      disabled={isDisabled}
+      title={isDisabled ? variant.disabledReason : variant.chartId}
     >
       <div className="builder-chart-variant-card-copy">
         <strong>{variant.label}</strong>
@@ -21,9 +26,9 @@ export default function ChartVariantCard({ variant, active, onSelect }) {
       </div>
       <div
         className={`builder-chart-support-badge is-${supportLevel}`}
-        title={variant.chartId}
+        title={isDisabled ? variant.disabledReason : variant.chartId}
       >
-        {formatSupportLabel(supportLevel)}
+        {formatSupportLabel(supportLevel, variant)}
       </div>
     </button>
   );

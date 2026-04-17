@@ -1,9 +1,9 @@
 import React from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { MainLayout } from "@/components/layout/Layout";
-import BuilderPage from "@/pages/Builder/index.jsx";
-import DashboardPage from "@/pages/Dashboard/index.jsx";
-import HomePage from "@/pages/Home/index.jsx";
+import BuilderPage from "@/pages/Builder.jsx";
+import DashboardPage from "@/pages/DashboardPage.jsx";
+import HomePage from "@/pages/HomePage.jsx";
 import LoginPage from "@/pages/LoginPage";
 import RegisterPage from "@/pages/RegisterPage";
 import SharePage from "@/pages/SharePage";

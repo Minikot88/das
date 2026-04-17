@@ -39,6 +39,7 @@ import {
   findFieldInSchema,
 } from "./builderStateUtils";
 import { evaluatePreviewRows, getPreviewReadiness } from "../../utils/builderChartUtils";
+import useBuilderPreview from "./useBuilderPreview";
 
 const AGGREGATION_BY_TYPE = {
   scatter: [],
@@ -219,43 +220,41 @@ function shouldUseDirectPreviewData(chartMeta, roleMapping = {}) {
     .some((roleKey) => (roleMapping?.[roleKey]?.length ?? 0) > 0);
 }
 
-function createSerializableQueryResult(result = {}, selectedTable = null) {
-  return {
-    rows: Array.isArray(result?.data) ? result.data : Array.isArray(result?.rows) ? result.rows : [],
-    columns: Array.isArray(result?.columns) ? result.columns : [],
-    fieldMeta: Array.isArray(result?.fieldMeta) ? result.fieldMeta : [],
-    rowCount: result?.meta?.rowCount ?? result?.rowCount ?? result?.data?.length ?? result?.rows?.length ?? 0,
-    columnCount: result?.meta?.columnCount ?? result?.columnCount ?? result?.columns?.length ?? 0,
-    sourceTable: result?.meta?.table ?? result?.sourceTable ?? selectedTable,
-  };
-}
-
-function areArraysEqual(left = [], right = []) {
-  return JSON.stringify(left) === JSON.stringify(right);
-}
-
-function isSameQueryResult(left = null, right = null) {
-  if (!left && !right) return true;
-  if (!left || !right) return false;
-
-  return (
-    left.rowCount === right.rowCount &&
-    left.columnCount === right.columnCount &&
-    left.sourceTable === right.sourceTable &&
-    areArraysEqual(left.columns, right.columns) &&
-    areArraysEqual(left.fieldMeta, right.fieldMeta) &&
-    areArraysEqual(left.rows, right.rows)
-  );
-}
-
-function isSamePreviewState(left = null, right = null) {
-  if (!left && !right) return true;
-  if (!left || !right) return false;
-  return left.status === right.status && left.error === right.error;
-}
-
 function isSameMapping(left = {}, right = {}) {
   return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function isSelectableChartVariant(variant) {
+  if (!variant) return false;
+  if (variant.supported === false) return false;
+  if (variant.previewSupported === false) return false;
+  return (variant.supportLevel ?? "supported") !== "metadata-ready";
+}
+
+function getChartVariantDisabledReason(variant) {
+  if (!variant) return "Variant unavailable.";
+  if (variant.supported === false) {
+    return variant.chart?.disabledReason || "This variant is not available in the current runtime.";
+  }
+  if (variant.previewSupported === false) {
+    return variant.chart?.disabledReason || "This variant is not preview-ready in the current runtime.";
+  }
+  if ((variant.supportLevel ?? "supported") === "metadata-ready") {
+    return "This variant is cataloged, but not fully wired for preview and save yet.";
+  }
+  return "";
+}
+
+function pickSelectableVariant(variants = [], preferredMatchers = []) {
+  const matchers = preferredMatchers.filter(Boolean);
+  const selectable = variants.filter(isSelectableChartVariant);
+
+  for (const matcher of matchers) {
+    const preferredVariant = selectable.find((variant) => matcher(variant));
+    if (preferredVariant) return preferredVariant;
+  }
+
+  return selectable[0] ?? variants[0] ?? null;
 }
 
 function createBuilderStateSnapshot(builderState = {}) {
@@ -319,19 +318,9 @@ export default function useBuilderWorkspace({
   const isEditing = !!builderState.editingChartId;
   const [chartSelectionMode, setChartSelectionMode] = useState("auto");
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const [previewRows, setPreviewRows] = useState([]);
-  const [previewState, setPreviewState] = useState({ status: "idle", error: "" });
   const [lastMappingNotice, setLastMappingNotice] = useState("");
-  const previewSignatureRef = useRef("");
-  const visualQuerySignatureRef = useRef("");
   const autoMappingContextRef = useRef("");
-  const latestQueryStoreRef = useRef({
-    generatedSql: builderSnapshot.generatedSql,
-    queryResult: builderSnapshot.queryResult,
-    queryError: builderSnapshot.queryError,
-    queryStatus: builderSnapshot.queryStatus,
-    lastRunAt: builderSnapshot.lastRunAt,
-  });
+  const autoSuggestionContextRef = useRef("");
 
   const selectedDb = builderSnapshot.selectedDb;
   const selectedTable = builderSnapshot.selectedTable;
@@ -468,11 +457,26 @@ export default function useBuilderWorkspace({
       ...family,
       variants: family.variants.map((variant) => {
         const variantChart = chartById.get(variant.id) ?? getChartMeta(variant.id);
+        const previewSupported = variantChart.previewSupported !== false;
+        const supported = variantChart.supported !== false;
+        const isSelectable = isSelectableChartVariant({
+          ...variant,
+          chart: variantChart,
+          supported,
+          previewSupported,
+        });
         return {
           ...variant,
           chart: variantChart,
-          supported: variantChart.supported,
-          previewSupported: variantChart.previewSupported,
+          supported,
+          previewSupported,
+          isSelectable,
+          disabledReason: getChartVariantDisabledReason({
+            ...variant,
+            chart: variantChart,
+            supported,
+            previewSupported,
+          }),
           recommended: recommendedIds.has(variant.id) || recommendedIds.has(variant.chartId),
         };
       }),
@@ -480,7 +484,12 @@ export default function useBuilderWorkspace({
     }));
   }, [catalogWithCompatibility, recommendedCharts]);
   const visibleChartFamilies = useMemo(
-    () => selectorFamilyCatalog.filter((family) => family.categories.includes(selectedChartCategory)),
+    () =>
+      selectorFamilyCatalog.filter(
+        (family) =>
+          family.categories.includes(selectedChartCategory) &&
+          family.variants.some((variant) => variant.isSelectable)
+      ),
     [selectedChartCategory, selectorFamilyCatalog]
   );
   const activeChartFamilyMeta = useMemo(
@@ -492,9 +501,11 @@ export default function useBuilderWorkspace({
   const visibleChartVariants = activeChartFamilyMeta?.variants ?? [];
   const activeChartVariantMeta = useMemo(
     () =>
-      visibleChartVariants.find((variant) => variant.id === selectedChartVariant) ??
-      visibleChartVariants.find((variant) => variant.id === chartType) ??
-      visibleChartVariants.find((variant) => variant.chartId === chartType) ??
+      pickSelectableVariant(visibleChartVariants, [
+        (variant) => variant.id === selectedChartVariant,
+        (variant) => variant.id === chartType,
+        (variant) => variant.chartId === chartType,
+      ]) ??
       visibleChartVariants[0] ??
       null,
     [chartType, selectedChartVariant, visibleChartVariants]
@@ -602,23 +613,6 @@ export default function useBuilderWorkspace({
       }),
     [previewConfig, previewReady]
   );
-  const visualQuerySignature = useMemo(
-    () =>
-      JSON.stringify({
-        queryMode,
-        selectedTable,
-      chartType: builderQueryInput.chartType,
-      dataset: builderQueryInput.dataset,
-      x: builderQueryInput.x,
-      y: builderQueryInput.y,
-      groupBy: builderQueryInput.groupBy,
-      sizeField: builderQueryInput.sizeField,
-      aggregate: builderQueryInput.aggregate,
-      direct: useDirectPreviewData,
-      blockers: validationSummary.blockers.map((item) => item.code),
-    }),
-    [builderQueryInput, queryMode, selectedTable, useDirectPreviewData, validationSummary.blockers]
-  );
   const mappingSignature = useMemo(
     () =>
       JSON.stringify({
@@ -633,62 +627,39 @@ export default function useBuilderWorkspace({
   const generatedQueryPreview = useMemo(() => buildQuery(builderQueryInput), [builderQueryInput]);
 
   useEffect(() => {
-    latestQueryStoreRef.current = {
-      generatedSql: builderSnapshot.generatedSql,
-      queryResult: builderSnapshot.queryResult,
-      queryError: builderSnapshot.queryError,
-      queryStatus: builderSnapshot.queryStatus,
-      lastRunAt: builderSnapshot.lastRunAt,
-    };
-  }, [
-    builderSnapshot.generatedSql,
-    builderSnapshot.lastRunAt,
-    builderSnapshot.queryError,
-    builderSnapshot.queryResult,
-    builderSnapshot.queryStatus,
-  ]);
-
-  function syncPreviewRows(nextRows) {
-    setPreviewRows((currentRows) => (areArraysEqual(currentRows, nextRows) ? currentRows : nextRows));
-  }
-
-  function syncPreviewState(nextState) {
-    setPreviewState((currentState) => (isSamePreviewState(currentState, nextState) ? currentState : nextState));
-  }
-
-  function commitQueryStatePatch(patch) {
-    const currentQueryState = latestQueryStoreRef.current;
-    const nextQueryState = {
-      ...currentQueryState,
-      ...patch,
-    };
-    const hasChanges =
-      currentQueryState.generatedSql !== nextQueryState.generatedSql ||
-      currentQueryState.queryError !== nextQueryState.queryError ||
-      currentQueryState.queryStatus !== nextQueryState.queryStatus ||
-      currentQueryState.lastRunAt !== nextQueryState.lastRunAt ||
-      !isSameQueryResult(currentQueryState.queryResult, nextQueryState.queryResult);
-
-    if (!hasChanges) return false;
-
-    latestQueryStoreRef.current = nextQueryState;
-    setBuilderState(patch);
-    return true;
-  }
-
-  useEffect(() => {
     const selectedFamilyMeta = selectorFamilyCatalog.find((family) => family.id === selectedChartFamily);
     const selectedVariantMeta = selectedFamilyMeta?.variants.find((variant) => variant.id === selectedChartVariant) ?? null;
-    if (selectedVariantMeta && (selectedVariantMeta.id === chartType || selectedVariantMeta.chartId === chartType)) return;
+    if (
+      selectedVariantMeta &&
+      selectedVariantMeta.isSelectable &&
+      (selectedVariantMeta.id === chartType || selectedVariantMeta.chartId === chartType)
+    ) {
+      return;
+    }
+
+    const fallbackFamily =
+      selectorFamilyCatalog.find((family) => family.id === selectorDefaults.familyId) ??
+      selectorFamilyCatalog.find((family) => family.variants.some((variant) => variant.isSelectable)) ??
+      selectorFamilyCatalog[0] ??
+      null;
+    const fallbackVariant = pickSelectableVariant(fallbackFamily?.variants ?? [], [
+      (variant) => variant.id === selectorDefaults.variantId,
+      (variant) => variant.id === chartType,
+      (variant) => variant.chartId === chartType,
+    ]);
+
+    if (!fallbackFamily || !fallbackVariant) return;
 
     setSelectedChartCategory((current) =>
-      current === selectorDefaults.categoryId ? current : selectorDefaults.categoryId
+      current === (fallbackFamily.primaryCategory ?? selectorDefaults.categoryId)
+        ? current
+        : (fallbackFamily.primaryCategory ?? selectorDefaults.categoryId)
     );
     setSelectedChartFamily((current) =>
-      current === selectorDefaults.familyId ? current : selectorDefaults.familyId
+      current === fallbackFamily.id ? current : fallbackFamily.id
     );
     setSelectedChartVariant((current) =>
-      current === selectorDefaults.variantId ? current : selectorDefaults.variantId
+      current === fallbackVariant.id ? current : fallbackVariant.id
     );
   }, [chartType, selectedChartFamily, selectedChartVariant, selectorDefaults, selectorFamilyCatalog]);
 
@@ -707,13 +678,10 @@ export default function useBuilderWorkspace({
     }
 
     const sourceChanged = autoMappingContextRef.current !== contextSignature;
-    const missingRequiredRoles = roleAssignments.some(
-      (role) => role.required && (roleMapping[role.key]?.length ?? 0) < role.min
+    const hasStoredMapping = Object.values(builderSnapshot.roleMapping ?? {}).some(
+      (fields) => (fields?.length ?? 0) > 0
     );
-    const missingSourceFields = Object.values(roleValidation.roleStates ?? {}).some(
-      (state) => (state?.missingFields?.length ?? 0) > 0
-    );
-    const shouldAutoMap = sourceChanged || !Object.keys(builderSnapshot.roleMapping ?? {}).length || missingRequiredRoles || missingSourceFields;
+    const shouldAutoMap = sourceChanged || !hasStoredMapping;
 
     if (!shouldAutoMap) {
       autoMappingContextRef.current = contextSignature;
@@ -740,9 +708,7 @@ export default function useBuilderWorkspace({
     chartMeta.name,
     chartType,
     queryMode,
-    roleAssignments,
     roleMapping,
-    roleValidation.roleStates,
     selectedDb,
     selectedTable,
   ]);
@@ -756,183 +722,49 @@ export default function useBuilderWorkspace({
   useEffect(() => {
     const suggested = suggestionResult?.suggested;
     if (!suggested || chartSelectionMode === "manual" || isEditing || chartType === suggested) return;
+
+    const suggestionContext = JSON.stringify({
+      selectedDb,
+      selectedTable,
+      suggested,
+      fieldNames: availableFields.map((field) => field.name),
+    });
+
+    if (autoSuggestionContextRef.current === suggestionContext) return;
+    autoSuggestionContextRef.current = suggestionContext;
+
     handleChartTypeChange(suggested, "auto");
-  }, [chartSelectionMode, chartType, isEditing, suggestionResult?.suggested]);
-
-  useEffect(() => {
-    if (!previewReady) {
-      if (previewSignatureRef.current) {
-        previewSignatureRef.current = "";
-        clearPreviewChart();
-      }
-      if (
-        previewReadiness.canAttemptPreview &&
-        previewReadiness.rowAssessment.hasRows &&
-        !previewReadiness.rowAssessment.canRender
-      ) {
-        syncPreviewRows([]);
-        syncPreviewState({
-          status: "error",
-          error: previewReadiness.rowAssessment.emptyReason,
-        });
-      }
-      return;
-    }
-
-    if (previewSignatureRef.current === previewSignature) return;
-    previewSignatureRef.current = previewSignature;
-    setPreviewChart({ config: previewConfig });
-  }, [clearPreviewChart, previewConfig, previewReadiness, previewReady, previewSignature, setPreviewChart]);
-
-  useEffect(() => () => clearPreviewChart(), [clearPreviewChart]);
-
-  useEffect(() => {
-    if (queryMode !== "visual" || useDirectPreviewData) return;
-
-    if (
-      previewReadiness.canAttemptPreview &&
-      previewReadiness.rowAssessment.hasRows &&
-      !previewReadiness.rowAssessment.canRender
-    ) {
-      syncPreviewRows([]);
-      syncPreviewState({
-        status: "error",
-        error: previewReadiness.rowAssessment.emptyReason,
-      });
-      return;
-    }
-
-    syncPreviewRows([]);
-    syncPreviewState({ status: "idle", error: "" });
-
-    const nextGeneratedSql = formatSql(generatedQueryPreview.sql || "");
-    commitQueryStatePatch({
-      generatedSql: nextGeneratedSql,
-      queryResult: null,
-      queryError: "",
-      queryStatus: "idle",
-    });
-  }, [generatedQueryPreview.sql, mappingSignature, previewReadiness, queryMode, useDirectPreviewData]);
-
-  useEffect(() => {
-    if (!previewReady || queryMode !== "visual" || !useDirectPreviewData) return;
-
-    const nextRows = Array.isArray(tableData) ? tableData : [];
-    const directPreviewAssessment = evaluatePreviewRows(chartType, roleMapping, nextRows);
-    const nextStatus = directPreviewAssessment.canRender ? "success" : "empty";
-    const nextGeneratedSql = formatSql(generatedQueryPreview.sql || "");
-    const nextQueryResult = createSerializableQueryResult(
-      {
-        data: nextRows,
-        columns: tableFields.map((field) => field.name),
-        fieldMeta: tableFields,
-        rowCount: nextRows.length,
-        columnCount: tableFields.length,
-        sourceTable: selectedTable,
-      },
-      selectedTable
-    );
-
-    syncPreviewRows(nextRows);
-    syncPreviewState({
-      status: nextStatus,
-      error: nextStatus === "empty" ? directPreviewAssessment.emptyReason : "",
-    });
-    visualQuerySignatureRef.current = visualQuerySignature;
-
-    commitQueryStatePatch({
-      generatedSql: nextGeneratedSql,
-      queryResult: nextQueryResult,
-      queryError: nextStatus === "empty" ? directPreviewAssessment.emptyReason : "",
-      queryStatus: nextStatus,
-    });
   }, [
+    availableFields,
+    chartSelectionMode,
     chartType,
-    generatedQueryPreview.sql,
+    isEditing,
+    selectedDb,
+    selectedTable,
+    suggestionResult?.suggested,
+  ]);
+  const { previewRows, previewState } = useBuilderPreview({
+    builderSnapshot,
+    setBuilderState,
+    clearPreviewChart,
+    previewConfig,
     previewReady,
+    previewReadiness,
     queryMode,
+    chartType,
+    roleMapping,
     selectedTable,
     tableData,
     tableFields,
-    useDirectPreviewData,
-    visualQuerySignature,
-    roleMapping,
-  ]);
-
-  useEffect(() => {
-    let cancelled = false;
-    if (!previewReady || queryMode === "sql" || useDirectPreviewData) {
-      syncPreviewRows([]);
-      syncPreviewState({ status: "idle", error: "" });
-      visualQuerySignatureRef.current = "";
-      return undefined;
-    }
-
-    if (visualQuerySignatureRef.current === visualQuerySignature) {
-      return undefined;
-    }
-
-    visualQuerySignatureRef.current = visualQuerySignature;
-    syncPreviewState({ status: "loading", error: "" });
-
-    commitQueryStatePatch({
-      queryError: "",
-      queryStatus: "running",
-    });
-
-    runQuery(builderQueryInput)
-      .then((result) => {
-        if (!cancelled) {
-          const nextRows = Array.isArray(result.data) ? result.data : [];
-          const queryPreviewAssessment = evaluatePreviewRows(chartType, roleMapping, nextRows);
-          const nextQueryResult = createSerializableQueryResult(result, selectedTable);
-          const nextGeneratedSql = formatSql(result.sql ?? "");
-          const nextQueryStatus = queryPreviewAssessment.canRender ? "success" : "empty";
-          const nextQueryError = queryPreviewAssessment.canRender ? "" : queryPreviewAssessment.emptyReason;
-
-          syncPreviewRows(nextRows);
-          syncPreviewState({
-            status: nextQueryStatus,
-            error: nextQueryError,
-          });
-
-          commitQueryStatePatch({
-            generatedSql: nextGeneratedSql,
-            queryResult: nextQueryResult,
-            queryError: nextQueryError,
-            queryStatus: nextQueryStatus,
-            lastRunAt: new Date().toISOString(),
-          });
-        }
-      })
-      .catch((error) => {
-        if (!cancelled) {
-          syncPreviewRows([]);
-          const nextError = error?.message || "Unable to run visual query.";
-          syncPreviewState({ status: "error", error: nextError });
-          commitQueryStatePatch({
-            queryError: nextError,
-            queryStatus: "error",
-            lastRunAt: new Date().toISOString(),
-          });
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [
     builderQueryInput,
-    chartType,
-    previewReady,
-    queryMode,
-    roleMapping,
-    selectedTable,
+    generatedQueryPreviewSql: generatedQueryPreview.sql,
     useDirectPreviewData,
-    visualQuerySignature,
-  ]);
+    setPreviewChart,
+    sourcePreviewRows,
+  });
 
   const canAddChart = validationSummary.blockers.length === 0
-    && (queryMode !== "sql" || builderSnapshot.queryStatus === "success");
+    && previewState.status === "success";
   const mappedCount = roleAssignments.filter((role) => role.fields.length).length;
   const mappedTarget = roleAssignments.filter((role) => role.required).length;
   const readinessLabel = createReadinessLabel({
@@ -1193,34 +1025,46 @@ export default function useBuilderWorkspace({
       nextFamilies.find((family) => family.id === selectedChartFamily) ??
       nextFamilies[0] ??
       null;
-    const nextVariant =
-      nextFamily?.variants.find((variant) => variant.id === selectedChartVariant) ??
-      nextFamily?.variants.find((variant) => variant.id === chartType) ??
-      nextFamily?.variants.find((variant) => variant.chartId === chartType) ??
-      nextFamily?.variants?.[0] ??
-      null;
+    const nextVariant = pickSelectableVariant(nextFamily?.variants ?? [], [
+      (variant) => variant.id === selectedChartVariant,
+      (variant) => variant.id === chartType,
+      (variant) => variant.chartId === chartType,
+    ]);
 
-    setSelectedChartCategory(nextCategory);
-    setSelectedChartFamily(nextFamily?.id ?? null);
-    setSelectedChartVariant(nextVariant?.id ?? null);
+    if (!nextFamily || !nextVariant || !nextVariant.isSelectable) {
+      setLastMappingNotice("No preview-ready variants are available in this family yet.");
+      return;
+    }
+
+    handleChartTypeChange(nextVariant.id, "manual", {
+      selectedCategory: nextCategory,
+      selectedFamily: nextFamily.id,
+      selectedVariant: nextVariant.id,
+    });
   }
 
   function handleChartFamilyChange(nextFamilyId) {
     const nextFamily = selectorFamilyCatalog.find((family) => family.id === nextFamilyId);
     if (!nextFamily) return;
 
-    const nextVariant =
-      nextFamily.variants.find((variant) => variant.id === selectedChartVariant) ??
-      nextFamily.variants.find((variant) => variant.id === chartType) ??
-      nextFamily.variants.find((variant) => variant.chartId === chartType) ??
-      nextFamily.variants[0] ??
-      null;
+    const nextVariant = pickSelectableVariant(nextFamily.variants, [
+      (variant) => variant.id === selectedChartVariant,
+      (variant) => variant.id === chartType,
+      (variant) => variant.chartId === chartType,
+    ]);
 
-    setSelectedChartCategory((current) =>
-      nextFamily.categories.includes(current) ? current : (nextFamily.primaryCategory ?? nextFamily.categories?.[0] ?? current)
-    );
-    setSelectedChartFamily(nextFamilyId);
-    setSelectedChartVariant(nextVariant?.id ?? null);
+    if (!nextVariant || !nextVariant.isSelectable) {
+      setLastMappingNotice("No preview-ready variants are available in this family yet.");
+      return;
+    }
+
+    handleChartTypeChange(nextVariant.id, "manual", {
+      selectedCategory: nextFamily.categories.includes(selectedChartCategory)
+        ? selectedChartCategory
+        : (nextFamily.primaryCategory ?? nextFamily.categories?.[0] ?? selectedChartCategory),
+      selectedFamily: nextFamily.id,
+      selectedVariant: nextVariant.id,
+    });
   }
 
   function handleChartVariantChange(nextVariantId) {
@@ -1232,6 +1076,10 @@ export default function useBuilderWorkspace({
       null;
     const variant = family?.variants.find((variantItem) => variantItem.id === nextVariantId) ?? null;
     if (!family || !variant) return;
+    if (!variant.isSelectable) {
+      setLastMappingNotice(variant.disabledReason || "This variant is not available yet.");
+      return;
+    }
 
     handleChartTypeChange(variant.id, "manual", {
       selectedCategory: family.categories.includes(selectedChartCategory)
@@ -1312,14 +1160,17 @@ export default function useBuilderWorkspace({
     try {
       const result = await runSqlQuery(formattedSql);
       const sqlPreviewAssessment = evaluatePreviewRows(chartType, roleMapping, result.data ?? []);
-      setPreviewRows([]);
       applySqlResult(result);
       setBuilderState({
         generatedSql: formatSql(generatedQueryPreview.sql || ""),
         customSql: formattedSql,
         lastExecutedSql: formattedSql,
         queryError: sqlPreviewAssessment.canRender ? "" : sqlPreviewAssessment.emptyReason,
-        queryStatus: sqlPreviewAssessment.canRender ? "success" : "empty",
+        queryStatus: sqlPreviewAssessment.canRender
+          ? "success"
+          : result.data?.length
+            ? "invalid_config"
+            : "no_rows",
         isDirtySql: true,
         lastRunAt: new Date().toISOString(),
       });
@@ -1430,7 +1281,7 @@ export default function useBuilderWorkspace({
       activeChartLabel: chartMeta.name,
       activeChartMeta: chartMeta,
       previewChart,
-      previewData: queryMode === "sql" ? builderState.queryResult?.rows ?? [] : previewRows,
+      previewData: previewRows,
       queryPreview,
       readinessLabel,
       mappedCount,
@@ -1476,6 +1327,7 @@ export default function useBuilderWorkspace({
       queryStatus: builderSnapshot.queryStatus || "idle",
       isDirtySql: builderSnapshot.isDirtySql || false,
       lastRunAt: builderSnapshot.lastRunAt || "",
+      previewState,
       slotAssignments,
       roleAssignments,
       roleConfig,

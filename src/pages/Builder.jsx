@@ -212,7 +212,14 @@ export default function BuilderPage() {
   const saveDisabledReason = contextError || (isSaving ? "Saving..." : null);
   const blockerCount = configSummary.validationSummary?.blockers?.length ?? 0;
   const draftLabel = builderDraft?.isDirty ? "Draft" : "Saved";
-  const readinessLabel = blockerCount ? "Needs Mapping" : "Ready";
+  const previewStatus = previewSummary.previewState?.status ?? "idle";
+  const readinessLabel = blockerCount
+    ? "Needs Mapping"
+    : previewStatus === "success"
+      ? "Preview Ready"
+      : previewStatus === "loading"
+        ? "Rendering"
+        : "Preview Pending";
   const compactContextLabel = contextLabels
     ? `${contextLabels.project} / ${contextLabels.sheet} / ${contextLabels.dashboard}`
     : (contextError || "Unavailable");

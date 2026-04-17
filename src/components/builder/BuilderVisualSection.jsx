@@ -33,6 +33,10 @@ export default function BuilderVisualSection({
     () => (chartSelectorCategories ?? []).find((category) => category.id === selectedChartCategory) ?? null,
     [chartSelectorCategories, selectedChartCategory]
   );
+  const selectableVariantCount = useMemo(
+    () => (orderedVariants ?? []).filter((variant) => variant.isSelectable).length,
+    [orderedVariants]
+  );
 
   return (
     <div className="builder-config-section builder-visual-section" style={{ gap: 8 }}>
@@ -60,7 +64,9 @@ export default function BuilderVisualSection({
         <div className="builder-chart-type-variant-panel">
           <div className="builder-chart-type-panel-head">
             <span className="builder-query-label">Variants</span>
-            <span className="builder-chart-inline-badge">{orderedVariants.length}</span>
+            <span className="builder-chart-inline-badge">
+              {selectableVariantCount}/{orderedVariants.length}
+            </span>
           </div>
           <div className="builder-chart-type-category-row">
             {(activeChartFamilyMeta?.categories ?? []).map((categoryId) => {

@@ -111,7 +111,7 @@ function WorkspaceTab({
         />
       ) : (
         <>
-          <span className="dashboard-workspace-tab-pill">{tone === "sheet" ? "Sheet" : "View"}</span>
+          <span className="dashboard-workspace-tab-pill">{tone === "sheet" ? "Sheet" : "Dashboard"}</span>
           <span className="dashboard-workspace-tab-label">{item.name}</span>
         </>
       )}
@@ -146,14 +146,14 @@ function EmptyCanvasState({ onBuildChart, onOpenSavedCharts }) {
           <span className="is-mid" />
           <span className="is-card" />
         </div>
-        <div className="dashboard-empty-state-title">Start with a chart</div>
-        <div className="dashboard-empty-state-copy">Create one or add a saved chart.</div>
+        <div className="dashboard-empty-state-title">Start the canvas</div>
+        <div className="dashboard-empty-state-copy">Create a chart or place one from the library.</div>
         <div className="dashboard-empty-state-actions">
           <button type="button" onClick={onBuildChart} className="dashboard-toolbar-btn is-primary">
-            Create Chart
+            New Chart
           </button>
           <button type="button" onClick={onOpenSavedCharts} className="dashboard-toolbar-btn">
-            Add Saved
+            Saved Charts
           </button>
         </div>
       </div>
