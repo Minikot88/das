@@ -504,6 +504,7 @@ export default function BuilderConfigPane({
   chartSelectorCategories,
   visibleChartFamilies,
   visibleChartVariants,
+  rendererSupport,
   selectedChartCategory,
   selectedChartFamily,
   selectedChartVariant,
@@ -631,6 +632,7 @@ export default function BuilderConfigPane({
               chartSelectorCategories={chartSelectorCategories}
               visibleChartFamilies={visibleChartFamilies}
               visibleChartVariants={visibleChartVariants}
+              rendererSupport={rendererSupport}
               selectedChartCategory={selectedChartCategory}
               selectedChartFamily={selectedChartFamily}
               selectedChartVariant={selectedChartVariant}

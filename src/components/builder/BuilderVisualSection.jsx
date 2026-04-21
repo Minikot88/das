@@ -10,7 +10,9 @@ export default function BuilderVisualSection({
   activeChartVariantMeta,
   chartSelectorFamilies,
   chartSelectorCategories,
+  visibleChartFamilies,
   visibleChartVariants,
+  rendererSupport,
   selectedChartCategory,
   selectedChartFamily,
   selectedChartVariant,
@@ -50,11 +52,32 @@ export default function BuilderVisualSection({
             <span className="builder-query-label">Selected</span>
             <strong>{activeChartVariantMeta?.label ?? activeChartMeta?.name ?? "Chart"}</strong>
           </div>
-          <span className="builder-chart-inline-badge">{activeChartFamilyMeta?.label ?? chartDefinition?.family}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+            <span className="builder-chart-inline-badge">{activeChartFamilyMeta?.label ?? chartDefinition?.family}</span>
+            <span className="builder-chart-inline-badge">Chart.js</span>
+          </div>
+        </div>
+
+        <div className={`builder-chart-support-note${rendererSupport?.rendererSupported ? "" : " is-alert"}`}>
+          <div className="builder-chart-support-note-head">
+            <strong>
+              {rendererSupport?.rendererSupported
+                ? `${selectableVariantCount}/${orderedVariants.length || 0} variants ready in this family`
+                : `${activeChartVariantMeta?.label ?? activeChartMeta?.name ?? "This chart"} needs a supported renderer`}
+            </strong>
+            <span className="builder-chart-inline-badge">
+              {rendererSupport?.rendererSupported ? "Builder ready" : "Switch required"}
+            </span>
+          </div>
+          <p>
+            {rendererSupport?.rendererSupported
+              ? "Only variants that the current Chart.js renderer can preview and save stay clickable."
+              : "This selection is not wired to the current Chart.js renderer yet. Pick one of the available variants below to continue."}
+          </p>
         </div>
 
         <ChartTypeSelect
-          families={chartSelectorFamilies ?? []}
+          families={visibleChartFamilies?.length ? visibleChartFamilies : (chartSelectorFamilies ?? [])}
           selectedFamily={selectedChartFamily}
           selectedFamilyMeta={activeChartFamilyMeta}
           selectedCategory={activeCategoryMeta?.label ?? selectedChartCategory}
@@ -63,9 +86,9 @@ export default function BuilderVisualSection({
 
         <div className="builder-chart-type-variant-panel">
           <div className="builder-chart-type-panel-head">
-            <span className="builder-query-label">Variants</span>
+            <span className="builder-query-label">Available variants</span>
             <span className="builder-chart-inline-badge">
-              {selectableVariantCount}/{orderedVariants.length}
+              {selectableVariantCount}/{orderedVariants.length} ready
             </span>
           </div>
           <div className="builder-chart-type-category-row">

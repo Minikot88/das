@@ -423,13 +423,13 @@ export default function BuilderPage() {
           flexShrink: 0,
           minHeight: 0,
           minWidth: 0,
-          padding: "10px 12px",
-          borderRadius: 6,
+          padding: "12px 14px",
+          borderRadius: 16,
           display: "flex",
-          alignItems: "center",
+          alignItems: "stretch",
           justifyContent: "space-between",
           gap: 12,
-          flexWrap: "nowrap",
+          flexWrap: "wrap",
         }}
       >
         <div
@@ -442,7 +442,7 @@ export default function BuilderPage() {
             alignContent: "center",
           }}
         >
-          <div className="builder-page-kicker">Builder</div>
+          <div className="builder-page-kicker">Chart.js Builder</div>
           <div className="builder-top-action-breadcrumb">{compactContextLabel}</div>
           <div
             className="builder-top-action-title-row"
@@ -455,7 +455,7 @@ export default function BuilderPage() {
             }}
           >
             <div className="builder-top-action-title-copy">
-              <h1 className="builder-top-action-title">Builder</h1>
+              <h1 className="builder-top-action-title">Build a chart</h1>
             </div>
             <div
               className="builder-top-action-summary builder-top-action-summary-compact"
@@ -483,7 +483,7 @@ export default function BuilderPage() {
             justifyContent: "flex-end",
             gap: 6,
             flexWrap: "wrap",
-            maxWidth: "52%",
+            maxWidth: "100%",
           }}
         >
           <span className="builder-top-action-badge">{draftLabel}</span>
@@ -496,14 +496,14 @@ export default function BuilderPage() {
             onClick={handleCancelAndReturn}
             className="builder-page-toolbar-btn"
           >
-            Cancel
+            Back
           </button>
           <button
             type="button"
             onClick={handleSaveDraft}
             className="builder-page-toolbar-btn builder-page-toolbar-btn-secondary"
           >
-            Draft
+            Save draft
           </button>
           <button
             type="button"
@@ -512,7 +512,7 @@ export default function BuilderPage() {
             disabled={!canSaveWithContext || Boolean(saveDisabledReason)}
             title={saveDisabledReason || "Save Chart"}
           >
-            {isSaving ? "Saving..." : "Save Chart"}
+            {isSaving ? "Saving..." : "Save chart"}
           </button>
         </div>
       </header>
@@ -545,15 +545,12 @@ export default function BuilderPage() {
           }}
         >
           <div
+            className="builder-workspace-column builder-workspace-column-data"
             style={{
-              width: 288,
-              minWidth: 288,
-              maxWidth: 288,
               minHeight: 0,
               height: "100%",
               maxHeight: "100%",
               overflow: "hidden",
-              flexShrink: 0,
               display: "flex",
               flexDirection: "column",
             }}
@@ -574,6 +571,7 @@ export default function BuilderPage() {
           </div>
 
           <div
+            className="builder-workspace-column builder-workspace-column-preview"
             style={{
               flex: 1,
               minWidth: 0,
@@ -596,10 +594,8 @@ export default function BuilderPage() {
           </div>
 
           <div
+            className="builder-workspace-column builder-workspace-column-settings"
             style={{
-              width: 344,
-              minWidth: 344,
-              maxWidth: 344,
               minHeight: 0,
               height: "100%",
               maxHeight: "100%",

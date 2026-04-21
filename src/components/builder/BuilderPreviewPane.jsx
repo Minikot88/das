@@ -22,6 +22,7 @@ function MappingRoleChip({ role }) {
 
   return (
     <div
+      className="builder-preview-role-card"
       style={{
         display: "grid",
         gap: 4,
@@ -35,6 +36,7 @@ function MappingRoleChip({ role }) {
       }}
     >
       <div
+        className="builder-preview-role-card-head"
         style={{
           display: "flex",
           alignItems: "center",
@@ -42,8 +44,9 @@ function MappingRoleChip({ role }) {
           gap: 8,
         }}
       >
-        <strong style={{ fontSize: 12, color: "var(--text-primary)" }}>{role.label}</strong>
+        <strong className="builder-preview-role-card-title" style={{ fontSize: 12, color: "var(--text-primary)" }}>{role.label}</strong>
         <span
+          className="builder-preview-role-card-status"
           style={{
             color: tone,
             fontSize: 9,
@@ -55,7 +58,7 @@ function MappingRoleChip({ role }) {
           {isMapped ? "Mapped" : isRequired ? "Required" : "Optional"}
         </span>
       </div>
-      <span style={{ fontSize: 10, color: isMapped ? "var(--text-primary)" : "var(--text-secondary)" }}>
+      <span className="builder-preview-role-card-copy" style={{ fontSize: 10, color: isMapped ? "var(--text-primary)" : "var(--text-secondary)" }}>
         {isMapped ? fieldLabels.join(", ") : (role.helper || `Add ${role.label.toLowerCase()}`)}
       </span>
     </div>
@@ -197,6 +200,7 @@ export default function BuilderPreviewPane({
           </div>
 
           <section
+            className="builder-preview-mapping-board"
             style={{
               display: "grid",
               gap: 6,
@@ -207,6 +211,7 @@ export default function BuilderPreviewPane({
             }}
           >
             <div
+              className="builder-preview-mapping-head"
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -220,6 +225,7 @@ export default function BuilderPreviewPane({
                 <strong style={{ fontSize: 12 }}>{activeChartLabel ?? "Chart"}</strong>
               </div>
               <span
+                className="builder-preview-mapping-status"
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
@@ -240,6 +246,7 @@ export default function BuilderPreviewPane({
             </div>
 
             <div
+              className="builder-preview-role-grid"
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fit, minmax(148px, 1fr))",
@@ -251,9 +258,10 @@ export default function BuilderPreviewPane({
             </div>
 
             {optionalRoles.length ? (
-              <div style={{ display: "grid", gap: 4 }}>
+              <div className="builder-preview-role-optional" style={{ display: "grid", gap: 4 }}>
                 <span className="builder-query-label" style={{ fontSize: 10 }}>Optional</span>
                 <div
+                  className="builder-preview-role-grid builder-preview-role-grid-optional"
                   style={{
                     display: "flex",
                     flexWrap: "wrap",

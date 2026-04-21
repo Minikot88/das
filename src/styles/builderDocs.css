@@ -1,0 +1,426 @@
+.shell.is-builder-route {
+  --builder-docs-ink: #16233b;
+  --builder-docs-subtle: #5a6c87;
+  --builder-docs-blue: #2f5bd3;
+  --builder-docs-blue-strong: #213f9b;
+  --builder-docs-soft-blue: #edf4ff;
+  --builder-docs-line: #d7e2f0;
+  --builder-docs-line-strong: #bfd0e5;
+  --builder-docs-surface: #f4f8fc;
+  --builder-docs-card: rgba(255, 255, 255, 0.96);
+  --builder-docs-chip: #f2f6fb;
+  --builder-docs-shadow: 0 22px 46px -34px rgba(18, 35, 59, 0.34);
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.shell.is-builder-route .body-row,
+.shell.is-builder-route .main-content,
+.shell.is-builder-route .main-content > .ui-page-container.builder-shell,
+.shell.is-builder-route .builder-workspace-region,
+.shell.is-builder-route .builder-workspace-grid.builder-workspace-grid-compact,
+.shell.is-builder-route .builder-workspace-column,
+.shell.is-builder-route .builder-pane-shell,
+.shell.is-builder-route .builder-pane-frame-left,
+.shell.is-builder-route .builder-preview-panel,
+.shell.is-builder-route .builder-controls-panel {
+  min-height: 0 !important;
+  height: 100% !important;
+  max-height: 100% !important;
+}
+
+.shell.is-builder-route .body-row,
+.shell.is-builder-route .main-content,
+.shell.is-builder-route .main-content > .ui-page-container.builder-shell,
+.shell.is-builder-route .builder-workspace-region,
+.shell.is-builder-route .builder-workspace-grid.builder-workspace-grid-compact,
+.shell.is-builder-route .builder-workspace-column,
+.shell.is-builder-route .builder-pane-shell,
+.shell.is-builder-route .builder-pane-frame-left,
+.shell.is-builder-route .builder-preview-panel,
+.shell.is-builder-route .builder-controls-panel {
+  overflow: hidden !important;
+}
+
+.shell.is-builder-route .main-content {
+  padding: 10px 12px 12px;
+  background:
+    radial-gradient(circle at top right, rgba(47, 91, 211, 0.08), transparent 26%),
+    linear-gradient(180deg, #f8fbff 0%, #f3f7fc 100%);
+}
+
+.shell.is-builder-route .builder-shell {
+  gap: 12px !important;
+  background: transparent !important;
+}
+
+.shell.is-builder-route .builder-top-action-bar {
+  border: 1px solid rgba(42, 72, 140, 0.2) !important;
+  background:
+    linear-gradient(180deg, rgba(20, 35, 62, 0.98) 0%, rgba(29, 52, 95, 0.95) 100%) !important;
+  box-shadow: var(--builder-docs-shadow) !important;
+}
+
+.shell.is-builder-route .builder-page-kicker,
+.shell.is-builder-route .builder-top-action-breadcrumb {
+  color: rgba(224, 233, 247, 0.8) !important;
+}
+
+.shell.is-builder-route .builder-top-action-title {
+  color: #ffffff !important;
+  font-size: 21px !important;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.shell.is-builder-route .builder-top-action-summary-chip,
+.shell.is-builder-route .builder-top-action-badge {
+  border: 1px solid rgba(191, 208, 229, 0.18) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #eef4ff !important;
+  border-radius: 999px !important;
+}
+
+.shell.is-builder-route .builder-top-action-badge.is-ready {
+  background: rgba(81, 164, 255, 0.16) !important;
+}
+
+.shell.is-builder-route .builder-top-action-badge.is-blocked {
+  background: rgba(245, 158, 11, 0.16) !important;
+  color: #fef3c7 !important;
+}
+
+.shell.is-builder-route .builder-page-toolbar-btn,
+.shell.is-builder-route .builder-top-save-btn {
+  min-height: 34px !important;
+  padding: 0 12px !important;
+  border-radius: 10px !important;
+  font-size: 12px !important;
+  font-weight: 600;
+}
+
+.shell.is-builder-route .builder-page-toolbar-btn {
+  border-color: rgba(191, 208, 229, 0.22) !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  color: var(--builder-docs-ink) !important;
+}
+
+.shell.is-builder-route .builder-page-toolbar-btn:hover,
+.shell.is-builder-route .builder-query-copy-btn:hover,
+.shell.is-builder-route .builder-query-mode-btn:hover,
+.shell.is-builder-route .builder-sql-btn:hover,
+.shell.is-builder-route .builder-aggregation-btn:hover,
+.shell.is-builder-route .builder-role-chip-action:hover,
+.shell.is-builder-route .builder-role-zone-clear:hover,
+.shell.is-builder-route .builder-sql-field-hint-btn:hover,
+.shell.is-builder-route .builder-schema-role-btn:hover {
+  border-color: var(--builder-docs-line-strong) !important;
+  background: #ffffff !important;
+}
+
+.shell.is-builder-route .builder-top-save-btn {
+  border-color: var(--builder-docs-blue) !important;
+  background: linear-gradient(180deg, #4a78ec 0%, #2f5bd3 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 12px 26px -20px rgba(47, 91, 211, 0.7);
+}
+
+.shell.is-builder-route .builder-top-save-btn:hover:not(:disabled) {
+  border-color: var(--builder-docs-blue-strong) !important;
+  background: linear-gradient(180deg, #416ee1 0%, #254dbb 100%) !important;
+}
+
+.shell.is-builder-route .builder-workspace-grid.builder-workspace-grid-compact {
+  display: flex !important;
+  flex-direction: row !important;
+  gap: 12px !important;
+  align-items: stretch !important;
+}
+
+.shell.is-builder-route .builder-workspace-column-data {
+  flex: 0 0 272px;
+  max-width: 272px;
+}
+
+.shell.is-builder-route .builder-workspace-column-preview {
+  flex: 1 1 auto;
+}
+
+.shell.is-builder-route .builder-workspace-column-settings {
+  flex: 0 0 320px;
+  max-width: 320px;
+}
+
+.shell.is-builder-route .builder-pane-frame-left,
+.shell.is-builder-route .builder-preview-panel,
+.shell.is-builder-route .builder-controls-panel {
+  border: 1px solid var(--builder-docs-line) !important;
+  border-radius: 18px !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(247, 250, 255, 0.96) 100%) !important;
+  box-shadow: var(--builder-docs-shadow) !important;
+  padding: 12px !important;
+  gap: 10px !important;
+}
+
+.shell.is-builder-route .builder-pane-title,
+.shell.is-builder-route .builder-section-title,
+.shell.is-builder-route .builder-preview-summary-strip strong,
+.shell.is-builder-route .builder-preview-role-card-title,
+.shell.is-builder-route .builder-chart-type-select-copy strong,
+.shell.is-builder-route .builder-chart-family-item-copy strong,
+.shell.is-builder-route .builder-chart-variant-card-copy strong,
+.shell.is-builder-route .builder-chart-support-note strong {
+  color: var(--builder-docs-ink) !important;
+}
+
+.shell.is-builder-route .builder-pane-title {
+  font-size: 16px !important;
+}
+
+.shell.is-builder-route .builder-preview-chip,
+.shell.is-builder-route .builder-status-badge,
+.shell.is-builder-route .builder-pane-status,
+.shell.is-builder-route .builder-chart-inline-badge,
+.shell.is-builder-route .builder-query-status,
+.shell.is-builder-route .builder-query-tag,
+.shell.is-builder-route .builder-query-sql-badge,
+.shell.is-builder-route .builder-top-action-summary-chip,
+.shell.is-builder-route .builder-top-action-badge,
+.shell.is-builder-route .builder-chart-type-category-chip,
+.shell.is-builder-route .builder-chart-family-item-meta,
+.shell.is-builder-route .builder-chart-support-badge {
+  border-radius: 999px !important;
+}
+
+.shell.is-builder-route .builder-preview-summary-strip > div,
+.shell.is-builder-route .builder-query-panel,
+.shell.is-builder-route .builder-query-sql-panel,
+.shell.is-builder-route .builder-controls-card,
+.shell.is-builder-route .builder-config-section,
+.shell.is-builder-route .builder-role-zone,
+.shell.is-builder-route .builder-sql-field-item,
+.shell.is-builder-route .builder-inline-validation,
+.shell.is-builder-route .builder-validation-inline-item,
+.shell.is-builder-route .schema-group,
+.shell.is-builder-route .builder-preview-mapping-board {
+  border: 1px solid var(--builder-docs-line) !important;
+  border-radius: 14px !important;
+  background: var(--builder-docs-card) !important;
+  box-shadow: none !important;
+}
+
+.shell.is-builder-route .builder-mini-stat {
+  border: 1px solid var(--builder-docs-line) !important;
+  border-radius: 14px !important;
+  background:
+    linear-gradient(180deg, #fdfefe 0%, #f4f8fd 100%) !important;
+}
+
+.shell.is-builder-route .builder-query-label,
+.shell.is-builder-route .builder-form-label,
+.shell.is-builder-route .builder-left-section-label,
+.shell.is-builder-route .builder-mini-label,
+.shell.is-builder-route .builder-section-description,
+.shell.is-builder-route .builder-chart-support-note p,
+.shell.is-builder-route .builder-chart-type-select-copy span,
+.shell.is-builder-route .builder-chart-family-item-copy p,
+.shell.is-builder-route .builder-chart-variant-card-copy p,
+.shell.is-builder-route .builder-preview-role-card-copy,
+.shell.is-builder-route .builder-preview-inline-empty p {
+  color: var(--builder-docs-subtle) !important;
+}
+
+.shell.is-builder-route .builder-form-input,
+.shell.is-builder-route .builder-schema-search-input,
+.shell.is-builder-route .builder-visual-search-input,
+.shell.is-builder-route .builder-query-copy-btn,
+.shell.is-builder-route .builder-query-mode-btn,
+.shell.is-builder-route .builder-sql-btn,
+.shell.is-builder-route .builder-aggregation-btn,
+.shell.is-builder-route .builder-sql-field-hint-btn,
+.shell.is-builder-route .builder-role-chip,
+.shell.is-builder-route .builder-role-zone-clear,
+.shell.is-builder-route .builder-role-chip-action,
+.shell.is-builder-route .builder-schema-role-btn,
+.shell.is-builder-route .builder-chart-type-select-trigger,
+.shell.is-builder-route .builder-chart-family-item,
+.shell.is-builder-route .builder-chart-variant-card,
+.shell.is-builder-route .builder-inspector-collapsible-summary {
+  border: 1px solid var(--builder-docs-line) !important;
+  border-radius: 10px !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.shell.is-builder-route .builder-form-input,
+.shell.is-builder-route .builder-schema-search-input,
+.shell.is-builder-route .builder-visual-search-input {
+  min-height: 34px !important;
+  padding: 0 11px !important;
+}
+
+.shell.is-builder-route .builder-inspector-collapsible-summary {
+  padding: 9px 10px !important;
+  color: var(--builder-docs-ink);
+}
+
+.shell.is-builder-route .builder-chart-support-note {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--builder-docs-line);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #f9fbff 0%, #eef5ff 100%);
+}
+
+.shell.is-builder-route .builder-chart-support-note.is-alert {
+  border-color: rgba(217, 119, 6, 0.24);
+  background: linear-gradient(180deg, #fffaf1 0%, #fff3dd 100%);
+}
+
+.shell.is-builder-route .builder-chart-support-note-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.shell.is-builder-route .builder-chart-type-select-trigger,
+.shell.is-builder-route .builder-chart-family-item,
+.shell.is-builder-route .builder-chart-variant-card {
+  padding: 10px 12px !important;
+}
+
+.shell.is-builder-route .builder-chart-type-select-trigger.is-open,
+.shell.is-builder-route .builder-chart-type-select-trigger.is-active,
+.shell.is-builder-route .builder-chart-family-item.is-active,
+.shell.is-builder-route .builder-chart-variant-card.is-active {
+  border-color: rgba(47, 91, 211, 0.42) !important;
+  background: linear-gradient(180deg, #f7faff 0%, #eef4ff 100%) !important;
+  box-shadow: inset 0 0 0 1px rgba(47, 91, 211, 0.12) !important;
+}
+
+.shell.is-builder-route .builder-chart-family-dropdown {
+  border: 1px solid var(--builder-docs-line) !important;
+  border-radius: 14px !important;
+  background: rgba(255, 255, 255, 0.98) !important;
+  box-shadow: var(--builder-docs-shadow) !important;
+  backdrop-filter: blur(12px);
+}
+
+.shell.is-builder-route .builder-chart-variant-card.is-disabled {
+  opacity: 1;
+  border-style: dashed !important;
+  background: #f8fafc !important;
+}
+
+.shell.is-builder-route .builder-chart-variant-card.is-disabled .builder-chart-variant-card-copy strong,
+.shell.is-builder-route .builder-chart-variant-card.is-disabled .builder-chart-variant-card-copy p {
+  color: #7a889d !important;
+}
+
+.shell.is-builder-route .builder-chart-support-badge {
+  border: 1px solid var(--builder-docs-line);
+  background: var(--builder-docs-chip);
+  color: var(--builder-docs-subtle);
+}
+
+.shell.is-builder-route .builder-chart-support-badge.is-supported {
+  border-color: rgba(5, 150, 105, 0.16);
+  background: rgba(5, 150, 105, 0.08);
+  color: #0f766e;
+}
+
+.shell.is-builder-route .builder-chart-support-badge.is-partial {
+  border-color: rgba(217, 119, 6, 0.2);
+  background: rgba(217, 119, 6, 0.1);
+  color: #9a6700;
+}
+
+.shell.is-builder-route .builder-chart-support-badge.is-unsupported,
+.shell.is-builder-route .builder-chart-support-badge.is-metadata-ready {
+  border-color: rgba(100, 116, 139, 0.16);
+  background: rgba(100, 116, 139, 0.09);
+  color: #526277;
+}
+
+.shell.is-builder-route .builder-preview-stage,
+.shell.is-builder-route .builder-canvas-stage {
+  border: 1px solid var(--builder-docs-line) !important;
+  border-radius: 16px !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(248, 251, 255, 0.98) 100%),
+    linear-gradient(90deg, rgba(191, 208, 229, 0.16) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(191, 208, 229, 0.16) 1px, transparent 1px) !important;
+  background-size: auto, 20px 20px, 20px 20px !important;
+}
+
+.shell.is-builder-route .builder-preview-canvas,
+.shell.is-builder-route .builder-preview-canvas-compact {
+  border-radius: 14px !important;
+  background: #ffffff !important;
+}
+
+.shell.is-builder-route .builder-preview-inline-empty {
+  border: 1px dashed var(--builder-docs-line-strong);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.shell.is-builder-route .builder-preview-mapping-status {
+  border-radius: 999px !important;
+}
+
+.shell.is-builder-route .builder-preview-role-card {
+  border-radius: 12px !important;
+  background: linear-gradient(180deg, #fcfdff 0%, #f5f9ff 100%) !important;
+}
+
+.shell.is-builder-route .builder-query-sql-block,
+.shell.is-builder-route .builder-query-generated-preview {
+  border-radius: 12px !important;
+  border-color: #163053 !important;
+  background: linear-gradient(180deg, #15233a 0%, #101c30 100%) !important;
+  color: #dce7fb !important;
+}
+
+.shell.is-builder-route .builder-query-panel,
+.shell.is-builder-route .builder-query-sql-panel,
+.shell.is-builder-route .builder-controls-grid,
+.shell.is-builder-route .builder-chart-type-variant-list,
+.shell.is-builder-route .builder-chart-family-list,
+.shell.is-builder-route .builder-data-pane__body,
+.shell.is-builder-route .builder-pane-body-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #b7c7db transparent;
+}
+
+@media (max-width: 1200px) {
+  .shell.is-builder-route .builder-shell,
+  .shell.is-builder-route .main-content,
+  .shell.is-builder-route .builder-workspace-region,
+  .shell.is-builder-route .builder-workspace-grid.builder-workspace-grid-compact {
+    height: auto !important;
+    max-height: none !important;
+    overflow: auto !important;
+  }
+
+  .shell.is-builder-route .builder-workspace-grid.builder-workspace-grid-compact {
+    flex-direction: column !important;
+  }
+
+  .shell.is-builder-route .builder-workspace-column-data,
+  .shell.is-builder-route .builder-workspace-column-settings {
+    flex: 0 0 auto;
+    max-width: none;
+  }
+
+  .shell.is-builder-route .builder-pane-frame-left,
+  .shell.is-builder-route .builder-preview-panel,
+  .shell.is-builder-route .builder-controls-panel {
+    height: auto !important;
+    max-height: none !important;
+  }
+}

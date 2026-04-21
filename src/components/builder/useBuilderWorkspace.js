@@ -8,8 +8,10 @@ import {
   getChartSelectorDefaults,
   getChartSelectorFamilies,
   getRecommendedCharts,
+  resolveChartRuntimeType,
 } from "../../utils/chartCatalog";
 import { getChartCompatibility, getChartSwitchPlan } from "../../utils/chartCompatibility";
+import { getChartJsSupport } from "../../utils/chartjsAdapter";
 import { normalizeChartConfig } from "../../utils/normalizeChartConfig";
 import { buildQuery, formatSql, runQuery, runSqlQuery } from "../../utils/queryEngine";
 import {
@@ -228,6 +230,7 @@ function isSelectableChartVariant(variant) {
   if (!variant) return false;
   if (variant.supported === false) return false;
   if (variant.previewSupported === false) return false;
+  if (variant.rendererSupported === false) return false;
   return (variant.supportLevel ?? "supported") !== "metadata-ready";
 }
 
@@ -239,10 +242,26 @@ function getChartVariantDisabledReason(variant) {
   if (variant.previewSupported === false) {
     return variant.chart?.disabledReason || "This variant is not preview-ready in the current runtime.";
   }
+  if (variant.rendererSupported === false) {
+    return variant.rendererDisabledReason || "This chart type is not available in the current Chart.js renderer yet.";
+  }
   if ((variant.supportLevel ?? "supported") === "metadata-ready") {
     return "This variant is cataloged, but not fully wired for preview and save yet.";
   }
   return "";
+}
+
+function getRendererSupportForChart(chartId) {
+  const runtimeType = resolveChartRuntimeType(chartId);
+  const rendererSupport = getChartJsSupport(runtimeType);
+  return {
+    runtimeType,
+    rendererSupport,
+    rendererSupported: rendererSupport.supported,
+    rendererDisabledReason: rendererSupport.supported
+      ? ""
+      : (rendererSupport.placeholder || "This chart type is not available in the current Chart.js renderer yet."),
+  };
 }
 
 function pickSelectableVariant(variants = [], preferredMatchers = []) {
@@ -360,6 +379,7 @@ export default function useBuilderWorkspace({
   );
   const chartCatalog = useMemo(() => getBuilderChartCatalog(), []);
   const chartMeta = useMemo(() => getChartMeta(chartType), [chartType]);
+  const activeRendererSupport = useMemo(() => getRendererSupportForChart(chartType), [chartType]);
   const selectorDefaults = useMemo(() => getChartSelectorDefaults(chartType), [chartType]);
   const [selectedChartCategory, setSelectedChartCategory] = useState(builderSnapshot.selectedChartCategory ?? selectorDefaults.categoryId);
   const [selectedChartFamily, setSelectedChartFamily] = useState(builderSnapshot.selectedChartFamily ?? selectorDefaults.familyId);
@@ -433,10 +453,12 @@ export default function useBuilderWorkspace({
   );
   const recommendedCharts = useMemo(
     () =>
-      getRecommendedCharts(previewConfig, tableFields).map((chart) => ({
-        ...chart,
-        compatibility: getChartCompatibility(chart.id, { ...builderSnapshot, ...previewConfig }, tableFields),
-      })),
+      getRecommendedCharts(previewConfig, tableFields)
+        .filter((chart) => getRendererSupportForChart(chart.id).rendererSupported)
+        .map((chart) => ({
+          ...chart,
+          compatibility: getChartCompatibility(chart.id, { ...builderSnapshot, ...previewConfig }, tableFields),
+        })),
     [builderSnapshot, previewConfig, tableFields]
   );
   const suggestionResult = useMemo(() => {
@@ -459,28 +481,40 @@ export default function useBuilderWorkspace({
         const variantChart = chartById.get(variant.id) ?? getChartMeta(variant.id);
         const previewSupported = variantChart.previewSupported !== false;
         const supported = variantChart.supported !== false;
+        const rendererInfo = getRendererSupportForChart(variant.chartId ?? variant.id);
         const isSelectable = isSelectableChartVariant({
           ...variant,
           chart: variantChart,
           supported,
           previewSupported,
+          rendererSupported: rendererInfo.rendererSupported,
         });
         return {
           ...variant,
           chart: variantChart,
           supported,
           previewSupported,
+          runtimeType: rendererInfo.runtimeType,
+          rendererSupport: rendererInfo.rendererSupport,
+          rendererSupported: rendererInfo.rendererSupported,
+          rendererDisabledReason: rendererInfo.rendererDisabledReason,
           isSelectable,
           disabledReason: getChartVariantDisabledReason({
             ...variant,
             chart: variantChart,
             supported,
             previewSupported,
+            rendererSupported: rendererInfo.rendererSupported,
+            rendererDisabledReason: rendererInfo.rendererDisabledReason,
           }),
           recommended: recommendedIds.has(variant.id) || recommendedIds.has(variant.chartId),
         };
       }),
       recommended: family.variants.some((variant) => recommendedIds.has(variant.id) || recommendedIds.has(variant.chartId)),
+    })).map((family) => ({
+      ...family,
+      selectableCount: family.variants.filter((variant) => variant.isSelectable).length,
+      totalVariantCount: family.variants.length,
     }));
   }, [catalogWithCompatibility, recommendedCharts]);
   const visibleChartFamilies = useMemo(
@@ -501,6 +535,8 @@ export default function useBuilderWorkspace({
   const visibleChartVariants = activeChartFamilyMeta?.variants ?? [];
   const activeChartVariantMeta = useMemo(
     () =>
+      visibleChartVariants.find((variant) => variant.id === selectedChartVariant) ??
+      visibleChartVariants.find((variant) => variant.id === chartType || variant.chartId === chartType) ??
       pickSelectableVariant(visibleChartVariants, [
         (variant) => variant.id === selectedChartVariant,
         (variant) => variant.id === chartType,
@@ -521,8 +557,28 @@ export default function useBuilderWorkspace({
     [availableFields, chartMeta.previewSupported, chartType, roleMapping, selectedTable]
   );
   const validationSummary = useMemo(
-    () => createValidationSummary(roleValidation, selectedTable),
-    [roleValidation, selectedTable]
+    () => {
+      const summary = createValidationSummary(roleValidation, selectedTable);
+
+      if (activeRendererSupport.rendererSupported) {
+        return summary;
+      }
+
+      const rendererBlocker = {
+        level: "error",
+        code: "unsupported-renderer-chart",
+        title: "Pick a supported chart type",
+        message: `${chartMeta.name} is not wired to the current Chart.js renderer yet.`,
+        action: "Choose one of the available chart families or variants to continue.",
+      };
+
+      return {
+        blockers: [rendererBlocker, ...summary.blockers],
+        cautions: summary.cautions,
+        nextStep: rendererBlocker.action,
+      };
+    },
+    [activeRendererSupport.rendererSupported, chartMeta.name, roleValidation, selectedTable]
   );
   const slotAssignments = useMemo(
     () =>
@@ -1367,6 +1423,7 @@ export default function useBuilderWorkspace({
       roleAssignments,
       validationSummary,
       previewSupported: previewFallback.useFallback ? true : chartMeta.previewSupported,
+      rendererSupport: activeRendererSupport,
       previewState,
       missingRequirements,
       canRenderPreview,
@@ -1388,6 +1445,7 @@ export default function useBuilderWorkspace({
       })),
       visibleChartFamilies,
       visibleChartVariants,
+      rendererSupport: activeRendererSupport,
       selectedChartCategory,
       selectedChartFamily,
       selectedChartVariant,

@@ -34,7 +34,7 @@ export default function ChartTypeSelect({
           <span className="builder-query-label">Selected family</span>
           <strong>{selectedFamilyMeta?.label ?? "Select chart family"}</strong>
         </div>
-        <span className="builder-chart-type-select-chevron">{open ? "▲" : "▼"}</span>
+        <span className="builder-chart-type-select-chevron" aria-hidden="true">{open ? "^" : "v"}</span>
       </button>
 
       {open ? (

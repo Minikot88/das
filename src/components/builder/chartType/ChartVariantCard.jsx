@@ -1,6 +1,7 @@
 import React from "react";
 
 function formatSupportLabel(level, variant) {
+  if (variant?.rendererSupported === false) return "Not ready";
   if (variant?.supported === false) return "Disabled";
   if (variant?.previewSupported === false) return "Unavailable";
   if (level === "metadata-ready") return "Unavailable";
@@ -25,7 +26,7 @@ export default function ChartVariantCard({ variant, active, onSelect }) {
         <p>{variant.description}</p>
       </div>
       <div
-        className={`builder-chart-support-badge is-${supportLevel}`}
+        className={`builder-chart-support-badge is-${variant?.rendererSupported === false ? "unsupported" : supportLevel}`}
         title={isDisabled ? variant.disabledReason : variant.chartId}
       >
         {formatSupportLabel(supportLevel, variant)}
