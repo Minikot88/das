@@ -73,6 +73,11 @@ export function resolveDashboardWidgets(layout = [], charts = []) {
       if (!savedChart) return null;
 
       const config = normalizeChartConfig(savedChart.config);
+      const chartRows = Array.isArray(savedChart.data)
+        ? savedChart.data
+        : Array.isArray(config.queryResult?.rows)
+          ? config.queryResult.rows
+          : [];
       const fallbackName = `Chart ${index + 1}`;
       const name = item.titleOverride || savedChart.name || config.title || config.name || fallbackName;
       const type = config.chartType || config.type || "bar";
@@ -97,7 +102,7 @@ export function resolveDashboardWidgets(layout = [], charts = []) {
           name,
         },
         echartsOption: buildChartOptionByType(type, {
-          rows: savedChart.data ?? [],
+          rows: chartRows,
           config: {
             ...config,
             title: name,

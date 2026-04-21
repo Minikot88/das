@@ -289,6 +289,13 @@
   min-width: 0;
 }
 
+.project-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
 .project-card-topline {
   justify-content: flex-start;
   align-items: center;
@@ -401,7 +408,7 @@
 .project-card-menu-wrap {
   position: absolute;
   right: 10px;
-  top: 10px;
+  top: 44px;
 }
 
 .project-card-menu-btn,
@@ -412,6 +419,30 @@
   border-radius: var(--radius-sm);
   background: var(--surface);
   cursor: pointer;
+}
+
+.project-card-menu-trigger {
+  width: auto;
+  min-width: 72px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.project-card-delete-btn {
+  min-height: 26px;
+  padding: 0 10px;
+  border: 1px solid color-mix(in srgb, var(--danger) 38%, var(--border));
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface));
+  color: var(--danger);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.project-card-delete-btn:hover {
+  background: color-mix(in srgb, var(--danger) 16%, var(--surface-soft));
 }
 
 .project-card-menu {
@@ -724,6 +755,12 @@
   .home-active-context {
     justify-items: start;
     text-align: left;
+  }
+
+  .project-card-actions {
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-end;
   }
 
   .home-stats-grid,

@@ -186,6 +186,7 @@ export default function HomePage() {
                 onOpen={handleOpenProject}
                 onRename={renameProject}
                 onDelete={deleteProject}
+                canDelete={projects.length > 1}
               />
             ))}
             <button type="button" className="project-card project-card-new" onClick={() => setShowModal(true)}>

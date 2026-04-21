@@ -8,6 +8,7 @@ export default function ProjectCard({
   onRename,
   onDelete,
   summary,
+  canDelete = true,
 }) {
   const { t } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -48,6 +49,24 @@ export default function ProjectCard({
               <div className="project-card-type">Project</div>
             </div>
             <div className={`project-card-status ${statusTone}`}>{statusLabel}</div>
+          </div>
+          <div className="project-card-actions" onClick={(event) => event.stopPropagation()}>
+            <button
+              type="button"
+              className="project-card-menu-btn project-card-menu-trigger"
+              onClick={() => setMenuOpen((value) => !value)}
+            >
+              {t("home.manageProject")}
+            </button>
+            {canDelete ? (
+              <button
+                type="button"
+                className="project-card-delete-btn"
+                onClick={() => onDelete(project.id)}
+              >
+                {t("home.deleteProject")}
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -92,11 +111,12 @@ export default function ProjectCard({
       </div>
 
       <div className="project-card-menu-wrap" onClick={(event) => event.stopPropagation()}>
-        <button type="button" className="project-card-menu-btn" onClick={() => setMenuOpen((value) => !value)}>•••</button>
         {menuOpen ? (
           <div className="project-card-menu">
             <button type="button" onClick={() => { setRenamingOpen(true); setMenuOpen(false); }}>{t("home.renameProject")}</button>
-            <button type="button" className="danger" onClick={() => { onDelete(project.id); setMenuOpen(false); }}>{t("home.deleteProject")}</button>
+            {canDelete ? (
+              <button type="button" className="danger" onClick={() => { onDelete(project.id); setMenuOpen(false); }}>{t("home.deleteProject")}</button>
+            ) : null}
           </div>
         ) : null}
       </div>

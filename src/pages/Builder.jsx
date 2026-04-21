@@ -56,6 +56,7 @@ export default function BuilderPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [draftFeedback, setDraftFeedback] = useState("");
   const draftFeedbackTimerRef = useRef(null);
+  const starterChartSeededRef = useRef(false);
 
   const fallbackContext = useMemo(
     () =>
@@ -104,6 +105,103 @@ export default function BuilderPage() {
     () => charts.filter((chart) => chart.projectId === builderContext?.projectId),
     [builderContext?.projectId, charts]
   );
+
+  useEffect(() => {
+    if (starterChartSeededRef.current) return;
+    if (!builderContext || !validation.isValid || !targetDashboard) return;
+    if ((targetDashboard.layout?.length ?? 0) > 0) return;
+    if (builderDraft?.isDirty) return;
+    if (builderState.selectedTable || builderState.xField || builderState.yField) return;
+
+    starterChartSeededRef.current = true;
+    let cancelled = false;
+
+    async function seedStarterChart() {
+      const starterConfig = {
+        dataset: "sales",
+        chartType: "bar",
+        x: "category",
+        xType: "string",
+        y: "sales",
+        yType: "number",
+        aggregate: "sum",
+        name: "Sales by Category",
+        title: "Sales by Category",
+        subtitle: "Starter chart",
+        queryMode: "visual",
+        roleMapping: {
+          category: [{ id: "business.sales.category", name: "category", type: "string", db: "business", tbl: "sales" }],
+          value: [{ id: "business.sales.sales", name: "sales", type: "number", db: "business", tbl: "sales" }],
+        },
+      };
+
+      try {
+        const queryResult = await runQuery({
+          dataset: starterConfig.dataset,
+          x: starterConfig.x,
+          y: starterConfig.y,
+          aggregate: starterConfig.aggregate,
+          chartType: starterConfig.chartType,
+        });
+
+        if (cancelled) return;
+
+        saveChartToDashboardContext({
+          projectId: builderContext.projectId,
+          sheetId: builderContext.sheetId,
+          dashboardId: builderContext.dashboardId,
+          chart: createWidgetFromBuilder({
+            chartConfig: starterConfig,
+            chartRows: queryResult.data ?? [],
+            context: builderContext,
+            existingCharts: projectCharts,
+          }),
+        });
+
+        setBuilderState({
+          selectedDb: "business",
+          selectedTable: "sales",
+          chartType: "bar",
+          xField: "category",
+          xType: "string",
+          yField: "sales",
+          yType: "number",
+          aggregation: "sum",
+          name: starterConfig.name,
+          title: starterConfig.title,
+          subtitle: starterConfig.subtitle,
+          queryMode: "visual",
+          roleMapping: starterConfig.roleMapping,
+        });
+
+        setDraftFeedback("Starter chart created");
+        window.clearTimeout(draftFeedbackTimerRef.current);
+        draftFeedbackTimerRef.current = window.setTimeout(() => setDraftFeedback(""), 2200);
+      } catch (error) {
+        starterChartSeededRef.current = false;
+        if (!cancelled) {
+          setContextError(error?.message || "Unable to create starter chart.");
+        }
+      }
+    }
+
+    void seedStarterChart();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    builderContext,
+    builderDraft?.isDirty,
+    builderState.selectedTable,
+    builderState.xField,
+    builderState.yField,
+    projectCharts,
+    saveChartToDashboardContext,
+    setBuilderState,
+    targetDashboard,
+    validation.isValid,
+  ]);
 
   useEffect(() => {
     if (location.state?.builderContext) {

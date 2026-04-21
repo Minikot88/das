@@ -14,7 +14,9 @@ import {
   readBuilderReturnState,
   resolveDashboardWidgets,
   toDashboardChartModel,
+  createWidgetFromBuilder,
 } from "../utils/dashboardWorkspace";
+import { runQuery } from "../utils/queryEngine";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 
@@ -189,6 +191,7 @@ export default function DashboardPage() {
   const setSelectedWidget = useStore((state) => state.setSelectedWidget);
   const rightPanelOpen = useStore((state) => state.rightPanelOpen);
   const setRightPanelOpen = useStore((state) => state.setRightPanelOpen);
+  const saveChartToDashboardContext = useStore((state) => state.saveChartToDashboardContext);
 
   const [pickingChart, setPickingChart] = useState(false);
   const [editingTab, setEditingTab] = useState(null);
@@ -200,6 +203,7 @@ export default function DashboardPage() {
 
   const contextMenuRef = useRef(null);
   const previousWidgetCountRef = useRef(0);
+  const starterChartSeededRef = useRef(false);
 
   const activeProject = useMemo(
     () => projects.find((project) => project.id === activeProjectId) ?? projects[0] ?? null,
@@ -295,6 +299,80 @@ export default function DashboardPage() {
       setFullscreenWidgetId(null);
     }
   }, [dashboardWidgets, fullscreenWidgetId]);
+
+  useEffect(() => {
+    if (starterChartSeededRef.current) return;
+    if (!activeProject || !activeSheet || !activeDashboard) return;
+    if ((activeDashboard.layout?.length ?? 0) > 0) return;
+
+    starterChartSeededRef.current = true;
+    let cancelled = false;
+
+    async function seedStarterChart() {
+      const builderContext = createBuilderContextForDashboard({
+        projectId: activeProject.id,
+        sheetId: activeSheet.id,
+        dashboardId: activeDashboard.id,
+        returnTo: "/dashboard",
+      });
+
+      const starterConfig = {
+        dataset: "sales",
+        chartType: "bar",
+        x: "category",
+        xType: "string",
+        y: "sales",
+        yType: "number",
+        aggregate: "sum",
+        name: "Sales by Category",
+        title: "Sales by Category",
+        subtitle: "Starter chart",
+        queryMode: "visual",
+        roleMapping: {
+          category: [{ id: "business.sales.category", name: "category", type: "string", db: "business", tbl: "sales" }],
+          value: [{ id: "business.sales.sales", name: "sales", type: "number", db: "business", tbl: "sales" }],
+        },
+      };
+
+      try {
+        const queryResult = await runQuery({
+          dataset: starterConfig.dataset,
+          x: starterConfig.x,
+          y: starterConfig.y,
+          aggregate: starterConfig.aggregate,
+          chartType: starterConfig.chartType,
+        });
+
+        if (cancelled) return;
+
+        saveChartToDashboardContext({
+          projectId: activeProject.id,
+          sheetId: activeSheet.id,
+          dashboardId: activeDashboard.id,
+          chart: createWidgetFromBuilder({
+            chartConfig: starterConfig,
+            chartRows: queryResult.data ?? [],
+            context: builderContext,
+            existingCharts: projectCharts,
+          }),
+        });
+      } catch {
+        starterChartSeededRef.current = false;
+      }
+    }
+
+    void seedStarterChart();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    activeDashboard,
+    activeProject,
+    activeSheet,
+    projectCharts,
+    saveChartToDashboardContext,
+  ]);
 
   if (!activeProject || !activeSheet || !activeDashboard) {
     return (

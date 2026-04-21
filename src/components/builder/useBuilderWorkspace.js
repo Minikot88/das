@@ -763,8 +763,11 @@ export default function useBuilderWorkspace({
     sourcePreviewRows,
   });
 
+  const hasChartConfig = Boolean(previewConfig.dataset) && Boolean(previewConfig.chartType);
+  const sqlReadyToSave = queryMode !== "sql" || builderSnapshot.queryStatus === "success";
   const canAddChart = validationSummary.blockers.length === 0
-    && previewState.status === "success";
+    && hasChartConfig
+    && sqlReadyToSave;
   const mappedCount = roleAssignments.filter((role) => role.fields.length).length;
   const mappedTarget = roleAssignments.filter((role) => role.required).length;
   const readinessLabel = createReadinessLabel({

@@ -146,6 +146,11 @@ function normalizeStoredChart(chart) {
   return {
     ...chart,
     name: chart.name ?? config.name ?? config.title ?? "Untitled",
+    data: Array.isArray(chart.data)
+      ? chart.data
+      : Array.isArray(config.queryResult?.rows)
+        ? config.queryResult.rows
+        : [],
     config,
   };
 }
@@ -162,10 +167,18 @@ function inferSelectedDb(dataset) {
 
 function createStoredChartRecord(projectId, chart) {
   const config = normalizeChartConfig(chart.config);
+  const data = Array.isArray(chart.data)
+    ? chart.data
+    : Array.isArray(chart.rows)
+      ? chart.rows
+      : Array.isArray(config.queryResult?.rows)
+        ? config.queryResult.rows
+        : [];
 
   return {
     id: createTimestampId(),
     name: chart.name || config.name || config.title || "Untitled",
+    data,
     config,
     type: config.chartType,
     echartsOption: chart.echartsOption ?? null,
