@@ -1,6 +1,7 @@
 import React from "react";
-import EChartRenderer from "./EChartRenderer";
+import ChartJsRenderer from "./ChartJsRenderer";
 
 export default function ChartRenderer(props) {
-  return <EChartRenderer {...props} />;
+  return <ChartJsRenderer {...props} />;
 }
+

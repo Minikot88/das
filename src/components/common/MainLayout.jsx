@@ -24,13 +24,29 @@ export default function MainLayout() {
   }, [location.pathname, setMobileMenuOpen]);
 
   const isWorkspaceRoute = location.pathname === "/builder" || location.pathname === "/dashboard";
+  const isBuilderRoute = location.pathname === "/builder";
+  const shellClassName = [
+    "shell",
+    sidebarCollapsed ? "sidebar-collapsed" : "",
+    isWorkspaceRoute ? "is-workspace-route" : "",
+    isBuilderRoute ? "is-builder-route" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const mainClassName = [
+    "main-content",
+    isWorkspaceRoute ? "is-workspace-route" : "",
+    isBuilderRoute ? "is-builder-route" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
-    <div className={`shell${sidebarCollapsed ? " sidebar-collapsed" : ""}`}>
+    <div className={shellClassName}>
       <AppHeader />
       <div className="body-row">
         <SidebarLeft />
-        <main className="main-content" id="main-content" role="main">
+        <main className={mainClassName} id="main-content" role="main">
           <Outlet />
         </main>
         {!isWorkspaceRoute && <SidebarRight />}

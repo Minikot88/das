@@ -86,6 +86,7 @@ export default function BuilderPreviewPane({
   const previewRowCount = Array.isArray(previewData) ? previewData.length : 0;
   const previewStatusState = previewState?.status ?? "idle";
   const previewError = previewState?.error ?? "";
+  const previewHint = previewState?.hint ?? "";
   const isPreviewLoading = previewStatusState === "loading";
   const isPreviewSuccess = previewStatusState === "success";
   const hasPreviewError = ["invalid_config", "render_error"].includes(previewStatusState) && Boolean(previewError);
@@ -101,7 +102,7 @@ export default function BuilderPreviewPane({
     : "empty";
 
   const previewStatusMeta = {
-    idle: { label: "Idle", title: selectedTable ? "Select a chart" : "Select a table", message: selectedTable ? "Choose a working chart and map the required fields." : "Choose a table to begin building a chart." },
+    idle: { label: "Idle", title: selectedTable ? "Map fields to preview" : "Select a table", message: selectedTable ? "Choose fields for at least one category and one numeric value. Preview will update automatically." : "Choose a table to begin building a chart." },
     loading: { label: "Loading", title: "Preparing preview", message: "Applying the latest chart settings and query." },
     missing_required_mappings: { label: "Needs mapping", title: "Map required fields", message: previewError || validationSummary?.blockers?.[0]?.title || "Map the required roles before preview can render." },
     no_rows: { label: "No rows", title: "No rows", message: previewError || "The current chart settings returned no rows." },
@@ -324,6 +325,11 @@ export default function BuilderPreviewPane({
                     </strong>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                    {previewHint ? (
+                      <span className="builder-preview-chip is-soft">
+                        {previewHint}
+                      </span>
+                    ) : null}
                     <span className="builder-preview-chip is-soft">
                       {previewRowCount} row{previewRowCount === 1 ? "" : "s"}
                     </span>

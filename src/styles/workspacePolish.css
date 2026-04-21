@@ -756,6 +756,8 @@
   align-items: center;
   gap: 8px;
   margin-left: auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .project-card-topline {
@@ -828,6 +830,7 @@
 }
 
 .project-card-menu-btn,
+.project-card-manage-btn,
 .modal-close-btn {
   width: 30px;
   height: 30px;
@@ -835,7 +838,8 @@
   background: var(--surface-secondary);
 }
 
-.project-card-menu-trigger {
+.project-card-menu-trigger,
+.project-card-manage-btn {
   width: auto;
   min-width: 84px;
   padding: 0 12px;
@@ -846,16 +850,24 @@
 .project-card-delete-btn {
   min-height: 30px;
   padding: 0 12px;
-  border: 1px solid color-mix(in srgb, var(--danger) 40%, var(--border));
+  border: 1px solid color-mix(in srgb, var(--danger) 72%, var(--border));
   border-radius: 4px;
-  background: color-mix(in srgb, var(--danger) 10%, var(--surface-secondary));
-  color: var(--danger);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--danger) 90%, white 10%) 0%, color-mix(in srgb, var(--danger) 94%, black 6%) 100%);
+  color: #fff;
   font-size: 12px;
   font-weight: 700;
+  cursor: pointer;
 }
 
-.project-card-menu {
-  border-radius: 6px;
+.project-card-manage-btn:hover,
+.project-card-menu-btn:hover {
+  border-color: color-mix(in srgb, var(--accent) 58%, var(--border-strong));
+  background: color-mix(in srgb, var(--surface) 78%, var(--accent) 22%);
+}
+
+.project-card-delete-btn:hover {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--danger) 82%, white 18%) 0%, color-mix(in srgb, var(--danger) 94%, black 8%) 100%);
+  border-color: color-mix(in srgb, var(--danger) 92%, var(--border));
 }
 
 .project-card-new {
@@ -1484,4 +1496,314 @@ body.dark .builder-chart-support-badge.is-supported {
   border-color: rgba(96, 165, 250, 0.34) !important;
   background: rgba(30, 64, 175, 0.22) !important;
   color: #bfdbfe !important;
+}
+
+/* Builder viewport-fit final pass */
+.main-content.is-builder-route > .builder-shell.ui-page-container,
+.main-content.is-builder-route > .ui-page-container.builder-shell,
+.builder-shell,
+.builder-workspace-region,
+.builder-workspace-grid.builder-workspace-grid-compact,
+.builder-pane-shell,
+.builder-pane-frame-left,
+.builder-preview-panel,
+.builder-controls-panel {
+  min-height: 0 !important;
+}
+
+.main-content.is-builder-route > .ui-page-container.builder-shell,
+.builder-shell,
+.builder-workspace-region,
+.builder-workspace-grid.builder-workspace-grid-compact,
+.builder-pane-shell,
+.builder-pane-frame-left,
+.builder-preview-panel,
+.builder-controls-panel {
+  height: 100% !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
+}
+
+.shell.is-builder-route .main-content {
+  scrollbar-gutter: stable both-edges;
+}
+
+.shell.is-builder-route .builder-shell {
+  gap: 8px;
+}
+
+.shell.is-builder-route .builder-top-action-bar {
+  position: relative;
+  top: auto;
+  min-height: 64px;
+  gap: 10px;
+  padding: 8px 10px !important;
+  border-radius: 8px !important;
+}
+
+.shell.is-builder-route .builder-top-action-title {
+  font-size: 16px;
+}
+
+.shell.is-builder-route .builder-page-kicker,
+.shell.is-builder-route .builder-top-action-breadcrumb,
+.shell.is-builder-route .builder-query-label,
+.shell.is-builder-route .builder-mini-label,
+.shell.is-builder-route .builder-left-section-label {
+  font-size: 10px !important;
+}
+
+.shell.is-builder-route .builder-top-action-summary,
+.shell.is-builder-route .builder-top-action-summary-compact,
+.shell.is-builder-route .builder-top-action-secondary,
+.shell.is-builder-route .builder-pane-header-copy,
+.shell.is-builder-route .builder-source-summary,
+.shell.is-builder-route .builder-preview-chip-row,
+.shell.is-builder-route .builder-preview-overview.compact,
+.shell.is-builder-route .builder-query-header-actions,
+.shell.is-builder-route .builder-query-tags {
+  gap: 6px !important;
+}
+
+.shell.is-builder-route .builder-top-action-summary-chip,
+.shell.is-builder-route .builder-top-action-badge,
+.shell.is-builder-route .builder-preview-chip,
+.shell.is-builder-route .builder-preview-overview-pill,
+.shell.is-builder-route .builder-query-tag,
+.shell.is-builder-route .builder-query-status,
+.shell.is-builder-route .builder-query-sql-badge,
+.shell.is-builder-route .builder-chart-inline-badge,
+.shell.is-builder-route .builder-pane-status,
+.shell.is-builder-route .builder-status-badge {
+  min-height: 22px !important;
+  padding: 0 7px !important;
+  font-size: 10px !important;
+  border-radius: 6px !important;
+}
+
+.shell.is-builder-route .builder-page-toolbar-btn,
+.shell.is-builder-route .builder-top-save-btn,
+.shell.is-builder-route .builder-query-copy-btn,
+.shell.is-builder-route .builder-query-mode-btn,
+.shell.is-builder-route .builder-sql-btn,
+.shell.is-builder-route .builder-aggregation-btn,
+.shell.is-builder-route .builder-schema-role-btn,
+.shell.is-builder-route .builder-role-chip,
+.shell.is-builder-route .builder-role-zone-clear,
+.shell.is-builder-route .builder-action-btn-primary,
+.shell.is-builder-route .builder-action-btn-secondary {
+  min-height: 32px !important;
+  padding: 0 10px !important;
+  font-size: 11px !important;
+  border-radius: 6px !important;
+}
+
+.shell.is-builder-route .builder-page-toolbar-btn,
+.shell.is-builder-route .builder-query-copy-btn,
+.shell.is-builder-route .builder-action-btn-secondary {
+  background: var(--surface) !important;
+}
+
+.shell.is-builder-route .builder-form-input,
+.shell.is-builder-route .builder-schema-search-input,
+.shell.is-builder-route .builder-visual-search-input,
+.shell.is-builder-route .builder-visual-select {
+  min-height: 32px !important;
+  padding: 0 10px !important;
+  font-size: 12px !important;
+  border-radius: 6px !important;
+}
+
+.shell.is-builder-route .builder-pane-frame-left,
+.shell.is-builder-route .builder-preview-panel,
+.shell.is-builder-route .builder-controls-panel {
+  padding: 10px !important;
+  border-radius: 8px !important;
+}
+
+.shell.is-builder-route .builder-pane-header,
+.shell.is-builder-route .builder-section-head {
+  gap: 8px !important;
+  padding-bottom: 4px !important;
+}
+
+.shell.is-builder-route .builder-pane-title,
+.shell.is-builder-route .builder-section-title {
+  font-size: 14px !important;
+}
+
+.shell.is-builder-route .builder-mini-stat,
+.shell.is-builder-route .builder-data-pane-chart-brief,
+.shell.is-builder-route .builder-preview-summary-strip > div,
+.shell.is-builder-route .builder-query-panel,
+.shell.is-builder-route .builder-query-sql-panel,
+.shell.is-builder-route .builder-controls-card,
+.shell.is-builder-route .builder-config-section,
+.shell.is-builder-route .builder-role-zone,
+.shell.is-builder-route .builder-sql-field-item,
+.shell.is-builder-route .builder-inline-validation,
+.shell.is-builder-route .builder-validation-inline-item,
+.shell.is-builder-route .schema-group {
+  border-radius: 6px !important;
+}
+
+.shell.is-builder-route .builder-mini-stat,
+.shell.is-builder-route .builder-data-pane-chart-brief,
+.shell.is-builder-route .builder-preview-summary-strip > div,
+.shell.is-builder-route .builder-query-panel,
+.shell.is-builder-route .builder-query-sql-panel,
+.shell.is-builder-route .builder-controls-card,
+.shell.is-builder-route .builder-config-section,
+.shell.is-builder-route .builder-role-zone,
+.shell.is-builder-route .builder-sql-field-item,
+.shell.is-builder-route .builder-inline-validation,
+.shell.is-builder-route .builder-validation-inline-item {
+  padding: 8px !important;
+}
+
+.shell.is-builder-route .builder-data-pane__body,
+.shell.is-builder-route .builder-pane-body-scroll {
+  flex: 1 1 auto;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+.shell.is-builder-route .builder-preview-panel {
+  gap: 8px !important;
+}
+
+.shell.is-builder-route .builder-preview-summary-strip {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 6px !important;
+}
+
+.shell.is-builder-route .builder-preview-summary-strip > div {
+  min-height: 0;
+}
+
+.shell.is-builder-route .builder-preview-stage,
+.shell.is-builder-route .builder-canvas-stage {
+  flex: 1 1 auto;
+  min-height: 0 !important;
+  height: 100% !important;
+  padding: 8px !important;
+  border-radius: 8px !important;
+}
+
+.shell.is-builder-route .builder-preview-canvas,
+.shell.is-builder-route .builder-preview-canvas-compact {
+  width: 100%;
+  min-height: 0 !important;
+  height: 100% !important;
+}
+
+.shell.is-builder-route .builder-preview-inline-empty {
+  min-height: 120px !important;
+  max-width: 300px !important;
+  padding: 12px !important;
+}
+
+.shell.is-builder-route .builder-query-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  flex: 0 0 auto;
+  min-height: 0 !important;
+  max-height: 172px !important;
+  gap: 6px !important;
+  overflow: hidden !important;
+}
+
+.shell.is-builder-route .builder-query-panel[open] {
+  max-height: 196px !important;
+}
+
+.shell.is-builder-route .builder-query-summary,
+.shell.is-builder-route .builder-query-sql-panel {
+  min-height: 0;
+  gap: 8px !important;
+  overflow: hidden;
+}
+
+.shell.is-builder-route .builder-query-sql-block {
+  max-height: 96px;
+  padding: 10px !important;
+  overflow: auto;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.shell.is-builder-route .builder-controls-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: block;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding-right: 2px;
+}
+
+.shell.is-builder-route .builder-controls-grid > .builder-controls-card + .builder-controls-card {
+  margin-top: 8px;
+}
+
+.shell.is-builder-route .builder-controls-grid > .builder-controls-card:not(:first-child) {
+  min-height: auto !important;
+  max-height: none !important;
+}
+
+.shell.is-builder-route .builder-action-tray,
+.shell.is-builder-route .builder-action-tray.compact {
+  gap: 6px !important;
+}
+
+.shell.is-builder-route .builder-action-row {
+  gap: 6px !important;
+}
+
+.shell.is-builder-route .builder-action-message,
+.shell.is-builder-route .builder-section-description,
+.shell.is-builder-route .builder-chart-list-item-main p,
+.shell.is-builder-route .builder-chart-family-item p,
+.shell.is-builder-route .builder-chart-variant-item p,
+.shell.is-builder-route .builder-preview-inline-empty p {
+  font-size: 11px !important;
+  line-height: 1.45;
+}
+
+.shell.is-builder-route .builder-chart-list-item,
+.shell.is-builder-route .builder-chart-family-item,
+.shell.is-builder-route .builder-chart-variant-item {
+  min-height: 44px !important;
+  padding: 8px !important;
+}
+
+.shell.is-builder-route .builder-preview-stage-status {
+  gap: 6px;
+}
+
+@media (max-height: 880px) and (min-width: 981px) {
+  .shell.is-builder-route .main-content {
+    padding: 6px;
+  }
+
+  .shell.is-builder-route .builder-top-action-bar {
+    min-height: 60px;
+    padding: 8px 9px !important;
+  }
+
+  .shell.is-builder-route .builder-preview-stage,
+  .shell.is-builder-route .builder-canvas-stage {
+    padding: 7px !important;
+  }
+
+  .shell.is-builder-route .builder-query-panel {
+    max-height: 156px !important;
+  }
+
+  .shell.is-builder-route .builder-query-panel[open] {
+    max-height: 180px !important;
+  }
+
+  .shell.is-builder-route .builder-query-sql-block {
+    max-height: 80px;
+  }
 }

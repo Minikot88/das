@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import { useI18n } from "../../utils/i18n";
 
 export default function ProjectCard({
@@ -11,15 +11,14 @@ export default function ProjectCard({
   canDelete = true,
 }) {
   const { t } = useI18n();
-  const [menuOpen, setMenuOpen] = useState(false);
   const [renamingOpen, setRenamingOpen] = useState(false);
   const [renameVal, setRenameVal] = useState(project.name);
   const sheetCount = summary?.sheetCount ?? project.sheets?.length ?? 0;
   const dashboardCount = summary?.dashboardCount ?? project.sheets?.reduce((total, sheet) => total + sheet.dashboards.length, 0) ?? 0;
-  const activeSheetName = summary?.activeSheetName ?? "No sheet";
-  const activeDashboardName = summary?.activeDashboardName ?? "No dashboard";
-  const lastUpdatedLabel = summary?.lastUpdatedLabel ?? "No recent updates";
-  const statusLabel = isActive ? t("home.active") : "Ready";
+  const activeSheetName = summary?.activeSheetName ?? t("home.noSheet");
+  const activeDashboardName = summary?.activeDashboardName ?? t("home.noDashboard");
+  const lastUpdatedLabel = summary?.lastUpdatedLabel ?? t("home.noRecentUpdates");
+  const statusLabel = isActive ? t("home.active") : t("home.ready");
   const statusTone = isActive ? "is-active" : "is-ready";
   const metricItems = [
     { label: t("home.sheets"), value: sheetCount },
@@ -46,15 +45,16 @@ export default function ProjectCard({
           <div className="project-card-heading">
             <div className="project-card-topline">
               <div className="project-card-icon">PR</div>
-              <div className="project-card-type">Project</div>
+              <div className="project-card-type">{t("home.projectLabel")}</div>
             </div>
             <div className={`project-card-status ${statusTone}`}>{statusLabel}</div>
           </div>
           <div className="project-card-actions" onClick={(event) => event.stopPropagation()}>
             <button
               type="button"
-              className="project-card-menu-btn project-card-menu-trigger"
-              onClick={() => setMenuOpen((value) => !value)}
+              className="project-card-manage-btn"
+              onClick={() => setRenamingOpen(true)}
+              title={t("home.manageProject")}
             >
               {t("home.manageProject")}
             </button>
@@ -62,7 +62,9 @@ export default function ProjectCard({
               <button
                 type="button"
                 className="project-card-delete-btn"
-                onClick={() => onDelete(project.id)}
+                onClick={(e) => { e.stopPropagation(); onDelete(project.id); }}
+                title={t("home.deleteProject")}
+                aria-label={t("home.deleteProject")}
               >
                 {t("home.deleteProject")}
               </button>
@@ -85,7 +87,7 @@ export default function ProjectCard({
         )}
 
         <div className="project-card-context">
-          <span className="project-card-context-label">Context</span>
+          <span className="project-card-context-label">{t("home.context")}</span>
           <div className="project-card-context-value">{activeSheetName} / {activeDashboardName}</div>
         </div>
 
@@ -100,7 +102,7 @@ export default function ProjectCard({
 
         <div className="project-card-footer">
           <div className="project-card-updated">
-            <span className="project-card-updated-label">Last updated</span>
+            <span className="project-card-updated-label">{t("home.lastUpdated")}</span>
             <strong>{lastUpdatedLabel}</strong>
           </div>
           <div className="project-card-meta">
@@ -108,17 +110,6 @@ export default function ProjectCard({
             <span>{activeDashboardName}</span>
           </div>
         </div>
-      </div>
-
-      <div className="project-card-menu-wrap" onClick={(event) => event.stopPropagation()}>
-        {menuOpen ? (
-          <div className="project-card-menu">
-            <button type="button" onClick={() => { setRenamingOpen(true); setMenuOpen(false); }}>{t("home.renameProject")}</button>
-            {canDelete ? (
-              <button type="button" className="danger" onClick={() => { onDelete(project.id); setMenuOpen(false); }}>{t("home.deleteProject")}</button>
-            ) : null}
-          </div>
-        ) : null}
       </div>
     </div>
   );

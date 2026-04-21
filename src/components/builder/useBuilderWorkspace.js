@@ -38,7 +38,7 @@ import {
   createValidationSummary,
   findFieldInSchema,
 } from "./builderStateUtils";
-import { evaluatePreviewRows, getPreviewReadiness } from "../../utils/builderChartUtils";
+import { buildPreviewFallback, evaluatePreviewRows, getPreviewReadiness } from "../../utils/builderChartUtils";
 import useBuilderPreview from "./useBuilderPreview";
 
 const AGGREGATION_BY_TYPE = {
@@ -568,50 +568,114 @@ export default function useBuilderWorkspace({
     () => (queryMode === "sql" ? builderSnapshot.queryResult?.rows ?? [] : tableData),
     [builderSnapshot.queryResult?.rows, queryMode, tableData]
   );
+  const previewFallback = useMemo(
+    () =>
+      buildPreviewFallback({
+        chartId: chartType,
+        roleMapping,
+        rows: sourcePreviewRows,
+        tableFields,
+      }),
+    [chartType, roleMapping, sourcePreviewRows, tableFields]
+  );
+  const previewChartType = previewFallback.useFallback ? previewFallback.chartType : chartType;
+  const previewChartMeta = useMemo(() => getChartMeta(previewChartType), [previewChartType]);
+  const previewRoleMapping = useMemo(
+    () => (previewFallback.useFallback ? previewFallback.roleMapping : roleMapping),
+    [previewFallback, roleMapping]
+  );
+  const previewConfigForRender = useMemo(
+    () =>
+      previewFallback.useFallback
+        ? normalizeChartConfig({
+            ...previewConfig,
+            chartType: previewChartType,
+            type: previewChartMeta.renderType ?? previewChartType,
+            x: previewFallback.xField,
+            y: previewFallback.yField,
+            groupBy: previewFallback.groupField,
+            sizeField: previewFallback.sizeField,
+            xField: previewFallback.xField,
+            yField: previewFallback.yField,
+            groupField: previewFallback.groupField,
+            roleMapping: previewRoleMapping,
+            mappings: {
+              ...(previewConfig.mappings ?? {}),
+              x: previewFallback.xField,
+              y: previewFallback.yField,
+              groupBy: previewFallback.groupField,
+              sizeField: previewFallback.sizeField,
+              roleMapping: previewRoleMapping,
+            },
+            meta: {
+              ...(previewConfig.meta ?? {}),
+              runtimeType: previewChartMeta.renderType ?? previewChartType,
+              selectedChartBaseType: previewChartMeta.chartId ?? previewChartMeta.renderType ?? previewChartType,
+              previewFallback: true,
+              previewFallbackSourceChartType: chartType,
+              previewFallbackType: previewChartType,
+              previewFallbackReason: previewFallback.message,
+            },
+          })
+        : previewConfig,
+    [chartType, previewConfig, previewFallback, previewChartMeta, previewChartType, previewRoleMapping]
+  );
+  const previewRoleValidation = useMemo(
+    () =>
+      validateRoleMapping(previewChartType, previewRoleMapping, {
+        selectedTable,
+        previewSupported: previewChartMeta.previewSupported,
+        availableFields,
+      }),
+    [availableFields, previewChartMeta.previewSupported, previewChartType, previewRoleMapping, selectedTable]
+  );
   const previewReadiness = useMemo(
     () =>
       getPreviewReadiness({
-        chartId: chartType,
-        chartMeta,
-        roleMapping,
-        validation: roleValidation,
+        chartId: previewChartType,
+        chartMeta: previewChartMeta,
+        roleMapping: previewRoleMapping,
+        validation: previewRoleValidation,
         selectedTable,
         rows: sourcePreviewRows,
       }),
-    [chartMeta, chartType, roleMapping, roleValidation, selectedTable, sourcePreviewRows]
+    [previewChartMeta, previewChartType, previewRoleMapping, previewRoleValidation, selectedTable, sourcePreviewRows]
   );
   const previewReady = useMemo(
     () =>
       previewReadiness.shouldRender &&
-      completedRequiredRoleCount === requiredRoleCount &&
       (queryMode !== "sql" || builderSnapshot.queryStatus === "success"),
-    [builderSnapshot.queryStatus, completedRequiredRoleCount, previewReadiness.shouldRender, queryMode, requiredRoleCount]
+    [builderSnapshot.queryStatus, previewReadiness.shouldRender, queryMode]
+  );
+  const previewUsesDirectRows = useMemo(
+    () => useDirectPreviewData || previewFallback.useFallback,
+    [previewFallback.useFallback, useDirectPreviewData]
   );
   const previewSignature = useMemo(
     () =>
       JSON.stringify({
         previewReady,
-        chartType: previewConfig.chartType,
-        dataset: previewConfig.dataset,
-        x: previewConfig.x,
-        y: previewConfig.y,
-        groupBy: previewConfig.groupBy,
-        sizeField: previewConfig.sizeField,
-        aggregate: previewConfig.aggregate,
-        title: previewConfig.title,
-        subtitle: previewConfig.subtitle,
-        xLabel: previewConfig.xLabel,
-        yLabel: previewConfig.yLabel,
-        legendVisible: previewConfig.legendVisible,
-        showGrid: previewConfig.showGrid,
-        showLabels: previewConfig.showLabels,
-        colorTheme: previewConfig.colorTheme,
-        smooth: previewConfig.smooth,
-        settings: previewConfig.settings,
-        display: previewConfig.display,
-        labels: previewConfig.labels,
+        chartType: previewConfigForRender.chartType,
+        dataset: previewConfigForRender.dataset,
+        x: previewConfigForRender.x,
+        y: previewConfigForRender.y,
+        groupBy: previewConfigForRender.groupBy,
+        sizeField: previewConfigForRender.sizeField,
+        aggregate: previewConfigForRender.aggregate,
+        title: previewConfigForRender.title,
+        subtitle: previewConfigForRender.subtitle,
+        xLabel: previewConfigForRender.xLabel,
+        yLabel: previewConfigForRender.yLabel,
+        legendVisible: previewConfigForRender.legendVisible,
+        showGrid: previewConfigForRender.showGrid,
+        showLabels: previewConfigForRender.showLabels,
+        colorTheme: previewConfigForRender.colorTheme,
+        smooth: previewConfigForRender.smooth,
+        settings: previewConfigForRender.settings,
+        display: previewConfigForRender.display,
+        labels: previewConfigForRender.labels,
       }),
-    [previewConfig, previewReady]
+    [previewConfigForRender, previewReady]
   );
   const mappingSignature = useMemo(
     () =>
@@ -743,24 +807,32 @@ export default function useBuilderWorkspace({
     selectedTable,
     suggestionResult?.suggested,
   ]);
-  const { previewRows, previewState } = useBuilderPreview({
+  const {
+    previewRows,
+    previewState,
+    previewChartType: activePreviewChartType,
+    previewConfig: activePreviewConfig,
+    missingRequirements,
+    canRenderPreview,
+  } = useBuilderPreview({
     builderSnapshot,
     setBuilderState,
     clearPreviewChart,
-    previewConfig,
+    previewConfig: previewConfigForRender,
     previewReady,
     previewReadiness,
     queryMode,
-    chartType,
-    roleMapping,
+    chartType: previewChartType,
+    roleMapping: previewRoleMapping,
     selectedTable,
     tableData,
     tableFields,
     builderQueryInput,
     generatedQueryPreviewSql: generatedQueryPreview.sql,
-    useDirectPreviewData,
+    useDirectPreviewData: previewUsesDirectRows,
     setPreviewChart,
     sourcePreviewRows,
+    previewHint: previewFallback.useFallback ? previewFallback.message : "",
   });
 
   const hasChartConfig = Boolean(previewConfig.dataset) && Boolean(previewConfig.chartType);
@@ -1285,6 +1357,8 @@ export default function useBuilderWorkspace({
       activeChartMeta: chartMeta,
       previewChart,
       previewData: previewRows,
+      previewChartType: activePreviewChartType,
+      previewConfig: activePreviewConfig,
       queryPreview,
       readinessLabel,
       mappedCount,
@@ -1292,8 +1366,10 @@ export default function useBuilderWorkspace({
       slotAssignments,
       roleAssignments,
       validationSummary,
-      previewSupported: chartMeta.previewSupported,
+      previewSupported: previewFallback.useFallback ? true : chartMeta.previewSupported,
       previewState,
+      missingRequirements,
+      canRenderPreview,
       completedRequiredRoleCount,
       requiredRoleCount,
     },

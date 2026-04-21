@@ -1,4 +1,4 @@
-﻿import { normalizeChartConfig } from "./normalizeChartConfig";
+import { normalizeChartConfig } from "./normalizeChartConfig";
 import { buildChartOptionByType, createDefaultWidgetName, getChartTypeLabel } from "./builderChartUtils";
 
 export function createBuilderContextForDashboard({
@@ -52,6 +52,11 @@ export function toDashboardChartModel(widget) {
 
   const config = normalizeChartConfig(widget.config ?? {});
   const title = widget.name || config.title || config.name || "Chart";
+  const data = Array.isArray(widget.data) && widget.data.length > 0
+    ? widget.data
+    : Array.isArray(config.queryResult?.rows) && config.queryResult.rows.length > 0
+      ? config.queryResult.rows
+      : [];
 
   return {
     ...config,
@@ -60,6 +65,17 @@ export function toDashboardChartModel(widget) {
     sheetId: widget.sheetId,
     title,
     name: title,
+    data,
+    queryResult: config.queryResult ?? (data.length
+      ? {
+          rows: data,
+          columns: Object.keys(data[0] ?? {}),
+          fieldMeta: [],
+          rowCount: data.length,
+          columnCount: Object.keys(data[0] ?? {}).length,
+          sourceTable: config.dataset ?? null,
+        }
+      : null),
     createdAt: widget.createdAt,
     colorTheme: config.colorTheme,
     dataset: config.dataset,
@@ -73,11 +89,13 @@ export function resolveDashboardWidgets(layout = [], charts = []) {
       if (!savedChart) return null;
 
       const config = normalizeChartConfig(savedChart.config);
-      const chartRows = Array.isArray(savedChart.data)
+      const chartRows = (Array.isArray(savedChart.data) && savedChart.data.length > 0)
         ? savedChart.data
-        : Array.isArray(config.queryResult?.rows)
+        : Array.isArray(config.queryResult?.rows) && config.queryResult.rows.length > 0
           ? config.queryResult.rows
-          : [];
+          : Array.isArray(savedChart.data)
+            ? savedChart.data
+            : [];
       const fallbackName = `Chart ${index + 1}`;
       const name = item.titleOverride || savedChart.name || config.title || config.name || fallbackName;
       const type = config.chartType || config.type || "bar";
@@ -96,10 +114,21 @@ export function resolveDashboardWidgets(layout = [], charts = []) {
             })
           : String(savedChart.id).slice(-6),
         layout: item,
+        data: chartRows,
         config: {
           ...config,
           title: name,
           name,
+          queryResult: config.queryResult ?? (chartRows.length
+            ? {
+                rows: chartRows,
+                columns: Object.keys(chartRows[0] ?? {}),
+                fieldMeta: [],
+                rowCount: chartRows.length,
+                columnCount: Object.keys(chartRows[0] ?? {}).length,
+                sourceTable: config.dataset ?? null,
+              }
+            : null),
         },
         echartsOption: buildChartOptionByType(type, {
           rows: chartRows,

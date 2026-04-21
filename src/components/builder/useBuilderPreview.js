@@ -23,7 +23,7 @@ function isSameQueryResult(left = null, right = null) {
 function isSamePreviewState(left = null, right = null) {
   if (!left && !right) return true;
   if (!left || !right) return false;
-  return left.status === right.status && left.error === right.error;
+  return left.status === right.status && left.error === right.error && left.hint === right.hint;
 }
 
 function createSerializableQueryResult(result = {}, selectedTable = null) {
@@ -37,8 +37,8 @@ function createSerializableQueryResult(result = {}, selectedTable = null) {
   };
 }
 
-function createPreviewState(status, error = "") {
-  return { status, error };
+function createPreviewState(status, error = "", hint = "") {
+  return { status, error, hint };
 }
 
 function getBasePreviewState({ selectedTable, previewReadiness, previewReady }) {
@@ -81,6 +81,7 @@ export default function useBuilderPreview({
   useDirectPreviewData,
   setPreviewChart,
   sourcePreviewRows,
+  previewHint = "",
 }) {
   const [previewRows, setPreviewRows] = useState([]);
   const [previewState, setPreviewState] = useState(createPreviewState("idle"));
@@ -237,11 +238,13 @@ export default function useBuilderPreview({
     syncPreviewRows(nextRows);
     syncPreviewState(createPreviewState(
       nextStatus,
-      nextStatus === "success" ? "" : sqlPreviewAssessment.emptyReason
+      nextStatus === "success" ? "" : sqlPreviewAssessment.emptyReason,
+      nextStatus === "success" ? previewHint : ""
     ));
   }, [
     builderSnapshot.queryResult?.rows,
     chartType,
+    previewHint,
     previewReady,
     queryMode,
     roleMapping,
@@ -273,7 +276,8 @@ export default function useBuilderPreview({
     syncPreviewRows(nextRows);
     syncPreviewState(createPreviewState(
       nextStatus,
-      nextStatus === "success" ? "" : directPreviewAssessment.emptyReason
+      nextStatus === "success" ? "" : directPreviewAssessment.emptyReason,
+      nextStatus === "success" ? previewHint : ""
     ));
     visualQuerySignatureRef.current = visualQuerySignature;
 
@@ -294,11 +298,12 @@ export default function useBuilderPreview({
     tableFields,
     useDirectPreviewData,
     visualQuerySignature,
+    previewHint,
   ]);
 
   useEffect(() => {
     let cancelled = false;
-    if (!previewReady || useDirectPreviewData) {
+    if (!previewReady) {
       syncPreviewRows([]);
       syncPreviewState(
         getBasePreviewState({
@@ -307,6 +312,11 @@ export default function useBuilderPreview({
           previewReady,
         })
       );
+      visualQuerySignatureRef.current = "";
+      return undefined;
+    }
+
+    if (useDirectPreviewData) {
       visualQuerySignatureRef.current = "";
       return undefined;
     }
@@ -344,7 +354,11 @@ export default function useBuilderPreview({
         const nextQueryError = nextQueryStatus === "success" ? "" : queryPreviewAssessment.emptyReason;
 
         syncPreviewRows(nextRows);
-        syncPreviewState(createPreviewState(nextQueryStatus, nextQueryError));
+        syncPreviewState(createPreviewState(
+          nextQueryStatus,
+          nextQueryError,
+          nextQueryStatus === "success" ? previewHint : ""
+        ));
 
         commitQueryStatePatch({
           generatedSql: nextGeneratedSql,
@@ -380,10 +394,21 @@ export default function useBuilderPreview({
     previewReadiness,
     useDirectPreviewData,
     visualQuerySignature,
+    previewHint,
   ]);
+
+  const missingRequirements = (previewReadiness?.blockers ?? [])
+    .map((item) => item?.title || item?.message)
+    .filter(Boolean);
+  const canRenderPreview = previewState.status === "success" && previewRows.length > 0;
 
   return {
     previewRows,
     previewState,
+    previewChartType: chartType,
+    previewConfig,
+    previewStatus: previewState.status,
+    missingRequirements,
+    canRenderPreview,
   };
 }

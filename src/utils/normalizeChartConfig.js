@@ -141,12 +141,16 @@ export function normalizeChartConfig(config = {}) {
   // Meta is resolved once here. The catalog layer stays pure and no longer
   // imports config normalization, which breaks the old recursion path.
   const chartMeta = getChartMeta(chartType);
+  const selectedChartBaseType =
+    config.selectedChartBaseType ??
+    config.meta?.selectedChartBaseType ??
+    chartMeta.chartId ??
+    resolveChartRuntimeType(chartType);
   const runtimeType = normalizeChartType(
     config.type ??
-    config.selectedChartBaseType ??
-    chartMeta.chartId ??
+    config.renderType ??
     chartMeta.renderType ??
-    resolveChartRuntimeType(chartType)
+    selectedChartBaseType
   );
   const dataset = config.dataset ?? config.source?.dataset ?? config.source?.table ?? config.table ?? null;
   const x = config.x ?? config.mappings?.x ?? config.xField ?? null;
@@ -186,7 +190,7 @@ export function normalizeChartConfig(config = {}) {
     variant,
     chartType,
     runtimeType,
-    selectedChartBaseType: config.selectedChartBaseType ?? runtimeType,
+    selectedChartBaseType,
     updatedAt: config.meta?.updatedAt ?? config.updatedAt ?? null,
     createdAt: config.meta?.createdAt ?? config.createdAt ?? null,
   };

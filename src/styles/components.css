@@ -1,4 +1,4 @@
-﻿.button-base,
+.button-base,
 .modal-btn,
 .home-create-btn,
 .rp-btn,
@@ -294,6 +294,8 @@
   align-items: center;
   gap: 8px;
   margin-left: auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .project-card-topline {
@@ -412,6 +414,7 @@
 }
 
 .project-card-menu-btn,
+.project-card-manage-btn,
 .modal-close-btn {
   width: 26px;
   height: 26px;
@@ -421,7 +424,8 @@
   cursor: pointer;
 }
 
-.project-card-menu-trigger {
+.project-card-menu-trigger,
+.project-card-manage-btn {
   width: auto;
   min-width: 72px;
   padding: 0 10px;
@@ -430,50 +434,27 @@
 }
 
 .project-card-delete-btn {
-  min-height: 26px;
-  padding: 0 10px;
-  border: 1px solid color-mix(in srgb, var(--danger) 38%, var(--border));
+  min-height: 28px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in srgb, var(--danger) 72%, var(--border));
   border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--danger) 10%, var(--surface));
-  color: var(--danger);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--danger) 90%, white 10%) 0%, color-mix(in srgb, var(--danger) 94%, black 6%) 100%);
+  color: #fff;
   cursor: pointer;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.project-card-manage-btn:hover,
+.project-card-menu-btn:hover {
+  border-color: color-mix(in srgb, var(--primary) 54%, var(--border));
+  background: color-mix(in srgb, var(--primary-soft) 28%, var(--surface));
 }
 
 .project-card-delete-btn:hover {
-  background: color-mix(in srgb, var(--danger) 16%, var(--surface-soft));
-}
-
-.project-card-menu {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 8px);
-  z-index: 10;
-  display: grid;
-  gap: 4px;
-  min-width: 160px;
-  padding: 6px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  box-shadow: var(--shadow-sm);
-}
-
-.project-card-menu button {
-  min-height: 28px;
-  padding: 0 10px;
-  border-radius: var(--radius-sm);
-  text-align: left;
-  cursor: pointer;
-}
-
-.project-card-menu button:hover {
-  background: var(--surface-soft);
-}
-
-.project-card-menu .danger {
-  color: var(--danger);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--danger) 82%, white 18%) 0%, color-mix(in srgb, var(--danger) 94%, black 8%) 100%);
+  border-color: color-mix(in srgb, var(--danger) 92%, var(--border));
 }
 
 .project-rename-input,
@@ -757,7 +738,7 @@
     text-align: left;
   }
 
-  .project-card-actions {
+.project-card-actions {
     width: 100%;
     margin-left: 0;
     justify-content: flex-end;

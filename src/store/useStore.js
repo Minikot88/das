@@ -1,4 +1,4 @@
-﻿
+
 import { create } from "zustand";
 import { normalizeChartConfig } from "../utils/normalizeChartConfig";
 import { schema } from "../data/mockData";
@@ -143,15 +143,32 @@ function normalizeStoredChart(chart) {
   if (!chart) return chart;
 
   const config = normalizeChartConfig(chart.config ?? chart);
+  const storedData = Array.isArray(chart.data) ? chart.data : [];
+  const fallbackRows = Array.isArray(config.queryResult?.rows) ? config.queryResult.rows : [];
+  const resolvedRows = storedData.length > 0 ? storedData : fallbackRows;
   return {
     ...chart,
     name: chart.name ?? config.name ?? config.title ?? "Untitled",
-    data: Array.isArray(chart.data)
-      ? chart.data
-      : Array.isArray(config.queryResult?.rows)
-        ? config.queryResult.rows
-        : [],
-    config,
+    data: resolvedRows,
+    config: {
+      ...config,
+      queryResult: config.queryResult
+        ? {
+            ...config.queryResult,
+            rows: resolvedRows,
+            rowCount: config.queryResult.rowCount ?? resolvedRows.length,
+          }
+        : resolvedRows.length
+          ? {
+              rows: resolvedRows,
+              columns: Object.keys(resolvedRows[0] ?? {}),
+              fieldMeta: [],
+              rowCount: resolvedRows.length,
+              columnCount: Object.keys(resolvedRows[0] ?? {}).length,
+              sourceTable: config.dataset ?? null,
+            }
+          : config.queryResult ?? null,
+    },
   };
 }
 
@@ -174,13 +191,34 @@ function createStoredChartRecord(projectId, chart) {
       : Array.isArray(config.queryResult?.rows)
         ? config.queryResult.rows
         : [];
+  const columns = Object.keys(data[0] ?? {});
+  const hydratedConfig = {
+    ...config,
+    queryResult: config.queryResult
+      ? {
+          ...config.queryResult,
+          rows: data,
+          rowCount: config.queryResult.rowCount ?? data.length,
+          columnCount: config.queryResult.columnCount ?? columns.length,
+          columns: config.queryResult.columns?.length ? config.queryResult.columns : columns,
+          sourceTable: config.queryResult.sourceTable ?? config.dataset ?? null,
+        }
+      : {
+          rows: data,
+          columns,
+          fieldMeta: [],
+          rowCount: data.length,
+          columnCount: columns.length,
+          sourceTable: config.dataset ?? null,
+        },
+  };
 
   return {
     id: createTimestampId(),
-    name: chart.name || config.name || config.title || "Untitled",
+    name: chart.name || hydratedConfig.name || hydratedConfig.title || "Untitled",
     data,
-    config,
-    type: config.chartType,
+    config: hydratedConfig,
+    type: hydratedConfig.chartType,
     echartsOption: chart.echartsOption ?? null,
     layout: chart.layout ?? null,
     sourceProjectId: chart.sourceProjectId ?? projectId,
@@ -402,9 +440,32 @@ export const useStore = create((set, get) => ({
     const active   = s.activeProjectId === id ? projects[0] : s.projects.find((p) => p.id === s.activeProjectId);
     const sheet    = active?.sheets[0];
     const dash     = sheet?.dashboards[0];
-    saveState({ ...s, projects, activeProjectId: active?.id, activeSheetId: sheet?.id, activeDashboardId: dash?.id });
+    const charts = s.charts.filter((chart) => chart.projectId !== id);
+    const shareLinks = Object.fromEntries(
+      Object.entries(s.shareLinks ?? {}).filter(([, value]) => value?.projectId !== id)
+    );
+    const ui = {
+      ...s.ui,
+      recentProjectIds: (s.ui.recentProjectIds ?? []).filter((projectId) => projectId !== id),
+      lastOpenedContextByProject: Object.fromEntries(
+        Object.entries(s.ui.lastOpenedContextByProject ?? {}).filter(([projectId]) => projectId !== id)
+      ),
+    };
+    saveState({
+      ...s,
+      projects,
+      charts,
+      shareLinks,
+      ui,
+      activeProjectId: active?.id,
+      activeSheetId: sheet?.id,
+      activeDashboardId: dash?.id,
+    });
     return {
       projects,
+      charts,
+      shareLinks,
+      ui,
       activeProjectId:   active?.id   ?? null,
       activeSheetId:     sheet?.id    ?? null,
       activeDashboardId: dash?.id     ?? null,
@@ -895,6 +956,11 @@ export const useStore = create((set, get) => ({
       c.id === chartId
         ? normalizeStoredChart({
             ...c,
+            data: Array.isArray(updates?.data)
+              ? updates.data
+              : Array.isArray(updates?.queryResult?.rows)
+                ? updates.queryResult.rows
+                : c.data,
             config: normalizeChartConfig({ ...c.config, ...updates }),
           })
         : c
@@ -1220,6 +1286,9 @@ export const useStore = create((set, get) => ({
   loadChartIntoBuilder: (chart) => set({
     builderState: (() => {
       const normalizedChart = normalizeChartConfig(chart);
+      const resolvedRows = Array.isArray(chart.data) && chart.data.length
+        ? chart.data
+        : normalizedChart.queryResult?.rows ?? [];
       return {
         selectedDb:     chart.db ?? inferSelectedDb(normalizedChart.dataset),
         selectedTable:  normalizedChart.dataset,
@@ -1248,7 +1317,16 @@ export const useStore = create((set, get) => ({
         generatedSql:   normalizedChart.generatedSql ?? "",
         customSql:      normalizedChart.customSql ?? "",
         lastExecutedSql: normalizedChart.lastExecutedSql ?? "",
-        queryResult:    normalizedChart.queryResult ?? null,
+        queryResult:    normalizedChart.queryResult ?? (resolvedRows.length
+          ? {
+              rows: resolvedRows,
+              columns: Object.keys(resolvedRows[0] ?? {}),
+              fieldMeta: [],
+              rowCount: resolvedRows.length,
+              columnCount: Object.keys(resolvedRows[0] ?? {}).length,
+              sourceTable: normalizedChart.dataset ?? null,
+            }
+          : null),
         queryError:     normalizedChart.queryError ?? "",
         queryStatus:    normalizedChart.queryStatus ?? "idle",
         isDirtySql:     normalizedChart.isDirtySql ?? false,

@@ -102,6 +102,11 @@ const ChartCard = memo(function ChartCard({
         ) : (
           <ChartRenderer
             chart={chart}
+            data={Array.isArray(chart.data) && chart.data.length > 0
+              ? chart.data
+              : Array.isArray(chart.queryResult?.rows)
+                ? chart.queryResult.rows
+                : undefined}
             containerHeight={contentHeight}
             filters={filters}
             drilldown={drilldown}

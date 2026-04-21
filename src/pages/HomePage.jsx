@@ -12,10 +12,10 @@ import { useStore } from "../store/useStore";
 import { useI18n } from "../utils/i18n";
 
 function formatLastUpdated(dateValue) {
-  if (!dateValue) return "No recent updates";
+  if (!dateValue) return null;
 
   const date = new Date(dateValue);
-  if (Number.isNaN(date.getTime())) return "No recent updates";
+  if (Number.isNaN(date.getTime())) return null;
 
   return new Intl.DateTimeFormat("th-TH", {
     day: "numeric",
@@ -87,14 +87,14 @@ export default function HomePage() {
           {
             sheetCount,
             dashboardCount,
-            activeSheetName: lastOpenedSheet?.name ?? "No sheet",
-            activeDashboardName: lastOpenedDashboard?.name ?? "No dashboard",
-            lastUpdatedLabel: formatLastUpdated(lastUpdated),
+            activeSheetName: lastOpenedSheet?.name ?? t("home.noSheet"),
+            activeDashboardName: lastOpenedDashboard?.name ?? t("home.noDashboard"),
+            lastUpdatedLabel: formatLastUpdated(lastUpdated) ?? t("home.noRecentUpdates"),
           },
         ];
       })
     );
-  }, [charts, projects, ui?.lastOpenedContextByProject]);
+  }, [charts, projects, t, ui?.lastOpenedContextByProject]);
 
   const handleOpenProject = (id) => {
     setActiveProject(id);
@@ -114,7 +114,7 @@ export default function HomePage() {
           title="Workspace"
           actions={(
             <Button id="create-project-btn" variant="primary" className="home-create-btn" onClick={() => setShowModal(true)}>
-              New Project
+              {t("home.newProject")}
             </Button>
           )}
         >
@@ -128,9 +128,9 @@ export default function HomePage() {
             )}
             right={(
               <div className="home-active-context">
-                <span>Current</span>
+                <span>{t("home.current")}</span>
                 <strong>
-                  {activeProject?.name ?? "None"}
+                  {activeProject?.name ?? t("home.none")}
                   {activeSheet ? ` / ${activeSheet.name}` : ""}
                   {activeDashboard ? ` / ${activeDashboard.name}` : ""}
                 </strong>
@@ -141,19 +141,19 @@ export default function HomePage() {
 
         <div className="home-stats-grid">
           <div className="home-stat-card">
-            <span className="home-stat-card-label">Projects</span>
+            <span className="home-stat-card-label">{t("home.projects")}</span>
             <strong>{projects.length}</strong>
           </div>
           <div className="home-stat-card">
-            <span className="home-stat-card-label">Sheets</span>
+            <span className="home-stat-card-label">{t("home.sheets")}</span>
             <strong>{totalSheets}</strong>
           </div>
           <div className="home-stat-card">
-            <span className="home-stat-card-label">Dashboards</span>
+            <span className="home-stat-card-label">{t("home.dashboards")}</span>
             <strong>{totalDashboards}</strong>
           </div>
           <div className="home-stat-card is-highlight">
-            <span className="home-stat-card-label">Active Items</span>
+            <span className="home-stat-card-label">{t("home.activeItems")}</span>
             <strong>{activeDashboard ? 3 : activeProject ? 2 : 1}</strong>
           </div>
         </div>
@@ -163,16 +163,16 @@ export default function HomePage() {
         <EmptyState
           className="home-empty"
           icon="PR"
-          title="No projects yet"
-          description="Create a project to start building dashboards."
+          title={t("home.noProjects")}
+          description={t("home.noProjectsBody")}
           actionText={t("home.createProject")}
           onAction={() => setShowModal(true)}
         />
       ) : (
         <section className="home-section home-section-shell">
           <SectionHeader
-            kicker="Projects"
-            title="Projects"
+            kicker={t("home.projects")}
+            title={t("home.projects")}
             actions={<Badge>Recent</Badge>}
           />
 
@@ -193,7 +193,7 @@ export default function HomePage() {
               <div className="project-card-new-icon">+</div>
               <div className="project-card-new-copy">
                 <strong>{t("home.addProject")}</strong>
-                <span>Create a new workspace</span>
+                <span>{t("home.createWorkspace")}</span>
               </div>
             </button>
           </div>

@@ -203,7 +203,7 @@ export default function DashboardPage() {
 
   const contextMenuRef = useRef(null);
   const previousWidgetCountRef = useRef(0);
-  const starterChartSeededRef = useRef(false);
+  const starterChartSeededRef = useRef(new Set());
 
   const activeProject = useMemo(
     () => projects.find((project) => project.id === activeProjectId) ?? projects[0] ?? null,
@@ -301,11 +301,12 @@ export default function DashboardPage() {
   }, [dashboardWidgets, fullscreenWidgetId]);
 
   useEffect(() => {
-    if (starterChartSeededRef.current) return;
     if (!activeProject || !activeSheet || !activeDashboard) return;
     if ((activeDashboard.layout?.length ?? 0) > 0) return;
+    const dashboardSeedKey = `${activeProject.id}:${activeSheet.id}:${activeDashboard.id}`;
+    if (starterChartSeededRef.current.has(dashboardSeedKey)) return;
 
-    starterChartSeededRef.current = true;
+    starterChartSeededRef.current.add(dashboardSeedKey);
     let cancelled = false;
 
     async function seedStarterChart() {
@@ -357,7 +358,7 @@ export default function DashboardPage() {
           }),
         });
       } catch {
-        starterChartSeededRef.current = false;
+        starterChartSeededRef.current.delete(dashboardSeedKey);
       }
     }
 
