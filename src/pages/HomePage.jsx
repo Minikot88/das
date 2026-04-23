@@ -173,7 +173,12 @@ export default function HomePage() {
           <SectionHeader
             kicker={t("home.projects")}
             title={t("home.projects")}
-            actions={<Badge>Recent</Badge>}
+            actions={(
+              <div className="home-section-pills">
+                <Badge>Recent</Badge>
+                <Badge>{sortedProjects.length} total</Badge>
+              </div>
+            )}
           />
 
           <div className="project-grid project-grid-command-center">

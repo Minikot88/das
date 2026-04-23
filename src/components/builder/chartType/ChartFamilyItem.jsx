@@ -1,6 +1,6 @@
 import React from "react";
 
-export default function ChartFamilyItem({ family, active, onSelect }) {
+export default function ChartFamilyItem({ family, active, showDescriptions = false, onSelect }) {
   const selectableCount = family.selectableCount ?? family.variants.length;
   const totalVariantCount = family.totalVariantCount ?? family.variants.length;
 
@@ -13,7 +13,7 @@ export default function ChartFamilyItem({ family, active, onSelect }) {
     >
       <div className="builder-chart-family-item-copy">
         <strong>{family.label}</strong>
-        <p>{family.description}</p>
+        {showDescriptions ? <p>{family.description}</p> : null}
       </div>
       <span className="builder-chart-family-item-meta">{selectableCount}/{totalVariantCount}</span>
     </button>

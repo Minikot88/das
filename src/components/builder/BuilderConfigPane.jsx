@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import InspectorLayout from "../layout/InspectorLayout";
 import BuilderMappingsSection from "./BuilderMappingsSection";
 import BuilderVisualSection from "./BuilderVisualSection";
@@ -6,12 +6,14 @@ import BuilderLabelSection from "./BuilderLabelSection";
 import DisplayOptionsSection from "./DisplayOptionsSection";
 import SqlEditorPanel from "./SqlEditorPanel";
 
-function ToggleControl({ label, hint, checked, onChange }) {
+const SETTINGS_DESCRIPTION_STORAGE_KEY = "builder.settings.showDescriptions";
+
+function ToggleControl({ label, hint, checked, onChange, showHint = true }) {
   return (
     <label className="builder-toggle-row">
       <span className="builder-toggle-copy">
         <strong>{label}</strong>
-        {hint ? <small>{hint}</small> : null}
+        {hint && showHint ? <small>{hint}</small> : null}
       </span>
       <span className={`builder-toggle-pill${checked ? " is-on" : ""}`}>
         <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} />
@@ -435,7 +437,7 @@ function getChartSettingsDefinition(activeChartMeta, activeChartFamilyMeta) {
   };
 }
 
-function renderSettingControl(control, chartSettings, displayOptions, onChartSettingChange, onDisplayChange) {
+function renderSettingControl(control, chartSettings, displayOptions, onChartSettingChange, onDisplayChange, showDescriptions) {
   const value = control.scope === "display" ? displayOptions[control.key] : chartSettings[control.key];
   const handleChange = control.scope === "display"
     ? (nextValue) => onDisplayChange(control.key, nextValue)
@@ -447,6 +449,7 @@ function renderSettingControl(control, chartSettings, displayOptions, onChartSet
         key={`${control.scope ?? "settings"}-${control.key}`}
         label={control.label}
         hint={control.hint}
+        showHint={showDescriptions}
         checked={Boolean(value)}
         onChange={handleChange}
       />
@@ -545,7 +548,10 @@ export default function BuilderConfigPane({
   handleFormatSql,
   handleResetSql,
   handleUseSqlResultForChart,
+  onCollapseSettings,
+  panelId,
 }) {
+  const [showDescriptions, setShowDescriptions] = useState(false);
   const blockerCount = validationSummary?.blockers?.length ?? 0;
   const previewStatus = previewState?.status ?? "idle";
   const previewIssue = previewState?.error ?? "";
@@ -561,6 +567,19 @@ export default function BuilderConfigPane({
   const chartSettingsDefinition = getChartSettingsDefinition(activeChartMeta, activeChartFamilyMeta);
   const settingsReady = blockerCount === 0 && previewStatus === "success";
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const savedValue = window.localStorage.getItem(SETTINGS_DESCRIPTION_STORAGE_KEY);
+    if (savedValue === "true") {
+      setShowDescriptions(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(SETTINGS_DESCRIPTION_STORAGE_KEY, String(showDescriptions));
+  }, [showDescriptions]);
+
   return (
     <InspectorLayout
       className="builder-pane-shell builder-pane-shell-right"
@@ -571,6 +590,7 @@ export default function BuilderConfigPane({
       }}
     >
       <section
+        id={panelId}
         className="builder-controls-panel ui-panel"
         style={{
           minHeight: 0,
@@ -591,9 +611,29 @@ export default function BuilderConfigPane({
           <div>
             <h2 className="builder-pane-title">Settings</h2>
           </div>
-          <span className={`builder-status-badge${settingsReady ? " ready" : " is-alert"}`}>
-            {settingsReady ? "Preview ready" : blockerCount ? `${blockerCount} issues` : "Preview pending"}
-          </span>
+          <div className="builder-controls-overview-actions" style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+            <span className={`builder-status-badge${settingsReady ? " ready" : " is-alert"}`}>
+              {settingsReady ? "Preview ready" : blockerCount ? `${blockerCount} issues` : "Preview pending"}
+            </span>
+            <button
+              type="button"
+              className={`builder-page-toolbar-btn builder-settings-description-toggle${showDescriptions ? " is-active" : ""}`}
+              onClick={() => setShowDescriptions((current) => !current)}
+              aria-pressed={showDescriptions}
+              title={showDescriptions ? "Hide descriptions" : "Show descriptions"}
+            >
+              Descriptions: {showDescriptions ? "On" : "Off"}
+            </button>
+            {onCollapseSettings ? (
+              <button
+                type="button"
+                className="builder-page-toolbar-btn builder-settings-panel-btn"
+                onClick={onCollapseSettings}
+              >
+                Hide
+              </button>
+            ) : null}
+          </div>
         </div>
 
         {inlineIssue ? (
@@ -637,6 +677,7 @@ export default function BuilderConfigPane({
               selectedChartFamily={selectedChartFamily}
               selectedChartVariant={selectedChartVariant}
               recommendedCharts={recommendedCharts}
+              showDescriptions={showDescriptions}
               onChartTypeChange={onChartTypeChange}
               onChartCategoryChange={onChartCategoryChange}
               onChartFamilyChange={onChartFamilyChange}
@@ -668,10 +709,10 @@ export default function BuilderConfigPane({
 
                 <div className="builder-chart-settings-grid">
                   {chartSettingsDefinition.controls.map((control) =>
-                    renderSettingControl(control, chartSettings, displayOptions, onChartSettingChange, onDisplayChange)
+                    renderSettingControl(control, chartSettings, displayOptions, onChartSettingChange, onDisplayChange, showDescriptions)
                   )}
                 </div>
-                {chartSettingsDefinition.helper ? (
+                {showDescriptions && chartSettingsDefinition.helper ? (
                   <div className="builder-settings-helper">{chartSettingsDefinition.helper}</div>
                 ) : null}
               </div>
@@ -699,6 +740,7 @@ export default function BuilderConfigPane({
               <DisplayOptionsSection
                 displayOptions={displayOptions}
                 onDisplayChange={onDisplayChange}
+                showDescriptions={showDescriptions}
               />
             </details>
 

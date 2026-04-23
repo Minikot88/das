@@ -78,17 +78,38 @@ export function MainLayout() {
   }, [theme]);
 
   useEffect(() => {
+    const isBuilderRoute = location.pathname === "/builder";
+    document.body.classList.toggle("builder-route-active", isBuilderRoute);
+
+    return () => {
+      document.body.classList.remove("builder-route-active");
+    };
+  }, [location.pathname]);
+
+  useEffect(() => {
     setMobileMenuOpen(false);
   }, [location.pathname, setMobileMenuOpen]);
 
   const isWorkspaceRoute = location.pathname === "/dashboard" || location.pathname === "/builder";
+  const isBuilderRoute = location.pathname === "/builder";
+  const shellClassName = joinClassNames(
+    "shell",
+    sidebarCollapsed && "sidebar-collapsed",
+    isWorkspaceRoute && "is-workspace-route",
+    isBuilderRoute && "is-builder-route"
+  );
+  const mainClassName = joinClassNames(
+    "main-content",
+    isWorkspaceRoute && "is-workspace-route",
+    isBuilderRoute && "is-builder-route"
+  );
 
   return (
-    <div className={joinClassNames("shell", sidebarCollapsed && "sidebar-collapsed")}>
+    <div className={shellClassName}>
       <AppHeader />
       <div className="body-row">
         <SidebarLeft />
-        <main className="main-content" id="main-content" role="main">
+        <main className={mainClassName} id="main-content" role="main">
           <Outlet />
         </main>
         {!isWorkspaceRoute ? <SidebarRight /> : null}

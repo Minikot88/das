@@ -1,0 +1,507 @@
+.home-page {
+  gap: 12px;
+}
+
+.home-page .home-panel,
+.home-page .home-section-shell,
+.home-page .home-empty {
+  border-radius: 10px;
+  border-color: color-mix(in srgb, var(--border) 90%, white 10%);
+  box-shadow: none;
+}
+
+.home-page .home-panel {
+  gap: 12px;
+  padding: 12px;
+}
+
+.home-page .home-section-shell {
+  gap: 12px;
+  padding: 12px;
+}
+
+.home-page .ui-page-header {
+  gap: 10px;
+}
+
+.home-page .ui-page-header-main {
+  gap: 14px;
+  padding-bottom: 8px;
+}
+
+.home-page .ui-page-header-copy {
+  gap: 4px;
+}
+
+.home-page .ui-page-kicker {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+.home-page .ui-page-title {
+  font-size: clamp(22px, 2.4vw, 24px);
+  line-height: 1.04;
+  letter-spacing: -0.04em;
+}
+
+.home-page .home-create-btn {
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.home-page .home-toolbar {
+  gap: 10px;
+}
+
+.home-page .home-toolbar-status {
+  gap: 6px;
+  font-size: 11px;
+}
+
+.home-page .home-active-context {
+  gap: 1px;
+}
+
+.home-page .home-active-context span {
+  font-size: 10px;
+}
+
+.home-page .home-active-context strong {
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.home-page .ui-badge,
+.home-page .project-card-status,
+.home-page .project-card-meta span {
+  min-height: 20px;
+  padding: 0 7px;
+  border-radius: 999px;
+  font-size: 10px;
+}
+
+.home-page .home-stats-grid {
+  gap: 8px;
+}
+
+.home-page .home-stat-card {
+  min-height: 68px;
+  gap: 2px;
+  padding: 9px 10px;
+  border-radius: 8px;
+}
+
+.home-page .home-stat-card strong {
+  font-size: 18px;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.home-page .home-stat-card-label {
+  font-size: 10px;
+}
+
+.home-page .home-section-shell .ui-section-header,
+.home-page .home-section-shell .home-section-head {
+  padding-bottom: 6px;
+}
+
+.home-page .ui-section-title {
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.home-page .ui-section-kicker {
+  font-size: 10px;
+}
+
+.home-page .project-grid {
+  grid-template-columns: repeat(auto-fit, minmax(232px, 1fr));
+  gap: 10px;
+}
+
+.home-page .project-card,
+.home-page .project-card-new {
+  border-radius: 10px;
+}
+
+.home-page .project-card {
+  min-height: 0;
+  padding: 11px 11px 11px 13px;
+}
+
+.home-page .project-card-accent {
+  width: 3px;
+}
+
+.home-page .project-card-body {
+  gap: 9px;
+}
+
+.home-page .project-card-top,
+.home-page .project-card-topline,
+.home-page .project-card-footer,
+.home-page .project-card-actions {
+  gap: 8px;
+}
+
+.home-page .project-card-heading {
+  gap: 6px;
+}
+
+.home-page .project-card-icon,
+.home-page .project-card-new-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  font-size: 9px;
+}
+
+.home-page .project-card-type,
+.home-page .project-card-context-label,
+.home-page .project-card-metric-label,
+.home-page .project-card-updated-label {
+  font-size: 10px;
+}
+
+.home-page .project-card-name {
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+.home-page .project-card-context {
+  gap: 4px;
+  padding-bottom: 8px;
+}
+
+.home-page .project-card-context-value {
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.home-page .project-card-metrics {
+  gap: 6px;
+}
+
+.home-page .project-card-metric {
+  gap: 3px;
+  padding: 7px 8px;
+  border-radius: 8px;
+}
+
+.home-page .project-card-metric strong {
+  font-size: 15px;
+}
+
+.home-page .project-card-footer {
+  padding-top: 8px;
+}
+
+.home-page .project-card-updated {
+  gap: 1px;
+}
+
+.home-page .project-card-updated strong {
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.home-page .project-card-meta {
+  gap: 4px;
+}
+
+.home-page .project-card-manage-btn,
+.home-page .project-card-delete-btn,
+.home-page .project-card-menu-btn,
+.home-page .modal-close-btn {
+  min-height: 28px;
+  height: 28px;
+  border-radius: 8px;
+  font-size: 11px;
+}
+
+.home-page .project-card-manage-btn {
+  min-width: 70px;
+  padding: 0 10px;
+}
+
+.home-page .project-card-delete-btn {
+  padding: 0 10px;
+}
+
+.home-page .project-card-new {
+  min-height: 156px;
+  gap: 6px;
+  padding: 16px 12px;
+}
+
+.home-page .project-card-new-copy {
+  gap: 3px;
+}
+
+.home-page .project-card-new-copy strong {
+  font-size: 13px;
+}
+
+.home-page .project-card-new-copy span {
+  font-size: 11px;
+}
+
+.home-page .home-empty {
+  gap: 10px;
+  padding: 20px 16px;
+}
+
+.home-page .empty-state-title {
+  font-size: 20px;
+}
+
+.home-page .empty-state-description {
+  font-size: 13px;
+  max-width: 440px;
+}
+
+body:has(.home-page) .main-content {
+  padding: 8px;
+}
+
+body:has(.home-page) .sidebar-left {
+  width: 188px;
+  gap: 8px;
+  padding: 8px;
+}
+
+body:has(.home-page) .sidebar-left.collapsed {
+  width: 56px;
+}
+
+body:has(.home-page) .sidebar-top {
+  gap: 6px;
+}
+
+body:has(.home-page) .sidebar-label {
+  gap: 1px;
+  font-size: 9px;
+}
+
+body:has(.home-page) .sidebar-label strong {
+  font-size: 11px;
+}
+
+body:has(.home-page) .sidebar-collapse-btn {
+  width: 24px;
+  height: 24px;
+}
+
+body:has(.home-page) .sidebar-workspace-card {
+  gap: 1px;
+  padding: 8px 9px 8px 10px;
+  border-radius: 8px;
+  box-shadow: inset 2px 0 0 var(--primary);
+}
+
+body:has(.home-page) .sidebar-workspace-card strong {
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+body:has(.home-page) .sidebar-workspace-card span:last-child,
+body:has(.home-page) .sidebar-version {
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+body:has(.home-page) .sidebar-nav-group {
+  gap: 4px;
+}
+
+body:has(.home-page) .sidebar-left .nav-link {
+  min-height: 34px;
+  gap: 7px;
+  padding: 0 7px;
+  border-radius: 8px;
+}
+
+body:has(.home-page) .nav-icon {
+  width: 22px;
+  height: 22px;
+  font-size: 8px;
+}
+
+body:has(.home-page) .nav-copy {
+  gap: 0;
+}
+
+body:has(.home-page) .nav-label {
+  font-size: 12px;
+  line-height: 1.1;
+}
+
+body:has(.home-page) .nav-copy small {
+  font-size: 9px;
+}
+
+body:has(.home-page) .sidebar-footer {
+  padding-top: 6px;
+}
+
+body:has(.home-page) .sidebar-footer-block {
+  gap: 2px;
+}
+
+body:has(.home-page) .dashboard-sidebar.dashboard-sidebar-home {
+  width: 276px;
+  gap: 0;
+  border-radius: 10px;
+}
+
+body:has(.home-page) .dashboard-sidebar.dashboard-sidebar-home .dashboard-sidebar-header,
+body:has(.home-page) .dashboard-sidebar.dashboard-sidebar-home .dashboard-sidebar-section {
+  padding: 10px 11px;
+}
+
+body:has(.home-page) .dashboard-sidebar.dashboard-sidebar-home .dashboard-sidebar-header {
+  gap: 8px;
+}
+
+body:has(.home-page) .dashboard-sidebar.dashboard-sidebar-home .dashboard-sidebar-header-copy {
+  gap: 2px;
+}
+
+body:has(.home-page) .dashboard-sidebar.dashboard-sidebar-home .dashboard-sidebar-kicker,
+body:has(.home-page) .dashboard-sidebar.dashboard-sidebar-home .dashboard-sidebar-section-title,
+body:has(.home-page) .dashboard-sidebar.dashboard-sidebar-home .dashboard-sidebar-overview-label,
+body:has(.home-page) .dashboard-sidebar.dashboard-sidebar-home .dashboard-sidebar-selection-row span,
+body:has(.home-page) .dashboard-sidebar.dashboard-sidebar-home .dashboard-sidebar-overview-grid span {
+  font-size: 10px;
+}
+
+body:has(.home-page) .dashboard-sidebar.dashboard-sidebar-home .dashboard-sidebar-title {
+  font-size: 18px;
+  line-height: 1.1;
+}
+
+body:has(.home-page) .dashboard-sidebar.dashboard-sidebar-home .dashboard-sidebar-meta {
+  font-size: 11px;
+}
+
+body:has(.home-page) .dashboard-sidebar.dashboard-sidebar-home .dashboard-sidebar-overview-card,
+body:has(.home-page) .dashboard-sidebar.dashboard-sidebar-home .dashboard-sidebar-selection-card,
+body:has(.home-page) .dashboard-sidebar.dashboard-sidebar-home .dashboard-sidebar-empty {
+  border-radius: 8px;
+  padding: 9px;
+}
+
+body:has(.home-page) .dashboard-sidebar.dashboard-sidebar-home .dashboard-sidebar-overview-topline,
+body:has(.home-page) .dashboard-sidebar.dashboard-sidebar-home .dashboard-sidebar-selection-row {
+  gap: 8px;
+}
+
+body:has(.home-page) .dashboard-sidebar.dashboard-sidebar-home .dashboard-sidebar-overview-title,
+body:has(.home-page) .dashboard-sidebar.dashboard-sidebar-home .dashboard-sidebar-selection-row strong,
+body:has(.home-page) .dashboard-sidebar.dashboard-sidebar-home .dashboard-sidebar-overview-grid strong {
+  font-size: 12px;
+}
+
+body:has(.home-page) .dashboard-sidebar.dashboard-sidebar-home .dashboard-sidebar-overview-badge {
+  min-height: 20px;
+  padding: 0 7px;
+  font-size: 10px;
+}
+
+body:has(.home-page) .dashboard-sidebar.dashboard-sidebar-home .dashboard-sidebar-overview-grid {
+  gap: 6px;
+}
+
+body:has(.home-page) .dashboard-sidebar.dashboard-sidebar-home .dashboard-sidebar-overview-grid > div {
+  padding: 7px 8px;
+  border-radius: 8px;
+}
+
+body:has(.home-page) .dashboard-sidebar.dashboard-sidebar-home .dashboard-sidebar-empty {
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+@media (max-width: 1180px) {
+  body:has(.home-page) .dashboard-sidebar.dashboard-sidebar-home {
+    width: 248px;
+  }
+}
+
+@media (max-width: 980px) {
+  .home-page .home-panel,
+  .home-page .home-section-shell {
+    padding: 10px;
+  }
+
+  .home-page .home-stat-card {
+    min-height: 62px;
+  }
+
+  .home-page .project-grid {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+
+  body:has(.home-page) .sidebar-left.mobile-open {
+    width: 180px;
+  }
+}
+
+@media (max-width: 760px) {
+  .home-page .ui-page-header-main,
+  .home-page .home-toolbar,
+  .home-page .project-card-top,
+  .home-page .project-card-footer {
+    gap: 8px;
+  }
+
+  .home-page .project-card-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .home-page .project-card-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .home-page {
+    gap: 10px;
+  }
+
+  .home-page .ui-page-title {
+    font-size: 22px;
+  }
+
+  .home-page .home-create-btn,
+  .home-page .project-card-manage-btn,
+  .home-page .project-card-delete-btn {
+    min-height: 30px;
+  }
+
+  .home-page .project-card,
+  .home-page .project-card-new {
+    padding: 10px;
+  }
+
+  .home-page .project-card-new {
+    min-height: 132px;
+  }
+}
+
+body.dark:has(.home-page) .sidebar-workspace-card,
+body.dark:has(.home-page) .dashboard-sidebar.dashboard-sidebar-home,
+body.dark:has(.home-page) .dashboard-sidebar.dashboard-sidebar-home .dashboard-sidebar-overview-card,
+body.dark:has(.home-page) .dashboard-sidebar.dashboard-sidebar-home .dashboard-sidebar-selection-card,
+body.dark:has(.home-page) .dashboard-sidebar.dashboard-sidebar-home .dashboard-sidebar-empty,
+body.dark:has(.home-page) .home-page .home-panel,
+body.dark:has(.home-page) .home-page .home-section-shell,
+body.dark:has(.home-page) .home-page .home-stat-card,
+body.dark:has(.home-page) .home-page .project-card,
+body.dark:has(.home-page) .home-page .project-card-metric {
+  box-shadow: none;
+}

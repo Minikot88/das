@@ -7,6 +7,7 @@ import { autoArrangeDashboardLayout } from "../utils/layoutUtils";
 import ChartPicker from "../components/dashboard/ChartPicker";
 import DashboardGrid from "../components/dashboard/DashboardGrid";
 import DashboardFullscreenModal from "../components/dashboard/DashboardFullscreenModal";
+import DashboardShareModal from "../components/dashboard/DashboardShareModal";
 import SidebarRight from "../layout/SidebarRight";
 import {
   createBuilderContextForDashboard,
@@ -16,6 +17,11 @@ import {
   toDashboardChartModel,
   createWidgetFromBuilder,
 } from "../utils/dashboardWorkspace";
+import {
+  buildDashboardEmbedCode,
+  buildDashboardViewUrl,
+  exportNodeAsImage,
+} from "../utils/dashboardShareUtils";
 import { runQuery } from "../utils/queryEngine";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
@@ -200,8 +206,19 @@ export default function DashboardPage() {
   const [pendingCreatedWidgetId, setPendingCreatedWidgetId] = useState(null);
   const [exportState, setExportState] = useState(null);
   const [fullscreenWidgetId, setFullscreenWidgetId] = useState(null);
+  const [shareModalTab, setShareModalTab] = useState("share");
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [dashboardExporting, setDashboardExporting] = useState(false);
+  const [shareOptions, setShareOptions] = useState({
+    width: 1200,
+    height: 720,
+    responsive: true,
+    theme: "auto",
+    showHeader: false,
+  });
 
   const contextMenuRef = useRef(null);
+  const dashboardCaptureRef = useRef(null);
   const previousWidgetCountRef = useRef(0);
   const starterChartSeededRef = useRef(new Set());
 
@@ -233,6 +250,38 @@ export default function DashboardPage() {
   const selectedWidget = dashboardWidgets.find((widget) => widget.id === selectedWidgetId) ?? null;
   const fullscreenWidget = dashboardWidgets.find((widget) => widget.id === fullscreenWidgetId) ?? null;
   const activeSelectionLabel = selectedWidget?.name ?? "No selection";
+  const publicViewUrl = useMemo(
+    () => activeDashboard?.id
+      ? buildDashboardViewUrl({
+          dashboardId: activeDashboard.id,
+          mode: "view",
+          theme: shareOptions.theme,
+          showHeader: true,
+        })
+      : "",
+    [activeDashboard?.id, shareOptions.theme]
+  );
+  const embedViewUrl = useMemo(
+    () => activeDashboard?.id
+      ? buildDashboardViewUrl({
+          dashboardId: activeDashboard.id,
+          mode: "embed",
+          theme: shareOptions.theme,
+          showHeader: shareOptions.showHeader,
+        })
+      : "",
+    [activeDashboard?.id, shareOptions.showHeader, shareOptions.theme]
+  );
+  const embedCode = useMemo(
+    () =>
+      buildDashboardEmbedCode({
+        src: embedViewUrl,
+        width: shareOptions.width,
+        height: shareOptions.height,
+        responsive: shareOptions.responsive,
+      }),
+    [embedViewUrl, shareOptions.height, shareOptions.responsive, shareOptions.width]
+  );
 
   useEffect(() => {
     if (!contextMenuState) return undefined;
@@ -511,6 +560,22 @@ export default function DashboardPage() {
     setSelectedWidget(activeDashboard?.id, widgetId);
   }
 
+  function openShareModal(nextTab = "share") {
+    setShareModalTab(nextTab);
+    setShareModalOpen(true);
+  }
+
+  function closeShareModal() {
+    setShareModalOpen(false);
+  }
+
+  function updateShareOptions(patch) {
+    setShareOptions((current) => ({
+      ...current,
+      ...patch,
+    }));
+  }
+
   function exportWidgetCode(widgetId) {
     const widget = dashboardWidgets.find((item) => item.id === widgetId);
     if (!widget) return;
@@ -562,6 +627,25 @@ export default function DashboardPage() {
 
   function handleExportPng(cardNode, chart) {
     downloadChartAsPng(cardNode, chart?.title || chart?.name || "chart");
+  }
+
+  async function handleDownloadDashboardImage(format = "png") {
+    if (!dashboardWidgets.length || !(dashboardCaptureRef.current instanceof HTMLElement)) return;
+
+    setDashboardExporting(true);
+
+    try {
+      await new Promise((resolve) => window.setTimeout(resolve, 180));
+      await exportNodeAsImage(dashboardCaptureRef.current, {
+        filename: activeDashboard?.name ?? "dashboard",
+        format,
+        backgroundColor: getComputedStyle(document.documentElement).getPropertyValue("--surface")?.trim() || "#ffffff",
+      });
+    } catch (error) {
+      window.alert(error?.message || "Unable to export this dashboard right now.");
+    } finally {
+      setDashboardExporting(false);
+    }
   }
 
   const toolbarItems = [
@@ -635,6 +719,15 @@ export default function DashboardPage() {
                 </button>
                 <button type="button" onClick={openBuilderForCurrentContext} className="dashboard-toolbar-btn is-primary">
                   New Chart
+                </button>
+                <button type="button" onClick={() => openShareModal("export")} className="dashboard-toolbar-btn" disabled={!dashboardWidgets.length}>
+                  Export
+                </button>
+                <button type="button" onClick={() => openShareModal("share")} className="dashboard-toolbar-btn">
+                  Share
+                </button>
+                <button type="button" onClick={() => openShareModal("embed")} className="dashboard-toolbar-btn">
+                  Embed
                 </button>
               </div>
             </div>
@@ -779,6 +872,32 @@ export default function DashboardPage() {
         />
       </WorkspaceLayout>
 
+      {(shareModalOpen || dashboardExporting) && hasWidgets ? (
+        <div className="dashboard-export-stage" aria-hidden="true">
+          <div ref={dashboardCaptureRef} className="dashboard-export-surface">
+            <div className="dashboard-export-surface-head">
+              <div className="dashboard-export-surface-copy">
+                <span className="dashboard-export-surface-kicker">{activeProject.name} / {activeSheet.name}</span>
+                <strong>{activeDashboard.name}</strong>
+              </div>
+              <div className="dashboard-export-surface-badges">
+                <span>{workspaceStats.chartCount} charts</span>
+                <span>{workspaceStats.readyChartsCount} ready</span>
+              </div>
+            </div>
+            <div className="dashboard-export-surface-body">
+              <DashboardGrid
+                widgets={dashboardWidgets}
+                layout={activeDashboard.layout ?? []}
+                isEditable={false}
+                isSelectable={false}
+                className="is-export-surface"
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <div ref={contextMenuRef}>
         <ContextMenu menu={contextMenuState} onRename={handleContextRename} onDelete={handleContextDelete} />
       </div>
@@ -794,6 +913,24 @@ export default function DashboardPage() {
           onExportCSV={handleExportCsv}
           onExportPNG={handleExportPng}
           onClose={() => setFullscreenWidgetId(null)}
+        />
+      ) : null}
+
+      {shareModalOpen ? (
+        <DashboardShareModal
+          dashboardName={activeDashboard.name}
+          activeTab={shareModalTab}
+          onChangeTab={setShareModalTab}
+          canExport={hasWidgets}
+          exportBusy={dashboardExporting}
+          onDownloadPng={() => handleDownloadDashboardImage("png")}
+          onDownloadJpg={() => handleDownloadDashboardImage("jpg")}
+          publicUrl={publicViewUrl}
+          embedUrl={embedViewUrl}
+          embedCode={embedCode}
+          options={shareOptions}
+          onChangeOptions={updateShareOptions}
+          onClose={closeShareModal}
         />
       ) : null}
     </PageContainer>

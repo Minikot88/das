@@ -31,6 +31,10 @@ export default function DashboardGrid({
   fullscreenChartId,
   onToggleFullscreen,
   onInsightData,
+  isEditable = true,
+  isSelectable = true,
+  themeMode,
+  className = "",
 }) {
   const responsiveLayouts = buildResponsiveLayouts(layout);
 
@@ -41,18 +45,18 @@ export default function DashboardGrid({
 
   return (
     <ResponsiveGridLayout
-      className="dashboard-canvas-grid"
+      className={`dashboard-canvas-grid${isEditable ? "" : " is-readonly"}${className ? ` ${className}` : ""}`}
       layouts={responsiveLayouts}
       breakpoints={GRID_BREAKPOINTS}
       cols={GRID_COLUMNS}
       rowHeight={DASHBOARD_ROW_HEIGHT}
       margin={DASHBOARD_GRID_MARGIN}
       containerPadding={DASHBOARD_GRID_PADDING}
-      isResizable
-      isDraggable
+      isResizable={isEditable}
+      isDraggable={isEditable}
       compactType={DASHBOARD_COMPACT_TYPE}
       preventCollision={false}
-      onLayoutChange={handleLayoutChange}
+      onLayoutChange={isEditable ? handleLayoutChange : undefined}
     >
       {widgets.map((widget) => {
         const layoutItem = layout.find((item) => item.i === widget.id) ?? {
@@ -71,8 +75,8 @@ export default function DashboardGrid({
           <div key={widget.id} className="dashboard-canvas-grid-item" data-grid={layoutItem}>
             <div
               className={`dashboard-widget-slot${widget.id === selectedWidgetId ? " is-selected" : ""}`}
-              onClick={() => onSelectWidget?.(widget.id)}
-              onContextMenu={(event) => onOpenWidgetMenu?.(widget, event)}
+              onClick={isSelectable ? () => onSelectWidget?.(widget.id) : undefined}
+              onContextMenu={isEditable ? (event) => onOpenWidgetMenu?.(widget, event) : undefined}
             >
               <ChartCard
                 chart={chart}
@@ -82,7 +86,8 @@ export default function DashboardGrid({
                 onExportPNG={onExportPNG}
                 onInsightData={onInsightData}
                 isFullscreen={fullscreenChartId === widget.id}
-                onToggleFullscreen={() => onToggleFullscreen?.(widget.id)}
+                onToggleFullscreen={isEditable ? () => onToggleFullscreen?.(widget.id) : undefined}
+                themeMode={themeMode}
               />
             </div>
           </div>

@@ -5,6 +5,7 @@ export default function ChartFamilyDropdown({
   families,
   selectedFamily,
   selectedCategory,
+  showDescriptions = false,
   onFamilySelect,
 }) {
   return (
@@ -18,6 +19,7 @@ export default function ChartFamilyDropdown({
       <ChartFamilyList
         families={families}
         selectedFamily={selectedFamily}
+        showDescriptions={showDescriptions}
         onSelect={onFamilySelect}
       />
     </div>

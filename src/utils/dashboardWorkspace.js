@@ -50,7 +50,11 @@ export function readBuilderReturnState(routeState) {
 export function toDashboardChartModel(widget) {
   if (!widget) return null;
 
-  const config = normalizeChartConfig(widget.config ?? {});
+  const config = normalizeChartConfig({
+    ...(widget.config ?? {}),
+    renderer: "chartjs",
+    chartPreset: widget.config?.chartPreset ?? "dashboard",
+  });
   const title = widget.name || config.title || config.name || "Chart";
   const data = Array.isArray(widget.data) && widget.data.length > 0
     ? widget.data
@@ -88,7 +92,11 @@ export function resolveDashboardWidgets(layout = [], charts = []) {
       const savedChart = charts.find((chart) => chart.id === item.chartId);
       if (!savedChart) return null;
 
-      const config = normalizeChartConfig(savedChart.config);
+      const config = normalizeChartConfig({
+        ...(savedChart.config ?? {}),
+        renderer: "chartjs",
+        chartPreset: savedChart.config?.chartPreset ?? "dashboard",
+      });
       const chartRows = (Array.isArray(savedChart.data) && savedChart.data.length > 0)
         ? savedChart.data
         : Array.isArray(config.queryResult?.rows) && config.queryResult.rows.length > 0
@@ -115,10 +123,12 @@ export function resolveDashboardWidgets(layout = [], charts = []) {
           : String(savedChart.id).slice(-6),
         layout: item,
         data: chartRows,
-        config: {
+        config: normalizeChartConfig({
           ...config,
           title: name,
           name,
+          renderer: "chartjs",
+          chartPreset: "dashboard",
           queryResult: config.queryResult ?? (chartRows.length
             ? {
                 rows: chartRows,
@@ -129,7 +139,7 @@ export function resolveDashboardWidgets(layout = [], charts = []) {
                 sourceTable: config.dataset ?? null,
               }
             : null),
-        },
+        }),
         echartsOption: buildChartOptionByType(type, {
           rows: chartRows,
           config: {
@@ -143,6 +153,27 @@ export function resolveDashboardWidgets(layout = [], charts = []) {
     .filter(Boolean);
 }
 
+export function findDashboardContextById(projects = [], charts = [], dashboardId = null) {
+  if (!dashboardId) return null;
+
+  for (const project of projects ?? []) {
+    for (const sheet of project?.sheets ?? []) {
+      for (const dashboard of sheet?.dashboards ?? []) {
+        if (dashboard?.id !== dashboardId) continue;
+
+        return {
+          project,
+          sheet,
+          dashboard,
+          widgets: resolveDashboardWidgets(dashboard.layout ?? [], charts),
+        };
+      }
+    }
+  }
+
+  return null;
+}
+
 export function createWidgetFromBuilder({
   chartConfig,
   chartRows,
@@ -153,6 +184,13 @@ export function createWidgetFromBuilder({
   const widgetName =
     chartConfig?.name?.trim() || createDefaultWidgetName(normalizedType, existingCharts);
   const title = chartConfig?.title?.trim() || widgetName;
+  const normalizedConfig = normalizeChartConfig({
+    ...chartConfig,
+    name: widgetName,
+    title,
+    renderer: "chartjs",
+    chartPreset: "dashboard",
+  });
 
   return {
     name: widgetName,
@@ -162,17 +200,9 @@ export function createWidgetFromBuilder({
     data: chartRows ?? [],
     echartsOption: buildChartOptionByType(normalizedType, {
       rows: chartRows ?? [],
-      config: {
-        ...chartConfig,
-        name: widgetName,
-        title,
-      },
+      config: normalizedConfig,
     }),
-    config: {
-      ...chartConfig,
-      name: widgetName,
-      title,
-    },
+    config: normalizedConfig,
     layout: {
       w: existingCharts.length ? 6 : 12,
       h: existingCharts.length ? 4 : 5,

@@ -1,5 +1,6 @@
 import { getChartPalette } from "./chartPalette";
-import { getChartTheme, withOpacity } from "./chartThemes";
+import { buildChartJsOptionFactory } from "./chartJsRuntime";
+import { withOpacity } from "./chartThemes";
 import { resolveChartRuntimeType } from "./chartCatalog";
 
 const SUPPORTED_TYPE_MAP = {
@@ -546,150 +547,27 @@ export function buildChartJsData({ type = "bar", rows = [], config = {}, theme =
   }
 }
 
-export function buildChartJsOptions({ type = "bar", config = {}, theme = "default", darkMode = false } = {}) {
+export function buildChartJsOptions({
+  type = "bar",
+  config = {},
+  theme = "default",
+  darkMode = false,
+  locale = "th",
+  mode = "dashboard",
+  chrome = "default",
+  data = null,
+} = {}) {
   const normalizedType = normalizeChartType(type, config);
   const support = getChartJsSupport(normalizedType);
-  const palette = getChartPalette(theme);
-  const chartTheme = getChartTheme();
-  const legendPosition = config.legendPosition ?? config.display?.legendPosition ?? config.displayOptions?.legendPosition ?? "top";
-  const showLegend = config.legendVisible ?? config.display?.showLegend ?? config.displayOptions?.showLegend ?? true;
-  const showGrid = config.showGrid ?? config.display?.showGrid ?? config.displayOptions?.showGrid ?? true;
-  const showLabels = config.showLabels ?? config.display?.showLabels ?? config.displayOptions?.showLabels ?? false;
-  const tension = config.smooth || config.settings?.smooth || config.chartSettings?.smooth ? 0.35 : 0;
-  const stacked = ["stacked-bar", "stacked-line", "stacked-area"].includes(support.mode)
-    || config.settings?.stack
-    || config.chartSettings?.stack;
-  const indexAxis = support.mode === "horizontal-bar" ? "y" : "x";
-  const lineMode = ["line", "multi-line", "step-line", "area", "stacked-line", "stacked-area"].includes(support.mode);
-  const pieLike = ["pie", "doughnut", "gauge", "polar-area"].includes(support.mode);
-
-  return {
-    responsive: true,
-    maintainAspectRatio: false,
-    resizeDelay: 0,
-    animation: {
-      duration: 220,
-      easing: "easeOutQuart",
-    },
-    interaction: {
-      mode: pieLike ? "nearest" : "index",
-      intersect: false,
-    },
-    indexAxis,
-    layout: {
-      padding: {
-        top: 8,
-        right: 10,
-        bottom: 6,
-        left: 6,
-      },
-    },
-    elements: {
-      line: {
-        tension,
-        fill: ["area", "stacked-area"].includes(support.mode),
-        stepped: support.mode === "step-line",
-        borderWidth: Number(config.settings?.lineWidth ?? config.chartSettings?.lineWidth ?? 3),
-      },
-      point: {
-        radius: config.settings?.showSymbol === false || config.chartSettings?.showSymbol === false ? 0 : 4,
-        hoverRadius: 6,
-      },
-      bar: {
-        borderRadius: Number(config.settings?.borderRadius ?? config.chartSettings?.borderRadius ?? 8),
-        borderSkipped: false,
-      },
-      arc: {
-        borderWidth: 2,
-        borderColor: darkMode ? "#0f172a" : "#ffffff",
-      },
-    },
-    plugins: {
-      legend: {
-        display: showLegend,
-        position: legendPosition,
-        align: "start",
-        labels: {
-          color: chartTheme.text,
-          usePointStyle: true,
-          pointStyle: "circle",
-          boxWidth: 10,
-          boxHeight: 10,
-          padding: 14,
-          font: {
-            size: 11,
-            weight: "600",
-          },
-        },
-      },
-      tooltip: {
-        enabled: true,
-        backgroundColor: darkMode ? "rgba(15, 23, 42, 0.96)" : "rgba(255, 255, 255, 0.96)",
-        titleColor: darkMode ? "#f8fafc" : "#0f172a",
-        bodyColor: darkMode ? "#e2e8f0" : "#1e293b",
-        borderColor: darkMode ? "rgba(148, 163, 184, 0.28)" : "rgba(148, 163, 184, 0.22)",
-        borderWidth: 1,
-        padding: 10,
-        displayColors: true,
-        cornerRadius: 10,
-        caretSize: 6,
-      },
-      title: {
-        display: false,
-      },
-      subtitle: {
-        display: false,
-      },
-      datalabels: {
-        display: false,
-      },
-    },
-    scales: pieLike || support.mode === "radar"
-      ? undefined
-      : {
-          x: {
-            stacked,
-            grid: {
-              display: false,
-            },
-            ticks: {
-              color: chartTheme.axisLabel,
-              maxRotation: 0,
-              autoSkip: true,
-              font: {
-                size: 11,
-              },
-            },
-            border: {
-              color: chartTheme.border,
-            },
-          },
-          y: {
-            stacked,
-            beginAtZero: true,
-            grid: {
-              display: showGrid,
-              color: darkMode ? "rgba(148, 163, 184, 0.14)" : "rgba(148, 163, 184, 0.18)",
-              drawBorder: false,
-            },
-            ticks: {
-              color: chartTheme.axisLabel,
-              font: {
-                size: 11,
-              },
-            },
-            border: {
-              display: false,
-            },
-          },
-        },
-    spanGaps: Boolean(config.settings?.connectNulls ?? config.chartSettings?.connectNulls),
-    cutout: support.mode === "gauge"
-      ? "72%"
-      : support.mode === "doughnut"
-        ? `${Number(config.settings?.innerRadius ?? config.chartSettings?.innerRadius ?? 48)}%`
-        : undefined,
-    rotation: support.mode === "gauge" ? -90 : undefined,
-    circumference: support.mode === "gauge" ? 180 : undefined,
-  };
+  return buildChartJsOptionFactory({
+    type: normalizedType,
+    support,
+    data,
+    config,
+    theme,
+    darkMode,
+    locale,
+    mode,
+    chrome,
+  }).options;
 }

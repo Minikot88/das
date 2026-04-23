@@ -9,7 +9,7 @@ function formatSupportLabel(level, variant) {
   return "Supported";
 }
 
-export default function ChartVariantCard({ variant, active, onSelect }) {
+export default function ChartVariantCard({ variant, active, showDescriptions = false, onSelect }) {
   const supportLevel = variant.supportLevel ?? "supported";
   const isDisabled = variant.isSelectable === false;
 
@@ -23,7 +23,7 @@ export default function ChartVariantCard({ variant, active, onSelect }) {
     >
       <div className="builder-chart-variant-card-copy">
         <strong>{variant.label}</strong>
-        <p>{variant.description}</p>
+        {showDescriptions ? <p>{variant.description}</p> : null}
       </div>
       <div
         className={`builder-chart-support-badge is-${variant?.rendererSupported === false ? "unsupported" : supportLevel}`}

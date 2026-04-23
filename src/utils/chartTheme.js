@@ -1,7 +1,7 @@
-import { getChartPalette } from "./chartPalette";
-import { withOpacity } from "./chartThemes";
+import { getChartPalette, mixColors, shadeColor, tintColor } from "./chartPalette";
+import { darkenColor, withOpacity } from "./chartThemes";
 
-const PIE_LIKE_TYPES = new Set(["pie", "donut", "polar-area"]);
+const PIE_LIKE_TYPES = new Set(["pie", "donut", "doughnut", "polar-area", "gauge"]);
 const LINE_LIKE_TYPES = new Set(["line", "multi-line", "smooth-line", "step-line", "area", "stacked-line", "stacked-area"]);
 const AREA_LIKE_TYPES = new Set(["area", "stacked-area"]);
 const BAR_LIKE_TYPES = new Set(["bar", "grouped-bar", "stacked-bar", "horizontal-bar"]);
@@ -38,19 +38,125 @@ function resolveAccentColor(accent, fallback) {
   return accent || fallback;
 }
 
+function resolveDatasetType(type = "bar") {
+  const normalized = String(type ?? "bar").trim().toLowerCase();
+  if (normalized === "doughnut") return "donut";
+  return normalized;
+}
+
+function isPieLikeType(type) {
+  return PIE_LIKE_TYPES.has(resolveDatasetType(type));
+}
+
+function isLineLikeType(type) {
+  return LINE_LIKE_TYPES.has(resolveDatasetType(type)) || resolveDatasetType(type) === "line";
+}
+
+function isAreaLikeType(type) {
+  return AREA_LIKE_TYPES.has(resolveDatasetType(type));
+}
+
+function isBarLikeType(type) {
+  return BAR_LIKE_TYPES.has(resolveDatasetType(type)) || resolveDatasetType(type) === "bar";
+}
+
+function isScatterLikeType(type) {
+  return SCATTER_LIKE_TYPES.has(resolveDatasetType(type));
+}
+
+function buildGradientEndColor(color, appearance, darkMode, opacity) {
+  const mixed = mixColors(color, appearance.surface, darkMode ? 0.28 : 0.42);
+  return withOpacity(mixed, opacity);
+}
+
+function buildBarBackground(color, appearance, darkMode, direction = "vertical") {
+  if (!appearance.barGradient) {
+    return withOpacity(color, appearance.barOpacity ?? 0.92);
+  }
+
+  return createChartGradient({
+    color,
+    startOpacity: appearance.barOpacity ?? 0.92,
+    endOpacity: appearance.barBottomOpacity ?? 0.76,
+    direction,
+    endColor: buildGradientEndColor(
+      color,
+      appearance,
+      darkMode,
+      appearance.barBottomOpacity ?? 0.76
+    ),
+  });
+}
+
+function buildAreaBackground(color, appearance, darkMode) {
+  if (!appearance.areaGradient) {
+    return withOpacity(color, appearance.areaTopOpacity ?? 0.18);
+  }
+
+  return createChartGradient({
+    color,
+    startOpacity: appearance.areaTopOpacity ?? 0.18,
+    endOpacity: appearance.areaBottomOpacity ?? 0.04,
+    direction: "vertical",
+    endColor: buildGradientEndColor(
+      color,
+      appearance,
+      darkMode,
+      appearance.areaBottomOpacity ?? 0.04
+    ),
+  });
+}
+
+function createChartGradient({
+  color,
+  startOpacity = 1,
+  endOpacity = 0.2,
+  direction = "vertical",
+  endColor,
+}) {
+  return (context) => {
+    const chart = context?.chart;
+    const chartArea = chart?.chartArea;
+    const ctx = chart?.ctx;
+
+    if (!chartArea || !ctx) {
+      return withOpacity(color, startOpacity);
+    }
+
+    const gradient = direction === "horizontal"
+      ? ctx.createLinearGradient(chartArea.left, 0, chartArea.right, 0)
+      : ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+
+    gradient.addColorStop(0, withOpacity(color, startOpacity));
+    gradient.addColorStop(1, endColor ?? withOpacity(color, endOpacity));
+
+    return gradient;
+  };
+}
+
+function resolveSurfaceMode(palette, darkMode) {
+  if (palette.surfaceMode === "dark") return true;
+  if (palette.surfaceMode === "light") return false;
+  return darkMode;
+}
+
+function buildSurfaceColor(baseSurface, accent, strength, alpha = 1) {
+  return withOpacity(mixColors(baseSurface, accent, strength), alpha);
+}
+
+function buildBorderColor(base, accent, strength, opacity) {
+  return withOpacity(mixColors(base, accent, strength), opacity);
+}
+
 function getSeriesColors(preferredTheme = "default", darkMode = false) {
   const palette = getChartPalette(preferredTheme);
-  const primary = readCssVar("--primary", darkMode ? "#60a5fa" : "#1d4ed8");
+  const fallbackPrimary = readCssVar("--primary", darkMode ? "#60a5fa" : "#1d4ed8");
 
   return uniqueColors([
-    primary,
-    "#22c7ff",
-    "#14b8a6",
-    "#8b5cf6",
-    "#22c55e",
-    "#f59e0b",
-    "#fb7185",
+    palette.single ?? fallbackPrimary,
     ...palette.colors,
+    tintColor(palette.single ?? fallbackPrimary, darkMode ? 0.22 : 0.14),
+    shadeColor(palette.single ?? fallbackPrimary, darkMode ? 0.06 : 0.12),
   ]);
 }
 
@@ -109,24 +215,77 @@ export function getChartAppearance({
   chrome = "default",
   mode = "dashboard",
 } = {}) {
+  const palette = getChartPalette(colorTheme);
   const compact = chrome === "minimal";
   const builderPreview = mode === "builder-preview";
-  const primary = readCssVar("--primary", darkMode ? "#60a5fa" : "#1d4ed8");
-  const surface = readCssVar("--surface", darkMode ? "#0f1a2b" : "#ffffff");
-  const surfaceSecondary = readCssVar("--surface-secondary", darkMode ? "#111f33" : "#f7f9fc");
-  const surfaceMuted = readCssVar("--surface-muted", darkMode ? "#111f33" : "#f4f7fb");
-  const surfaceStrong = readCssVar("--surface-strong", darkMode ? "#1a2a40" : "#edf3fb");
-  const border = readCssVar("--border", darkMode ? "#25364d" : "#dbe5f0");
-  const borderStrong = readCssVar("--border-strong", darkMode ? "#35506e" : "#b8c8dc");
-  const divider = readCssVar("--divider", darkMode ? "#1c2c43" : "#e6edf5");
-  const textPrimary = readCssVar("--text-primary", darkMode ? "#edf4ff" : "#102033");
-  const textSecondary = readCssVar("--text-secondary", darkMode ? "#9fb0c5" : "#4f6074");
-  const warning = readCssVar("--warning", darkMode ? "#fbbf24" : "#d97706");
-  const danger = readCssVar("--danger", darkMode ? "#fb7185" : "#dc2626");
-  const seriesColors = getSeriesColors(colorTheme, darkMode);
+  const useDarkSurface = resolveSurfaceMode(palette, darkMode);
+  const primary = palette.single ?? readCssVar("--primary", darkMode ? "#60a5fa" : "#1d4ed8");
+  const tint = palette.tint ?? tintColor(primary, 0.18);
+  const baseSurface = useDarkSurface ? "#0b1220" : "#ffffff";
+  const baseSurfaceSecondary = useDarkSurface ? "#111b2d" : "#f6f9fc";
+  const baseSurfaceMuted = useDarkSurface ? "#101b2b" : "#f1f5f9";
+  const baseSurfaceStrong = useDarkSurface ? "#182538" : "#e9eff7";
+  const surface = buildSurfaceColor(
+    baseSurface,
+    tint,
+    useDarkSurface ? palette.surfaceTintStrengthDark : palette.surfaceTintStrengthLight,
+    useDarkSurface ? palette.surfaceAlphaDark : palette.surfaceAlphaLight
+  );
+  const surfaceSecondary = buildSurfaceColor(
+    baseSurfaceSecondary,
+    tint,
+    useDarkSurface ? palette.surfaceTintStrengthDark + 0.04 : palette.surfaceTintStrengthLight + 0.04,
+    useDarkSurface ? palette.surfaceAlphaDark : palette.surfaceAlphaLight
+  );
+  const surfaceMuted = buildSurfaceColor(
+    baseSurfaceMuted,
+    tint,
+    useDarkSurface ? palette.surfaceTintStrengthDark + 0.03 : palette.surfaceTintStrengthLight + 0.02,
+    useDarkSurface ? palette.surfaceAlphaDark : palette.surfaceAlphaLight
+  );
+  const surfaceStrong = buildSurfaceColor(
+    baseSurfaceStrong,
+    palette.accent ?? primary,
+    useDarkSurface ? palette.surfaceTintStrengthDark + 0.06 : palette.surfaceTintStrengthLight + 0.06,
+    useDarkSurface ? palette.surfaceAlphaDark : palette.surfaceAlphaLight
+  );
+  const border = buildBorderColor(
+    useDarkSurface ? "#324255" : "#c7d3e1",
+    tint,
+    useDarkSurface ? palette.borderTintStrengthDark : palette.borderTintStrengthLight,
+    useDarkSurface ? 0.68 : 0.7
+  );
+  const borderStrong = buildBorderColor(
+    useDarkSurface ? "#47586d" : "#9db2c8",
+    palette.accent ?? primary,
+    useDarkSurface ? palette.borderTintStrengthDark + 0.04 : palette.borderTintStrengthLight + 0.04,
+    useDarkSurface ? 0.78 : 0.76
+  );
+  const divider = buildBorderColor(
+    useDarkSurface ? "#24364b" : "#dbe5ef",
+    tint,
+    useDarkSurface ? palette.gridTintStrengthDark : palette.gridTintStrengthLight,
+    useDarkSurface ? 0.52 : 0.62
+  );
+  const textPrimary = useDarkSurface
+    ? mixColors("#eef4ff", palette.accent ?? primary, 0.08)
+    : mixColors("#102033", palette.accent ?? primary, 0.06);
+  const textSecondary = useDarkSurface
+    ? mixColors("#aebdd0", tint, 0.16)
+    : mixColors("#526274", tint, 0.14);
+  const warning = readCssVar("--warning", useDarkSurface ? "#fbbf24" : "#d97706");
+  const danger = readCssVar("--danger", useDarkSurface ? "#fb7185" : "#dc2626");
+  const seriesColors = getSeriesColors(colorTheme, useDarkSurface);
+  const tooltipDark = palette.tooltipMode === "dark" || (palette.tooltipMode === "auto" && useDarkSurface);
+  const minimalChrome = compact;
 
   return {
+    themeKey: palette.key,
+    themeLabel: palette.label,
+    usesDarkSurface: useDarkSurface,
     primary,
+    accent: palette.accent ?? primary,
+    tint,
     seriesColors,
     surface,
     surfaceSecondary,
@@ -140,32 +299,55 @@ export function getChartAppearance({
     warning,
     danger,
     axisLabel: textSecondary,
-    axisBorder: withOpacity(borderStrong, darkMode ? 0.58 : 0.72),
-    grid: withOpacity(borderStrong, darkMode ? 0.14 : 0.16),
-    shellBackground: darkMode
-      ? "linear-gradient(180deg, rgba(20, 33, 53, 0.96) 0%, rgba(15, 26, 43, 0.92) 100%)"
-      : "linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 253, 0.98) 100%)",
-    canvasBackground: darkMode
-      ? "linear-gradient(180deg, rgba(19, 31, 50, 0.96) 0%, rgba(15, 26, 43, 0.98) 100%)"
-      : "linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(246, 249, 253, 0.98) 100%)",
-    shellBorder: withOpacity(borderStrong, darkMode ? 0.54 : 0.44),
-    shellShadow: darkMode
-      ? "0 18px 40px -36px rgba(2, 6, 23, 0.72), inset 0 1px 0 rgba(255,255,255,0.04)"
-      : "0 18px 40px -34px rgba(15, 23, 42, 0.18), inset 0 1px 0 rgba(255,255,255,0.9)",
-    tooltipBackground: darkMode ? "rgba(15, 23, 42, 0.96)" : "rgba(255, 255, 255, 0.96)",
-    tooltipBorder: darkMode ? "rgba(148, 163, 184, 0.18)" : "rgba(148, 163, 184, 0.2)",
-    tooltipTitle: darkMode ? "#f8fbff" : "#102033",
-    tooltipText: darkMode ? "#d8e4f2" : "#334155",
-    noteBackground: darkMode ? "rgba(17, 31, 51, 0.9)" : "rgba(247, 249, 252, 0.96)",
-    noteBorder: withOpacity(borderStrong, darkMode ? 0.44 : 0.34),
+    axisBorder: withOpacity(
+      buildBorderColor(useDarkSurface ? "#5b7189" : "#90a6bd", palette.accent ?? primary, 0.2, 1),
+      useDarkSurface ? 0.5 : 0.46
+    ),
+    grid: withOpacity(
+      buildBorderColor(useDarkSurface ? "#58708b" : "#9eb4cb", tint, useDarkSurface ? palette.gridTintStrengthDark : palette.gridTintStrengthLight, 1),
+      useDarkSurface ? 0.24 : 0.2
+    ),
+    shellBackground: minimalChrome
+      ? "transparent"
+      : `linear-gradient(180deg, ${surface} 0%, ${surfaceSecondary} 100%)`,
+    canvasBackground: minimalChrome
+      ? "transparent"
+      : `linear-gradient(180deg, ${surfaceSecondary} 0%, ${surfaceMuted} 100%)`,
+    shellBorder: minimalChrome ? "transparent" : withOpacity(borderStrong, useDarkSurface ? 0.28 : 0.22),
+    shellShadow: minimalChrome
+      ? "none"
+      : useDarkSurface
+        ? "0 16px 34px -28px rgba(2, 6, 23, 0.82), inset 0 1px 0 rgba(255,255,255,0.03)"
+        : "0 16px 28px -26px rgba(15, 23, 42, 0.12), inset 0 1px 0 rgba(255,255,255,0.72)",
+    tooltipBackground: tooltipDark
+      ? buildSurfaceColor("#0d1727", palette.accent ?? primary, 0.16, 0.98)
+      : buildSurfaceColor("#ffffff", tint, 0.06, 0.98),
+    tooltipBorder: tooltipDark
+      ? withOpacity(buildBorderColor("#61758f", palette.accent ?? primary, 0.22, 1), 0.46)
+      : withOpacity(buildBorderColor("#889cb3", tint, 0.18, 1), 0.34),
+    tooltipTitle: tooltipDark ? "#f8fbff" : textPrimary,
+    tooltipText: tooltipDark ? mixColors("#d6e2f0", tint, 0.12) : mixColors("#334155", tint, 0.1),
+    noteBackground: useDarkSurface ? withOpacity(surfaceSecondary, 0.92) : withOpacity(surfaceMuted, 0.98),
+    noteBorder: withOpacity(borderStrong, useDarkSurface ? 0.3 : 0.22),
     noteText: textSecondary,
-    emptyBackground: darkMode
-      ? "linear-gradient(180deg, rgba(21, 37, 59, 0.96) 0%, rgba(15, 26, 43, 0.96) 100%)"
-      : "linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(246, 249, 253, 0.98) 100%)",
-    radius: compact ? 10 : 12,
-    canvasPaddingTop: builderPreview ? 14 : 12,
-    canvasPaddingX: compact ? 12 : 14,
-    canvasPaddingBottom: compact ? 10 : 12,
+    emptyBackground: `linear-gradient(180deg, ${surface} 0%, ${surfaceSecondary} 100%)`,
+    barGradient: palette.barGradient,
+    areaGradient: palette.areaGradient,
+    gradientAxis: palette.gradientAxis,
+    barOpacity: palette.barOpacity,
+    barBottomOpacity: palette.barBottomOpacity,
+    areaTopOpacity: palette.areaTopOpacity,
+    areaBottomOpacity: palette.areaBottomOpacity,
+    arcOpacity: palette.arcOpacity,
+    scatterOpacity: palette.scatterOpacity,
+    bubbleOpacity: palette.bubbleOpacity,
+    pointFillOpacity: palette.pointFillOpacity,
+    pieSpacing: palette.pieSpacing,
+    pieHoverOffset: palette.pieHoverOffset,
+    radius: compact ? 6 : 10,
+    canvasPaddingTop: builderPreview ? 4 : compact ? 3 : 6,
+    canvasPaddingX: builderPreview ? 6 : compact ? 4 : 8,
+    canvasPaddingBottom: compact ? 3 : 6,
     fontFamily: "Inter, Segoe UI, system-ui, sans-serif",
   };
 }
@@ -190,101 +372,165 @@ export function styleChartJsData({
   const datasetCount = data.datasets.length;
   const labelDensity = labels.length;
   const builderPreview = mode === "builder-preview";
-  const defaultLineWidth = Number(config.settings?.lineWidth ?? config.chartSettings?.lineWidth ?? 2.5);
-  const defaultBarRadius = Number(config.settings?.borderRadius ?? config.chartSettings?.borderRadius ?? 5);
+  const defaultLineWidth = Number(config.settings?.lineWidth ?? config.chartSettings?.lineWidth ?? 2.8);
+  const defaultBarRadius = Number(config.settings?.borderRadius ?? config.chartSettings?.borderRadius ?? 0);
 
   const datasets = data.datasets.map((dataset, index) => {
     const color = getDatasetColor(index, appearance);
     const nextDataset = { ...dataset };
+    const datasetType = resolveDatasetType(nextDataset.type ?? type);
 
-    if (PIE_LIKE_TYPES.has(type)) {
+    if (datasetType === "gauge") {
+      const trackColor = withOpacity(appearance.surfaceStrong, darkMode ? 0.72 : 0.88);
+      const existingTrackColor = Array.isArray(nextDataset.backgroundColor)
+        ? nextDataset.backgroundColor[1]
+        : null;
+      const primaryColor = color;
+
+      return {
+        ...nextDataset,
+        backgroundColor: [
+          withOpacity(primaryColor, appearance.arcOpacity ?? 0.92),
+          existingTrackColor ?? trackColor,
+        ],
+        hoverBackgroundColor: [
+          primaryColor,
+          existingTrackColor ?? trackColor,
+        ],
+        borderColor: [appearance.surface, appearance.surface],
+        hoverBorderColor: [appearance.surface, appearance.surface],
+        borderWidth: 0,
+        hoverOffset: 0,
+        spacing: 0,
+      };
+    }
+
+    if (isPieLikeType(datasetType)) {
       const segmentCount = Array.isArray(nextDataset.data) ? nextDataset.data.length : 0;
       const arcColors = buildArcPalette(segmentCount, appearance);
       return {
         ...nextDataset,
-        backgroundColor: arcColors.map((entry) => withOpacity(entry, type === "polar-area" ? 0.8 : 0.9)),
-        hoverBackgroundColor: arcColors,
+        backgroundColor: arcColors.map((entry) =>
+          withOpacity(entry, datasetType === "polar-area" ? Math.max(0.78, appearance.arcOpacity - 0.06) : appearance.arcOpacity ?? 0.9)
+        ),
+        hoverBackgroundColor: arcColors.map((entry) => tintColor(entry, darkMode ? 0.06 : 0.02)),
         borderColor: appearance.surface,
         hoverBorderColor: appearance.surface,
-        borderWidth: 2,
-        hoverOffset: 6,
-        spacing: type === "donut" ? 2 : 1,
+        borderWidth: darkMode ? 1.25 : 1.1,
+        hoverOffset: datasetType === "donut" ? appearance.pieHoverOffset ?? 2 : Math.max(1, (appearance.pieHoverOffset ?? 2) - 1),
+        spacing: datasetType === "donut" ? appearance.pieSpacing ?? 1 : Math.max(0, (appearance.pieSpacing ?? 1) - 1),
       };
     }
 
-    if (type === "radar") {
+    if (datasetType === "radar") {
       return {
         ...nextDataset,
         borderColor: color,
-        backgroundColor: withOpacity(color, 0.16),
-        pointBackgroundColor: appearance.surface,
+        backgroundColor: buildAreaBackground(color, appearance, darkMode),
+        pointBackgroundColor: withOpacity(color, appearance.pointFillOpacity ?? 1),
         pointBorderColor: color,
         pointHoverBackgroundColor: color,
         pointHoverBorderColor: appearance.surface,
-        pointRadius: 3,
-        pointHoverRadius: 5,
-        pointBorderWidth: 2,
-        borderWidth: clamp(defaultLineWidth, 2, 3),
+        pointRadius: 2,
+        pointHoverRadius: 3.8,
+        pointBorderWidth: 1.25,
+        borderWidth: clamp(defaultLineWidth, 2.4, 3.4),
         fill: true,
       };
     }
 
-    if (LINE_LIKE_TYPES.has(type)) {
+    if (isLineLikeType(datasetType)) {
       const pointRadius = builderPreview
-        ? (labelDensity > 10 ? 1.5 : 2.5)
-        : (labelDensity > 12 ? 0 : datasetCount > 1 ? 2.5 : 3);
+        ? (labelDensity > 10 ? 0 : 1.5)
+        : (labelDensity > 14 ? 0 : datasetCount > 1 ? 1.5 : 2);
+      const areaLike = isAreaLikeType(datasetType);
 
       return {
         ...nextDataset,
         borderColor: color,
-        backgroundColor: AREA_LIKE_TYPES.has(type) ? withOpacity(color, darkMode ? 0.2 : 0.16) : withOpacity(color, 0.12),
+        backgroundColor: areaLike
+          ? buildAreaBackground(color, appearance, darkMode)
+          : withOpacity(color, darkMode ? 0.12 : 0.08),
         pointBackgroundColor: appearance.surface,
         pointBorderColor: color,
         pointHoverBackgroundColor: color,
         pointHoverBorderColor: appearance.surface,
         pointRadius,
-        pointHoverRadius: pointRadius === 0 ? 5 : pointRadius + 2,
-        pointHitRadius: 12,
-        pointBorderWidth: 2,
-        borderWidth: clamp(defaultLineWidth, 2, 3.5),
-        fill: AREA_LIKE_TYPES.has(type),
+        pointHoverRadius: pointRadius === 0 ? 4 : pointRadius + 1.75,
+        pointHitRadius: 9,
+        pointBorderWidth: 1.25,
+        borderWidth: clamp(defaultLineWidth, 2.5, 3.5),
+        fill: areaLike,
       };
     }
 
-    if (SCATTER_LIKE_TYPES.has(type)) {
+    if (isScatterLikeType(datasetType)) {
       return {
         ...nextDataset,
         borderColor: color,
-        backgroundColor: withOpacity(color, type === "bubble" ? 0.28 : 0.74),
+        backgroundColor: withOpacity(
+          color,
+          datasetType === "bubble"
+            ? appearance.bubbleOpacity ?? 0.36
+            : appearance.scatterOpacity ?? 0.72
+        ),
         hoverBackgroundColor: color,
         hoverBorderColor: color,
-        borderWidth: type === "bubble" ? 1.2 : 1.6,
-        pointRadius: type === "bubble" ? undefined : 4,
-        pointHoverRadius: type === "bubble" ? undefined : 6,
+        borderWidth: datasetType === "bubble" ? 1.1 : 1.2,
+        pointRadius: datasetType === "bubble" ? undefined : 4,
+        pointHoverRadius: datasetType === "bubble" ? undefined : 5.6,
       };
     }
 
-    if (BAR_LIKE_TYPES.has(type)) {
+    if (isBarLikeType(datasetType)) {
       const useSingleTone = datasetCount === 1;
+      const sparseCategories = labelDensity <= 2;
+      const fewCategories = labelDensity <= 4;
+      const horizontalBar = datasetType === "horizontal-bar";
+      const baseColor = useSingleTone ? appearance.primary : color;
+
       return {
         ...nextDataset,
-        backgroundColor: useSingleTone ? withOpacity(appearance.primary, 0.88) : withOpacity(color, 0.86),
-        hoverBackgroundColor: useSingleTone ? appearance.primary : color,
-        borderColor: useSingleTone ? appearance.primary : color,
-        hoverBorderColor: useSingleTone ? appearance.primary : color,
-        borderRadius: clamp(defaultBarRadius, 3, 8),
+        backgroundColor: buildBarBackground(
+          baseColor,
+          appearance,
+          darkMode,
+          horizontalBar ? "horizontal" : appearance.gradientAxis ?? "vertical"
+        ),
+        hoverBackgroundColor: baseColor,
+        borderColor: shadeColor(baseColor, darkMode ? 0.08 : 0.12),
+        hoverBorderColor: baseColor,
+        borderRadius: clamp(defaultBarRadius, 0, 2),
         borderSkipped: false,
-        borderWidth: 1,
-        categoryPercentage: datasetCount > 4 ? 0.64 : 0.72,
-        barPercentage: type === "stacked-bar" ? 0.96 : 0.82,
-        maxBarThickness: type === "horizontal-bar" ? 20 : 28,
+        borderWidth: 1.05,
+        categoryPercentage: datasetType === "stacked-bar"
+          ? (sparseCategories ? 0.74 : fewCategories ? 0.8 : 0.88)
+          : sparseCategories
+            ? 0.72
+            : fewCategories
+              ? 0.78
+              : datasetCount > 4
+                ? 0.84
+                : 0.86,
+        barPercentage: datasetType === "stacked-bar"
+          ? 0.98
+          : sparseCategories
+            ? 0.9
+            : datasetCount > 3
+              ? 0.86
+              : 0.88,
+        maxBarThickness: horizontalBar
+          ? (sparseCategories ? 38 : fewCategories ? 34 : 30)
+          : (sparseCategories ? 54 : fewCategories ? 46 : 36),
+        minBarLength: 2,
+        inflateAmount: 0.32,
       };
     }
 
     return {
       ...nextDataset,
       borderColor: color,
-      backgroundColor: withOpacity(color, 0.82),
+      backgroundColor: withOpacity(color, appearance.barOpacity ?? 0.78),
       hoverBackgroundColor: color,
       hoverBorderColor: color,
     };
@@ -468,7 +714,7 @@ export function createChartPresentationOptions({
       ...(baseOptions.elements ?? {}),
       line: {
         ...(baseOptions.elements?.line ?? {}),
-        tension: type === "step-line" ? 0 : Number(config.settings?.curveTension ?? config.chartSettings?.curveTension ?? 0.34),
+        tension: type === "step-line" ? 0 : Number(config.settings?.curveTension ?? config.chartSettings?.curveTension ?? 0.18),
         capBezierPoints: true,
       },
       point: {
@@ -477,12 +723,12 @@ export function createChartPresentationOptions({
       },
       bar: {
         ...(baseOptions.elements?.bar ?? {}),
-        borderRadius: clamp(Number(config.settings?.borderRadius ?? config.chartSettings?.borderRadius ?? 5), 3, 8),
+        borderRadius: clamp(Number(config.settings?.borderRadius ?? config.chartSettings?.borderRadius ?? 0), 0, 2),
         borderSkipped: false,
       },
       arc: {
         ...(baseOptions.elements?.arc ?? {}),
-        borderWidth: 2,
+        borderWidth: 1.25,
         borderColor: appearance.surface,
         hoverBorderColor: appearance.surface,
       },
@@ -498,7 +744,7 @@ export function createChartPresentationOptions({
           ...(baseOptions.plugins?.legend?.labels ?? {}),
           color: appearance.textSecondary,
           usePointStyle: true,
-          pointStyle: LINE_LIKE_TYPES.has(type) || SCATTER_LIKE_TYPES.has(type) ? "circle" : "rectRounded",
+          pointStyle: LINE_LIKE_TYPES.has(type) || SCATTER_LIKE_TYPES.has(type) ? "circle" : "rect",
           boxWidth: 10,
           boxHeight: 10,
           padding: compact ? 14 : 16,
@@ -529,7 +775,7 @@ export function createChartPresentationOptions({
         },
         displayColors: true,
         boxPadding: 5,
-        cornerRadius: 8,
+        cornerRadius: 6,
         caretPadding: 8,
         titleSpacing: 6,
         bodySpacing: 4,
@@ -577,7 +823,7 @@ export function getChartSurfaceStyle({
     width,
     height,
     minHeight: 0,
-    border: `1px solid ${appearance.shellBorder}`,
+    border: chrome === "minimal" ? "1px solid transparent" : `1px solid ${appearance.shellBorder}`,
     borderRadius: appearance.radius,
     background: appearance.shellBackground,
     boxShadow: appearance.shellShadow,
@@ -598,7 +844,7 @@ export function getChartCanvasShellStyle({
     width: "100%",
     display: "flex",
     flexDirection: "column",
-    gap: 8,
+    gap: 4,
     padding: `${appearance.canvasPaddingTop}px ${appearance.canvasPaddingX}px ${appearance.canvasPaddingBottom}px`,
     background: appearance.canvasBackground,
   };
@@ -624,9 +870,9 @@ export function getChartFallbackNoteStyle({
     display: "inline-flex",
     alignItems: "center",
     alignSelf: "flex-start",
-    minHeight: 24,
+    minHeight: 22,
     maxWidth: "100%",
-    padding: "4px 8px",
+    padding: "3px 8px",
     border: `1px solid ${appearance.noteBorder}`,
     borderRadius: 6,
     background: appearance.noteBackground,
@@ -635,7 +881,7 @@ export function getChartFallbackNoteStyle({
     fontWeight: 600,
     lineHeight: 1.4,
     letterSpacing: "0.01em",
-    boxShadow: `inset 0 1px 0 ${withOpacity(appearance.surface, 0.68)}`,
+    boxShadow: "none",
   };
 }
 
@@ -655,18 +901,18 @@ export function getChartPlaceholderStyles({
       width: "100%",
       display: "grid",
       placeItems: "center",
-      padding: 18,
+      padding: 16,
       background: appearance.emptyBackground,
     },
     card: {
       width: "100%",
-      maxWidth: 420,
+      maxWidth: 380,
       display: "grid",
-      gap: 10,
-      padding: 18,
+      gap: 8,
+      padding: 16,
       border: `1px solid ${withOpacity(resolvedAccent, darkMode ? 0.28 : 0.22)}`,
-      borderRadius: appearance.radius,
-      background: appearance.emptyBackground,
+      borderRadius: Math.max(appearance.radius - 1, 6),
+      background: darkMode ? withOpacity(appearance.surfaceSecondary, 0.92) : appearance.surface,
       boxShadow: appearance.shellShadow,
     },
     eyebrow: {
@@ -676,7 +922,7 @@ export function getChartPlaceholderStyles({
       minHeight: 22,
       padding: "0 8px",
       border: `1px solid ${withOpacity(resolvedAccent, darkMode ? 0.3 : 0.2)}`,
-      borderRadius: 6,
+      borderRadius: 4,
       background: withOpacity(resolvedAccent, darkMode ? 0.12 : 0.08),
       color: resolvedAccent,
       fontSize: 10,
@@ -686,14 +932,14 @@ export function getChartPlaceholderStyles({
     },
     title: {
       color: appearance.textPrimary,
-      fontSize: 14,
+      fontSize: 13,
       lineHeight: 1.35,
     },
     message: {
       margin: 0,
       color: appearance.textSecondary,
-      fontSize: 12,
-      lineHeight: 1.6,
+      fontSize: 11,
+      lineHeight: 1.55,
     },
   };
 }
@@ -713,8 +959,8 @@ export function getChartMetricStyles({
       display: "grid",
       alignContent: "center",
       justifyItems: "start",
-      gap: 10,
-      padding: chrome === "minimal" ? 18 : 22,
+      gap: 8,
+      padding: chrome === "minimal" ? 16 : 18,
       background: appearance.canvasBackground,
     },
     kicker: {
@@ -725,13 +971,13 @@ export function getChartMetricStyles({
       color: appearance.textSecondary,
     },
     value: {
-      fontSize: "clamp(28px, 4vw, 44px)",
-      lineHeight: 0.96,
+      fontSize: "clamp(28px, 4vw, 42px)",
+      lineHeight: 0.94,
       color: appearance.textPrimary,
-      letterSpacing: "-0.03em",
+      letterSpacing: "-0.04em",
     },
     title: {
-      fontSize: 12,
+      fontSize: 11,
       color: appearance.textSecondary,
     },
   };
@@ -749,7 +995,7 @@ export function getChartTableStyles({
     wrapper: {
       height: "100%",
       overflow: "auto",
-      padding: chrome === "minimal" ? 4 : 6,
+      padding: chrome === "minimal" ? 2 : 4,
       background: appearance.canvasBackground,
     },
     table: {
@@ -763,14 +1009,14 @@ export function getChartTableStyles({
       top: 0,
       zIndex: 1,
       textAlign: "left",
-      padding: "10px 12px",
+      padding: "7px 9px",
       borderBottom: `1px solid ${appearance.divider}`,
       background: appearance.surfaceMuted,
       color: appearance.textSecondary,
       fontWeight: 700,
     },
     bodyCell: {
-      padding: "10px 12px",
+      padding: "7px 9px",
       borderBottom: `1px solid ${withOpacity(appearance.divider, 0.88)}`,
       color: appearance.textPrimary,
       background: "transparent",

@@ -4,6 +4,7 @@ import {
   BarElement,
   CategoryScale,
   Chart as ChartJS,
+  Decimation,
   Filler,
   Legend,
   LineElement,
@@ -27,8 +28,6 @@ import { normalizeChartConfig } from "../../utils/normalizeChartConfig";
 import { runQuery } from "../../utils/queryEngine";
 import { normalizePreviewChartType } from "../../utils/builderChartUtils";
 import {
-  createChartPresentationOptions,
-  formatChartNumber,
   getChartCanvasShellStyle,
   getChartFallbackNoteStyle,
   getChartMetricStyles,
@@ -36,22 +35,27 @@ import {
   getChartPlotAreaStyle,
   getChartSurfaceStyle,
   getChartTableStyles,
-  styleChartJsData,
 } from "../../utils/chartTheme";
 import {
+  buildChartJsRuntime,
+  CHART_JS_SYSTEM_PLUGINS,
+  formatChartDisplayValue,
+} from "../../utils/chartJsRuntime";
+import {
   buildChartJsData,
-  buildChartJsOptions,
   getChartJsSupport,
   normalizeChartType,
 } from "../../utils/chartjsAdapter";
 import { buildChartDrilldown, canChartDrilldown } from "../../utils/chartUtils";
 import ChartErrorBoundary from "./ChartErrorBoundary";
 import ChartSkeleton from "./ChartSkeleton";
+import { useStore } from "../../store/useStore";
 
 ChartJS.register(
   ArcElement,
   BarElement,
   CategoryScale,
+  Decimation,
   Filler,
   Legend,
   LineElement,
@@ -59,7 +63,8 @@ ChartJS.register(
   PointElement,
   RadialLinearScale,
   Title,
-  Tooltip
+  Tooltip,
+  ...CHART_JS_SYSTEM_PLUGINS
 );
 
 const CHART_COMPONENTS = {
@@ -101,9 +106,20 @@ function formatChartTypeLabel(value) {
     .trim();
 }
 
-function readDarkMode() {
-  if (typeof document === "undefined") return false;
-  return document.body.classList.contains("dark");
+function formatValueWithRuntime(value, runtimeMeta, normalizedChart, locale) {
+  if (typeof runtimeMeta?.formatValue === "function") {
+    return runtimeMeta.formatValue(value, {
+      valueFormat: normalizedChart.labels?.valueFormat ?? "default",
+      compact: false,
+    });
+  }
+
+  return formatChartDisplayValue(value, {
+    locale: locale ?? normalizedChart.locale ?? "th",
+    localeOptions: normalizedChart.localeOptions ?? {},
+    valueFormat: normalizedChart.labels?.valueFormat ?? "default",
+    compact: false,
+  });
 }
 
 function PlaceholderCard({
@@ -128,9 +144,7 @@ function PlaceholderCard({
       <div style={styles.card}>
         <span style={styles.eyebrow}>Chart state</span>
         <strong style={styles.title}>{title}</strong>
-        <p style={styles.message}>
-          {message}
-        </p>
+        <p style={styles.message}>{message}</p>
       </div>
     </div>
   );
@@ -154,12 +168,8 @@ function MetricCard({
 
   return (
     <div style={styles.wrapper}>
-      <span style={styles.kicker}>
-        {subtitle || "Metric"}
-      </span>
-      <strong style={styles.value}>
-        {value}
-      </strong>
+      <span style={styles.kicker}>{subtitle || "Metric"}</span>
+      <strong style={styles.value}>{value}</strong>
       <span style={styles.title}>{title}</span>
     </div>
   );
@@ -186,10 +196,7 @@ function TablePreview({
         <thead>
           <tr>
             {columns.map((column) => (
-              <th
-                key={column}
-                style={styles.headerCell}
-              >
+              <th key={column} style={styles.headerCell}>
                 {column}
               </th>
             ))}
@@ -199,10 +206,7 @@ function TablePreview({
           {rows.map((row, rowIndex) => (
             <tr key={rowIndex}>
               {columns.map((column) => (
-                <td
-                  key={`${rowIndex}-${column}`}
-                  style={styles.bodyCell}
-                >
+                <td key={`${rowIndex}-${column}`} style={styles.bodyCell}>
                   {String(row?.[column] ?? "-")}
                 </td>
               ))}
@@ -231,7 +235,19 @@ const ChartJsRenderer = memo(function ChartJsRenderer({
   onDataReady,
   mode = "dashboard",
   chrome = "default",
+  themeMode,
 }) {
+  const appTheme = useStore((state) => state.theme);
+  const appLocale = useStore((state) => state.locale);
+  const resolvedThemeMode = themeMode ?? appTheme;
+  const isDarkMode = resolvedThemeMode === "dark";
+  const chartRef = useRef(null);
+  const wrapperRef = useRef(null);
+  const lastDataKeyRef = useRef("");
+  const [runtimeRows, setRuntimeRows] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [renderError, setRenderError] = useState("");
+
   const normalizedChart = useMemo(
     () => normalizeChartConfig(config ?? chart ?? { chartType: type ?? "bar" }),
     [chart, config, type]
@@ -240,14 +256,6 @@ const ChartJsRenderer = memo(function ChartJsRenderer({
     () => normalizeChartType(normalizedChart.type ?? normalizedChart.chartType ?? type ?? "bar", normalizedChart),
     [normalizedChart, type]
   );
-  const [runtimeRows, setRuntimeRows] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [renderError, setRenderError] = useState("");
-  const [isDarkMode, setIsDarkMode] = useState(readDarkMode);
-  const chartRef = useRef(null);
-  const wrapperRef = useRef(null);
-  const lastDataKeyRef = useRef("");
-
   const externalRows = useMemo(
     () => getChartRows(normalizedChart, Array.isArray(rows) ? rows : propData),
     [normalizedChart, propData, rows]
@@ -265,14 +273,8 @@ const ChartJsRenderer = memo(function ChartJsRenderer({
   });
 
   useEffect(() => {
-    if (typeof MutationObserver === "undefined" || typeof document === "undefined") return undefined;
-    const observer = new MutationObserver(() => setIsDarkMode(readDarkMode()));
-    observer.observe(document.body, { attributes: true, attributeFilter: ["class"] });
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
     let cancelled = false;
+
     if (externalRows.length || !normalizedChart.dataset) {
       setRuntimeRows((current) => {
         if (externalRows.length) {
@@ -314,7 +316,18 @@ const ChartJsRenderer = memo(function ChartJsRenderer({
     return () => {
       cancelled = true;
     };
-  }, [drilldown?.filters, externalRows, fetchSignature, normalizedChart.dataset, normalizedChart.x, normalizedChart.y, normalizedChart.groupBy, normalizedChart.sizeField, normalizedChart.aggregate, requestedType]);
+  }, [
+    drilldown?.filters,
+    externalRows,
+    fetchSignature,
+    normalizedChart.aggregate,
+    normalizedChart.dataset,
+    normalizedChart.groupBy,
+    normalizedChart.sizeField,
+    normalizedChart.x,
+    normalizedChart.y,
+    requestedType,
+  ]);
 
   const activeRows = externalRows.length ? externalRows : runtimeRows;
   const previewTypeNormalization = useMemo(
@@ -328,62 +341,67 @@ const ChartJsRenderer = memo(function ChartJsRenderer({
     ? previewTypeNormalization.chartType
     : requestedType;
   const support = useMemo(() => getChartJsSupport(effectiveType), [effectiveType]);
+  const rendererColorTheme = theme ?? normalizedChart.colorTheme ?? "default";
+  const locale = appLocale ?? normalizedChart.locale ?? "th";
   const adapterResult = useMemo(
     () =>
       buildChartJsData({
         type: effectiveType,
         rows: activeRows,
         config: normalizedChart,
-        theme: theme ?? normalizedChart.colorTheme ?? "default",
+        theme: rendererColorTheme,
       }),
-    [activeRows, effectiveType, normalizedChart, theme]
+    [activeRows, effectiveType, normalizedChart, rendererColorTheme]
   );
-  const styledChartData = useMemo(
+  const chartRuntime = useMemo(
     () =>
-      adapterResult.data
-        ? styleChartJsData({
-            type: support.mode ?? effectiveType,
-            data: adapterResult.data,
-            config: normalizedChart,
-            darkMode: isDarkMode,
-            mode,
-            chrome,
-          })
-        : adapterResult.data,
-    [adapterResult.data, chrome, effectiveType, isDarkMode, mode, normalizedChart, support.mode]
-  );
-
-  const chartOptions = useMemo(() => {
-    const baseOptions = buildChartJsOptions({
-      type: effectiveType,
-      config: normalizedChart,
-      theme: theme ?? normalizedChart.colorTheme ?? "default",
-      darkMode: isDarkMode,
-    });
-
-    const styledOptions = createChartPresentationOptions({
-      type: support.mode ?? effectiveType,
-      baseOptions,
-      data: styledChartData,
-      config: normalizedChart,
-      darkMode: isDarkMode,
-      mode,
+      buildChartJsRuntime({
+        type: effectiveType,
+        support,
+        adapterResult,
+        config: normalizedChart,
+        theme: rendererColorTheme,
+        darkMode: isDarkMode,
+        locale,
+        mode,
+        chrome,
+      }),
+    [
+      adapterResult,
       chrome,
-    });
+      effectiveType,
+      isDarkMode,
+      locale,
+      mode,
+      normalizedChart,
+      rendererColorTheme,
+      support,
+    ]
+  );
+  const chartData = chartRuntime.data;
+  const chartOptions = useMemo(() => {
+    const runtimeOptions = chartRuntime.options ?? {};
+    const runtimeOnClick = typeof runtimeOptions.onClick === "function" ? runtimeOptions.onClick : null;
+    const configuredOnClick = typeof normalizedChart.interactions?.onClick === "function"
+      ? normalizedChart.interactions.onClick
+      : null;
 
     return {
-      ...baseOptions,
-      ...styledOptions,
-      onClick: (_event, elements) => {
+      ...runtimeOptions,
+      onClick: (event, elements, chartInstance) => {
+        runtimeOnClick?.(event, elements, chartInstance);
+        configuredOnClick?.(event, elements, chartInstance);
+
         if (!elements?.length || !canChartDrilldown(normalizedChart)) return;
         const firstElement = elements[0];
         const payload = adapterResult?.clickTargets?.[firstElement.datasetIndex]?.[firstElement.index] ?? null;
         if (!payload) return;
+
         const nextDrilldown = buildChartDrilldown(normalizedChart, payload);
         if (nextDrilldown) onDrilldown?.(nextDrilldown);
       },
     };
-  }, [adapterResult?.clickTargets, chrome, effectiveType, isDarkMode, mode, normalizedChart, onDrilldown, styledChartData, support.mode, theme]);
+  }, [adapterResult?.clickTargets, chartRuntime.options, normalizedChart, onDrilldown]);
 
   useEffect(() => {
     if (!onDataReady) return;
@@ -409,7 +427,7 @@ const ChartJsRenderer = memo(function ChartJsRenderer({
   const ChartComponent = CHART_COMPONENTS[support.chartJsType];
   const isBuilderPreview = mode === "builder-preview";
   const hasRows = activeRows.length > 0;
-  const rendererColorTheme = theme ?? normalizedChart.colorTheme ?? "default";
+  const runtimeAppearance = chartRuntime.meta?.appearance ?? null;
   const fallbackSourceType = normalizedChart.meta?.previewFallbackSourceChartType
     ?? normalizedChart.chartType
     ?? requestedType;
@@ -502,7 +520,7 @@ const ChartJsRenderer = memo(function ChartJsRenderer({
       <MetricCard
         title={normalizedChart.title || normalizedChart.name || "KPI"}
         subtitle={normalizedChart.subtitle || firstNumericKey || "Value"}
-        value={formatChartNumber(firstRow?.[firstNumericKey])}
+        value={formatValueWithRuntime(firstRow?.[firstNumericKey], chartRuntime.meta, normalizedChart, locale)}
         darkMode={isDarkMode}
         colorTheme={rendererColorTheme}
         chrome={chrome}
@@ -525,7 +543,7 @@ const ChartJsRenderer = memo(function ChartJsRenderer({
     );
   }
 
-  if (!ChartComponent || !adapterResult.data) {
+  if (!ChartComponent || !chartData) {
     return (
       <PlaceholderCard
         title="Chart unavailable"
@@ -575,7 +593,7 @@ const ChartJsRenderer = memo(function ChartJsRenderer({
             </div>
           ) : null}
           <div style={getChartPlotAreaStyle()}>
-            <ChartComponent ref={chartRef} data={styledChartData} options={chartOptions} />
+            <ChartComponent ref={chartRef} data={chartData} options={chartOptions} />
             {support.mode === "gauge" && gaugeMeta ? (
               <div
                 style={{
@@ -586,11 +604,22 @@ const ChartJsRenderer = memo(function ChartJsRenderer({
                   pointerEvents: "none",
                 }}
               >
-                <strong style={{ fontSize: 24, color: "var(--text-primary)", letterSpacing: "-0.03em" }}>
-                  {formatChartNumber(gaugeMeta.value, { compact: false })}
+                <strong
+                  style={{
+                    fontSize: 24,
+                    color: runtimeAppearance?.textPrimary ?? "var(--text-primary)",
+                    letterSpacing: "-0.03em",
+                  }}
+                >
+                  {formatValueWithRuntime(gaugeMeta.value, chartRuntime.meta, normalizedChart, locale)}
                 </strong>
-                <span style={{ fontSize: 11, color: "var(--text-secondary)" }}>
-                  / {formatChartNumber(gaugeMeta.max, { compact: false })}
+                <span
+                  style={{
+                    fontSize: 11,
+                    color: runtimeAppearance?.textSecondary ?? "var(--text-secondary)",
+                  }}
+                >
+                  / {formatValueWithRuntime(gaugeMeta.max, chartRuntime.meta, normalizedChart, locale)}
                 </span>
               </div>
             ) : null}

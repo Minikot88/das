@@ -12,11 +12,16 @@ const SchemaTree = memo(function SchemaTree({
   selectedDb,
   selectedTable,
   getFieldRoleHints,
+  search: controlledSearch,
+  showSearch = true,
+  scrollable = true,
 }) {
   const [openDbs, setOpenDbs] = useState(() => new Set(Object.keys(schema)));
   const [openTables, setOpenTables] = useState(() => new Set());
   const [draggingFieldKey, setDraggingFieldKey] = useState(null);
-  const [search, setSearch] = useState("");
+  const [internalSearch, setInternalSearch] = useState("");
+
+  const search = controlledSearch ?? internalSearch;
 
   const toggle = (set, setFn, key) =>
     setFn((prev) => {
@@ -24,6 +29,12 @@ const SchemaTree = memo(function SchemaTree({
       next.has(key) ? next.delete(key) : next.add(key);
       return next;
     });
+
+  function handleSearchChange(event) {
+    const nextValue = event.target.value;
+    if (controlledSearch !== undefined) return;
+    setInternalSearch(nextValue);
+  }
 
   function handleDragStart(e, db, tbl, field) {
     e.dataTransfer.effectAllowed = "copy";
@@ -45,35 +56,38 @@ const SchemaTree = memo(function SchemaTree({
 
   return (
     <div
-      className="schema-explorer"
+      className={`schema-explorer${scrollable ? "" : " is-scroll-managed"}`}
       style={{
         display: "flex",
         flexDirection: "column",
-        flex: "1 1 auto",
+        flex: scrollable ? "1 1 auto" : "0 0 auto",
         gap: 6,
         minHeight: 0,
-        overflow: "hidden",
+        overflow: scrollable ? "hidden" : "visible",
       }}
     >
-      <label className="builder-schema-search" style={{ gap: 4, marginBottom: 0 }}>
-        <span className="builder-query-label">Explorer</span>
-        <input
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search fields"
-          className="builder-schema-search-input"
-        />
-      </label>
+      {showSearch ? (
+        <label className="builder-schema-search" style={{ gap: 4, marginBottom: 0 }}>
+          <span className="builder-query-label">Explorer</span>
+          <input
+            value={search}
+            onChange={handleSearchChange}
+            placeholder="Search fields"
+            className="builder-schema-search-input"
+          />
+        </label>
+      ) : null}
+
       <div
         className="schema-explorer-list"
         style={{
           display: "grid",
-          flex: "1 1 auto",
+          flex: scrollable ? "1 1 auto" : "0 0 auto",
           minHeight: 0,
-          overflowY: "auto",
+          overflowY: scrollable ? "auto" : "visible",
           overflowX: "hidden",
-          overscrollBehavior: "auto",
-          scrollbarGutter: "stable",
+          overscrollBehavior: scrollable ? "auto" : "contain",
+          scrollbarGutter: scrollable ? "stable" : "auto",
           paddingRight: 2,
           gap: 6,
           alignContent: "start",
@@ -103,7 +117,15 @@ const SchemaTree = memo(function SchemaTree({
                     <span className="schema-table-count">{info.fields?.length ?? 0} fields</span>
                   </div>
                   {isOpen ? (
-                    <div className="schema-table-fields">
+                    <div
+                      className="schema-table-fields"
+                      style={{
+                        minHeight: 0,
+                        maxHeight: scrollable ? "min(44vh, 420px)" : "none",
+                        overflowY: scrollable ? "auto" : "visible",
+                        overflowX: "hidden",
+                      }}
+                    >
                       {info.fields
                         .filter((field) => {
                           if (!query) return true;

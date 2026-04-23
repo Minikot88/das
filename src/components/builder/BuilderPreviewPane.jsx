@@ -1,7 +1,32 @@
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import ChartRenderer from "../charts/ChartRenderer";
 import { getReadableFieldLabel } from "../../utils/builderMappingUtils";
 import BuilderQuerySection from "./BuilderQuerySection";
+
+const QUERY_PANEL_DEFAULT_HEIGHT = 200;
+const QUERY_PANEL_MIN_HEIGHT = 120;
+const QUERY_PANEL_MAX_RATIO = 0.45;
+const PREVIEW_PANEL_MIN_HEIGHT = 220;
+const QUERY_PANEL_HEIGHT_STORAGE_KEY = "builder-query-panel-height";
+
+function clampQueryPanelHeight(value, maxHeight) {
+  return Math.min(Math.max(value, QUERY_PANEL_MIN_HEIGHT), Math.max(QUERY_PANEL_MIN_HEIGHT, maxHeight));
+}
+
+function getQueryPanelMaxHeight(panelElement, metaElement) {
+  if (!panelElement) return QUERY_PANEL_DEFAULT_HEIGHT;
+  const panelRect = panelElement.getBoundingClientRect();
+  const metaHeight = metaElement?.getBoundingClientRect().height ?? 0;
+  const availableHeight = Math.max(
+    QUERY_PANEL_MIN_HEIGHT,
+    panelRect.height - metaHeight - PREVIEW_PANEL_MIN_HEIGHT - 24
+  );
+
+  return Math.max(
+    QUERY_PANEL_MIN_HEIGHT,
+    Math.floor(Math.min(availableHeight, panelRect.height * QUERY_PANEL_MAX_RATIO))
+  );
+}
 
 function MappingRoleChip({ role }) {
   const fields = role.fields ?? [];
@@ -27,9 +52,9 @@ function MappingRoleChip({ role }) {
         display: "grid",
         gap: 4,
         minWidth: 0,
-        minHeight: 58,
+        minHeight: 50,
         alignContent: "start",
-        padding: "8px 9px",
+        padding: "7px 8px",
         border: `1px solid ${border}`,
         borderRadius: 5,
         background,
@@ -84,6 +109,11 @@ export default function BuilderPreviewPane({
   completedRequiredRoleCount,
   requiredRoleCount,
 }) {
+  const [queryPanelHeight, setQueryPanelHeight] = useState(QUERY_PANEL_DEFAULT_HEIGHT);
+  const [isQueryResizing, setIsQueryResizing] = useState(false);
+  const previewPanelRef = useRef(null);
+  const previewMetaRef = useRef(null);
+  const queryResizeStateRef = useRef(null);
   const blockerCount = validationSummary?.blockers?.length ?? 0;
   const hasPreviewData = Array.isArray(previewData) && previewData.length > 0;
   const previewRowCount = Array.isArray(previewData) ? previewData.length : 0;
@@ -92,7 +122,6 @@ export default function BuilderPreviewPane({
   const previewHint = previewState?.hint ?? "";
   const isPreviewLoading = previewStatusState === "loading";
   const isPreviewSuccess = previewStatusState === "success";
-  const hasPreviewError = ["invalid_config", "render_error"].includes(previewStatusState) && Boolean(previewError);
   const previewKey = previewChart?.config
     ? JSON.stringify({
         chartType: previewChart.config.chartType,
@@ -119,6 +148,7 @@ export default function BuilderPreviewPane({
   const requiredRoles = (roleAssignments ?? []).filter((role) => role.required);
   const optionalRoles = (roleAssignments ?? []).filter((role) => !role.required && role.fields?.length);
   const isPreviewRenderable = previewStatusState === "success" && hasPreviewData;
+  const hasRenderableChart = Boolean(previewChart) && isPreviewRenderable;
   const mappingHeadline = blockerCount
     ? validationSummary?.blockers?.[0]?.title ?? "Mapping required"
     : requiredRoleCount
@@ -134,6 +164,103 @@ export default function BuilderPreviewPane({
   const previewCanvasBackground =
     "linear-gradient(180deg, color-mix(in srgb, var(--surface) 98%, transparent) 0%, color-mix(in srgb, var(--surface-secondary) 94%, transparent) 100%)";
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const savedHeight = Number(window.localStorage.getItem(QUERY_PANEL_HEIGHT_STORAGE_KEY));
+    if (Number.isFinite(savedHeight)) {
+      setQueryPanelHeight(savedHeight);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(QUERY_PANEL_HEIGHT_STORAGE_KEY, String(queryPanelHeight));
+  }, [queryPanelHeight]);
+
+  useEffect(() => {
+    const previewPanelElement = previewPanelRef.current;
+    if (!previewPanelElement || typeof ResizeObserver === "undefined") return undefined;
+
+    function clampToAvailableSpace() {
+      const maxHeight = getQueryPanelMaxHeight(previewPanelElement, previewMetaRef.current);
+      setQueryPanelHeight((current) => clampQueryPanelHeight(current, maxHeight));
+    }
+
+    const resizeObserver = new ResizeObserver(() => {
+      clampToAvailableSpace();
+    });
+
+    resizeObserver.observe(previewPanelElement);
+    clampToAvailableSpace();
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isQueryResizing) return undefined;
+
+    function handlePointerMove(event) {
+      const resizeState = queryResizeStateRef.current;
+      const previewPanelElement = previewPanelRef.current;
+      if (!resizeState || !previewPanelElement) return;
+
+      const maxHeight = getQueryPanelMaxHeight(previewPanelElement, previewMetaRef.current);
+      const nextHeight = clampQueryPanelHeight(
+        resizeState.startHeight - (event.clientY - resizeState.startY),
+        maxHeight
+      );
+      setQueryPanelHeight(nextHeight);
+    }
+
+    function stopResize() {
+      queryResizeStateRef.current = null;
+      setIsQueryResizing(false);
+      document.body.classList.remove("builder-resize-active");
+    }
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", stopResize);
+    window.addEventListener("pointercancel", stopResize);
+
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", stopResize);
+      window.removeEventListener("pointercancel", stopResize);
+    };
+  }, [isQueryResizing]);
+
+  function beginQueryResize(event) {
+    if (event.button !== 0) return;
+    event.preventDefault();
+
+    queryResizeStateRef.current = {
+      startY: event.clientY,
+      startHeight: queryPanelHeight,
+    };
+    setIsQueryResizing(true);
+    document.body.classList.add("builder-resize-active");
+  }
+
+  function handleQueryResizeKeyboard(event) {
+    const previewPanelElement = previewPanelRef.current;
+    if (!previewPanelElement) return;
+
+    const maxHeight = getQueryPanelMaxHeight(previewPanelElement, previewMetaRef.current);
+    const step = event.shiftKey ? 20 : 12;
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setQueryPanelHeight((current) => clampQueryPanelHeight(current + step, maxHeight));
+    }
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setQueryPanelHeight((current) => clampQueryPanelHeight(current - step, maxHeight));
+    }
+  }
+
   return (
     <main
       className="builder-pane-shell builder-pane-shell-center"
@@ -147,7 +274,8 @@ export default function BuilderPreviewPane({
       }}
     >
       <section
-        className="builder-preview-panel builder-preview-panel-compact"
+        ref={previewPanelRef}
+        className={`builder-preview-panel builder-preview-panel-compact${hasRenderableChart ? " is-chart-ready" : " is-chart-empty"}`}
         style={{
           flex: "1 1 auto",
           minHeight: 0,
@@ -155,10 +283,10 @@ export default function BuilderPreviewPane({
           overflow: "hidden",
           display: "flex",
           flexDirection: "column",
-          gap: 10,
+          gap: 8,
         }}
       >
-        <div style={{ display: "grid", gap: 8, flexShrink: 0 }}>
+        <div ref={previewMetaRef} className="builder-preview-meta-block" style={{ display: "grid", gap: 8, flexShrink: 0 }}>
           <div
             className="builder-pane-header builder-pane-header-compact"
             style={{
@@ -185,15 +313,15 @@ export default function BuilderPreviewPane({
               gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
             }}
           >
-            <div style={{ padding: 8 }}>
+            <div style={{ padding: 7 }}>
               <span className="builder-query-label">Chart</span>
               <strong>{activeChartLabel ?? "Chart"}</strong>
             </div>
-            <div style={{ padding: 8 }}>
+            <div style={{ padding: 7 }}>
               <span className="builder-query-label">Metric</span>
               <strong>{aggregation || "sum"}</strong>
             </div>
-            <div style={{ padding: 8 }}>
+            <div style={{ padding: 7 }}>
               <span className="builder-query-label">Source</span>
               <strong>{selectedTable ?? "No table"}</strong>
             </div>
@@ -204,7 +332,7 @@ export default function BuilderPreviewPane({
             style={{
               display: "grid",
               gap: 6,
-              padding: 8,
+              padding: 7,
               border: "1px solid var(--border)",
               borderRadius: 5,
               background: "var(--surface)",
@@ -280,8 +408,12 @@ export default function BuilderPreviewPane({
           </section>
         </div>
 
-        <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+        <div
+          className={`builder-preview-content-slot${hasRenderableChart ? " is-chart-ready" : " is-chart-empty"}`}
+          style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
+        >
           <div
+            className={`builder-preview-chart-slot${hasRenderableChart ? " is-chart-ready" : " is-chart-empty"}`}
             style={{
               flex: 1,
               minHeight: 0,
@@ -290,7 +422,7 @@ export default function BuilderPreviewPane({
           >
             {previewStatusState === "unsupported_chart" || previewSupported === false ? (
               <div
-                className="builder-preview-stage"
+                className="builder-preview-stage is-empty-stage"
                 style={{
                   width: "100%",
                   minHeight: 0,
@@ -306,14 +438,14 @@ export default function BuilderPreviewPane({
               </div>
             ) : previewChart ? (
               <div
-                className="builder-preview-stage builder-canvas-stage"
+                className={`builder-preview-stage builder-canvas-stage${hasRenderableChart ? " is-chart-stage" : " is-empty-stage"}`}
                 style={{
                   width: "100%",
                   minHeight: 0,
                   display: "grid",
                   gridTemplateRows: "auto minmax(0, 1fr)",
-                  gap: 10,
-                  padding: 10,
+                  gap: 8,
+                  padding: 8,
                   background: previewStageBackground,
                 }}
               >
@@ -386,7 +518,7 @@ export default function BuilderPreviewPane({
               </div>
             ) : (
               <div
-                className="builder-preview-stage"
+                className="builder-preview-stage is-empty-stage"
                 style={{
                   width: "100%",
                   maxWidth: "100%",
@@ -405,7 +537,31 @@ export default function BuilderPreviewPane({
           </div>
         </div>
 
-        <div style={{ flexShrink: 0 }}>
+        <div
+          className={`builder-preview-resizer${isQueryResizing ? " is-active" : ""}`}
+          role="separator"
+          aria-label="Resize query panel"
+          aria-orientation="horizontal"
+          aria-valuemin={QUERY_PANEL_MIN_HEIGHT}
+          aria-valuemax={getQueryPanelMaxHeight(previewPanelRef.current, previewMetaRef.current)}
+          aria-valuenow={queryPanelHeight}
+          tabIndex={0}
+          onPointerDown={beginQueryResize}
+          onKeyDown={handleQueryResizeKeyboard}
+          onDoubleClick={() => setQueryPanelHeight(QUERY_PANEL_DEFAULT_HEIGHT)}
+        >
+          <span className="builder-preview-resizer__grip" />
+        </div>
+
+        <div
+          className="builder-preview-query-slot is-resizable"
+          style={{
+            flexShrink: 0,
+            height: queryPanelHeight,
+            minHeight: QUERY_PANEL_MIN_HEIGHT,
+            maxHeight: getQueryPanelMaxHeight(previewPanelRef.current, previewMetaRef.current),
+          }}
+        >
           <BuilderQuerySection
             chartDefinition={chartDefinition}
             selectedTable={selectedTable}

@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { MainLayout } from "@/components/layout/Layout";
 import BuilderPage from "@/pages/Builder.jsx";
 import DashboardPage from "@/pages/DashboardPage.jsx";
+import DashboardPublicPage from "@/pages/DashboardPublicPage.jsx";
 import HomePage from "@/pages/HomePage.jsx";
 import LoginPage from "@/pages/LoginPage";
 import RegisterPage from "@/pages/RegisterPage";
@@ -14,6 +15,8 @@ export default function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/share/:sheetId" element={<SharePage />} />
+      <Route path="/dashboard/:dashboardId/view" element={<DashboardPublicPage />} />
+      <Route path="/dashboard/:dashboardId/embed" element={<DashboardPublicPage />} />
 
       <Route element={<MainLayout />}>
         <Route index element={<HomePage />} />

@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React, { useState } from "react";
 import SchemaTree from "./SchemaTree";
 import BuilderSourceSummary from "./BuilderSourceSummary";
 
@@ -30,7 +30,13 @@ function SqlResultFieldList({ selectedDb, selectedTable, fields = [], onFieldAss
   }
 
   return (
-    <div className="builder-sql-field-list" style={{ gap: 5 }}>
+    <div
+      className="builder-sql-field-list builder-sql-field-list-scroll"
+      style={{
+        gap: 5,
+        alignContent: "start",
+      }}
+    >
       {fields.map((field) => {
         const roleHints = getFieldRoleHints?.({
           id: `${selectedDb}.${selectedTable}.${field.name}`,
@@ -92,6 +98,7 @@ export default function BuilderDataPane({
   lastMappingNotice,
   getFieldRoleHints,
 }) {
+  const [search, setSearch] = useState("");
   const requiredRoles = (roleAssignments ?? []).filter((role) => role.required);
   const completedRoles = requiredRoles.filter((role) => role.state.status === "valid").length;
   const explorerLabel = queryMode === "sql" ? "Query Result" : "Explorer";
@@ -102,8 +109,9 @@ export default function BuilderDataPane({
     const start = event.target instanceof HTMLElement ? event.target : null;
     const directScrollable = start ? findScrollableElement(start, root) : null;
     const fallbackScrollable =
-      root.querySelector(".schema-table-fields") ??
+      root.querySelector(".builder-data-pane__list-scroll") ??
       root.querySelector(".schema-explorer-list") ??
+      root.querySelector(".schema-table-fields") ??
       root.querySelector(".builder-sql-field-list");
     const scroller = directScrollable ?? fallbackScrollable;
     if (!(scroller instanceof HTMLElement)) return;
@@ -120,31 +128,39 @@ export default function BuilderDataPane({
     <aside
       className="builder-pane-shell builder-pane-shell-left"
       style={{
+        display: "flex",
+        flexDirection: "column",
         flex: "1 1 auto",
         minHeight: 0,
         height: "100%",
         overflow: "hidden",
-        display: "flex",
-        flexDirection: "column",
       }}
     >
       <div
         className="builder-pane-frame builder-pane-frame-left"
-        style={{ flex: "1 1 auto", minHeight: 0, height: "100%", overflow: "hidden", gap: 6 }}
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          flex: "1 1 auto",
+          minHeight: 0,
+          height: "100%",
+          overflow: "hidden",
+          gap: 6,
+        }}
       >
         <div
           className="builder-data-pane"
           style={{
+            display: "flex",
+            flexDirection: "column",
             flex: "1 1 auto",
             minHeight: 0,
             height: "100%",
             overflow: "hidden",
-            display: "flex",
-            flexDirection: "column",
             gap: 6,
           }}
         >
-          <div className="builder-data-pane__header">
+          <div className="builder-data-pane__header builder-data-pane__header-shell">
             <div className="builder-pane-header" style={{ paddingBottom: 6 }}>
               <div className="builder-pane-header-copy" style={{ gap: 8, flexWrap: "wrap" }}>
                 <h2 className="builder-pane-title">Data Source</h2>
@@ -178,18 +194,30 @@ export default function BuilderDataPane({
               </span>
             </div>
 
-            <div
-              className="builder-left-section-label"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                paddingInline: 2,
-                marginTop: 2,
-              }}
-            >
-              <span>{explorerLabel}</span>
-              <span>{explorerCount}</span>
+            <div className="builder-data-pane__utility-row">
+              <div
+                className="builder-left-section-label builder-left-section-label-pill"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  paddingInline: 2,
+                  marginTop: 2,
+                }}
+              >
+                <span>{explorerLabel}</span>
+                <span>{explorerCount}</span>
+              </div>
+
+              <label className="builder-schema-search builder-data-pane__search" style={{ gap: 4, marginBottom: 0 }}>
+                <span className="builder-query-label">Search</span>
+                <input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search fields"
+                  className="builder-schema-search-input"
+                />
+              </label>
             </div>
           </div>
 
@@ -197,6 +225,8 @@ export default function BuilderDataPane({
             className="builder-data-pane__body builder-pane-body builder-pane-body-scroll"
             onWheelCapture={handleBodyWheel}
             style={{
+              display: "flex",
+              flexDirection: "column",
               flex: 1,
               minHeight: 0,
               height: 0,
@@ -204,26 +234,42 @@ export default function BuilderDataPane({
               paddingRight: 2,
               borderTop: "1px solid var(--divider)",
               paddingTop: 6,
-              display: "flex",
-              flexDirection: "column",
               gap: 8,
             }}
           >
-            {queryMode === "sql" && queryResult?.fieldMeta?.length ? (
-              <SqlResultFieldList
+            <div
+              className="builder-data-pane__list-scroll"
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                flex: 1,
+                minHeight: 0,
+                overflowY: "auto",
+                overflowX: "hidden",
+                scrollbarGutter: "stable",
+                paddingRight: 2,
+                gap: 8,
+              }}
+            >
+              {queryMode === "sql" && queryResult?.fieldMeta?.length ? (
+                <SqlResultFieldList
+                  selectedDb={selectedDb}
+                  selectedTable={selectedTable}
+                  fields={queryResult.fieldMeta}
+                  onFieldAssign={onFieldAssign}
+                  getFieldRoleHints={getFieldRoleHints}
+                />
+              ) : null}
+              <SchemaTree
+                onFieldAssign={onFieldAssign}
                 selectedDb={selectedDb}
                 selectedTable={selectedTable}
-                fields={queryResult.fieldMeta}
-                onFieldAssign={onFieldAssign}
                 getFieldRoleHints={getFieldRoleHints}
+                search={search}
+                showSearch={false}
+                scrollable={false}
               />
-            ) : null}
-            <SchemaTree
-              onFieldAssign={onFieldAssign}
-              selectedDb={selectedDb}
-              selectedTable={selectedTable}
-              getFieldRoleHints={getFieldRoleHints}
-            />
+            </div>
           </div>
         </div>
       </div>

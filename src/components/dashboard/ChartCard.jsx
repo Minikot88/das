@@ -1,15 +1,7 @@
 ﻿import React, { memo, useCallback, useEffect, useRef, useState } from "react";
 import ChartRenderer from "../charts/ChartRenderer";
 import ChartSkeleton from "../charts/ChartSkeleton";
-
-const THEME_ACCENTS = {
-  default: "#1677ff",
-  vibrant: "#ff4d4f",
-  pastel: "#aec6cf",
-  dark: "#4fc3f7",
-  ocean: "#0a9396",
-  warm: "#e63946",
-};
+import { getChartPalette } from "../../utils/chartPalette";
 
 const ChartCard = memo(function ChartCard({
   chart,
@@ -20,6 +12,7 @@ const ChartCard = memo(function ChartCard({
   onDrilldown,
   isFullscreen = false,
   onToggleFullscreen,
+  themeMode,
 }) {
   const [loaded, setLoaded] = useState(false);
   const lastRowsKeyRef = useRef("");
@@ -65,7 +58,7 @@ const ChartCard = memo(function ChartCard({
     };
   }, [pixelHeight]);
 
-  const accent = THEME_ACCENTS[chart.colorTheme] ?? THEME_ACCENTS.default;
+  const accent = getChartPalette(chart.colorTheme).single;
   const contentHeight = Math.max(180, bodyHeight || (pixelHeight - 42));
 
   const handleDataReady = useCallback((rows) => {
@@ -113,6 +106,7 @@ const ChartCard = memo(function ChartCard({
             onDrilldown={onDrilldown}
             onDataReady={handleDataReady}
             chrome="minimal"
+            themeMode={themeMode}
           />
         )}
       </div>

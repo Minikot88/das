@@ -1666,6 +1666,414 @@
   }
 }
 
+.dashboard-canvas-grid.is-readonly .react-resizable-handle,
+.dashboard-canvas-grid.is-export-surface .react-resizable-handle {
+  display: none !important;
+}
+
+.dashboard-export-stage {
+  position: fixed;
+  left: -200vw;
+  top: 0;
+  width: min(1280px, calc(100vw - 48px));
+  pointer-events: none;
+  opacity: 1;
+  z-index: -1;
+}
+
+.dashboard-export-surface {
+  display: grid;
+  gap: 18px;
+  padding: 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  box-shadow: var(--shadow-lg);
+}
+
+.dashboard-export-surface-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.dashboard-export-surface-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.dashboard-export-surface-copy strong {
+  font-size: 24px;
+  letter-spacing: -0.04em;
+  color: var(--text-primary);
+}
+
+.dashboard-export-surface-kicker {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.dashboard-export-surface-badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.dashboard-export-surface-badges span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.dashboard-export-surface-body {
+  min-width: 0;
+}
+
+.dashboard-share-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.42);
+  backdrop-filter: blur(10px);
+  z-index: 60;
+}
+
+.dashboard-share-modal {
+  width: min(860px, calc(100vw - 32px));
+  max-height: min(88vh, 900px);
+  overflow: auto;
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.dashboard-share-modal-head,
+.dashboard-share-tabs,
+.dashboard-share-action-row,
+.dashboard-share-toggle,
+.dashboard-share-toggle-grid {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dashboard-share-modal-copy,
+.dashboard-share-panel,
+.dashboard-share-panel-copy,
+.dashboard-share-field,
+.dashboard-share-toggle-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.dashboard-share-modal-head {
+  align-items: flex-start;
+}
+
+.dashboard-share-kicker {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.dashboard-share-title {
+  font-size: 30px;
+  line-height: 0.98;
+  letter-spacing: -0.05em;
+  color: var(--text-primary);
+}
+
+.dashboard-share-description,
+.dashboard-share-panel-copy p,
+.dashboard-share-toggle-copy small {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.dashboard-share-close,
+.dashboard-share-tab,
+.dashboard-share-input,
+.dashboard-share-textarea {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text-primary);
+}
+
+.dashboard-share-close,
+.dashboard-share-tab {
+  min-height: 38px;
+  padding: 0 14px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.dashboard-share-tab.is-active {
+  border-color: color-mix(in srgb, var(--primary) 28%, transparent);
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.dashboard-share-feedback {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+  border-radius: 12px;
+  background: var(--success-soft);
+  color: var(--success);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.dashboard-share-body {
+  display: grid;
+  gap: 16px;
+}
+
+.dashboard-share-panel {
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface-muted);
+}
+
+.dashboard-share-panel-copy strong,
+.dashboard-share-field span {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.dashboard-share-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.dashboard-share-field {
+  min-width: 0;
+}
+
+.dashboard-share-input {
+  min-height: 40px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+.dashboard-share-textarea {
+  min-height: 94px;
+  padding: 12px;
+  resize: vertical;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.dashboard-share-textarea.is-code {
+  min-height: 128px;
+  font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+}
+
+.dashboard-share-toggle-grid {
+  flex-wrap: wrap;
+}
+
+.dashboard-share-toggle {
+  flex: 1 1 240px;
+  align-items: flex-start;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.dashboard-share-toggle input {
+  margin-top: 3px;
+}
+
+.dashboard-public-page {
+  min-height: 100dvh;
+  padding: 24px;
+  background: linear-gradient(180deg, var(--app-bg) 0%, color-mix(in srgb, var(--surface) 96%, var(--primary) 4%) 100%);
+}
+
+.dashboard-public-page.is-embed {
+  padding: 0;
+  background: transparent;
+}
+
+.dashboard-public-header {
+  width: min(1400px, calc(100vw - 48px));
+  margin: 0 auto 20px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  padding: 22px 24px;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--surface) 94%, var(--primary) 6%);
+  box-shadow: var(--shadow-sm);
+}
+
+.dashboard-public-header-copy,
+.dashboard-public-stats,
+.dashboard-public-breadcrumb,
+.dashboard-public-shell {
+  display: flex;
+  gap: 12px;
+}
+
+.dashboard-public-header-copy {
+  min-width: 0;
+  flex-direction: column;
+}
+
+.dashboard-public-kicker {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.dashboard-public-title {
+  font-size: clamp(28px, 5vw, 42px);
+  line-height: 0.96;
+  letter-spacing: -0.05em;
+  color: var(--text-primary);
+}
+
+.dashboard-public-breadcrumb {
+  flex-wrap: wrap;
+  align-items: center;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.dashboard-public-stats {
+  align-items: stretch;
+  flex-wrap: wrap;
+}
+
+.dashboard-public-stat {
+  min-width: 104px;
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.dashboard-public-stat span {
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.dashboard-public-stat strong {
+  color: var(--text-primary);
+  font-size: 18px;
+}
+
+.dashboard-public-shell {
+  width: min(1400px, calc(100vw - 48px));
+  margin: 0 auto;
+  flex-direction: column;
+}
+
+.dashboard-public-page.is-embed .dashboard-public-shell {
+  width: 100%;
+}
+
+.dashboard-public-frame {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.dashboard-public-page.is-embed .dashboard-public-frame {
+  padding: 16px;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.dashboard-public-page .dashboard-canvas-grid {
+  min-height: 360px;
+}
+
+@media (max-width: 960px) {
+  .dashboard-share-form-grid,
+  .dashboard-public-header {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-share-modal {
+    padding: 16px;
+  }
+
+  .dashboard-public-page {
+    padding: 16px;
+  }
+
+  .dashboard-public-shell,
+  .dashboard-public-header {
+    width: min(1400px, calc(100vw - 32px));
+  }
+}
+
+@media (max-width: 640px) {
+  .dashboard-share-modal-backdrop {
+    padding: 12px;
+  }
+
+  .dashboard-share-tabs,
+  .dashboard-share-action-row,
+  .dashboard-share-toggle-grid {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .dashboard-public-page {
+    padding: 12px;
+  }
+
+  .dashboard-public-shell,
+  .dashboard-public-header {
+    width: min(1400px, calc(100vw - 24px));
+  }
+}
+
 body.dark .dashboard-workspace-page,
 body.dark .dashboard-workspace-canvas {
   background: var(--bg-body);

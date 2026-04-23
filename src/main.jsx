@@ -3,6 +3,8 @@ import { createRoot } from "react-dom/client";
 import App from "./App.jsx";
 import "./styles.css";
 import "./styles/workspacePolish.css";
+import "./styles/homeWorkspaceCompact.css";
+import "./styles/workspaceSidebarRefresh.css";
 import "./styles/builderDocs.css";
 
 createRoot(document.getElementById("root")).render(

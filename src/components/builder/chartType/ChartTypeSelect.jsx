@@ -7,6 +7,7 @@ export default function ChartTypeSelect({
   selectedFamily,
   selectedFamilyMeta,
   selectedCategory,
+  showDescriptions = false,
   onFamilyChange,
 }) {
   const [open, setOpen] = useState(false);
@@ -42,6 +43,7 @@ export default function ChartTypeSelect({
           families={families}
           selectedFamily={selectedFamily}
           selectedCategory={selectedCategory}
+          showDescriptions={showDescriptions}
           onFamilySelect={(familyId) => {
             onFamilyChange(familyId);
             setOpen(false);

@@ -29,12 +29,11 @@ export default function BuilderQuerySection({
   };
 
   return (
-    <details className="builder-query-panel" open={isSqlMode} style={{ gap: 6 }}>
-      <summary
+    <section className="builder-query-panel" style={{ gap: 6 }} aria-label="Query panel">
+      <div
         className="builder-query-header"
         style={{
           listStyle: "none",
-          cursor: "pointer",
         }}
       >
         <div className="builder-query-header-copy">
@@ -45,7 +44,7 @@ export default function BuilderQuerySection({
           <span className={`builder-query-status${hasSql ? " ready" : ""}`}>{rowCount} rows</span>
           <span className="builder-query-sql-badge">{hasSql ? `${sql.split("\n").length} lines` : "Waiting"}</span>
         </div>
-      </summary>
+      </div>
 
       <div className="builder-query-summary">
         <div className="builder-query-row builder-query-row-compact">
@@ -84,6 +83,6 @@ export default function BuilderQuerySection({
           )}
         </div>
       </div>
-    </details>
+    </section>
   );
 }

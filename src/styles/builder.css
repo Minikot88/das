@@ -2404,3 +2404,204 @@ body.dark .builder-top-action-bar {
   display: flex !important;
   flex-direction: column !important;
 }
+
+.builder-theme-picker {
+  display: grid;
+  gap: 10px;
+}
+
+.builder-theme-picker-toolbar {
+  display: grid;
+  gap: 8px;
+}
+
+.builder-theme-picker-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.builder-theme-picker-copy strong {
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.builder-theme-picker-copy p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.builder-theme-search-field {
+  display: grid;
+  gap: 6px;
+}
+
+.builder-theme-selected-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface-secondary) 84%, transparent);
+}
+
+.builder-theme-group-stack {
+  display: grid;
+  gap: 10px;
+}
+
+.builder-theme-group {
+  display: grid;
+  gap: 8px;
+}
+
+.builder-theme-group-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.builder-theme-group-head strong {
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.builder-theme-group-head p {
+  margin: 2px 0 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.builder-theme-group-head span {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.builder-theme-option-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.builder-theme-option {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 140ms ease, background-color 140ms ease, transform 140ms ease;
+}
+
+.builder-theme-option:hover {
+  border-color: color-mix(in srgb, var(--primary) 18%, var(--border) 82%);
+  background: color-mix(in srgb, var(--surface-soft) 58%, var(--surface) 42%);
+  transform: translateY(-1px);
+}
+
+.builder-theme-option.is-active {
+  border-color: color-mix(in srgb, var(--primary) 28%, transparent);
+  background: color-mix(in srgb, var(--surface-soft) 76%, var(--surface) 24%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+.builder-settings-description-toggle.is-active {
+  border-color: color-mix(in srgb, var(--primary) 24%, transparent);
+  background: var(--surface-soft);
+  color: var(--primary);
+}
+
+.builder-theme-option-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.builder-theme-option-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.builder-theme-option-copy strong {
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.builder-theme-option-copy span {
+  color: var(--text-secondary);
+  font-size: 10px;
+  line-height: 1.3;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.builder-theme-option-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 0 7px;
+  border: 1px solid color-mix(in srgb, var(--primary) 20%, transparent);
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--primary);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.builder-theme-swatch-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.builder-theme-swatch {
+  width: 14px;
+  height: 14px;
+  border: 1px solid color-mix(in srgb, var(--border-strong) 70%, white 30%);
+  border-radius: 4px;
+  flex: 0 0 14px;
+}
+
+.builder-theme-swatch.is-selected {
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary) 16%, transparent);
+}
+
+.builder-theme-option-description {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+body.dark .builder-theme-selected-strip,
+body.dark .builder-theme-option {
+  background: #0f1a2b;
+}
+
+body.dark .builder-theme-option.is-active {
+  background: #15253b;
+}
+
+@media (max-width: 1180px) {
+  .builder-theme-option-grid {
+    grid-template-columns: 1fr;
+  }
+}

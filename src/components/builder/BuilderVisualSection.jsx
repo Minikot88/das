@@ -17,6 +17,7 @@ export default function BuilderVisualSection({
   selectedChartFamily,
   selectedChartVariant,
   recommendedCharts,
+  showDescriptions = false,
   onChartFamilyChange,
   onChartVariantChange,
 }) {
@@ -58,8 +59,8 @@ export default function BuilderVisualSection({
           </div>
         </div>
 
-        <div className={`builder-chart-support-note${rendererSupport?.rendererSupported ? "" : " is-alert"}`}>
-          <div className="builder-chart-support-note-head">
+          <div className={`builder-chart-support-note${rendererSupport?.rendererSupported ? "" : " is-alert"}`}>
+            <div className="builder-chart-support-note-head">
             <strong>
               {rendererSupport?.rendererSupported
                 ? `${selectableVariantCount}/${orderedVariants.length || 0} variants ready in this family`
@@ -68,12 +69,14 @@ export default function BuilderVisualSection({
             <span className="builder-chart-inline-badge">
               {rendererSupport?.rendererSupported ? "Builder ready" : "Switch required"}
             </span>
-          </div>
-          <p>
-            {rendererSupport?.rendererSupported
-              ? "Only variants that the current Chart.js renderer can preview and save stay clickable."
-              : "This selection is not wired to the current Chart.js renderer yet. Pick one of the available variants below to continue."}
-          </p>
+            </div>
+            {showDescriptions ? (
+              <p>
+                {rendererSupport?.rendererSupported
+                  ? "Only variants that the current Chart.js renderer can preview and save stay clickable."
+                  : "This selection is not wired to the current Chart.js renderer yet. Pick one of the available variants below to continue."}
+              </p>
+            ) : null}
         </div>
 
         <ChartTypeSelect
@@ -81,6 +84,7 @@ export default function BuilderVisualSection({
           selectedFamily={selectedChartFamily}
           selectedFamilyMeta={activeChartFamilyMeta}
           selectedCategory={activeCategoryMeta?.label ?? selectedChartCategory}
+          showDescriptions={showDescriptions}
           onFamilyChange={onChartFamilyChange}
         />
 
@@ -104,6 +108,7 @@ export default function BuilderVisualSection({
           <ChartVariantList
             variants={orderedVariants}
             selectedVariant={selectedChartVariant ?? activeChartVariantMeta?.id ?? chartType}
+            showDescriptions={showDescriptions}
             onVariantSelect={onChartVariantChange}
           />
         </div>
