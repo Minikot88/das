@@ -3,10 +3,10 @@ import ChartRenderer from "../charts/ChartRenderer";
 import { getReadableFieldLabel } from "../../utils/builderMappingUtils";
 import BuilderQuerySection from "./BuilderQuerySection";
 
-const QUERY_PANEL_DEFAULT_HEIGHT = 200;
+const QUERY_PANEL_DEFAULT_HEIGHT = 168;
 const QUERY_PANEL_MIN_HEIGHT = 120;
-const QUERY_PANEL_MAX_RATIO = 0.45;
-const PREVIEW_PANEL_MIN_HEIGHT = 220;
+const QUERY_PANEL_MAX_RATIO = 0.38;
+const PREVIEW_PANEL_MIN_HEIGHT = 260;
 const QUERY_PANEL_HEIGHT_STORAGE_KEY = "builder-query-panel-height";
 
 function clampQueryPanelHeight(value, maxHeight) {
@@ -109,7 +109,12 @@ export default function BuilderPreviewPane({
   completedRequiredRoleCount,
   requiredRoleCount,
 }) {
-  const [queryPanelHeight, setQueryPanelHeight] = useState(QUERY_PANEL_DEFAULT_HEIGHT);
+  const [queryPanelHeight, setQueryPanelHeight] = useState(() => {
+    if (typeof window === "undefined") return QUERY_PANEL_DEFAULT_HEIGHT;
+    const savedHeight = Number(window.localStorage.getItem(QUERY_PANEL_HEIGHT_STORAGE_KEY));
+    return Number.isFinite(savedHeight) ? savedHeight : QUERY_PANEL_DEFAULT_HEIGHT;
+  });
+  const [queryPanelMaxHeight, setQueryPanelMaxHeight] = useState(QUERY_PANEL_DEFAULT_HEIGHT);
   const [isQueryResizing, setIsQueryResizing] = useState(false);
   const previewPanelRef = useRef(null);
   const previewMetaRef = useRef(null);
@@ -166,34 +171,34 @@ export default function BuilderPreviewPane({
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const savedHeight = Number(window.localStorage.getItem(QUERY_PANEL_HEIGHT_STORAGE_KEY));
-    if (Number.isFinite(savedHeight)) {
-      setQueryPanelHeight(savedHeight);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
     window.localStorage.setItem(QUERY_PANEL_HEIGHT_STORAGE_KEY, String(queryPanelHeight));
   }, [queryPanelHeight]);
 
   useEffect(() => {
     const previewPanelElement = previewPanelRef.current;
     if (!previewPanelElement || typeof ResizeObserver === "undefined") return undefined;
+    let frameId = 0;
 
     function clampToAvailableSpace() {
       const maxHeight = getQueryPanelMaxHeight(previewPanelElement, previewMetaRef.current);
+      setQueryPanelMaxHeight(maxHeight);
       setQueryPanelHeight((current) => clampQueryPanelHeight(current, maxHeight));
     }
 
+    function scheduleClamp() {
+      window.cancelAnimationFrame(frameId);
+      frameId = window.requestAnimationFrame(clampToAvailableSpace);
+    }
+
     const resizeObserver = new ResizeObserver(() => {
-      clampToAvailableSpace();
+      scheduleClamp();
     });
 
     resizeObserver.observe(previewPanelElement);
-    clampToAvailableSpace();
+    scheduleClamp();
 
     return () => {
+      window.cancelAnimationFrame(frameId);
       resizeObserver.disconnect();
     };
   }, []);
@@ -207,6 +212,7 @@ export default function BuilderPreviewPane({
       if (!resizeState || !previewPanelElement) return;
 
       const maxHeight = getQueryPanelMaxHeight(previewPanelElement, previewMetaRef.current);
+      setQueryPanelMaxHeight(maxHeight);
       const nextHeight = clampQueryPanelHeight(
         resizeState.startHeight - (event.clientY - resizeState.startY),
         maxHeight
@@ -248,6 +254,7 @@ export default function BuilderPreviewPane({
     if (!previewPanelElement) return;
 
     const maxHeight = getQueryPanelMaxHeight(previewPanelElement, previewMetaRef.current);
+    setQueryPanelMaxHeight(maxHeight);
     const step = event.shiftKey ? 20 : 12;
 
     if (event.key === "ArrowUp") {
@@ -543,7 +550,7 @@ export default function BuilderPreviewPane({
           aria-label="Resize query panel"
           aria-orientation="horizontal"
           aria-valuemin={QUERY_PANEL_MIN_HEIGHT}
-          aria-valuemax={getQueryPanelMaxHeight(previewPanelRef.current, previewMetaRef.current)}
+          aria-valuemax={queryPanelMaxHeight}
           aria-valuenow={queryPanelHeight}
           tabIndex={0}
           onPointerDown={beginQueryResize}
@@ -559,7 +566,7 @@ export default function BuilderPreviewPane({
             flexShrink: 0,
             height: queryPanelHeight,
             minHeight: QUERY_PANEL_MIN_HEIGHT,
-            maxHeight: getQueryPanelMaxHeight(previewPanelRef.current, previewMetaRef.current),
+            maxHeight: queryPanelMaxHeight,
           }}
         >
           <BuilderQuerySection

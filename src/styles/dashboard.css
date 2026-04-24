@@ -2685,3 +2685,166 @@ body.dark .dashboard-sidebar-selection-row strong {
     justify-content: flex-start;
   }
 }
+
+/* Compact dashboard workspace requested from the annotated PDF. */
+.dashboard-workspace-shell {
+  min-height: calc(100vh - var(--appbar-h));
+  align-items: stretch;
+}
+
+.dashboard-workspace-main {
+  min-height: 0;
+  grid-template-rows: auto auto auto minmax(420px, 1fr);
+  gap: 10px;
+}
+
+.dashboard-workspace-header {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  padding: 14px 16px;
+}
+
+.dashboard-workspace-title {
+  font-size: clamp(24px, 2.4vw, 32px);
+  letter-spacing: 0;
+  line-height: 1.04;
+}
+
+.dashboard-workspace-header-actions {
+  align-items: flex-end;
+  justify-content: center;
+  min-height: 0;
+}
+
+.dashboard-workspace-stat-row {
+  gap: 8px;
+}
+
+.dashboard-workspace-stat {
+  min-width: 84px;
+  padding: 9px 10px;
+  border-radius: 8px;
+}
+
+.dashboard-workspace-stat span {
+  font-size: 10px;
+}
+
+.dashboard-workspace-stat strong {
+  font-size: 16px;
+}
+
+.dashboard-command-strip {
+  align-items: center;
+  padding: 10px 12px;
+}
+
+.dashboard-command-strip .dashboard-workspace-action-strip {
+  justify-content: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dashboard-command-strip .dashboard-toolbar-btn {
+  min-height: 34px;
+  border-radius: 8px;
+}
+
+.dashboard-workspace-tabs-section {
+  gap: 9px;
+  padding: 12px;
+}
+
+.dashboard-workspace-tabs-head,
+.dashboard-workspace-tabs-subhead {
+  padding-bottom: 6px;
+}
+
+.dashboard-workspace-tab,
+.dashboard-workspace-tab-add {
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 8px;
+}
+
+.dashboard-workspace-canvas {
+  min-height: 0;
+  gap: 10px;
+  padding: 12px;
+}
+
+.dashboard-workspace-canvas-head {
+  min-height: 32px;
+}
+
+.dashboard-workspace-canvas-frame {
+  min-height: clamp(420px, calc(100vh - 430px), 680px);
+  gap: 10px;
+  padding: 12px;
+}
+
+.dashboard-empty-state {
+  min-height: clamp(320px, calc(100vh - 520px), 520px);
+}
+
+.dashboard-sidebar {
+  top: 12px;
+  max-height: calc(100vh - var(--appbar-h) - 24px);
+}
+
+.dashboard-sidebar.is-collapsed {
+  width: 48px;
+  min-width: 48px;
+}
+
+.dashboard-sidebar-rail-button {
+  gap: 8px;
+  padding: 8px 4px;
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface) 96%, var(--primary) 4%) 0%, var(--surface-secondary) 100%);
+}
+
+.dashboard-sidebar-rail-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+}
+
+.dashboard-sidebar-rail-text {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+body.dark .dashboard-sidebar-rail-button {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface) 88%, var(--primary) 12%) 0%, var(--surface-secondary) 100%);
+}
+
+@media (max-width: 1180px) {
+  .dashboard-workspace-header {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-workspace-header-actions {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 760px) {
+  .dashboard-workspace-header,
+  .dashboard-workspace-toolbar,
+  .dashboard-workspace-tabs-section,
+  .dashboard-workspace-canvas {
+    padding: 10px;
+  }
+
+  .dashboard-workspace-stat-row {
+    width: 100%;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .dashboard-workspace-stat {
+    min-width: 0;
+  }
+}

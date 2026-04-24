@@ -1,0 +1,337 @@
+:root {
+  color-scheme: light;
+}
+
+body.dark {
+  color-scheme: dark;
+}
+
+body,
+.shell,
+.main-content {
+  background: var(--app-bg);
+  color: var(--text-primary);
+}
+
+.appbar {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface) 98%, var(--primary) 2%) 0%, var(--surface) 100%);
+  border-bottom-color: var(--divider);
+}
+
+.appbar-logo-mark,
+.appbar-search-wrap,
+.appbar-select,
+.appbar-theme-btn,
+.appbar-user,
+.appbar-btn,
+.sidebar-left,
+.ui-card,
+.ui-panel,
+.home-panel,
+.home-section-shell,
+.project-card,
+.dashboard-sidebar,
+.chart-card,
+.modal-box {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text-primary);
+}
+
+.appbar-nav-link:hover,
+.appbar-theme-btn:hover,
+.appbar-user:hover,
+.appbar-btn:hover,
+.nav-link:hover,
+.ui-button:hover,
+.button-base:hover,
+.dashboard-toolbar-btn:hover,
+.builder-page-toolbar-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-strong);
+}
+
+.ui-button.is-primary,
+.button-primary,
+.home-create-btn,
+.modal-btn.primary,
+.dashboard-toolbar-btn.is-primary,
+.builder-top-save-btn {
+  background: linear-gradient(180deg, var(--primary) 0%, var(--primary-hover) 100%);
+  border-color: var(--primary);
+  color: #ffffff;
+}
+
+.main-content,
+.dashboard-workspace-page,
+.builder-shell,
+.home-page {
+  background: var(--app-bg) !important;
+}
+
+.dashboard-workspace-header,
+.dashboard-workspace-toolbar,
+.dashboard-workspace-tabs-section,
+.dashboard-workspace-canvas,
+.dashboard-workspace-canvas-frame,
+.dashboard-sidebar,
+.dashboard-workspace-stat,
+.dashboard-workspace-tab,
+.dashboard-workspace-tab-add,
+.dashboard-widget-frame,
+.dashboard-empty-state-inner,
+.builder-top-action-bar,
+.builder-pane-frame-left,
+.builder-preview-panel,
+.builder-controls-panel,
+.builder-controls-card,
+.builder-preview-summary-strip > div,
+.builder-preview-mapping-board,
+.builder-preview-role-card,
+.builder-query-panel,
+.builder-data-pane-chart-brief,
+.schema-group,
+.schema-table-title,
+.schema-item,
+.builder-form-input,
+.builder-schema-search-input,
+.builder-visual-search-input,
+.builder-theme-option,
+.builder-theme-group,
+.builder-chart-type-select-trigger,
+.builder-chart-family-dropdown,
+.builder-chart-family-item,
+.builder-chart-variant-card {
+  background: var(--surface) !important;
+  border-color: var(--border) !important;
+  color: var(--text-primary) !important;
+}
+
+.dashboard-workspace-canvas,
+.dashboard-workspace-canvas-frame,
+.builder-preview-stage,
+.builder-canvas-stage,
+.builder-preview-canvas {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface) 94%, var(--app-bg) 6%) 0%, color-mix(in srgb, var(--surface-secondary) 84%, var(--app-bg) 16%) 100%),
+    linear-gradient(90deg, color-mix(in srgb, var(--border) 58%, transparent) 1px, transparent 1px),
+    linear-gradient(180deg, color-mix(in srgb, var(--border) 58%, transparent) 1px, transparent 1px) !important;
+  background-size: auto, 28px 28px, 28px 28px !important;
+}
+
+.dashboard-workspace-status,
+.dashboard-workspace-tab-pill,
+.dashboard-workspace-canvas-strip-item,
+.builder-top-action-summary-chip,
+.builder-top-action-badge,
+.builder-preview-chip,
+.builder-status-badge,
+.builder-chart-inline-badge,
+.ui-badge {
+  background: var(--surface-secondary) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text-secondary) !important;
+}
+
+.dashboard-workspace-status.is-live,
+.dashboard-sidebar-overview-badge.is-live,
+.builder-status-badge.ready,
+.builder-top-action-badge.is-ready {
+  background: var(--success-soft) !important;
+  border-color: color-mix(in srgb, var(--success) 34%, transparent) !important;
+  color: var(--success) !important;
+}
+
+.dashboard-workspace-tab.is-active,
+.dashboard-sidebar-chart-item.is-active,
+.dashboard-widget-slot.is-selected .chart-card,
+.project-card.active,
+.nav-link.active,
+.builder-chart-type-select-trigger.is-open,
+.builder-chart-type-select-trigger.is-active,
+.builder-chart-family-item.is-active,
+.builder-chart-variant-card.is-active,
+.builder-theme-option.is-active {
+  background: color-mix(in srgb, var(--surface) 82%, var(--accent) 18%) !important;
+  border-color: color-mix(in srgb, var(--accent) 62%, var(--border)) !important;
+  color: var(--text-primary) !important;
+}
+
+.builder-chart-family-item:hover,
+.builder-chart-variant-card:hover,
+.builder-theme-option:hover,
+.schema-item:hover,
+.schema-table-title.active {
+  background: color-mix(in srgb, var(--surface) 86%, var(--accent) 14%) !important;
+  border-color: color-mix(in srgb, var(--accent) 44%, var(--border-strong)) !important;
+}
+
+.builder-theme-swatch,
+.builder-theme-swatch.is-selected {
+  border-color: color-mix(in srgb, var(--surface) 52%, var(--border-strong) 48%) !important;
+}
+
+.builder-workspace-resizer::before,
+.builder-preview-resizer::before {
+  background: color-mix(in srgb, var(--accent) 46%, var(--border-strong) 54%) !important;
+}
+
+.builder-settings-rail-btn,
+.dashboard-sidebar-rail-button {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface) 92%, var(--accent) 8%) 0%, var(--surface-secondary) 100%) !important;
+  border-color: var(--border) !important;
+  color: var(--text-primary) !important;
+}
+
+body.dark .appbar {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--bg-sidebar) 86%, var(--accent) 14%) 0%, var(--bg-sidebar) 100%);
+  border-bottom-color: color-mix(in srgb, var(--border) 82%, var(--accent) 18%);
+}
+
+body.dark .sidebar-left,
+body.dark .ui-inspector,
+body.dark .dashboard-sidebar {
+  background: var(--bg-sidebar) !important;
+  border-color: var(--border) !important;
+}
+
+body.dark .appbar-logo-mark,
+body.dark .appbar-search-wrap,
+body.dark .appbar-select,
+body.dark .appbar-theme-btn,
+body.dark .appbar-user,
+body.dark .appbar-btn,
+body.dark .ui-card,
+body.dark .ui-panel,
+body.dark .home-panel,
+body.dark .home-section-shell,
+body.dark .project-card,
+body.dark .chart-card,
+body.dark .modal-box {
+  background: var(--bg-surface) !important;
+  border-color: var(--border) !important;
+  color: var(--text-base) !important;
+}
+
+body.dark .main-content,
+body.dark .dashboard-workspace-page,
+body.dark .builder-shell,
+body.dark .home-page,
+body.dark .shell.is-builder-route .main-content {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--bg-body) 94%, var(--accent) 6%) 0%, var(--bg-body) 100%) !important;
+}
+
+body.dark .dashboard-workspace-header,
+body.dark .dashboard-workspace-toolbar,
+body.dark .dashboard-workspace-tabs-section,
+body.dark .dashboard-workspace-canvas,
+body.dark .dashboard-sidebar,
+body.dark .dashboard-workspace-stat,
+body.dark .dashboard-workspace-tab,
+body.dark .dashboard-workspace-tab-add,
+body.dark .dashboard-widget-frame,
+body.dark .dashboard-empty-state-inner,
+body.dark .builder-top-action-bar,
+body.dark .builder-pane-frame-left,
+body.dark .builder-preview-panel,
+body.dark .builder-controls-panel,
+body.dark .builder-controls-card,
+body.dark .builder-preview-summary-strip > div,
+body.dark .builder-preview-mapping-board,
+body.dark .builder-preview-role-card,
+body.dark .builder-query-panel,
+body.dark .builder-data-pane-chart-brief,
+body.dark .schema-group,
+body.dark .schema-table-title,
+body.dark .schema-item,
+body.dark .builder-form-input,
+body.dark .builder-schema-search-input,
+body.dark .builder-visual-search-input,
+body.dark .builder-theme-option,
+body.dark .builder-theme-group,
+body.dark .builder-chart-type-select-trigger,
+body.dark .builder-chart-family-dropdown,
+body.dark .builder-chart-family-item,
+body.dark .builder-chart-variant-card {
+  background: var(--bg-surface) !important;
+  border-color: var(--border) !important;
+  color: var(--text-base) !important;
+}
+
+body.dark .builder-top-action-bar {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--bg-surface) 82%, var(--accent) 18%) 0%, var(--bg-surface) 100%) !important;
+  border-color: color-mix(in srgb, var(--accent) 34%, var(--border)) !important;
+}
+
+body.dark .dashboard-workspace-title,
+body.dark .dashboard-sidebar-title,
+body.dark .builder-top-action-title,
+body.dark .builder-pane-title,
+body.dark .home-title,
+body.dark .project-card-title,
+body.dark .chart-card-title {
+  color: var(--text-strong) !important;
+}
+
+body.dark .dashboard-workspace-breadcrumb,
+body.dark .dashboard-workspace-meta,
+body.dark .dashboard-workspace-canvas-meta,
+body.dark .dashboard-sidebar-meta,
+body.dark .builder-top-action-breadcrumb,
+body.dark .builder-page-kicker,
+body.dark .builder-query-label,
+body.dark .builder-form-label,
+body.dark .home-subtitle,
+body.dark .project-card-meta,
+body.dark .chart-card-subline,
+body.dark small {
+  color: var(--text-muted) !important;
+}
+
+body.dark .dashboard-workspace-canvas,
+body.dark .dashboard-workspace-canvas-frame,
+body.dark .builder-preview-stage,
+body.dark .builder-canvas-stage,
+body.dark .builder-preview-canvas {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--bg-surface) 92%, var(--accent) 8%) 0%, color-mix(in srgb, var(--bg-body) 94%, black 6%) 100%),
+    linear-gradient(90deg, color-mix(in srgb, var(--border) 70%, transparent) 1px, transparent 1px),
+    linear-gradient(180deg, color-mix(in srgb, var(--border) 70%, transparent) 1px, transparent 1px) !important;
+  background-size: auto, 28px 28px, 28px 28px !important;
+}
+
+body.dark .dashboard-workspace-tab.is-active,
+body.dark .dashboard-sidebar-chart-item.is-active,
+body.dark .dashboard-widget-slot.is-selected .chart-card,
+body.dark .project-card.active,
+body.dark .nav-link.active,
+body.dark .builder-chart-type-select-trigger.is-open,
+body.dark .builder-chart-type-select-trigger.is-active,
+body.dark .builder-chart-family-item.is-active,
+body.dark .builder-chart-variant-card.is-active,
+body.dark .builder-theme-option.is-active {
+  background: color-mix(in srgb, var(--bg-elevated) 76%, var(--accent) 24%) !important;
+  border-color: color-mix(in srgb, var(--accent) 64%, var(--border)) !important;
+}
+
+body.dark .builder-chart-family-item:hover,
+body.dark .builder-chart-variant-card:hover,
+body.dark .builder-theme-option:hover,
+body.dark .schema-item:hover,
+body.dark .schema-table-title.active,
+body.dark .dashboard-toolbar-btn:hover,
+body.dark .builder-page-toolbar-btn:hover {
+  background: var(--bg-hover) !important;
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--border-strong)) !important;
+}
+
+body.dark .builder-settings-rail-btn,
+body.dark .dashboard-sidebar-rail-button {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--bg-elevated) 76%, var(--accent) 24%) 0%, var(--bg-surface) 100%) !important;
+}

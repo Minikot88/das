@@ -403,3 +403,66 @@ body:has(.home-page) .sidebar-left .nav-link:hover {
     width: 100%;
   }
 }
+
+/* Home workspace polish from the annotated PDF. */
+.home-page .home-command-center,
+.home-page .home-panel {
+  padding: 10px 12px;
+}
+
+.home-page .home-stats-grid {
+  gap: 8px;
+}
+
+.home-page .home-stat-card {
+  min-height: 56px;
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+
+.home-page .home-stat-card strong {
+  font-size: 18px;
+}
+
+.home-page .project-grid,
+.home-page .project-grid-command-center {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  align-items: stretch;
+  gap: 10px;
+}
+
+.home-page .project-card,
+.home-page .project-card-new {
+  min-height: 180px;
+  border-radius: 8px;
+}
+
+.home-page .project-card {
+  padding: 11px 12px;
+}
+
+.home-page .project-card-title {
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+.home-page .project-card-meta,
+.home-page .project-card-description {
+  line-height: 1.45;
+}
+
+body:has(.home-page) .dashboard-sidebar.dashboard-sidebar-home {
+  width: 268px !important;
+}
+
+body:has(.home-page) .dashboard-sidebar.is-collapsed {
+  width: 48px !important;
+  min-width: 48px !important;
+}
+
+@media (max-width: 980px) {
+  .home-page .project-grid,
+  .home-page .project-grid-command-center {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+}

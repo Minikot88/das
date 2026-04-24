@@ -2,7 +2,6 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { useStore } from "../store/useStore";
 import { PageContainer, WorkspaceLayout } from "../components/layout/Layout";
-import { buildDashboardExportCode, buildWidgetExportCode } from "../utils/exportUtils";
 import { autoArrangeDashboardLayout } from "../utils/layoutUtils";
 import ChartPicker from "../components/dashboard/ChartPicker";
 import DashboardGrid from "../components/dashboard/DashboardGrid";
@@ -15,14 +14,12 @@ import {
   readBuilderReturnState,
   resolveDashboardWidgets,
   toDashboardChartModel,
-  createWidgetFromBuilder,
 } from "../utils/dashboardWorkspace";
 import {
   buildDashboardEmbedCode,
   buildDashboardViewUrl,
   exportNodeAsImage,
 } from "../utils/dashboardShareUtils";
-import { runQuery } from "../utils/queryEngine";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 
@@ -197,14 +194,12 @@ export default function DashboardPage() {
   const setSelectedWidget = useStore((state) => state.setSelectedWidget);
   const rightPanelOpen = useStore((state) => state.rightPanelOpen);
   const setRightPanelOpen = useStore((state) => state.setRightPanelOpen);
-  const saveChartToDashboardContext = useStore((state) => state.saveChartToDashboardContext);
 
   const [pickingChart, setPickingChart] = useState(false);
   const [editingTab, setEditingTab] = useState(null);
   const [editingValue, setEditingValue] = useState("");
   const [contextMenuState, setContextMenuState] = useState(null);
   const [pendingCreatedWidgetId, setPendingCreatedWidgetId] = useState(null);
-  const [exportState, setExportState] = useState(null);
   const [fullscreenWidgetId, setFullscreenWidgetId] = useState(null);
   const [shareModalTab, setShareModalTab] = useState("share");
   const [shareModalOpen, setShareModalOpen] = useState(false);
@@ -220,7 +215,6 @@ export default function DashboardPage() {
   const contextMenuRef = useRef(null);
   const dashboardCaptureRef = useRef(null);
   const previousWidgetCountRef = useRef(0);
-  const starterChartSeededRef = useRef(new Set());
 
   const activeProject = useMemo(
     () => projects.find((project) => project.id === activeProjectId) ?? projects[0] ?? null,
@@ -348,81 +342,6 @@ export default function DashboardPage() {
       setFullscreenWidgetId(null);
     }
   }, [dashboardWidgets, fullscreenWidgetId]);
-
-  useEffect(() => {
-    if (!activeProject || !activeSheet || !activeDashboard) return;
-    if ((activeDashboard.layout?.length ?? 0) > 0) return;
-    const dashboardSeedKey = `${activeProject.id}:${activeSheet.id}:${activeDashboard.id}`;
-    if (starterChartSeededRef.current.has(dashboardSeedKey)) return;
-
-    starterChartSeededRef.current.add(dashboardSeedKey);
-    let cancelled = false;
-
-    async function seedStarterChart() {
-      const builderContext = createBuilderContextForDashboard({
-        projectId: activeProject.id,
-        sheetId: activeSheet.id,
-        dashboardId: activeDashboard.id,
-        returnTo: "/dashboard",
-      });
-
-      const starterConfig = {
-        dataset: "sales",
-        chartType: "bar",
-        x: "category",
-        xType: "string",
-        y: "sales",
-        yType: "number",
-        aggregate: "sum",
-        name: "Sales by Category",
-        title: "Sales by Category",
-        subtitle: "Starter chart",
-        queryMode: "visual",
-        roleMapping: {
-          category: [{ id: "business.sales.category", name: "category", type: "string", db: "business", tbl: "sales" }],
-          value: [{ id: "business.sales.sales", name: "sales", type: "number", db: "business", tbl: "sales" }],
-        },
-      };
-
-      try {
-        const queryResult = await runQuery({
-          dataset: starterConfig.dataset,
-          x: starterConfig.x,
-          y: starterConfig.y,
-          aggregate: starterConfig.aggregate,
-          chartType: starterConfig.chartType,
-        });
-
-        if (cancelled) return;
-
-        saveChartToDashboardContext({
-          projectId: activeProject.id,
-          sheetId: activeSheet.id,
-          dashboardId: activeDashboard.id,
-          chart: createWidgetFromBuilder({
-            chartConfig: starterConfig,
-            chartRows: queryResult.data ?? [],
-            context: builderContext,
-            existingCharts: projectCharts,
-          }),
-        });
-      } catch {
-        starterChartSeededRef.current.delete(dashboardSeedKey);
-      }
-    }
-
-    void seedStarterChart();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    activeDashboard,
-    activeProject,
-    activeSheet,
-    projectCharts,
-    saveChartToDashboardContext,
-  ]);
 
   if (!activeProject || !activeSheet || !activeDashboard) {
     return (
@@ -576,39 +495,6 @@ export default function DashboardPage() {
     }));
   }
 
-  function exportWidgetCode(widgetId) {
-    const widget = dashboardWidgets.find((item) => item.id === widgetId);
-    if (!widget) return;
-
-    setExportState({
-      target: widget.id,
-      mode: "widget",
-      title: `Export: ${widget.name}`,
-      code: buildWidgetExportCode(widget),
-    });
-  }
-
-  function exportDashboardCode() {
-    if (!dashboardWidgets.length) return;
-
-    setExportState({
-      target: activeDashboard?.id,
-      mode: "dashboard",
-      title: `Export: ${activeDashboard?.name ?? "Dashboard"}`,
-      code: buildDashboardExportCode(activeDashboard?.name ?? "Dashboard", dashboardWidgets),
-    });
-  }
-
-  async function handleCopyCode() {
-    if (!exportState?.code) return;
-
-    try {
-      await navigator.clipboard.writeText(exportState.code);
-    } catch {
-      window.prompt("คัดลอกโค้ดด้านล่าง", exportState.code);
-    }
-  }
-
   function handleContextRename() {
     if (!contextMenuState) return;
     startEdit(contextMenuState.type, contextMenuState.target);
@@ -651,7 +537,7 @@ export default function DashboardPage() {
   const toolbarItems = [
     {
       key: "panel",
-      label: rightPanelOpen ? "Hide Panel" : "Show Panel",
+      label: rightPanelOpen ? "Hide Inspector" : "Show Inspector",
       onClick: toggleRightSidebar,
     },
     {
@@ -660,10 +546,32 @@ export default function DashboardPage() {
       onClick: () => setPickingChart(true),
     },
     {
+      key: "new",
+      label: "New Chart",
+      onClick: openBuilderForCurrentContext,
+      primary: true,
+    },
+    {
       key: "arrange",
-      label: "Arrange",
+      label: "Auto Layout",
       onClick: autoArrangeDashboard,
       disabled: !dashboardWidgets.length,
+    },
+    {
+      key: "export",
+      label: "Export",
+      onClick: () => openShareModal("export"),
+      disabled: !dashboardWidgets.length,
+    },
+    {
+      key: "share",
+      label: "Share",
+      onClick: () => openShareModal("share"),
+    },
+    {
+      key: "embed",
+      label: "Embed",
+      onClick: () => openShareModal("embed"),
     },
   ];
 
@@ -713,27 +621,10 @@ export default function DashboardPage() {
                   <strong>{selectedWidget ? "1" : "0"}</strong>
                 </div>
               </div>
-              <div className="dashboard-workspace-header-quick-actions">
-                <button type="button" onClick={() => setPickingChart(true)} className="dashboard-toolbar-btn">
-                  Add Chart
-                </button>
-                <button type="button" onClick={openBuilderForCurrentContext} className="dashboard-toolbar-btn is-primary">
-                  New Chart
-                </button>
-                <button type="button" onClick={() => openShareModal("export")} className="dashboard-toolbar-btn" disabled={!dashboardWidgets.length}>
-                  Export
-                </button>
-                <button type="button" onClick={() => openShareModal("share")} className="dashboard-toolbar-btn">
-                  Share
-                </button>
-                <button type="button" onClick={() => openShareModal("embed")} className="dashboard-toolbar-btn">
-                  Embed
-                </button>
-              </div>
             </div>
           </header>
 
-          <section className="dashboard-workspace-toolbar">
+          <section className="dashboard-workspace-toolbar dashboard-command-strip">
             <div className="dashboard-workspace-toolbar-group dashboard-workspace-toolbar-group-main">
               <div className="dashboard-workspace-action-strip">
                 {toolbarItems.map((item) => (
@@ -742,7 +633,7 @@ export default function DashboardPage() {
                     type="button"
                     onClick={item.onClick}
                     disabled={item.disabled}
-                    className="dashboard-toolbar-btn"
+                    className={`dashboard-toolbar-btn${item.primary ? " is-primary" : ""}`}
                   >
                     {item.label}
                   </button>
@@ -857,18 +748,11 @@ export default function DashboardPage() {
           isOpen={rightPanelOpen}
           widgets={dashboardWidgets}
           selectedWidgetId={selectedWidget?.id ?? null}
-          exportState={exportState}
           projectName={activeProject.name}
           dashboardName={activeDashboard.name}
           onToggle={toggleRightSidebar}
-          onOpenSavedCharts={() => setPickingChart(true)}
-          onBuildChart={openBuilderForCurrentContext}
-          onAutoArrange={autoArrangeDashboard}
           onSelectWidget={selectWidget}
           onRemoveWidget={removeWidget}
-          onExportSelected={() => exportWidgetCode(selectedWidget?.id)}
-          onExportDashboard={exportDashboardCode}
-          onCopyCode={handleCopyCode}
         />
       </WorkspaceLayout>
 

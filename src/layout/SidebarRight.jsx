@@ -14,19 +14,6 @@ function SidebarSection({ title, meta = null, children, compact = false }) {
   );
 }
 
-function ActionButton({ children, onClick, disabled = false, primary = false }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={`dashboard-sidebar-btn${primary ? " is-primary" : ""}`}
-    >
-      {children}
-    </button>
-  );
-}
-
 function SidebarStatTile({ label, value, tone = "" }) {
   return (
     <div className={`dashboard-sidebar-stat-tile${tone ? ` is-${tone}` : ""}`}>
@@ -85,34 +72,18 @@ export default function SidebarRight({
   isOpen = true,
   widgets = [],
   selectedWidgetId = null,
-  exportState = null,
   projectName = "",
   dashboardName = "",
   onToggle,
-  onOpenSavedCharts,
-  onBuildChart,
-  onAutoArrange,
   onSelectWidget,
   onRemoveWidget,
-  onExportSelected,
-  onExportDashboard,
-  onCopyCode,
 }) {
   const projects = useStore((state) => state.projects);
   const activeProjectId = useStore((state) => state.activeProjectId);
   const activeSheetId = useStore((state) => state.activeSheetId);
   const activeDashboardId = useStore((state) => state.activeDashboardId);
   const selectedWidget = widgets.find((widget) => widget.id === selectedWidgetId) ?? null;
-  const isWorkspaceInspector = Boolean(
-    projectName ||
-    dashboardName ||
-    widgets.length ||
-    onBuildChart ||
-    onOpenSavedCharts ||
-    onAutoArrange ||
-    onExportSelected ||
-    onExportDashboard
-  );
+  const isWorkspaceInspector = Boolean(projectName || dashboardName || widgets.length);
   const activeProject = projects.find((project) => project.id === activeProjectId) ?? projects[0] ?? null;
   const activeSheet = activeProject?.sheets.find((sheet) => sheet.id === activeSheetId) ?? activeProject?.sheets?.[0] ?? null;
   const activeDashboard =
@@ -235,15 +206,6 @@ export default function SidebarRight({
         </div>
       </SidebarSection>
 
-      <SidebarSection title="Actions">
-        <div className="dashboard-sidebar-button-stack dashboard-sidebar-action-grid">
-          <ActionButton primary onClick={onBuildChart}>Add Chart</ActionButton>
-          <ActionButton onClick={onOpenSavedCharts}>Saved Charts</ActionButton>
-          <ActionButton onClick={onAutoArrange} disabled={!widgets.length}>Auto Layout</ActionButton>
-          <ActionButton onClick={onExportDashboard} disabled={!widgets.length}>Export Canvas</ActionButton>
-        </div>
-      </SidebarSection>
-
       <SidebarSection title="Active Selection">
         {selectedWidget ? (
           <div className="dashboard-sidebar-selection-card dashboard-sidebar-selection-card-premium">
@@ -288,26 +250,6 @@ export default function SidebarRight({
         )}
       </SidebarSection>
 
-      <SidebarSection title="Export" compact>
-        <div className="dashboard-sidebar-button-grid">
-          <ActionButton disabled={!selectedWidget} onClick={onExportSelected}>Export Widget</ActionButton>
-          <ActionButton disabled={!widgets.length} onClick={onExportDashboard}>Export Code</ActionButton>
-        </div>
-
-        {exportState?.code ? (
-          <>
-            <div className="dashboard-sidebar-export-meta">
-              <span className="dashboard-sidebar-export-title">{exportState.title}</span>
-              <button type="button" onClick={onCopyCode} className="dashboard-sidebar-copy-btn">Copy code</button>
-            </div>
-            <textarea readOnly value={exportState.code} className="dashboard-sidebar-code" />
-          </>
-        ) : (
-          <div className="dashboard-sidebar-empty is-subtle">
-            {selectedWidget ? "Exports are ready when you need them." : "Select a widget or build the canvas first."}
-          </div>
-        )}
-      </SidebarSection>
     </InspectorLayout>
   );
 }

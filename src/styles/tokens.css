@@ -29,9 +29,13 @@
   --sky-600: #0284c7;
 
   /* Core theme */
-  --primary: var(--blue-700);
-  --primary-hover: var(--blue-800);
-  --background: #eef2f6;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-light: #dbeafe;
+  --accent: #0f766e;
+  --accent-cyan: #0891b2;
+  --accent-rose: #be123c;
+  --background: #f3f6fa;
   --surface: var(--gray-0);
   --surface-secondary: #f6f8fb;
   --surface-muted: #f5f7fa;
@@ -45,6 +49,8 @@
   --text-secondary: #4f6074;
   --text-muted: #728399;
   --text-soft: #8da0b4;
+  --text-strong: var(--text-primary);
+  --text-base: var(--text-primary);
   --success: var(--green-600);
   --warning: var(--amber-600);
   --danger: var(--red-600);
@@ -56,6 +62,13 @@
   --warning-soft: rgba(217, 119, 6, 0.12);
   --danger-soft: rgba(220, 38, 38, 0.1);
   --info-soft: rgba(2, 132, 199, 0.1);
+
+  /* Shared aliases used by workspace and builder refinements */
+  --bg-body: var(--background);
+  --bg-surface: var(--surface);
+  --bg-sidebar: #f8fafc;
+  --bg-elevated: #ffffff;
+  --bg-hover: #eef4fb;
 
   /* Spacing */
   --space-0: 0;
@@ -147,22 +160,28 @@
 }
 
 body.dark {
-  --primary: #60a5fa;
-  --primary-hover: #3b82f6;
-  --background: #0a1220;
-  --surface: #0f1a2b;
-  --surface-secondary: #111f33;
-  --surface-muted: #111f33;
-  --surface-soft: #15253b;
-  --surface-strong: #1a2a40;
-  --border: #25364d;
-  --border-strong: #35506e;
+  --primary: #7dd3fc;
+  --primary-hover: #38bdf8;
+  --primary-light: rgba(125, 211, 252, 0.16);
+  --accent: #2dd4bf;
+  --accent-cyan: #38bdf8;
+  --accent-rose: #fb7185;
+  --background: #07111f;
+  --surface: #0f1b2d;
+  --surface-secondary: #132238;
+  --surface-muted: #16283f;
+  --surface-soft: #1a304a;
+  --surface-strong: #203957;
+  --border: #263a54;
+  --border-strong: #3d5877;
   --border-active: #60a5fa;
-  --divider: #1c2c43;
-  --text-primary: #edf4ff;
-  --text-secondary: #9fb0c5;
-  --text-muted: #7f91a7;
-  --text-soft: #6e8198;
+  --divider: #22334b;
+  --text-primary: #f2f7ff;
+  --text-secondary: #b4c4d8;
+  --text-muted: #8ea3ba;
+  --text-soft: #728aa5;
+  --text-strong: #ffffff;
+  --text-base: #dce8f6;
   --success: #34d399;
   --warning: #f59e0b;
   --danger: #f87171;
@@ -177,5 +196,10 @@ body.dark {
   --shadow-md: 0 10px 22px rgba(2, 8, 23, 0.28);
   --shadow-lg: 0 14px 28px rgba(2, 8, 23, 0.32);
   --focus-ring: 0 0 0 3px rgba(96, 165, 250, 0.18);
+  --bg-body: #07111f;
+  --bg-surface: #0f1b2d;
+  --bg-sidebar: #0b1728;
+  --bg-elevated: #17263d;
+  --bg-hover: #1b2d46;
   --app-bg: var(--background);
 }

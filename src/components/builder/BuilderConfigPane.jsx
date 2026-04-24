@@ -540,7 +540,6 @@ export default function BuilderConfigPane({
   clearSlot,
   handleRoleFieldRemove,
   handleReorderRole,
-  lastMappingNotice,
   canAssignFieldToRole,
   handleQueryModeChange,
   handleSqlChange,
@@ -551,7 +550,10 @@ export default function BuilderConfigPane({
   onCollapseSettings,
   panelId,
 }) {
-  const [showDescriptions, setShowDescriptions] = useState(false);
+  const [showDescriptions, setShowDescriptions] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(SETTINGS_DESCRIPTION_STORAGE_KEY) === "true";
+  });
   const blockerCount = validationSummary?.blockers?.length ?? 0;
   const previewStatus = previewState?.status ?? "idle";
   const previewIssue = previewState?.error ?? "";
@@ -569,14 +571,6 @@ export default function BuilderConfigPane({
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const savedValue = window.localStorage.getItem(SETTINGS_DESCRIPTION_STORAGE_KEY);
-    if (savedValue === "true") {
-      setShowDescriptions(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
     window.localStorage.setItem(SETTINGS_DESCRIPTION_STORAGE_KEY, String(showDescriptions));
   }, [showDescriptions]);
 
@@ -591,7 +585,7 @@ export default function BuilderConfigPane({
     >
       <section
         id={panelId}
-        className="builder-controls-panel ui-panel"
+        className={`builder-controls-panel ui-panel${showDescriptions ? " is-descriptions-on" : " is-descriptions-off"}`}
         style={{
           minHeight: 0,
           height: "100%",

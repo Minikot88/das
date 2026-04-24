@@ -6,6 +6,7 @@ import "./styles/workspacePolish.css";
 import "./styles/homeWorkspaceCompact.css";
 import "./styles/workspaceSidebarRefresh.css";
 import "./styles/builderDocs.css";
+import "./styles/themeModes.css";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>

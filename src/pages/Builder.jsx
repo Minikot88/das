@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { PageContainer, WorkspaceLayout } from "../components/layout/Layout";
 import "../components/builder/builderWorkspaceViewport.css";
@@ -73,12 +73,9 @@ export default function BuilderPage() {
   const [contextError, setContextError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(true);
-  const [draftFeedback, setDraftFeedback] = useState("");
   const [leftPanelWidth, setLeftPanelWidth] = useState(LEFT_PANEL_DEFAULT_WIDTH);
   const [rightPanelWidth, setRightPanelWidth] = useState(RIGHT_PANEL_DEFAULT_WIDTH);
   const [activeResizeHandle, setActiveResizeHandle] = useState(null);
-  const draftFeedbackTimerRef = useRef(null);
-  const starterChartSeededRef = useRef(false);
   const resizeDragStateRef = useRef(null);
   const workspaceRegionRef = useRef(null);
 
@@ -108,8 +105,6 @@ export default function BuilderPage() {
         : null),
     [builderDraft, builderNavigationContext, fallbackContext, location.state]
   );
-
-  useEffect(() => () => window.clearTimeout(draftFeedbackTimerRef.current), []);
 
   const validation = useMemo(() => validateBuilderContext(builderContext, projects), [builderContext, projects]);
   const targetDashboard = useMemo(() => getTargetDashboard(builderContext, projects), [builderContext, projects]);
@@ -149,6 +144,32 @@ export default function BuilderPage() {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(RIGHT_PANEL_WIDTH_STORAGE_KEY, String(rightPanelWidth));
   }, [rightPanelWidth]);
+
+  const getHorizontalResizeBounds = useCallback((type) => {
+    const regionWidth = workspaceRegionRef.current?.getBoundingClientRect().width ?? 0;
+    const currentRightWidth = isSettingsOpen ? rightPanelWidth : SETTINGS_COLLAPSED_WIDTH;
+    const currentRightResizer = isSettingsOpen ? RESIZER_SIZE : 0;
+
+    if (!regionWidth) {
+      return type === "left"
+        ? { min: LEFT_PANEL_MIN_WIDTH, max: LEFT_PANEL_MAX_WIDTH }
+        : { min: RIGHT_PANEL_MIN_WIDTH, max: RIGHT_PANEL_MAX_WIDTH };
+    }
+
+    if (type === "left") {
+      const dynamicMax = regionWidth - currentRightWidth - currentRightResizer - RESIZER_SIZE - CENTER_PANEL_MIN_WIDTH - BUILDER_GRID_RESERVED_SPACE;
+      return {
+        min: LEFT_PANEL_MIN_WIDTH,
+        max: Math.max(LEFT_PANEL_MIN_WIDTH, Math.min(LEFT_PANEL_MAX_WIDTH, dynamicMax)),
+      };
+    }
+
+    const dynamicMax = regionWidth - leftPanelWidth - RESIZER_SIZE - RESIZER_SIZE - CENTER_PANEL_MIN_WIDTH - BUILDER_GRID_RESERVED_SPACE;
+    return {
+      min: RIGHT_PANEL_MIN_WIDTH,
+      max: Math.max(RIGHT_PANEL_MIN_WIDTH, Math.min(RIGHT_PANEL_MAX_WIDTH, dynamicMax)),
+    };
+  }, [isSettingsOpen, leftPanelWidth, rightPanelWidth]);
 
   useEffect(() => {
     if (!activeResizeHandle) return undefined;
@@ -194,7 +215,7 @@ export default function BuilderPage() {
       window.removeEventListener("pointerup", stopResize);
       window.removeEventListener("pointercancel", stopResize);
     };
-  }, [activeResizeHandle]);
+  }, [activeResizeHandle, getHorizontalResizeBounds]);
 
   useEffect(() => {
     function clampPanelsToViewport() {
@@ -211,109 +232,12 @@ export default function BuilderPage() {
       window.cancelAnimationFrame(frame);
       window.removeEventListener("resize", clampPanelsToViewport);
     };
-  }, [isSettingsOpen]);
+  }, [getHorizontalResizeBounds]);
 
   const projectCharts = useMemo(
     () => charts.filter((chart) => chart.projectId === builderContext?.projectId),
     [builderContext?.projectId, charts]
   );
-
-  useEffect(() => {
-    if (starterChartSeededRef.current) return;
-    if (!builderContext || !validation.isValid || !targetDashboard) return;
-    if ((targetDashboard.layout?.length ?? 0) > 0) return;
-    if (builderDraft?.isDirty) return;
-    if (builderState.selectedTable || builderState.xField || builderState.yField) return;
-
-    starterChartSeededRef.current = true;
-    let cancelled = false;
-
-    async function seedStarterChart() {
-      const starterConfig = {
-        dataset: "sales",
-        chartType: "bar",
-        x: "category",
-        xType: "string",
-        y: "sales",
-        yType: "number",
-        aggregate: "sum",
-        name: "Sales by Category",
-        title: "Sales by Category",
-        subtitle: "Starter chart",
-        queryMode: "visual",
-        roleMapping: {
-          category: [{ id: "business.sales.category", name: "category", type: "string", db: "business", tbl: "sales" }],
-          value: [{ id: "business.sales.sales", name: "sales", type: "number", db: "business", tbl: "sales" }],
-        },
-      };
-
-      try {
-        const queryResult = await runQuery({
-          dataset: starterConfig.dataset,
-          x: starterConfig.x,
-          y: starterConfig.y,
-          aggregate: starterConfig.aggregate,
-          chartType: starterConfig.chartType,
-        });
-
-        if (cancelled) return;
-
-        saveChartToDashboardContext({
-          projectId: builderContext.projectId,
-          sheetId: builderContext.sheetId,
-          dashboardId: builderContext.dashboardId,
-          chart: createWidgetFromBuilder({
-            chartConfig: starterConfig,
-            chartRows: queryResult.data ?? [],
-            context: builderContext,
-            existingCharts: projectCharts,
-          }),
-        });
-
-        setBuilderState({
-          selectedDb: "business",
-          selectedTable: "sales",
-          chartType: "bar",
-          xField: "category",
-          xType: "string",
-          yField: "sales",
-          yType: "number",
-          aggregation: "sum",
-          name: starterConfig.name,
-          title: starterConfig.title,
-          subtitle: starterConfig.subtitle,
-          queryMode: "visual",
-          roleMapping: starterConfig.roleMapping,
-        });
-
-        setDraftFeedback("Starter chart created");
-        window.clearTimeout(draftFeedbackTimerRef.current);
-        draftFeedbackTimerRef.current = window.setTimeout(() => setDraftFeedback(""), 2200);
-      } catch (error) {
-        starterChartSeededRef.current = false;
-        if (!cancelled) {
-          setContextError(error?.message || "Unable to create starter chart.");
-        }
-      }
-    }
-
-    void seedStarterChart();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    builderContext,
-    builderDraft?.isDirty,
-    builderState.selectedTable,
-    builderState.xField,
-    builderState.yField,
-    projectCharts,
-    saveChartToDashboardContext,
-    setBuilderState,
-    targetDashboard,
-    validation.isValid,
-  ]);
 
   useEffect(() => {
     if (location.state?.builderContext) {
@@ -491,37 +415,8 @@ export default function BuilderPage() {
     }
   }
 
-  function getHorizontalResizeBounds(type) {
-    const regionWidth = workspaceRegionRef.current?.getBoundingClientRect().width ?? 0;
-    const currentRightWidth = isSettingsOpen ? rightPanelWidth : SETTINGS_COLLAPSED_WIDTH;
-    const currentRightResizer = isSettingsOpen ? RESIZER_SIZE : 0;
-
-    if (!regionWidth) {
-      return type === "left"
-        ? { min: LEFT_PANEL_MIN_WIDTH, max: LEFT_PANEL_MAX_WIDTH }
-        : { min: RIGHT_PANEL_MIN_WIDTH, max: RIGHT_PANEL_MAX_WIDTH };
-    }
-
-    if (type === "left") {
-      const dynamicMax = regionWidth - currentRightWidth - currentRightResizer - RESIZER_SIZE - CENTER_PANEL_MIN_WIDTH - BUILDER_GRID_RESERVED_SPACE;
-      return {
-        min: LEFT_PANEL_MIN_WIDTH,
-        max: Math.max(LEFT_PANEL_MIN_WIDTH, Math.min(LEFT_PANEL_MAX_WIDTH, dynamicMax)),
-      };
-    }
-
-    const dynamicMax = regionWidth - leftPanelWidth - RESIZER_SIZE - RESIZER_SIZE - CENTER_PANEL_MIN_WIDTH - BUILDER_GRID_RESERVED_SPACE;
-    return {
-      min: RIGHT_PANEL_MIN_WIDTH,
-      max: Math.max(RIGHT_PANEL_MIN_WIDTH, Math.min(RIGHT_PANEL_MAX_WIDTH, dynamicMax)),
-    };
-  }
-
   function handleSaveDraft() {
     setBuilderState({});
-    setDraftFeedback("Draft saved");
-    window.clearTimeout(draftFeedbackTimerRef.current);
-    draftFeedbackTimerRef.current = window.setTimeout(() => setDraftFeedback(""), 1800);
   }
 
   async function handleSaveChart() {
