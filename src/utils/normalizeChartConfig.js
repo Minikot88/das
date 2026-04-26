@@ -174,7 +174,7 @@ function normalizeSettings(config = {}, chartType) {
   };
 }
 
-function normalizeConfiguration(config = {}, chartType, settings, display) {
+function normalizeConfiguration(config = {}, chartType, settings) {
   const chartJs = config.chartJs ?? {};
   const nested = chartJs.configuration ?? config.configuration ?? {};
 
@@ -488,7 +488,7 @@ export function normalizeChartConfig(config = {}) {
   const display = normalizeDisplay(config);
   const labels = normalizeLabels(config, config.name ?? chartMeta.name ?? "Chart");
   const settings = normalizeSettings(config, chartType);
-  const configuration = normalizeConfiguration(config, chartType, settings, display);
+  const configuration = normalizeConfiguration(config, chartType, settings);
   const animations = normalizeAnimations(config, chartType);
   const canvas = normalizeCanvas(config);
   const decimation = normalizeDecimation(config);

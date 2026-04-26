@@ -1,12 +1,16 @@
 ﻿import React, { memo, useCallback, useEffect, useRef, useState } from "react";
 import ChartRenderer from "../charts/ChartRenderer";
 import ChartSkeleton from "../charts/ChartSkeleton";
+import CardActions from "./CardActions";
 import { getChartPalette } from "../../utils/chartPalette";
 
 const ChartCard = memo(function ChartCard({
   chart,
   pixelHeight,
+  sheetId,
   filters,
+  onExportCSV,
+  onExportPNG,
   onInsightData,
   drilldown = null,
   onDrilldown,
@@ -15,7 +19,9 @@ const ChartCard = memo(function ChartCard({
   themeMode,
 }) {
   const [loaded, setLoaded] = useState(false);
+  const [renderRows, setRenderRows] = useState([]);
   const lastRowsKeyRef = useRef("");
+  const cardRef = useRef(null);
   const bodyRef = useRef(null);
   const resizeFrameRef = useRef(0);
   const [bodyHeight, setBodyHeight] = useState(0);
@@ -68,12 +74,14 @@ const ChartCard = memo(function ChartCard({
     if (lastRowsKeyRef.current === nextKey) return;
 
     lastRowsKeyRef.current = nextKey;
+    setRenderRows(nextRows);
     onInsightData?.(chart, nextRows);
   }, [chart, onInsightData]);
 
   return (
     <div
       className={`chart-card${isFullscreen ? " is-fullscreen" : ""}`}
+      ref={cardRef}
       style={{ height: pixelHeight, "--card-accent": accent }}
       role="article"
       aria-label={`Chart: ${chart.title}`}
@@ -87,6 +95,19 @@ const ChartCard = memo(function ChartCard({
         <div className="chart-card-title">
           <span className="chart-title-text">{chart.title}</span>
         </div>
+        {(onExportCSV || onExportPNG || onToggleFullscreen) ? (
+          <div className="chart-card-controls" data-export-ignore="true">
+            <CardActions
+              chart={chart}
+              sheetId={sheetId}
+              cardRef={cardRef}
+              onExportCSV={(activeChart) => onExportCSV?.(activeChart, renderRows)}
+              onExportPNG={onExportPNG}
+              onToggleFullscreen={onToggleFullscreen}
+              isFullscreen={isFullscreen}
+            />
+          </div>
+        ) : null}
       </div>
 
       <div ref={bodyRef} className="chart-card-body">

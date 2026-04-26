@@ -1,5 +1,5 @@
 import { getChartPalette, mixColors, shadeColor, tintColor } from "./chartPalette";
-import { darkenColor, withOpacity } from "./chartThemes";
+import { withOpacity } from "./chartThemes";
 
 const PIE_LIKE_TYPES = new Set(["pie", "donut", "doughnut", "polar-area", "gauge"]);
 const LINE_LIKE_TYPES = new Set(["line", "multi-line", "smooth-line", "step-line", "area", "stacked-line", "stacked-area"]);

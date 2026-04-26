@@ -660,7 +660,7 @@ function createVariantRequirements(variant) {
 
   const roles = orderedRoleKeys.map((roleKey) => {
     const baseRole = base.roles.find((item) => item.key === roleKey) ?? FIELD_ROLES[roleKey];
-    const required = requiredSet.has(roleKey) || (!requiredSet.size && (baseRole?.required ?? false));
+    const required = requiredSet.has(roleKey) || (!requiredSet.size && !optionalSet.has(roleKey) && (baseRole?.required ?? false));
 
     return role(roleKey, {
       ...(baseRole ?? {}),

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { evaluatePreviewRows } from "../../utils/builderChartUtils";
 import { formatSql, runQuery } from "../../utils/queryEngine";
 
@@ -80,7 +80,6 @@ export default function useBuilderPreview({
   generatedQueryPreviewSql,
   useDirectPreviewData,
   setPreviewChart,
-  sourcePreviewRows,
   previewHint = "",
 }) {
   const [previewRows, setPreviewRows] = useState([]);
@@ -155,7 +154,7 @@ export default function useBuilderPreview({
     setPreviewState((currentState) => (isSamePreviewState(currentState, nextState) ? currentState : nextState));
   }
 
-  function commitQueryStatePatch(patch) {
+  const commitQueryStatePatch = useCallback((patch) => {
     const currentQueryState = latestQueryStoreRef.current;
     const nextQueryState = {
       ...currentQueryState,
@@ -173,7 +172,7 @@ export default function useBuilderPreview({
     latestQueryStoreRef.current = nextQueryState;
     setBuilderState(patch);
     return true;
-  }
+  }, [setBuilderState]);
 
   useEffect(() => {
     if (!previewReady) {
@@ -222,7 +221,7 @@ export default function useBuilderPreview({
       queryError: "",
       queryStatus: "idle",
     });
-  }, [generatedQueryPreviewSql, previewReadiness, queryMode, useDirectPreviewData]);
+  }, [commitQueryStatePatch, generatedQueryPreviewSql, previewReadiness, queryMode, useDirectPreviewData]);
 
   useEffect(() => {
     if (!previewReady || queryMode !== "sql") return;
@@ -299,6 +298,7 @@ export default function useBuilderPreview({
     useDirectPreviewData,
     visualQuerySignature,
     previewHint,
+    commitQueryStatePatch,
   ]);
 
   useEffect(() => {
@@ -395,6 +395,7 @@ export default function useBuilderPreview({
     useDirectPreviewData,
     visualQuerySignature,
     previewHint,
+    commitQueryStatePatch,
   ]);
 
   const missingRequirements = (previewReadiness?.blockers ?? [])

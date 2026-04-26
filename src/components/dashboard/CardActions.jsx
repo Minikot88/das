@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef, useState } from "react";
+﻿import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useStore } from "../../store/useStore";
 
 const QUICK_ACTIONS = [
@@ -29,6 +29,12 @@ export default function CardActions({
   const menuRef = useRef(null);
   const inputRef = useRef(null);
 
+  const closeMenus = useCallback(() => {
+    setIsRenaming(false);
+    setDraftTitle(chart.title ?? "");
+    setOpenPanel(null);
+  }, [chart.title]);
+
   useEffect(() => {
     if (!openPanel) return undefined;
 
@@ -40,7 +46,7 @@ export default function CardActions({
 
     document.addEventListener("mousedown", handleOutsideClick);
     return () => document.removeEventListener("mousedown", handleOutsideClick);
-  }, [openPanel]);
+  }, [closeMenus, openPanel]);
 
   useEffect(() => {
     if (openPanel === "menu" && isRenaming) {
@@ -48,12 +54,6 @@ export default function CardActions({
       inputRef.current?.select();
     }
   }, [isRenaming, openPanel]);
-
-  function closeMenus() {
-    setIsRenaming(false);
-    setDraftTitle(chart.title ?? "");
-    setOpenPanel(null);
-  }
 
   function togglePanel(panelKey, event) {
     event.stopPropagation();
@@ -104,14 +104,14 @@ export default function CardActions({
     }
 
     if (actionKey === "csv") {
-      onExportCSV(chart);
+      onExportCSV?.(chart);
       closeMenus();
       return;
     }
 
     if (actionKey === "png") {
       if (cardRef.current) {
-        onExportPNG(cardRef.current, chart);
+        onExportPNG?.(cardRef.current, chart);
       }
       closeMenus();
     }

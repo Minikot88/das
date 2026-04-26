@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 
 function SummaryItem({ label, value, accent = false }) {
   return (
@@ -26,11 +26,6 @@ export default function DashboardToolbar({
 }) {
   const [editingTarget, setEditingTarget] = useState(null);
   const [draftName, setDraftName] = useState("");
-
-  useEffect(() => {
-    if (!editingTarget) return;
-    setDraftName(activeDashboardName || "");
-  }, [activeDashboardName, editingTarget]);
 
   function openRename(target) {
     setEditingTarget(target);

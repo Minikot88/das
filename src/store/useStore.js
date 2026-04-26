@@ -1228,7 +1228,7 @@ export const useStore = create((set, get) => ({
     };
   }),
 
-  hydrateBuilderDraft: (context) => set((s) => {
+  hydrateBuilderDraft: (context) => set(() => {
     const draft = loadBuilderDraft();
     if (
       draft?.projectId === context?.projectId &&

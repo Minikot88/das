@@ -95,7 +95,6 @@ export default function BuilderDataPane({
   onFieldAssign,
   chartDefinition,
   roleAssignments,
-  lastMappingNotice,
   getFieldRoleHints,
 }) {
   const [search, setSearch] = useState("");

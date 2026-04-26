@@ -165,19 +165,16 @@ function selectorVariant(definition) {
 function selectorFamily(definition) {
   const variants = (definition.variants ?? []).map((variantItem) => selectorVariant(variantItem));
   const categories = unique(definition.categories ?? [definition.category].filter(Boolean));
+  const chartIds = unique([...(definition.chartIds ?? []), ...variants.map((variantItem) => variantItem.chartId)]);
 
   return {
     description: "",
     keywords: [],
-    categories,
-    primaryCategory: categories[0] ?? "comparison",
-    variants,
-    chartIds: unique([...(definition.chartIds ?? []), ...variants.map((variantItem) => variantItem.chartId)]),
     ...definition,
     categories,
     primaryCategory: categories[0] ?? "comparison",
     variants,
-    chartIds: unique([...(definition.chartIds ?? []), ...variants.map((variantItem) => variantItem.chartId)]),
+    chartIds,
   };
 }
 

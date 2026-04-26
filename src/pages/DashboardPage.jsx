@@ -19,6 +19,7 @@ import {
   buildDashboardEmbedCode,
   buildDashboardViewUrl,
   exportNodeAsImage,
+  sanitizeFileName,
 } from "../utils/dashboardShareUtils";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
@@ -27,11 +28,25 @@ function getNextName(prefix, items = []) {
   return `${prefix} ${items.length + 1}`;
 }
 
+function getChartExportRows(chart = {}, rows = []) {
+  if (Array.isArray(rows) && rows.length) return rows;
+  if (Array.isArray(chart.data) && chart.data.length) return chart.data;
+  if (Array.isArray(chart.queryResult?.rows) && chart.queryResult.rows.length) return chart.queryResult.rows;
+  return [];
+}
+
 function downloadCsv(rows = [], filename = "chart-data") {
   const safeRows = Array.isArray(rows) ? rows : [];
-  if (!safeRows.length) return;
+  if (!safeRows.length) {
+    window.alert("No rows available to export yet.");
+    return false;
+  }
 
   const columns = Array.from(new Set(safeRows.flatMap((row) => Object.keys(row ?? {}))));
+  if (!columns.length) {
+    window.alert("No columns available to export yet.");
+    return false;
+  }
   const csv = [
     columns.join(","),
     ...safeRows.map((row) =>
@@ -45,23 +60,41 @@ function downloadCsv(rows = [], filename = "chart-data") {
     ),
   ].join("\n");
 
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `${filename}.csv`;
+  link.download = `${sanitizeFileName(filename)}.csv`;
+  document.body.appendChild(link);
   link.click();
+  link.remove();
   URL.revokeObjectURL(url);
+  return true;
 }
 
-function downloadChartAsPng(cardNode, title = "chart") {
+async function downloadChartAsPng(cardNode, title = "chart") {
   const canvas = cardNode?.querySelector("canvas");
-  if (!canvas) return;
+  if (!canvas) {
+    if (cardNode instanceof HTMLElement) {
+      await exportNodeAsImage(cardNode, {
+        filename: title,
+        format: "png",
+        backgroundColor: getComputedStyle(document.documentElement).getPropertyValue("--surface")?.trim() || "#ffffff",
+      });
+      return true;
+    }
+
+    window.alert("Unable to find a rendered chart to export.");
+    return false;
+  }
 
   const link = document.createElement("a");
   link.href = canvas.toDataURL("image/png");
-  link.download = `${title}.png`;
+  link.download = `${sanitizeFileName(title)}.png`;
+  document.body.appendChild(link);
   link.click();
+  link.remove();
+  return true;
 }
 
 function WorkspaceTab({
@@ -508,11 +541,15 @@ export default function DashboardPage() {
   }
 
   function handleExportCsv(chart, rows) {
-    downloadCsv(rows, chart?.title || chart?.name || "chart-data");
+    downloadCsv(getChartExportRows(chart, rows), chart?.title || chart?.name || "chart-data");
   }
 
-  function handleExportPng(cardNode, chart) {
-    downloadChartAsPng(cardNode, chart?.title || chart?.name || "chart");
+  async function handleExportPng(cardNode, chart) {
+    try {
+      await downloadChartAsPng(cardNode, chart?.title || chart?.name || "chart");
+    } catch (error) {
+      window.alert(error?.message || "Unable to export this chart right now.");
+    }
   }
 
   async function handleDownloadDashboardImage(format = "png") {

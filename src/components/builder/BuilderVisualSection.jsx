@@ -61,9 +61,14 @@ export default function BuilderVisualSection({
   const [searchQuery, setSearchQuery] = useState("");
   const recommendedIds = useMemo(() => new Set((recommendedCharts ?? []).map((chart) => chart.id)), [recommendedCharts]);
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
-  const familySource = visibleChartFamilies?.length
-    ? visibleChartFamilies
-    : (chartSelectorFamilies ?? []);
+  const familySource = useMemo(
+    () => (
+      visibleChartFamilies?.length
+        ? visibleChartFamilies
+        : (chartSelectorFamilies ?? [])
+    ),
+    [chartSelectorFamilies, visibleChartFamilies]
+  );
   const filteredFamilies = useMemo(() => {
     if (!normalizedSearchQuery) return familySource;
     return familySource.filter((family) => familyMatchesQuery(family, normalizedSearchQuery));

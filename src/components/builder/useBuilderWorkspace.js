@@ -13,7 +13,7 @@ import {
 import { getChartCompatibility, getChartSwitchPlan } from "../../utils/chartCompatibility";
 import { getChartJsSupport } from "../../utils/chartjsAdapter";
 import { normalizeChartConfig } from "../../utils/normalizeChartConfig";
-import { buildQuery, formatSql, runQuery, runSqlQuery } from "../../utils/queryEngine";
+import { buildQuery, formatSql, runSqlQuery } from "../../utils/queryEngine";
 import {
   autoMapFieldsForChart,
   assignFieldToRole,
@@ -42,6 +42,8 @@ import {
 } from "./builderStateUtils";
 import { buildPreviewFallback, evaluatePreviewRows, getPreviewReadiness } from "../../utils/builderChartUtils";
 import useBuilderPreview from "./useBuilderPreview";
+
+const EMPTY_ARRAY = [];
 
 const AGGREGATION_BY_TYPE = {
   scatter: [],
@@ -346,8 +348,8 @@ export default function useBuilderWorkspace({
   const chartType = builderSnapshot.chartType;
   const queryMode = builderSnapshot.queryMode;
   const tableInfo = selectedDb && selectedTable ? schema[selectedDb]?.[selectedTable] : null;
-  const tableData = tableInfo?.data ?? [];
-  const tableFields = resolveRuntimeFields(builderSnapshot, tableInfo?.fields ?? []);
+  const tableData = tableInfo?.data ?? EMPTY_ARRAY;
+  const tableFields = resolveRuntimeFields(builderSnapshot, tableInfo?.fields ?? EMPTY_ARRAY);
   const mappingSeed = useMemo(
     () => ({
       roleMapping: builderSnapshot.roleMapping,
@@ -532,7 +534,7 @@ export default function useBuilderWorkspace({
       getChartFamilyMeta(selectedChartFamily),
     [selectedChartFamily, selectorFamilyCatalog]
   );
-  const visibleChartVariants = activeChartFamilyMeta?.variants ?? [];
+  const visibleChartVariants = activeChartFamilyMeta?.variants ?? EMPTY_ARRAY;
   const activeChartVariantMeta = useMemo(
     () =>
       visibleChartVariants.find((variant) => variant.id === selectedChartVariant) ??
@@ -706,43 +708,6 @@ export default function useBuilderWorkspace({
   const previewUsesDirectRows = useMemo(
     () => useDirectPreviewData || previewFallback.useFallback,
     [previewFallback.useFallback, useDirectPreviewData]
-  );
-  const previewSignature = useMemo(
-    () =>
-      JSON.stringify({
-        previewReady,
-        chartType: previewConfigForRender.chartType,
-        dataset: previewConfigForRender.dataset,
-        x: previewConfigForRender.x,
-        y: previewConfigForRender.y,
-        groupBy: previewConfigForRender.groupBy,
-        sizeField: previewConfigForRender.sizeField,
-        aggregate: previewConfigForRender.aggregate,
-        title: previewConfigForRender.title,
-        subtitle: previewConfigForRender.subtitle,
-        xLabel: previewConfigForRender.xLabel,
-        yLabel: previewConfigForRender.yLabel,
-        legendVisible: previewConfigForRender.legendVisible,
-        showGrid: previewConfigForRender.showGrid,
-        showLabels: previewConfigForRender.showLabels,
-        colorTheme: previewConfigForRender.colorTheme,
-        smooth: previewConfigForRender.smooth,
-        settings: previewConfigForRender.settings,
-        display: previewConfigForRender.display,
-        labels: previewConfigForRender.labels,
-      }),
-    [previewConfigForRender, previewReady]
-  );
-  const mappingSignature = useMemo(
-    () =>
-      JSON.stringify({
-        selectedDb,
-        selectedTable,
-        chartType,
-        queryMode,
-        roleMapping,
-      }),
-    [chartType, queryMode, roleMapping, selectedDb, selectedTable]
   );
   const generatedQueryPreview = useMemo(() => buildQuery(builderQueryInput), [builderQueryInput]);
 

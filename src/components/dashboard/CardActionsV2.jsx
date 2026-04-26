@@ -2,7 +2,7 @@
  * components/dashboard/CardActionsV2.jsx
  * Widget toolbar for active dashboard cards.
  */
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useStore } from "../../store/useStore";
 
 const CARD_ACTIONS = [
@@ -33,6 +33,12 @@ export default function CardActionsV2({
   const menuRef = useRef(null);
   const inputRef = useRef(null);
 
+  const closeMenus = useCallback(() => {
+    setIsRenaming(false);
+    setDraftTitle(chart.title ?? "");
+    setOpenMenu(null);
+  }, [chart.title]);
+
   useEffect(() => {
     if (!openMenu) return;
 
@@ -44,7 +50,7 @@ export default function CardActionsV2({
 
     document.addEventListener("mousedown", handleOutsideClick);
     return () => document.removeEventListener("mousedown", handleOutsideClick);
-  }, [openMenu]);
+  }, [closeMenus, openMenu]);
 
   useEffect(() => {
     if (openMenu === "menu" && isRenaming) {
@@ -52,12 +58,6 @@ export default function CardActionsV2({
       inputRef.current?.select();
     }
   }, [isRenaming, openMenu]);
-
-  function closeMenus() {
-    setIsRenaming(false);
-    setDraftTitle(chart.title ?? "");
-    setOpenMenu(null);
-  }
 
   function beginRename(event) {
     event.stopPropagation();
@@ -102,14 +102,14 @@ export default function CardActionsV2({
     }
 
     if (actionKey === "csv") {
-      onExportCSV(chart);
+      onExportCSV?.(chart);
       closeMenus();
       return;
     }
 
     if (actionKey === "png") {
       if (cardRef.current) {
-        onExportPNG(cardRef.current, chart);
+        onExportPNG?.(cardRef.current, chart);
       }
       closeMenus();
     }

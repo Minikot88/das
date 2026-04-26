@@ -56,9 +56,8 @@ export default function HomePage() {
     0
   );
   const readyItems = activeDashboardId ? 3 : activeProjectId ? 2 : 1;
-  const recentProjectIds = ui?.recentProjectIds ?? [];
-
   const sortedProjects = useMemo(() => {
+    const recentProjectIds = ui?.recentProjectIds ?? [];
     return [...projects].sort((a, b) => {
       const aIndex = recentProjectIds.indexOf(a.id);
       const bIndex = recentProjectIds.indexOf(b.id);
@@ -66,7 +65,7 @@ export default function HomePage() {
       const safeB = bIndex === -1 ? Number.MAX_SAFE_INTEGER : bIndex;
       return safeA - safeB;
     });
-  }, [projects, recentProjectIds]);
+  }, [projects, ui?.recentProjectIds]);
 
   const activeProject = projects.find((project) => project.id === activeProjectId) ?? projects[0] ?? null;
   const activeSheet = activeProject?.sheets.find((sheet) => sheet.id === activeSheetId) ?? activeProject?.sheets?.[0] ?? null;

@@ -519,7 +519,10 @@ export function mapLegacyOption(option = {}) {
 }
 
 export function buildChartJsData({ type = "bar", rows = [], config = {}, theme = "default" } = {}) {
-  const normalizedType = normalizeChartType(type, config);
+  const themedConfig = config.colorTheme || config.display?.colorTheme
+    ? config
+    : { ...config, colorTheme: theme };
+  const normalizedType = normalizeChartType(type, themedConfig);
   const support = getChartJsSupport(normalizedType);
   if (!support.supported) {
     return {
@@ -531,24 +534,24 @@ export function buildChartJsData({ type = "bar", rows = [], config = {}, theme =
     };
   }
 
-  if (!rows.length && (config.option || config.echartsOption)) {
-    const legacy = mapLegacyOption(config.option ?? config.echartsOption);
+  if (!rows.length && (themedConfig.option || themedConfig.echartsOption)) {
+    const legacy = mapLegacyOption(themedConfig.option ?? themedConfig.echartsOption);
     return {
       ...legacy,
-      support: getChartJsSupport(normalizeChartType(legacy.inferredType ?? normalizedType, config)),
+      support: getChartJsSupport(normalizeChartType(legacy.inferredType ?? normalizedType, themedConfig)),
     };
   }
 
   switch (support.mode) {
     case "scatter":
-      return { ...buildScatterRows(rows, config, "scatter"), support };
+      return { ...buildScatterRows(rows, themedConfig, "scatter"), support };
     case "bubble":
-      return { ...buildScatterRows(rows, config, "bubble"), support };
+      return { ...buildScatterRows(rows, themedConfig, "bubble"), support };
     case "gauge":
-      return { ...buildGaugeRows(rows, config), support };
+      return { ...buildGaugeRows(rows, themedConfig), support };
     case "kpi":
     case "table":
-      return { ...buildTableRows(rows, config), support };
+      return { ...buildTableRows(rows, themedConfig), support };
     case "polar-area":
     case "pie":
     case "doughnut":
@@ -564,7 +567,7 @@ export function buildChartJsData({ type = "bar", rows = [], config = {}, theme =
     case "stacked-line":
     case "stacked-area":
     default:
-      return { ...buildCategoricalSeriesRows(rows, config, support.mode), support };
+      return { ...buildCategoricalSeriesRows(rows, themedConfig, support.mode), support };
   }
 }
 

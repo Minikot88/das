@@ -124,7 +124,7 @@ export function getChartSwitchPlan(nextChartId, currentState = {}, tableFields =
     .filter(([, fields]) => (fields?.length ?? 0) > 0)
     .map(([roleKey]) => roleKey);
   const droppedRoles = Object.entries(currentMapping)
-    .filter(([roleKey, fields]) => (fields?.length ?? 0) > 0 && !Object.values(autoMappedNext).flat().some((field) => ensureArray(fields).some((item) => item.name === field?.name)))
+    .filter(([, fields]) => (fields?.length ?? 0) > 0 && !Object.values(autoMappedNext).flat().some((field) => ensureArray(fields).some((item) => item.name === field?.name)))
     .map(([roleKey]) => roleKey);
   const missingRoles = getMissingRoleSummary(nextChartId, autoMappedNext);
 

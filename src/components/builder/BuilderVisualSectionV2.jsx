@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from "react";
+﻿import React, { useMemo, useState } from "react";
 import { getChartCategories } from "../../utils/chartCatalog";
 import ChartTypeCategoryTabs from "./ChartTypeCategoryTabs";
 import ChartTypeHoverPreview from "./ChartTypeHoverPreview";
@@ -59,12 +59,6 @@ export default function BuilderVisualSectionV2({
     () => chartCatalog.filter((chart) => chart.category === activeCategory),
     [activeCategory, chartCatalog]
   );
-
-  useEffect(() => {
-    if (activeChartMeta?.category && activeChartMeta.category !== activeCategory) {
-      setActiveCategory(activeChartMeta.category);
-    }
-  }, [activeCategory, activeChartMeta?.category]);
 
   return (
     <div className="builder-config-section builder-visual-section">
