@@ -4,6 +4,53 @@
   gap: 10px;
 }
 
+.builder-chart-type-search-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.builder-chart-type-search-field {
+  min-width: 0;
+  flex: 1;
+  display: grid;
+  gap: 4px;
+}
+
+.builder-chart-type-search-field input {
+  width: 100%;
+  min-height: 30px;
+  padding: 0 9px;
+  border: 1px solid color-mix(in srgb, var(--border-strong) 78%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--surface) 94%, var(--surface-secondary) 6%);
+  color: var(--text-primary);
+  font-size: 12px;
+}
+
+.builder-chart-type-search-field input:focus-visible {
+  outline: none;
+  border-color: var(--accent, var(--text-primary));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent, var(--text-primary)) 26%, transparent);
+}
+
+.builder-chart-type-search-clear {
+  min-height: 30px;
+  padding: 0 9px;
+  border: 1px solid color-mix(in srgb, var(--border-strong) 78%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--surface) 92%, var(--surface-secondary) 8%);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.builder-chart-type-search-clear:hover {
+  border-color: color-mix(in srgb, var(--accent, var(--text-primary)) 56%, var(--border-strong));
+  color: var(--text-primary);
+}
+
 .builder-chart-type-select-trigger {
   width: 100%;
   display: flex;
@@ -141,6 +188,94 @@
   gap: 3px;
 }
 
+.builder-chart-variant-card-leading {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.builder-chart-variant-thumb {
+  width: 50px;
+  height: 32px;
+  flex: none;
+  border: 1px solid color-mix(in srgb, var(--border-strong) 76%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--surface) 88%, var(--surface-secondary) 12%);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.builder-chart-variant-thumb svg {
+  width: 100%;
+  height: 100%;
+}
+
+.builder-chart-variant-thumb .axis {
+  fill: none;
+  stroke: color-mix(in srgb, var(--text-secondary) 36%, transparent);
+  stroke-width: 1.2;
+}
+
+.builder-chart-variant-thumb .series {
+  fill: none;
+  stroke: var(--accent, #2563eb);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.builder-chart-variant-thumb .fill {
+  fill: color-mix(in srgb, var(--accent, #2563eb) 22%, transparent);
+  stroke: none;
+}
+
+.builder-chart-variant-thumb .bar {
+  fill: color-mix(in srgb, var(--accent, #2563eb) 72%, white);
+}
+
+.builder-chart-variant-thumb .ring-bg {
+  fill: none;
+  stroke: color-mix(in srgb, var(--text-secondary) 36%, transparent);
+  stroke-width: 2;
+}
+
+.builder-chart-variant-thumb .slice-1 {
+  fill: color-mix(in srgb, var(--accent, #2563eb) 78%, white);
+}
+
+.builder-chart-variant-thumb .slice-2 {
+  fill: color-mix(in srgb, #14b8a6 72%, white);
+}
+
+.builder-chart-variant-thumb .slice-3 {
+  fill: color-mix(in srgb, #f59e0b 74%, white);
+}
+
+.builder-chart-variant-thumb .slice-4 {
+  fill: color-mix(in srgb, #8b5cf6 72%, white);
+}
+
+.builder-chart-variant-thumb .point {
+  fill: color-mix(in srgb, var(--accent, #2563eb) 80%, white);
+  stroke: color-mix(in srgb, var(--surface) 88%, white);
+  stroke-width: 1;
+}
+
+.builder-chart-variant-thumb .radar-grid {
+  fill: color-mix(in srgb, var(--text-secondary) 18%, transparent);
+  stroke: color-mix(in srgb, var(--text-secondary) 34%, transparent);
+  stroke-width: 1;
+}
+
+.builder-chart-variant-thumb .radar-shape {
+  fill: color-mix(in srgb, var(--accent, #2563eb) 28%, transparent);
+  stroke: var(--accent, #2563eb);
+  stroke-width: 1.2;
+}
+
 .builder-chart-family-item-meta,
 .builder-chart-variant-card-meta {
   flex: none;
@@ -216,6 +351,17 @@
   color: #9a6700;
 }
 
-.builder-chart-support-badge.is-metadata-ready {
-  color: #475569;
+.builder-chart-support-badge.is-coming-soon,
+.builder-chart-support-badge.is-unsupported {
+  color: #64748b;
+}
+
+.builder-chart-type-empty {
+  padding: 9px 10px;
+  border: 1px dashed color-mix(in srgb, var(--border-strong) 72%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--surface) 95%, var(--surface-secondary) 5%);
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.4;
 }

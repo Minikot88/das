@@ -1,9 +1,9 @@
 ﻿import React from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { useStore } from "../store/useStore";
 
 const NAV_ITEMS = [
-  { to: "/", exact: true, icon: "HM", label: "หน้าหลัก", hint: "Projects" },
+  { to: "/", exact: true, icon: "HM", label: "Home", hint: "Projects" },
   { to: "/dashboard", exact: false, icon: "DB", label: "Dashboard", hint: "Canvas" },
   { to: "/builder", exact: false, icon: "BL", label: "Builder", hint: "Chart editor" },
 ];
@@ -17,6 +17,7 @@ export default function SidebarLeft() {
   const activeProjectId = useStore((s) => s.activeProjectId);
   const activeSheetId = useStore((s) => s.activeSheetId);
   const activeDashboardId = useStore((s) => s.activeDashboardId);
+  const location = useLocation();
 
   const activeProject = projects.find((p) => p.id === activeProjectId) ?? projects[0];
   const activeSheet = activeProject?.sheets.find((sheet) => sheet.id === activeSheetId) ?? activeProject?.sheets[0];
@@ -39,11 +40,25 @@ export default function SidebarLeft() {
         className={`sidebar-left${isCollapsed ? " collapsed" : ""}${mobileMenuOpen ? " mobile-open" : ""}`}
         aria-label="เมนูหลัก"
       >
+        <div className="sidebar-brand" title={activeProject?.name ?? "Mini BI"}>
+          <div className="sidebar-brand-mark" aria-hidden="true">
+            MB
+          </div>
+          {!isCollapsed ? (
+            <div className="sidebar-brand-copy">
+              <strong>Mini BI</strong>
+              <span title={activeProject?.name ?? "Workspace"}>
+                {activeProject?.name ?? "Workspace"}
+              </span>
+            </div>
+          ) : null}
+        </div>
+
         <div className="sidebar-top">
           <div className="sidebar-label">
             {!isCollapsed ? (
               <>
-                <span>Menu</span>
+                <span>MENU</span>
                 <strong>Workspace</strong>
               </>
             ) : (
@@ -63,9 +78,11 @@ export default function SidebarLeft() {
 
         {!isCollapsed ? (
           <div className="sidebar-workspace-card">
-            <span className="sidebar-workspace-kicker">Current</span>
-            <strong>{activeProject?.name ?? "โปรเจกต์"}</strong>
-            <span>{activeSheet?.name ?? "ชีต"} / {activeDashboard?.name ?? "Dashboard"}</span>
+            <span className="sidebar-workspace-kicker">CURRENT</span>
+            <strong title={activeProject?.name ?? "โปรเจกต์"}>{activeProject?.name ?? "โปรเจกต์"}</strong>
+            <span title={`${activeSheet?.name ?? "ชีต"} / ${activeDashboard?.name ?? "Dashboard"}`}>
+              {activeSheet?.name ?? "ชีต"} / {activeDashboard?.name ?? "Dashboard"}
+            </span>
           </div>
         ) : null}
 
@@ -84,7 +101,7 @@ export default function SidebarLeft() {
               <span className="nav-icon">{icon}</span>
               {!isCollapsed ? (
                 <span className="nav-copy">
-                  <span className="nav-label">{label}</span>
+                  <span className="nav-label" title={label}>{label}</span>
                   <small>{hint}</small>
                 </span>
               ) : null}
@@ -95,11 +112,12 @@ export default function SidebarLeft() {
         {!isCollapsed ? (
           <div className="sidebar-footer">
             <div className="sidebar-footer-block">
-              <span className="sidebar-footer-label">Active Context</span>
-              <span className="sidebar-version">
-                {activeProject?.name ?? "โปรเจกต์"}
-                {activeSheet ? ` / ${activeSheet.name}` : ""}
-                {activeDashboard ? ` / ${activeDashboard.name}` : ""}
+              <span className="sidebar-footer-label">ACTIVE CONTEXT</span>
+              <span
+                className="sidebar-version"
+                title={location.pathname}
+              >
+                {location.pathname}
               </span>
             </div>
           </div>

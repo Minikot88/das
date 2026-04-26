@@ -89,42 +89,124 @@ const SchemaTree = memo(function SchemaTree({
           overscrollBehavior: scrollable ? "auto" : "contain",
           scrollbarGutter: scrollable ? "stable" : "auto",
           paddingRight: 2,
-          gap: 6,
+          paddingBottom: 2,
+          gap: 8,
           alignContent: "start",
         }}
       >
-        {Object.entries(schema).map(([db, tables]) => (
-          <div key={db} className="schema-group" style={{ borderRadius: 5, background: "var(--surface)" }}>
-            <div className="schema-db-title" onClick={() => toggle(openDbs, setOpenDbs, db)} style={{ padding: "6px 8px", background: "var(--surface-secondary)" }}>
-              <span className="schema-expander">{openDbs.has(db) ? "v" : ">"}</span>
-              <span className="schema-db-icon" aria-hidden="true" style={{ fontSize: 9, color: "var(--text-secondary)" }}>DB</span>
-              <span className="schema-db-label" style={{ fontWeight: 600 }}>{db}</span>
+        {Object.entries(schema).map(([db, tables]) => {
+          const tableEntries = Object.entries(tables);
+          const totalFieldCount = tableEntries.reduce((sum, [, info]) => sum + (info.fields?.length ?? 0), 0);
+          return (
+          <div
+            key={db}
+            className={`schema-group${openDbs.has(db) ? " is-open" : ""}`}
+            style={{
+              borderRadius: 8,
+              background: "var(--surface)",
+              border: "1px solid var(--divider)",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              className={`schema-db-title${openDbs.has(db) ? " is-open" : ""}`}
+              onClick={() => toggle(openDbs, setOpenDbs, db)}
+              style={{
+                minHeight: 36,
+                padding: "0 10px",
+                background: "var(--surface-secondary)",
+                borderBottom: openDbs.has(db) ? "1px solid var(--divider)" : "none",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              <span className="schema-expander" style={{ width: 12, textAlign: "center", color: "var(--text-secondary)" }}>
+                {openDbs.has(db) ? "v" : ">"}
+              </span>
+              <span
+                className="schema-db-icon"
+                aria-hidden="true"
+                style={{
+                  minWidth: 24,
+                  height: 18,
+                  borderRadius: 999,
+                  border: "1px solid color-mix(in srgb, var(--border) 82%, transparent)",
+                  color: "var(--text-secondary)",
+                  fontSize: 9,
+                  fontWeight: 700,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  letterSpacing: "0.06em",
+                }}
+              >
+                DB
+              </span>
+              <span className="schema-db-label" style={{ fontWeight: 600, minWidth: 0, flex: 1 }}>{db}</span>
+              <span className="schema-table-count" style={{ fontSize: 11, color: "var(--text-secondary)" }}>
+                {totalFieldCount} fields
+              </span>
             </div>
-            {openDbs.has(db) && Object.entries(tables).map(([tbl, info]) => {
+            {openDbs.has(db) && tableEntries.map(([tbl, info]) => {
               const tableKey = `${db}.${tbl}`;
               const isOpen = openTables.has(tableKey);
               const isActive = selectedDb === db && selectedTable === tbl;
               return (
                 <div key={tbl}>
-                  <div
-                    className={`schema-table-title${isActive ? " active" : ""}`}
-                    onClick={() => toggle(openTables, setOpenTables, tableKey)}
-                    style={{ padding: "6px 8px" }}
-                  >
-                    <span className="schema-expander">{isOpen ? "v" : ">"}</span>
-                    <span className="schema-table-icon" aria-hidden="true" style={{ fontSize: 9, color: "var(--text-secondary)" }}>TB</span>
-                    <span className="schema-table-label">{tbl}</span>
-                    <span className="schema-table-count">{info.fields?.length ?? 0} fields</span>
-                  </div>
-                  {isOpen ? (
                     <div
-                      className="schema-table-fields"
+                      className={`schema-table-title${isActive ? " active" : ""}${isOpen ? " is-open" : ""}`}
+                      onClick={() => toggle(openTables, setOpenTables, tableKey)}
                       style={{
-                        minHeight: 0,
-                        maxHeight: scrollable ? "min(44vh, 420px)" : "none",
-                        overflowY: scrollable ? "auto" : "visible",
-                        overflowX: "hidden",
+                        minHeight: 36,
+                        padding: "0 10px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        borderBottom: "1px solid var(--divider)",
+                        background: isActive || isOpen
+                          ? "color-mix(in srgb, var(--primary-soft) 40%, var(--surface) 60%)"
+                          : "transparent",
                       }}
+                    >
+                    <span className="schema-expander" style={{ width: 12, textAlign: "center", color: "var(--text-secondary)" }}>
+                      {isOpen ? "v" : ">"}
+                    </span>
+                    <span
+                      className="schema-table-icon"
+                      aria-hidden="true"
+                      style={{
+                        minWidth: 24,
+                        height: 18,
+                        borderRadius: 999,
+                        border: "1px solid color-mix(in srgb, var(--border) 82%, transparent)",
+                        color: "var(--text-secondary)",
+                        fontSize: 9,
+                        fontWeight: 700,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        letterSpacing: "0.06em",
+                      }}
+                    >
+                      TB
+                    </span>
+                    <span className="schema-table-label" style={{ minWidth: 0, flex: 1, fontWeight: 600 }}>{tbl}</span>
+                    <span className="schema-table-count" style={{ fontSize: 11, color: "var(--text-secondary)" }}>
+                      {info.fields?.length ?? 0} fields
+                    </span>
+                  </div>
+                    {isOpen ? (
+                      <div
+                        className="schema-table-fields is-open"
+                        style={{
+                          minHeight: 0,
+                          maxHeight: scrollable ? "min(44vh, 420px)" : "none",
+                          overflowY: scrollable ? "auto" : "visible",
+                          overflowX: "hidden",
+                          padding: "4px 0 6px",
+                          background: "color-mix(in srgb, var(--surface-secondary) 58%, var(--surface) 42%)",
+                        }}
                     >
                       {info.fields
                         .filter((field) => {
@@ -150,7 +232,14 @@ const SchemaTree = memo(function SchemaTree({
                               onDragStart={(e) => handleDragStart(e, db, tbl, field)}
                               onDragEnd={handleDragEnd}
                               onClick={() => onFieldAssign(db, tbl, field)}
-                              style={{ padding: "6px 8px", gap: 6 }}
+                              style={{
+                                minHeight: 34,
+                                padding: "7px 10px 7px 30px",
+                                gap: 8,
+                                borderBottom: "1px solid color-mix(in srgb, var(--divider) 78%, transparent)",
+                                display: "flex",
+                                alignItems: "center",
+                              }}
                             >
                               <span className="field-dot" style={{ background: TYPE_COLOR[field.type] }} />
                               <span className="schema-item-copy">
@@ -167,11 +256,11 @@ const SchemaTree = memo(function SchemaTree({
                                       key={`${field.name}-${role.key}`}
                                       type="button"
                                       className={`builder-schema-role-btn${role.required ? " is-required" : ""}`}
-                                      onClick={(event) => {
-                                        event.stopPropagation();
-                                        onFieldAssign(db, tbl, field, role.key);
-                                      }}
-                                      style={{ minHeight: 22, padding: "0 7px", borderRadius: 5, fontSize: 9 }}
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      onFieldAssign(db, tbl, field, role.key);
+                                    }}
+                                      style={{ minHeight: 22, padding: "0 7px", borderRadius: 999, fontSize: 9 }}
                                     >
                                       {role.label}
                                     </button>
@@ -187,7 +276,7 @@ const SchemaTree = memo(function SchemaTree({
               );
             })}
           </div>
-        ))}
+        )})}
       </div>
     </div>
   );

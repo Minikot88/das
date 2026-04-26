@@ -48,12 +48,14 @@ export default function HomePage() {
   const deleteProject = useStore((state) => state.deleteProject);
   const setActiveProject = useStore((state) => state.setActiveProject);
   const [showModal, setShowModal] = useState(false);
+  const [projectSort, setProjectSort] = useState("recent");
 
   const totalSheets = projects.reduce((count, project) => count + (project.sheets?.length ?? 0), 0);
   const totalDashboards = projects.reduce(
     (count, project) => count + (project.sheets?.reduce((sheetCount, sheet) => sheetCount + (sheet.dashboards?.length ?? 0), 0) ?? 0),
     0
   );
+  const readyItems = activeDashboardId ? 3 : activeProjectId ? 2 : 1;
   const recentProjectIds = ui?.recentProjectIds ?? [];
 
   const sortedProjects = useMemo(() => {
@@ -96,6 +98,23 @@ export default function HomePage() {
     );
   }, [charts, projects, t, ui?.lastOpenedContextByProject]);
 
+  const visibleProjects = useMemo(() => {
+    let next = [...projects];
+
+    if (projectSort === "recent") {
+      next = [...sortedProjects];
+    } else if (projectSort === "active") {
+      next.sort((a, b) => {
+        if (a.id === activeProjectId) return -1;
+        if (b.id === activeProjectId) return 1;
+        return a.name.localeCompare(b.name, "th");
+      });
+    } else {
+      next.sort((a, b) => a.name.localeCompare(b.name, "th"));
+    }
+    return next;
+  }, [activeProjectId, projectSort, projects, sortedProjects]);
+
   const handleOpenProject = (id) => {
     setActiveProject(id);
     navigate("/dashboard");
@@ -112,6 +131,7 @@ export default function HomePage() {
         <PageHeader
           kicker="Workspace"
           title="Workspace"
+          subtitle="Manage projects, sheets and dashboards in one place."
           actions={(
             <Button id="create-project-btn" variant="primary" className="home-create-btn" onClick={() => setShowModal(true)}>
               {t("home.newProject")}
@@ -121,9 +141,10 @@ export default function HomePage() {
           <Toolbar
             className="home-toolbar home-command-toolbar"
             left={(
-              <div className="home-toolbar-status">
+              <div className="home-toolbar-status home-toolbar-chip-row">
                 <Badge tone="primary">Active</Badge>
-                <span>{projects.length} projects</span>
+                <Badge>{projects.length} Projects</Badge>
+                <Badge>{readyItems} Ready Items</Badge>
               </div>
             )}
             right={(
@@ -139,7 +160,7 @@ export default function HomePage() {
           />
         </PageHeader>
 
-        <div className="home-stats-grid">
+          <div className="home-stats-grid">
           <div className="home-stat-card">
             <span className="home-stat-card-label">{t("home.projects")}</span>
             <strong>{projects.length}</strong>
@@ -154,7 +175,7 @@ export default function HomePage() {
           </div>
           <div className="home-stat-card is-highlight">
             <span className="home-stat-card-label">{t("home.activeItems")}</span>
-            <strong>{activeDashboard ? 3 : activeProject ? 2 : 1}</strong>
+            <strong>{readyItems}</strong>
           </div>
         </div>
       </Panel>
@@ -172,17 +193,42 @@ export default function HomePage() {
         <section className="home-section home-section-shell">
           <SectionHeader
             kicker={t("home.projects")}
-            title={t("home.projects")}
+            title={(
+              <span className="home-section-title-row">
+                <span>{t("home.projects")}</span>
+                <Badge className="home-title-count-badge">{visibleProjects.length}</Badge>
+              </span>
+            )}
             actions={(
-              <div className="home-section-pills">
-                <Badge>Recent</Badge>
-                <Badge>{sortedProjects.length} total</Badge>
+              <div className="home-projects-controls">
+                <div className="home-section-pills home-sort-pills">
+                  <button
+                    type="button"
+                    className={`home-filter-chip${projectSort === "recent" ? " is-active" : ""}`}
+                    onClick={() => setProjectSort("recent")}
+                  >
+                    Recent
+                  </button>
+                  <button
+                    type="button"
+                    className={`home-filter-chip${projectSort === "active" ? " is-active" : ""}`}
+                    onClick={() => setProjectSort("active")}
+                  >
+                    Active
+                  </button>
+                  <button
+                    type="button"
+                    className={`home-filter-chip${projectSort === "az" ? " is-active" : ""}`}
+                    onClick={() => setProjectSort("az")}
+                  >
+                    A-Z
+                  </button>
+                </div>
               </div>
             )}
           />
-
           <div className="project-grid project-grid-command-center">
-            {sortedProjects.map((project) => (
+            {visibleProjects.map((project) => (
               <ProjectCard
                 key={project.id}
                 project={project}

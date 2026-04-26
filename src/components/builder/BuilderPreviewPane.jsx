@@ -3,10 +3,10 @@ import ChartRenderer from "../charts/ChartRenderer";
 import { getReadableFieldLabel } from "../../utils/builderMappingUtils";
 import BuilderQuerySection from "./BuilderQuerySection";
 
-const QUERY_PANEL_DEFAULT_HEIGHT = 168;
-const QUERY_PANEL_MIN_HEIGHT = 120;
-const QUERY_PANEL_MAX_RATIO = 0.38;
-const PREVIEW_PANEL_MIN_HEIGHT = 260;
+const QUERY_PANEL_DEFAULT_HEIGHT = 200;
+const QUERY_PANEL_MIN_HEIGHT = 110;
+const QUERY_PANEL_MAX_RATIO = 0.45;
+const PREVIEW_PANEL_MIN_HEIGHT = 240;
 const QUERY_PANEL_HEIGHT_STORAGE_KEY = "builder-query-panel-height";
 
 function clampQueryPanelHeight(value, maxHeight) {
@@ -52,11 +52,11 @@ function MappingRoleChip({ role }) {
         display: "grid",
         gap: 4,
         minWidth: 0,
-        minHeight: 50,
+        minHeight: 52,
         alignContent: "start",
-        padding: "7px 8px",
+        padding: "8px 9px",
         border: `1px solid ${border}`,
-        borderRadius: 5,
+        borderRadius: 8,
         background,
       }}
     >
@@ -293,7 +293,21 @@ export default function BuilderPreviewPane({
           gap: 8,
         }}
       >
-        <div ref={previewMetaRef} className="builder-preview-meta-block" style={{ display: "grid", gap: 8, flexShrink: 0 }}>
+        <div
+          ref={previewMetaRef}
+          className="builder-preview-meta-block"
+          style={{
+            display: "grid",
+            gap: 8,
+            flex: "0 0 auto",
+            maxHeight: "none",
+            minHeight: "auto",
+            height: "auto",
+            overflow: "visible",
+            paddingRight: 0,
+            alignContent: "start",
+          }}
+        >
           <div
             className="builder-pane-header builder-pane-header-compact"
             style={{
@@ -318,17 +332,18 @@ export default function BuilderPreviewPane({
             className="builder-preview-summary-strip"
             style={{
               gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+              gap: 8,
             }}
           >
-            <div style={{ padding: 7 }}>
+            <div style={{ padding: "10px 11px", minHeight: 58, display: "grid", alignContent: "center", gap: 3 }}>
               <span className="builder-query-label">Chart</span>
               <strong>{activeChartLabel ?? "Chart"}</strong>
             </div>
-            <div style={{ padding: 7 }}>
+            <div style={{ padding: "10px 11px", minHeight: 58, display: "grid", alignContent: "center", gap: 3 }}>
               <span className="builder-query-label">Metric</span>
               <strong>{aggregation || "sum"}</strong>
             </div>
-            <div style={{ padding: 7 }}>
+            <div style={{ padding: "10px 11px", minHeight: 58, display: "grid", alignContent: "center", gap: 3 }}>
               <span className="builder-query-label">Source</span>
               <strong>{selectedTable ?? "No table"}</strong>
             </div>
@@ -338,10 +353,10 @@ export default function BuilderPreviewPane({
             className="builder-preview-mapping-board"
             style={{
               display: "grid",
-              gap: 6,
-              padding: 7,
+              gap: 8,
+              padding: "8px 10px",
               border: "1px solid var(--border)",
-              borderRadius: 5,
+              borderRadius: 8,
               background: "var(--surface)",
             }}
           >
@@ -364,8 +379,8 @@ export default function BuilderPreviewPane({
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
-                  minHeight: 20,
-                  padding: "0 7px",
+                  minHeight: 22,
+                  padding: "0 8px",
                   border: "1px solid var(--border)",
                   borderRadius: 999,
                   background: mappingBackground,
@@ -385,7 +400,7 @@ export default function BuilderPreviewPane({
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fit, minmax(148px, 1fr))",
-                gap: 6,
+                gap: 8,
                 alignItems: "stretch",
               }}
             >
@@ -400,7 +415,7 @@ export default function BuilderPreviewPane({
                   style={{
                     display: "flex",
                     flexWrap: "wrap",
-                    gap: 6,
+                    gap: 8,
                     alignItems: "stretch",
                   }}
                 >

@@ -1,6 +1,43 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import ChartTypeSelect from "./chartType/ChartTypeSelect";
 import ChartVariantList from "./chartType/ChartVariantList";
+
+function includesSearchTerm(value, query) {
+  return String(value ?? "").toLowerCase().includes(query);
+}
+
+function familyMatchesQuery(family, query) {
+  const familyTokens = [
+    family.label,
+    family.description,
+    family.iconKey,
+    ...(family.categories ?? []),
+  ];
+
+  const variantTokens = (family.variants ?? []).flatMap((variant) => [
+    variant.label,
+    variant.description,
+    variant.chartId,
+    variant.id,
+  ]);
+
+  return [...familyTokens, ...variantTokens].some((token) => includesSearchTerm(token, query));
+}
+
+function variantMatchesQuery(variant, query) {
+  const variantTokens = [
+    variant.label,
+    variant.description,
+    variant.chartId,
+    variant.id,
+    variant.family,
+    variant.renderingStrategy,
+    variant.chart?.label,
+    variant.chart?.name,
+  ];
+
+  return variantTokens.some((token) => includesSearchTerm(token, query));
+}
 
 export default function BuilderVisualSection({
   chartDefinition,
@@ -21,16 +58,29 @@ export default function BuilderVisualSection({
   onChartFamilyChange,
   onChartVariantChange,
 }) {
+  const [searchQuery, setSearchQuery] = useState("");
   const recommendedIds = useMemo(() => new Set((recommendedCharts ?? []).map((chart) => chart.id)), [recommendedCharts]);
+  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+  const familySource = visibleChartFamilies?.length
+    ? visibleChartFamilies
+    : (chartSelectorFamilies ?? []);
+  const filteredFamilies = useMemo(() => {
+    if (!normalizedSearchQuery) return familySource;
+    return familySource.filter((family) => familyMatchesQuery(family, normalizedSearchQuery));
+  }, [familySource, normalizedSearchQuery]);
+  const filteredVariants = useMemo(() => {
+    if (!normalizedSearchQuery) return visibleChartVariants ?? [];
+    return (visibleChartVariants ?? []).filter((variant) => variantMatchesQuery(variant, normalizedSearchQuery));
+  }, [normalizedSearchQuery, visibleChartVariants]);
   const orderedVariants = useMemo(
     () =>
-      [...(visibleChartVariants ?? [])].sort((left, right) => {
+      [...filteredVariants].sort((left, right) => {
         const leftRecommended = recommendedIds.has(left.chartId) ? 1 : 0;
         const rightRecommended = recommendedIds.has(right.chartId) ? 1 : 0;
         if (leftRecommended !== rightRecommended) return rightRecommended - leftRecommended;
         return 0;
       }),
-    [recommendedIds, visibleChartVariants]
+    [filteredVariants, recommendedIds]
   );
   const activeCategoryMeta = useMemo(
     () => (chartSelectorCategories ?? []).find((category) => category.id === selectedChartCategory) ?? null,
@@ -79,8 +129,29 @@ export default function BuilderVisualSection({
             ) : null}
         </div>
 
+        <div className="builder-chart-type-search-row">
+          <label className="builder-chart-type-search-field">
+            <span className="builder-query-label">Search chart type</span>
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Find family or variant"
+            />
+          </label>
+          {normalizedSearchQuery ? (
+            <button
+              type="button"
+              className="builder-chart-type-search-clear"
+              onClick={() => setSearchQuery("")}
+            >
+              Clear
+            </button>
+          ) : null}
+        </div>
+
         <ChartTypeSelect
-          families={visibleChartFamilies?.length ? visibleChartFamilies : (chartSelectorFamilies ?? [])}
+          families={normalizedSearchQuery ? filteredFamilies : familySource}
           selectedFamily={selectedChartFamily}
           selectedFamilyMeta={activeChartFamilyMeta}
           selectedCategory={activeCategoryMeta?.label ?? selectedChartCategory}
@@ -90,9 +161,11 @@ export default function BuilderVisualSection({
 
         <div className="builder-chart-type-variant-panel">
           <div className="builder-chart-type-panel-head">
-            <span className="builder-query-label">Available variants</span>
+            <span className="builder-query-label">
+              {normalizedSearchQuery ? "Matched variants" : "Available variants"}
+            </span>
             <span className="builder-chart-inline-badge">
-              {selectableVariantCount}/{orderedVariants.length} ready
+              {selectableVariantCount}/{orderedVariants.length || 0} ready
             </span>
           </div>
           <div className="builder-chart-type-category-row">
@@ -105,12 +178,18 @@ export default function BuilderVisualSection({
               );
             })}
           </div>
-          <ChartVariantList
-            variants={orderedVariants}
-            selectedVariant={selectedChartVariant ?? activeChartVariantMeta?.id ?? chartType}
-            showDescriptions={showDescriptions}
-            onVariantSelect={onChartVariantChange}
-          />
+          {orderedVariants.length ? (
+            <ChartVariantList
+              variants={orderedVariants}
+              selectedVariant={selectedChartVariant ?? activeChartVariantMeta?.id ?? chartType}
+              showDescriptions={showDescriptions}
+              onVariantSelect={onChartVariantChange}
+            />
+          ) : (
+            <div className="builder-chart-type-empty">
+              No chart variants matched this search.
+            </div>
+          )}
         </div>
       </div>
     </div>

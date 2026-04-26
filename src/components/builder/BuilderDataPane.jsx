@@ -247,8 +247,9 @@ export default function BuilderDataPane({
                 overflowY: "auto",
                 overflowX: "hidden",
                 scrollbarGutter: "stable",
-                paddingRight: 2,
+                padding: "0 2px 2px",
                 gap: 8,
+                alignContent: "start",
               }}
             >
               {queryMode === "sql" && queryResult?.fieldMeta?.length ? (

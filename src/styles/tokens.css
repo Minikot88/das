@@ -23,32 +23,32 @@
   --gray-900: #0f172a;
   --gray-950: #0b1220;
 
-  --green-600: #059669;
-  --amber-600: #d97706;
-  --red-600: #dc2626;
+  --green-600: #16a34a;
+  --amber-600: #f59e0b;
+  --red-600: #ef4444;
   --sky-600: #0284c7;
 
   /* Core theme */
   --primary: #2563eb;
   --primary-hover: #1d4ed8;
   --primary-light: #dbeafe;
-  --accent: #0f766e;
+  --accent: #2563eb;
   --accent-cyan: #0891b2;
   --accent-rose: #be123c;
-  --background: #f3f6fa;
+  --background: #f8fafc;
   --surface: var(--gray-0);
-  --surface-secondary: #f6f8fb;
-  --surface-muted: #f5f7fa;
-  --surface-soft: #edf2f7;
-  --surface-strong: #e7edf4;
-  --border: #d2dbe6;
-  --border-strong: #b8c5d4;
+  --surface-secondary: #f1f5f9;
+  --surface-muted: #f1f5f9;
+  --surface-soft: #f1f5f9;
+  --surface-strong: #e2e8f0;
+  --border: #dbe3ef;
+  --border-strong: #c9d5e6;
   --border-active: var(--blue-600);
-  --divider: #dde5ee;
+  --divider: #dbe3ef;
   --text-primary: var(--gray-900);
-  --text-secondary: #4f6074;
-  --text-muted: #728399;
-  --text-soft: #8da0b4;
+  --text-secondary: #64748b;
+  --text-muted: #64748b;
+  --text-soft: #7f8ea3;
   --text-strong: var(--text-primary);
   --text-base: var(--text-primary);
   --success: var(--green-600);
@@ -82,16 +82,16 @@
 
   /* Radius */
   --radius-0: 0;
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
   --radius-pill: 999px;
 
   /* Shadows */
-  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.015);
-  --shadow-sm: 0 4px 10px rgba(15, 23, 42, 0.03);
-  --shadow-md: 0 8px 18px rgba(15, 23, 42, 0.05);
-  --shadow-lg: 0 12px 24px rgba(15, 23, 42, 0.06);
+  --shadow-xs: 0 2px 8px rgba(15, 23, 42, 0.03);
+  --shadow-sm: 0 6px 20px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 10px 26px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 16px 34px rgba(15, 23, 42, 0.1);
 
   /* Typography */
   --font-sans: "IBM Plex Sans", "Noto Sans Thai", "Segoe UI", sans-serif;
@@ -118,8 +118,8 @@
   /* Layout */
   --layout-page-max: 1440px;
   --layout-content-max: 1280px;
-  --layout-sidebar-left: 248px;
-  --layout-sidebar-left-collapsed: 78px;
+  --layout-sidebar-left: 220px;
+  --layout-sidebar-left-collapsed: 72px;
   --layout-sidebar-right: 340px;
   --layout-builder-left: 300px;
   --layout-builder-right: 360px;

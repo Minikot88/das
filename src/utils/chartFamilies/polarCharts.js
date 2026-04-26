@@ -1,0 +1,47 @@
+export const polarCharts = {
+  id: "polar",
+  label: "Polar",
+  iconKey: "polar",
+  categories: ["distribution", "relationship"],
+  description: "Radial comparison charts for circular value storytelling.",
+  variants: [
+    {
+      id: "basic-polar-variant",
+      label: "Polar Basic",
+      description: "Single-series polar area chart.",
+      family: "polar",
+      exampleKey: "basic-polar-variant",
+      chartId: "rose",
+      requiredRoles: ["category", "value"],
+      optionalRoles: ["series", "values"],
+      renderingStrategy: "polar-area",
+      supportLevel: "supported",
+    },
+    {
+      id: "comparison-polar-variant",
+      label: "Polar Comparison",
+      description: "Compare polar slices across grouped categories.",
+      family: "polar",
+      exampleKey: "comparison-polar-variant",
+      chartId: "rose",
+      requiredRoles: ["category", "value"],
+      optionalRoles: ["series", "values"],
+      renderingStrategy: "polar-area",
+      supportLevel: "supported",
+    },
+    {
+      id: "multi-polar-variant",
+      label: "Polar Multi",
+      description: "Multi-series polar view with radial emphasis.",
+      family: "polar",
+      exampleKey: "multi-polar-variant",
+      chartId: "rose",
+      requiredRoles: ["category", "value"],
+      optionalRoles: ["series", "values"],
+      renderingStrategy: "polar-area",
+      supportLevel: "partial",
+    },
+  ],
+};
+
+export default polarCharts;

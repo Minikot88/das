@@ -338,6 +338,229 @@ body.builder-resize-active {
   transition: border-color 140ms ease, background-color 140ms ease;
 }
 
+/* Builder workspace functional overrides (beats global polish/docs rules). */
+body .shell.is-builder-route {
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
+body .shell.is-builder-route .appbar {
+  box-sizing: border-box;
+  height: var(--appbar-h) !important;
+  min-height: var(--appbar-h) !important;
+  max-height: var(--appbar-h) !important;
+}
+
+body .shell.is-builder-route .body-row {
+  height: calc(100dvh - var(--appbar-h)) !important;
+  min-height: 0 !important;
+  max-height: calc(100dvh - var(--appbar-h)) !important;
+  overflow: hidden !important;
+}
+
+body .shell.is-builder-route .main-content {
+  min-height: 0 !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+body .shell.is-builder-route .main-content > .ui-page-container.builder-shell,
+body .shell.is-builder-route .builder-shell,
+body .shell.is-builder-route .builder-workspace-region,
+body .shell.is-builder-route .builder-workspace-grid.builder-workspace-grid-compact,
+body .shell.is-builder-route .builder-workspace-column,
+body .shell.is-builder-route .builder-preview-panel,
+body .shell.is-builder-route .builder-controls-panel,
+body .shell.is-builder-route .builder-query-panel,
+body .shell.is-builder-route .builder-query-summary,
+body .shell.is-builder-route .builder-query-sql-panel,
+body .shell.is-builder-route .builder-data-pane__body,
+body .shell.is-builder-route .builder-data-pane__list-scroll,
+body .shell.is-builder-route .builder-controls-grid {
+  min-width: 0 !important;
+  min-height: 0 !important;
+}
+
+body .shell.is-builder-route .main-content > .ui-page-container.builder-shell,
+body .shell.is-builder-route .builder-shell,
+body .shell.is-builder-route .builder-workspace-region,
+body .shell.is-builder-route .builder-workspace-grid.builder-workspace-grid-compact {
+  height: 100% !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
+}
+
+body .shell.is-builder-route .builder-top-action-bar {
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  overflow: hidden !important;
+}
+
+body .shell.is-builder-route .builder-top-action-primary,
+body .shell.is-builder-route .builder-top-action-secondary,
+body .shell.is-builder-route .builder-top-action-context-row,
+body .shell.is-builder-route .builder-top-action-title-row,
+body .shell.is-builder-route .builder-top-action-summary.builder-top-action-summary-compact {
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+body .shell.is-builder-route .builder-top-action-context-row,
+body .shell.is-builder-route .builder-top-action-title-row,
+body .shell.is-builder-route .builder-top-action-summary.builder-top-action-summary-compact {
+  flex-wrap: nowrap !important;
+}
+
+body .shell.is-builder-route .builder-top-action-breadcrumb {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+body .shell.is-builder-route .builder-workspace-grid.builder-workspace-grid-compact {
+  display: grid !important;
+  grid-template-columns:
+    var(--builder-left-width, 280px)
+    var(--builder-left-resizer-size, 10px)
+    minmax(0, 1fr)
+    var(--builder-right-resizer-size, 10px)
+    var(--builder-right-width, 340px) !important;
+  align-items: stretch !important;
+  overflow: hidden !important;
+}
+
+body .shell.is-builder-route .builder-workspace-column-data,
+body .shell.is-builder-route .builder-workspace-column-settings {
+  width: auto !important;
+  max-width: none !important;
+  flex: 0 0 auto !important;
+}
+
+body .shell.is-builder-route .builder-workspace-column-preview {
+  min-width: 0 !important;
+  flex: 1 1 auto !important;
+}
+
+body .shell.is-builder-route .builder-workspace-column-settings.is-collapsed {
+  min-width: 40px !important;
+  width: 40px !important;
+  max-width: 40px !important;
+}
+
+body .shell.is-builder-route .builder-data-pane__body {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  overflow: hidden !important;
+}
+
+body .shell.is-builder-route .builder-data-pane__list-scroll,
+body .shell.is-builder-route .builder-controls-grid {
+  flex: 1 1 auto !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+/* Keep Data Source header static and allow long table/field lists to scroll in-list only. */
+body .shell.is-builder-route .builder-pane-shell-left,
+body .shell.is-builder-route .builder-pane-frame-left,
+body .shell.is-builder-route .builder-data-pane {
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  overflow: hidden !important;
+}
+
+body .shell.is-builder-route .builder-data-pane__header,
+body .shell.is-builder-route .builder-data-pane__header-shell {
+  flex: 0 0 auto !important;
+}
+
+body .shell.is-builder-route .builder-data-pane__body {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+}
+
+body .shell.is-builder-route .builder-data-pane__list-scroll {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  height: 0 !important;
+  max-height: none !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: contain;
+}
+
+body .shell.is-builder-route .schema-explorer.is-scroll-managed {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 0 0 auto !important;
+  min-height: auto !important;
+  overflow: visible !important;
+}
+
+body .shell.is-builder-route .schema-explorer.is-scroll-managed .schema-explorer-list {
+  display: grid !important;
+  flex: 0 0 auto !important;
+  min-height: auto !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+  align-content: start !important;
+}
+
+body .shell.is-builder-route .schema-explorer.is-scroll-managed .schema-table-fields {
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+body .shell.is-builder-route .builder-preview-panel {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  overflow: hidden !important;
+}
+
+body .shell.is-builder-route .builder-preview-content-slot,
+body .shell.is-builder-route .builder-preview-chart-slot {
+  flex: 1 1 auto !important;
+  overflow: hidden !important;
+}
+
+body .shell.is-builder-route .builder-preview-query-slot.is-resizable {
+  flex: 0 0 auto !important;
+  overflow: hidden !important;
+}
+
+body .shell.is-builder-route .builder-query-panel {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  max-height: none !important;
+  overflow: hidden !important;
+}
+
+body .shell.is-builder-route .builder-query-summary,
+body .shell.is-builder-route .builder-query-sql-panel {
+  flex: 1 1 auto !important;
+  max-height: none !important;
+  overflow: hidden !important;
+}
+
+body .shell.is-builder-route .builder-query-sql-block {
+  max-height: none !important;
+  overflow: auto !important;
+}
+
 .shell.is-builder-route .builder-workspace-resizer,
 .shell.is-builder-route .builder-preview-resizer {
   position: relative;

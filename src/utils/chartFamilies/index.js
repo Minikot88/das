@@ -1,10 +1,13 @@
 import { lineCharts } from "./lineCharts";
+import { areaCharts } from "./areaCharts";
 import { barCharts } from "./barCharts";
 import { pieCharts } from "./pieCharts";
 import { scatterCharts } from "./scatterCharts";
+import { bubbleCharts } from "./bubbleCharts";
 import { mapCharts } from "./mapCharts";
 import { candlestickCharts } from "./candlestickCharts";
 import { radarCharts } from "./radarCharts";
+import { polarCharts } from "./polarCharts";
 import { boxplotCharts } from "./boxplotCharts";
 import { heatmapCharts } from "./heatmapCharts";
 import { graphCharts } from "./graphCharts";
@@ -21,6 +24,7 @@ import { themeRiverCharts } from "./themeRiverCharts";
 import { calendarCharts } from "./calendarCharts";
 import { matrixCharts } from "./matrixCharts";
 import { chordCharts } from "./chordCharts";
+import { mixedCharts } from "./mixedCharts";
 import { customCharts } from "./customCharts";
 import { datasetCharts } from "./datasetCharts";
 import { dataZoomCharts } from "./dataZoomCharts";
@@ -29,9 +33,13 @@ import { richTextCharts } from "./richTextCharts";
 
 export const CHART_SELECTOR_FAMILIES = [
   lineCharts,
+  areaCharts,
   barCharts,
+  mixedCharts,
   pieCharts,
+  polarCharts,
   scatterCharts,
+  bubbleCharts,
   mapCharts,
   candlestickCharts,
   radarCharts,
@@ -69,4 +77,3 @@ export function getChartVariantById(variantId) {
   }
   return null;
 }
-

@@ -28,10 +28,10 @@ function getBuilderContextFromState(routeState, fallbackContext) {
 
 const LEFT_PANEL_DEFAULT_WIDTH = 280;
 const LEFT_PANEL_MIN_WIDTH = 220;
-const LEFT_PANEL_MAX_WIDTH = 420;
-const RIGHT_PANEL_DEFAULT_WIDTH = 320;
-const RIGHT_PANEL_MIN_WIDTH = 260;
-const RIGHT_PANEL_MAX_WIDTH = 480;
+const LEFT_PANEL_MAX_WIDTH = 440;
+const RIGHT_PANEL_DEFAULT_WIDTH = 340;
+const RIGHT_PANEL_MIN_WIDTH = 280;
+const RIGHT_PANEL_MAX_WIDTH = 520;
 const SETTINGS_COLLAPSED_WIDTH = 40;
 const RESIZER_SIZE = 10;
 const CENTER_PANEL_MIN_WIDTH = 320;
@@ -520,7 +520,8 @@ export default function BuilderPage() {
           alignItems: "center",
           justifyContent: "space-between",
           gap: 8,
-          flexWrap: "wrap",
+          flexWrap: "nowrap",
+          overflow: "hidden",
         }}
       >
         <div
@@ -531,6 +532,7 @@ export default function BuilderPage() {
             display: "grid",
             gap: 3,
             alignContent: "center",
+            overflow: "hidden",
           }}
         >
           <div
@@ -540,11 +542,22 @@ export default function BuilderPage() {
               display: "flex",
               alignItems: "center",
               gap: 6,
-              flexWrap: "wrap",
+              flexWrap: "nowrap",
+              overflow: "hidden",
             }}
           >
             <div className="builder-page-kicker">Chart.js Builder</div>
-            <div className="builder-top-action-breadcrumb">{compactContextLabel}</div>
+            <div
+              className="builder-top-action-breadcrumb"
+              style={{
+                minWidth: 0,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {compactContextLabel}
+            </div>
           </div>
           <div
             className="builder-top-action-title-row"
@@ -553,7 +566,8 @@ export default function BuilderPage() {
               display: "flex",
               alignItems: "center",
               gap: 6,
-              flexWrap: "wrap",
+              flexWrap: "nowrap",
+              overflow: "hidden",
             }}
           >
             <div className="builder-top-action-title-copy">
@@ -565,11 +579,33 @@ export default function BuilderPage() {
                 display: "flex",
                 alignItems: "center",
                 gap: 6,
-                flexWrap: "wrap",
+                flexWrap: "nowrap",
+                minWidth: 0,
+                overflow: "hidden",
               }}
             >
-              <span className="builder-top-action-summary-chip">{workspaceSummary.activeChartLabel}</span>
-              <span className="builder-top-action-summary-chip">{workspaceSummary.chartFamily}</span>
+              <span
+                className="builder-top-action-summary-chip"
+                style={{
+                  maxWidth: 180,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {workspaceSummary.activeChartLabel}
+              </span>
+              <span
+                className="builder-top-action-summary-chip"
+                style={{
+                  maxWidth: 140,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {workspaceSummary.chartFamily}
+              </span>
               <span className="builder-top-action-summary-chip">
                 {workspaceSummary.mappedCount}/{workspaceSummary.mappedTarget} mapped
               </span>
@@ -586,6 +622,7 @@ export default function BuilderPage() {
             gap: 5,
             flexWrap: "wrap",
             maxWidth: "100%",
+            minWidth: 0,
           }}
         >
           <span className="builder-top-action-badge">{draftLabel}</span>
