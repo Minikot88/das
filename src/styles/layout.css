@@ -794,3 +794,251 @@
 .sidebar-left {
   gap: 6px;
 }
+
+/* App shell polish scoped to the builder workspace */
+.shell.is-builder-route .appbar {
+  height: var(--appbar-h);
+  min-height: var(--appbar-h);
+  padding: 0 14px;
+  border-bottom: 1px solid rgba(203, 213, 225, 0.72);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.045);
+}
+
+.shell.is-builder-route .appbar-logo,
+.shell.is-builder-route .appbar-search-wrap,
+.shell.is-builder-route .appbar-select,
+.shell.is-builder-route .appbar-btn,
+.shell.is-builder-route .appbar-theme-btn,
+.shell.is-builder-route .appbar-user,
+.shell.is-builder-route .appbar-nav-link {
+  border-radius: 10px;
+}
+
+.shell.is-builder-route .appbar-logo {
+  padding: 4px 6px;
+}
+
+.shell.is-builder-route .appbar-logo-mark,
+.shell.is-builder-route .sidebar-brand-mark {
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.12);
+}
+
+.shell.is-builder-route .appbar-nav {
+  padding: 3px;
+  border: 1px solid rgba(203, 213, 225, 0.68);
+  border-radius: 12px;
+  background: rgba(248, 250, 252, 0.82);
+}
+
+.shell.is-builder-route .appbar-nav-link {
+  min-width: 86px;
+  min-height: 38px;
+  border-color: transparent;
+  background: transparent;
+}
+
+.shell.is-builder-route .appbar-nav-link.active {
+  border-color: rgba(37, 99, 235, 0.28);
+  background: #ffffff;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.09);
+}
+
+.shell.is-builder-route .appbar-search-wrap {
+  width: clamp(190px, 15vw, 260px);
+  border-color: rgba(203, 213, 225, 0.72);
+  background: #ffffff;
+}
+
+.shell.is-builder-route .appbar-project-switcher {
+  min-width: 0;
+}
+
+.shell.is-builder-route .appbar-select {
+  width: clamp(132px, 12vw, 180px);
+  min-width: 132px;
+  border-color: rgba(203, 213, 225, 0.72);
+  background-color: #ffffff;
+}
+
+.shell.is-builder-route .appbar-btn {
+  min-height: 38px;
+  border-color: #2563eb;
+  background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
+  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.2);
+}
+
+.shell.is-builder-route .appbar-theme-btn,
+.shell.is-builder-route .appbar-user {
+  border-color: rgba(203, 213, 225, 0.72);
+  background: #ffffff;
+}
+
+.shell.is-builder-route .sidebar-left {
+  padding: 12px 10px;
+  border-right: 1px solid rgba(203, 213, 225, 0.72);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.94));
+}
+
+.shell.is-builder-route .sidebar-brand {
+  min-height: 48px;
+  padding: 7px;
+  border: 1px solid rgba(203, 213, 225, 0.68);
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.shell.is-builder-route .sidebar-workspace-card {
+  padding: 12px;
+  border-color: rgba(37, 99, 235, 0.22);
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, rgba(239, 246, 255, 0.92), rgba(255, 255, 255, 0.98));
+  box-shadow: inset 3px 0 0 #2563eb;
+}
+
+.shell.is-builder-route .sidebar-left .nav-link {
+  min-height: 42px;
+  border-radius: 10px;
+}
+
+.shell.is-builder-route .sidebar-left .nav-link.active {
+  border-color: rgba(37, 99, 235, 0.32);
+  background:
+    linear-gradient(180deg, rgba(239, 246, 255, 0.98), rgba(255, 255, 255, 0.96));
+  box-shadow:
+    inset 3px 0 0 #2563eb,
+    0 10px 20px rgba(37, 99, 235, 0.08);
+}
+
+.shell.is-builder-route .nav-icon {
+  border-radius: 9px;
+}
+
+.shell.is-builder-route .sidebar-footer {
+  border-top-color: rgba(203, 213, 225, 0.74);
+}
+
+@media (max-width: 1400px) {
+  .shell.is-builder-route .appbar {
+    grid-template-columns: minmax(190px, 210px) minmax(220px, 1fr) minmax(330px, auto);
+  }
+
+  .shell.is-builder-route .appbar-search-wrap {
+    display: none;
+  }
+
+  .shell.is-builder-route .appbar-nav-link {
+    min-width: 78px;
+  }
+}
+
+@media (max-width: 1500px) {
+  .shell.is-builder-route {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .shell.is-builder-route .body-row,
+  .shell.is-builder-route .main-content.is-builder-route {
+    overflow: visible;
+  }
+
+  .shell.is-builder-route .main-content.is-builder-route > .ui-page-container.builder-shell {
+    height: auto;
+    max-height: none;
+  }
+}
+
+@media (max-width: 1080px) {
+  .shell.is-builder-route .appbar-center {
+    display: none;
+  }
+
+  .shell.is-builder-route .appbar {
+    grid-template-columns: auto 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .shell.is-builder-route .appbar {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 8px;
+    overflow: hidden;
+  }
+
+  .shell.is-builder-route .appbar-left,
+  .shell.is-builder-route .appbar-right {
+    min-width: 0;
+  }
+
+  .shell.is-builder-route .appbar-right {
+    justify-content: flex-end;
+    overflow: hidden;
+  }
+
+  .shell.is-builder-route .appbar-project-switcher {
+    flex: 1 1 auto;
+    max-width: min(154px, 42vw);
+    min-width: 0;
+  }
+
+  .shell.is-builder-route .appbar-select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .shell.is-builder-route .appbar-btn {
+    display: none;
+  }
+
+  .shell.is-builder-route .appbar-theme-btn {
+    width: 38px;
+    flex: 0 0 38px;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .shell.is-builder-route .appbar-user {
+    display: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .shell.is-builder-route .appbar {
+    padding: 0 8px;
+  }
+
+  .shell.is-builder-route .appbar-logo {
+    padding: 0;
+  }
+
+  .shell.is-builder-route .appbar-logo-copy {
+    display: none;
+  }
+
+  .shell.is-builder-route .appbar-project-switcher {
+    display: none;
+  }
+}
+
+body.dark .shell.is-builder-route .appbar,
+body.dark .shell.is-builder-route .sidebar-left {
+  border-color: rgba(51, 65, 85, 0.86);
+  background: rgba(8, 20, 35, 0.94);
+}
+
+body.dark .shell.is-builder-route .appbar-nav,
+body.dark .shell.is-builder-route .appbar-nav-link.active,
+body.dark .shell.is-builder-route .appbar-search-wrap,
+body.dark .shell.is-builder-route .appbar-select,
+body.dark .shell.is-builder-route .appbar-theme-btn,
+body.dark .shell.is-builder-route .appbar-user,
+body.dark .shell.is-builder-route .sidebar-brand,
+body.dark .shell.is-builder-route .sidebar-workspace-card {
+  border-color: rgba(71, 85, 105, 0.72);
+  background: linear-gradient(180deg, #101d31 0%, #0d1829 100%);
+}

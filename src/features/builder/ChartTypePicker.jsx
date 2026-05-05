@@ -17,7 +17,7 @@ export default function ChartTypePicker({ templates = [], selectedTemplateId, on
   const visibleTemplates = templates.filter((template) => template.family === activeFamily);
 
   return (
-    <section className="builder-v3-panel">
+    <section className="builder-v3-panel builder-v3-chart-picker-panel">
       <div className="builder-v3-section-head">
         <div>
           <span className="builder-v3-kicker">Chart Type</span>

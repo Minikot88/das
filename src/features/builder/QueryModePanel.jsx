@@ -24,7 +24,7 @@ export default function QueryModePanel({
   const columnCount = queryResult?.columnCount ?? queryResult?.columns?.length ?? 0;
 
   return (
-    <section className="builder-v3-panel">
+    <section className="builder-v3-panel builder-v3-query-panel">
       <div className="builder-v3-section-head">
         <div>
           <span className="builder-v3-kicker">Query</span>

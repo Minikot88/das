@@ -12,7 +12,7 @@ export default function ChartMappingPanel({
   if (!template) return null;
 
   return (
-    <section className="builder-v3-panel">
+    <section className="builder-v3-panel builder-v3-mapping-panel">
       <div className="builder-v3-section-head">
         <div>
           <span className="builder-v3-kicker">Mapping</span>

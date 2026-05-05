@@ -335,3 +335,93 @@ body.dark .dashboard-sidebar-rail-button {
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--bg-elevated) 76%, var(--accent) 24%) 0%, var(--bg-surface) 100%) !important;
 }
+
+/* Builder v3 dark surface cleanup */
+body.dark .shell.is-builder-route .builder-v3-pill {
+  background: color-mix(in srgb, var(--accent) 24%, var(--bg-elevated)) !important;
+  border-color: color-mix(in srgb, var(--accent) 46%, var(--border)) !important;
+  color: color-mix(in srgb, #ffffff 86%, var(--accent) 14%) !important;
+}
+
+body.dark .shell.is-builder-route .builder-v3-dataset-card,
+body.dark .shell.is-builder-route .builder-v3-dataset-card-compact,
+body.dark .shell.is-builder-route .builder-v3-explorer-toggle,
+body.dark .shell.is-builder-route .builder-v3-explorer-field,
+body.dark .shell.is-builder-route .builder-v3-dropzone-empty,
+body.dark .shell.is-builder-route .builder-v3-color-swatch,
+body.dark .shell.is-builder-route .builder-v3-button:not(.is-primary) {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--bg-elevated) 82%, var(--accent) 18%) 0%, var(--bg-surface) 100%) !important;
+  border-color: color-mix(in srgb, var(--border-strong) 74%, var(--accent) 26%) !important;
+  color: var(--text-base) !important;
+}
+
+body.dark .shell.is-builder-route .builder-v3-dataset-card strong,
+body.dark .shell.is-builder-route .builder-v3-explorer-copy strong,
+body.dark .shell.is-builder-route .builder-v3-explorer-field-copy strong,
+body.dark .shell.is-builder-route .builder-v3-mapped-chip span {
+  color: var(--text-strong) !important;
+}
+
+body.dark .shell.is-builder-route .builder-v3-dataset-card span,
+body.dark .shell.is-builder-route .builder-v3-dataset-card small,
+body.dark .shell.is-builder-route .builder-v3-explorer-copy small,
+body.dark .shell.is-builder-route .builder-v3-explorer-field-copy small,
+body.dark .shell.is-builder-route .builder-v3-explorer-field-kind,
+body.dark .shell.is-builder-route .builder-v3-mapped-chip small,
+body.dark .shell.is-builder-route .builder-v3-dropzone-empty {
+  color: var(--text-muted) !important;
+}
+
+body.dark .shell.is-builder-route .builder-v3-explorer-toggle:hover,
+body.dark .shell.is-builder-route .builder-v3-explorer-field:hover {
+  background: color-mix(in srgb, var(--bg-hover) 82%, var(--accent) 18%) !important;
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--border-strong)) !important;
+}
+
+body.dark .shell.is-builder-route .builder-v3-explorer-toggle.is-open {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--accent) 28%, var(--bg-elevated)) 0%, var(--bg-surface) 100%) !important;
+  border-color: color-mix(in srgb, var(--accent) 48%, var(--border-strong)) !important;
+  box-shadow: inset 3px 0 0 var(--accent) !important;
+}
+
+body.dark .shell.is-builder-route .builder-v3-explorer-children {
+  border-left-color: color-mix(in srgb, var(--accent) 30%, var(--border)) !important;
+}
+
+body.dark .shell.is-builder-route .builder-v3-field-type-badge {
+  background: color-mix(in srgb, var(--bg-elevated) 78%, var(--accent) 22%) !important;
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--border)) !important;
+  color: var(--text-strong) !important;
+}
+
+body.dark .shell.is-builder-route .builder-v3-field-type-badge.is-number {
+  background: color-mix(in srgb, #2563eb 28%, var(--bg-elevated)) !important;
+  color: #bfdbfe !important;
+}
+
+body.dark .shell.is-builder-route .builder-v3-field-type-badge.is-category {
+  background: color-mix(in srgb, #64748b 22%, var(--bg-elevated)) !important;
+  color: #e2e8f0 !important;
+}
+
+body.dark .shell.is-builder-route .builder-v3-field-type-badge.is-date {
+  background: color-mix(in srgb, #059669 26%, var(--bg-elevated)) !important;
+  color: #bbf7d0 !important;
+}
+
+body.dark .shell.is-builder-route .builder-v3-preview-frame,
+body.dark .shell.is-builder-route .builder-v3-preview-frame .chart-status-card,
+body.dark .shell.is-builder-route .builder-v3-preview-frame .chart-renderer-root {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--bg-surface) 90%, var(--accent) 10%) 0%, color-mix(in srgb, var(--bg-body) 92%, black 8%) 100%) !important;
+  border-color: color-mix(in srgb, var(--border-strong) 70%, var(--accent) 30%) !important;
+  color: var(--text-base) !important;
+}
+
+body.dark .shell.is-builder-route .builder-v3-button:disabled:not(.is-primary) {
+  background: color-mix(in srgb, var(--bg-surface) 82%, #ffffff 8%) !important;
+  color: var(--text-muted) !important;
+  opacity: 0.68;
+}
