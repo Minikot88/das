@@ -23,18 +23,24 @@ const defaultDashboard = (id = "dash-1", name = "Dashboard 1") => ({
   layout: [],
 });
 
-const defaultSheet = (id = "sheet-1", name = "Sheet 1") => ({
+const defaultSheet = (id = "sheet-1", name = "Sheet 1", dashboardId = "dash-1", dashboardName = "Dashboard 1") => ({
   id,
   name,
-  dashboards: [defaultDashboard()],
-  activeDashboardId: "dash-1",
+  dashboards: [defaultDashboard(dashboardId, dashboardName)],
+  activeDashboardId: dashboardId,
 });
 
-const defaultProject = (id = "project-1", name = "My Project") => ({
+const defaultProject = (id = "project-1", name = "My Project", sheetId = "sheet-1", dashboardId = "dash-1") => ({
   id,
   name,
-  sheets: [defaultSheet()],
+  sheets: [defaultSheet(sheetId, "Sheet 1", dashboardId)],
 });
+
+function createProjectSeed(projectId, name) {
+  const sheetId = createEntityId("sheet");
+  const dashboardId = createEntityId("dash");
+  return defaultProject(projectId, name, sheetId, dashboardId);
+}
 
 const defaultBuilderState = {
   selectedDb:    null,
@@ -105,7 +111,7 @@ function saveState(s) {
 function migrateState(saved) {
   if (!saved) return null;
 
-  if (saved.projects) return saved;
+  if (saved.projects) return ensureUniqueWorkspaceStructure(saved);
 
   if (saved.sheets) {
     const sheets = saved.sheets.map((sh) => ({
@@ -120,7 +126,7 @@ function migrateState(saved) {
       }],
     }));
 
-    return {
+    return ensureUniqueWorkspaceStructure({
       ...saved,
       projects: [{
         id:     "project-1",
@@ -130,44 +136,212 @@ function migrateState(saved) {
       activeProjectId:   "project-1",
       activeSheetId:     saved.activeSheetId ?? sheets[0]?.id ?? "sheet-1",
       activeDashboardId: sheets[0]?.activeDashboardId ?? "dash-1",
-    };
+    });
   }
 
-  return saved;
+  return ensureUniqueWorkspaceStructure(saved);
+}
+
+function ensureUniqueWorkspaceStructure(saved) {
+  if (!saved?.projects?.length) return saved;
+
+  let mutated = false;
+  const seenSheetIds = new Set();
+  const seenDashboardIds = new Set();
+  const sheetIdMapByProject = new Map();
+  const dashboardIdMapByProject = new Map();
+
+  const projects = saved.projects.map((project) => {
+    const sheetIdMap = new Map();
+    const dashboardIdMap = new Map();
+    const sheets = (project.sheets ?? []).map((sheet) => {
+      let nextSheetId = sheet.id;
+      if (!nextSheetId || seenSheetIds.has(nextSheetId)) {
+        nextSheetId = createEntityId("sheet");
+        mutated = true;
+      }
+      seenSheetIds.add(nextSheetId);
+      if (nextSheetId !== sheet.id) sheetIdMap.set(sheet.id, nextSheetId);
+
+      const dashboards = (sheet.dashboards ?? []).map((dashboard) => {
+        let nextDashboardId = dashboard.id;
+        if (!nextDashboardId || seenDashboardIds.has(nextDashboardId)) {
+          nextDashboardId = createEntityId("dash");
+          mutated = true;
+        }
+        seenDashboardIds.add(nextDashboardId);
+        if (nextDashboardId !== dashboard.id) dashboardIdMap.set(dashboard.id, nextDashboardId);
+        return {
+          ...dashboard,
+          id: nextDashboardId,
+        };
+      });
+
+      const activeDashboardId = dashboardIdMap.get(sheet.activeDashboardId)
+        ?? (dashboards.some((dashboard) => dashboard.id === sheet.activeDashboardId) ? sheet.activeDashboardId : dashboards[0]?.id ?? null);
+
+      if (activeDashboardId !== sheet.activeDashboardId) mutated = true;
+
+      return {
+        ...sheet,
+        id: nextSheetId,
+        dashboards,
+        activeDashboardId,
+      };
+    });
+
+    if (sheetIdMap.size) sheetIdMapByProject.set(project.id, sheetIdMap);
+    if (dashboardIdMap.size) dashboardIdMapByProject.set(project.id, dashboardIdMap);
+
+    return {
+      ...project,
+      sheets,
+    };
+  });
+
+  if (!mutated) return saved;
+
+  const activeProject = projects.find((project) => project.id === saved.activeProjectId) ?? projects[0] ?? null;
+  const activeProjectSheetMap = sheetIdMapByProject.get(activeProject?.id);
+  const activeProjectDashboardMap = dashboardIdMapByProject.get(activeProject?.id);
+  let activeSheetId = activeProjectSheetMap?.get(saved.activeSheetId) ?? saved.activeSheetId ?? activeProject?.sheets?.[0]?.id ?? null;
+  if (!activeProject?.sheets?.some((sheet) => sheet.id === activeSheetId)) {
+    activeSheetId = activeProject?.sheets?.[0]?.id ?? null;
+  }
+
+  const activeSheet = activeProject?.sheets?.find((sheet) => sheet.id === activeSheetId) ?? activeProject?.sheets?.[0] ?? null;
+  let activeDashboardId = activeProjectDashboardMap?.get(saved.activeDashboardId)
+    ?? saved.activeDashboardId
+    ?? activeSheet?.activeDashboardId
+    ?? activeSheet?.dashboards?.[0]?.id
+    ?? null;
+  if (!activeSheet?.dashboards?.some((dashboard) => dashboard.id === activeDashboardId)) {
+    activeDashboardId = activeSheet?.activeDashboardId ?? activeSheet?.dashboards?.[0]?.id ?? null;
+  }
+
+  const ui = {
+    ...(saved.ui ?? {}),
+    lastOpenedContextByProject: Object.fromEntries(
+      Object.entries(saved.ui?.lastOpenedContextByProject ?? {}).map(([projectId, context]) => {
+        const sheetIdMap = sheetIdMapByProject.get(projectId);
+        const dashboardIdMap = dashboardIdMapByProject.get(projectId);
+        const project = projects.find((item) => item.id === projectId);
+        const fallbackSheet = project?.sheets?.[0] ?? null;
+        const resolvedSheetId = sheetIdMap?.get(context?.sheetId)
+          ?? context?.sheetId
+          ?? fallbackSheet?.id
+          ?? null;
+        const resolvedSheet = project?.sheets?.find((sheet) => sheet.id === resolvedSheetId) ?? fallbackSheet;
+        return [
+          projectId,
+          {
+            ...context,
+            sheetId: resolvedSheetId,
+            dashboardId: dashboardIdMap?.get(context?.dashboardId)
+              ?? context?.dashboardId
+              ?? resolvedSheet?.activeDashboardId
+              ?? resolvedSheet?.dashboards?.[0]?.id
+              ?? null,
+          },
+        ];
+      })
+    ),
+  };
+
+  return {
+    ...saved,
+    projects,
+    activeProjectId: activeProject?.id ?? saved.activeProjectId ?? null,
+    activeSheetId,
+    activeDashboardId,
+    ui,
+  };
 }
 
 const saved = migrateState(loadState());
 const savedBuilderDraft = loadBuilderDraft();
 
+function isChartJsConfig(config) {
+  return Boolean(config && typeof config === "object" && Array.isArray(config.data?.datasets));
+}
+
+function cloneSerializable(value) {
+  if (value === undefined) return undefined;
+  return JSON.parse(JSON.stringify(value));
+}
+
+function buildQueryResult(rows = [], dataset = null, existingQueryResult = null) {
+  const columns = Object.keys(rows[0] ?? {});
+
+  if (existingQueryResult) {
+    return {
+      ...existingQueryResult,
+      rows,
+      rowCount: existingQueryResult.rowCount ?? rows.length,
+      columnCount: existingQueryResult.columnCount ?? columns.length,
+      columns: existingQueryResult.columns?.length ? existingQueryResult.columns : columns,
+      sourceTable: existingQueryResult.sourceTable ?? dataset ?? null,
+    };
+  }
+
+  return {
+    rows,
+    columns,
+    fieldMeta: [],
+    rowCount: rows.length,
+    columnCount: columns.length,
+    sourceTable: dataset ?? null,
+  };
+}
+
 function normalizeStoredChart(chart) {
   if (!chart) return chart;
 
-  const config = normalizeChartConfig(chart.config ?? chart);
-  const storedData = Array.isArray(chart.data) ? chart.data : [];
-  const fallbackRows = Array.isArray(config.queryResult?.rows) ? config.queryResult.rows : [];
+  const config = isChartJsConfig(chart.config)
+    ? {
+        ...cloneSerializable(chart.config),
+        queryMode: chart.config?.queryMode ?? chart.queryMode ?? "visual",
+        generatedSql: chart.config?.generatedSql ?? chart.generatedSql ?? "",
+        customSql: chart.config?.customSql ?? chart.customSql ?? "",
+        lastExecutedSql: chart.config?.lastExecutedSql ?? chart.lastExecutedSql ?? "",
+        rows: Array.isArray(chart.config?.rows) ? chart.config.rows : chart.data ?? chart.rows ?? [],
+      }
+    : normalizeChartConfig(chart.config ?? chart);
+  const storedData = Array.isArray(chart.data)
+    ? chart.data
+    : Array.isArray(chart.rows)
+      ? chart.rows
+      : [];
+  const fallbackRows = Array.isArray(config.queryResult?.rows)
+    ? config.queryResult.rows
+    : Array.isArray(config.rows)
+      ? config.rows
+      : [];
   const resolvedRows = storedData.length > 0 ? storedData : fallbackRows;
+  const title = chart.title ?? chart.name ?? config.title ?? config.name ?? "Untitled";
   return {
     ...chart,
-    name: chart.name ?? config.name ?? config.title ?? "Untitled",
+    name: title,
+    title,
+    engine: chart.engine ?? "chartjs",
     data: resolvedRows,
+    rows: resolvedRows,
+    dataset: chart.dataset ?? chart.datasetId ?? config.dataset ?? null,
+    mapping: chart.mapping ?? config.mapping ?? {},
+    settings: chart.settings ?? config.settings ?? {},
+    queryMode: chart.queryMode ?? config.queryMode ?? "visual",
+    generatedSql: chart.generatedSql ?? config.generatedSql ?? "",
+    customSql: chart.customSql ?? config.customSql ?? "",
+    lastExecutedSql: chart.lastExecutedSql ?? config.lastExecutedSql ?? "",
+    queryResult: chart.queryResult ?? config.queryResult ?? null,
     config: {
       ...config,
-      queryResult: config.queryResult
-        ? {
-            ...config.queryResult,
-            rows: resolvedRows,
-            rowCount: config.queryResult.rowCount ?? resolvedRows.length,
-          }
-        : resolvedRows.length
-          ? {
-              rows: resolvedRows,
-              columns: Object.keys(resolvedRows[0] ?? {}),
-              fieldMeta: [],
-              rowCount: resolvedRows.length,
-              columnCount: Object.keys(resolvedRows[0] ?? {}).length,
-              sourceTable: config.dataset ?? null,
-            }
-          : config.queryResult ?? null,
+      queryMode: chart.queryMode ?? config.queryMode ?? "visual",
+      generatedSql: chart.generatedSql ?? config.generatedSql ?? "",
+      customSql: chart.customSql ?? config.customSql ?? "",
+      lastExecutedSql: chart.lastExecutedSql ?? config.lastExecutedSql ?? "",
+      rows: resolvedRows,
+      queryResult: buildQueryResult(resolvedRows, chart.dataset ?? config.dataset ?? null, config.queryResult ?? null),
     },
   };
 }
@@ -183,47 +357,85 @@ function inferSelectedDb(dataset) {
 }
 
 function createStoredChartRecord(projectId, chart) {
-  const config = normalizeChartConfig(chart.config);
+  const baseConfig = isChartJsConfig(chart.config)
+    ? cloneSerializable(chart.config)
+    : normalizeChartConfig(chart.config ?? chart);
   const data = Array.isArray(chart.data)
     ? chart.data
     : Array.isArray(chart.rows)
       ? chart.rows
-      : Array.isArray(config.queryResult?.rows)
-        ? config.queryResult.rows
-        : [];
+      : Array.isArray(baseConfig?.rows)
+        ? baseConfig.rows
+        : Array.isArray(baseConfig.queryResult?.rows)
+          ? baseConfig.queryResult.rows
+          : [];
   const columns = Object.keys(data[0] ?? {});
-  const hydratedConfig = {
-    ...config,
-    queryResult: config.queryResult
-      ? {
-          ...config.queryResult,
-          rows: data,
-          rowCount: config.queryResult.rowCount ?? data.length,
-          columnCount: config.queryResult.columnCount ?? columns.length,
-          columns: config.queryResult.columns?.length ? config.queryResult.columns : columns,
-          sourceTable: config.queryResult.sourceTable ?? config.dataset ?? null,
-        }
-      : {
-          rows: data,
-          columns,
-          fieldMeta: [],
-          rowCount: data.length,
-          columnCount: columns.length,
-          sourceTable: config.dataset ?? null,
-        },
-  };
+  const hydratedConfig = isChartJsConfig(baseConfig)
+    ? {
+        ...baseConfig,
+        queryMode: chart.queryMode ?? baseConfig.queryMode ?? "visual",
+        generatedSql: chart.generatedSql ?? baseConfig.generatedSql ?? "",
+        customSql: chart.customSql ?? baseConfig.customSql ?? "",
+        lastExecutedSql: chart.lastExecutedSql ?? baseConfig.lastExecutedSql ?? "",
+        rows: data,
+        queryResult: buildQueryResult(
+          data,
+          chart.dataset ?? chart.datasetId ?? baseConfig.dataset ?? null,
+          baseConfig.queryResult ?? null
+        ),
+      }
+    : {
+        ...baseConfig,
+        queryMode: chart.queryMode ?? baseConfig.queryMode ?? "visual",
+        generatedSql: chart.generatedSql ?? baseConfig.generatedSql ?? "",
+        customSql: chart.customSql ?? baseConfig.customSql ?? "",
+        lastExecutedSql: chart.lastExecutedSql ?? baseConfig.lastExecutedSql ?? "",
+        queryResult: baseConfig.queryResult
+          ? {
+              ...baseConfig.queryResult,
+              rows: data,
+              rowCount: baseConfig.queryResult.rowCount ?? data.length,
+              columnCount: baseConfig.queryResult.columnCount ?? columns.length,
+              columns: baseConfig.queryResult.columns?.length ? baseConfig.queryResult.columns : columns,
+              sourceTable: baseConfig.queryResult.sourceTable ?? baseConfig.dataset ?? null,
+            }
+          : {
+              rows: data,
+              columns,
+              fieldMeta: [],
+              rowCount: data.length,
+              columnCount: columns.length,
+              sourceTable: baseConfig.dataset ?? null,
+            },
+      };
+  const name = chart.name || chart.title || hydratedConfig.name || hydratedConfig.title || "Untitled";
 
   return {
-    id: createTimestampId(),
-    name: chart.name || hydratedConfig.name || hydratedConfig.title || "Untitled",
+    ...chart,
+    id: chart.id ?? createTimestampId(),
+    name,
+    title: chart.title || name,
     data,
+    rows: data,
     config: hydratedConfig,
-    type: hydratedConfig.chartType,
-    echartsOption: chart.echartsOption ?? null,
+    engine: chart.engine ?? "chartjs",
+    templateId: chart.templateId ?? chart.config?.meta?.templateId ?? null,
+    type: chart.type ?? chart.chartType ?? hydratedConfig.chartType ?? hydratedConfig.type,
+    family: chart.family ?? chart.config?.meta?.family ?? hydratedConfig.family ?? null,
+    variant: chart.variant ?? chart.config?.meta?.variant ?? hydratedConfig.variant ?? null,
+    mapping: chart.mapping ?? hydratedConfig.mapping ?? {},
+    settings: chart.settings ?? hydratedConfig.settings ?? {},
+    dataset: chart.dataset ?? chart.datasetId ?? hydratedConfig.dataset ?? null,
+    queryMode: chart.queryMode ?? hydratedConfig.queryMode ?? "visual",
+    generatedSql: chart.generatedSql ?? hydratedConfig.generatedSql ?? "",
+    customSql: chart.customSql ?? hydratedConfig.customSql ?? "",
+    lastExecutedSql: chart.lastExecutedSql ?? hydratedConfig.lastExecutedSql ?? "",
+    queryResult: chart.queryResult ?? hydratedConfig.queryResult ?? null,
     layout: chart.layout ?? null,
     sourceProjectId: chart.sourceProjectId ?? projectId,
     projectId,
-    createdAt: new Date().toISOString(),
+    createdAt: chart.createdAt ?? new Date().toISOString(),
+    updatedAt: chart.updatedAt ?? new Date().toISOString(),
   };
 }
 
@@ -371,7 +583,7 @@ export const useStore = create((set, get) => ({
 
   createProject: (name) => set((s) => {
     const id      = createEntityId("project");
-    const project = defaultProject(id, name);
+    const project = createProjectSeed(id, name);
     const projects = [...s.projects, project];
     const firstSheet = project.sheets[0];
     const firstDash  = firstSheet.dashboards[0];
@@ -712,17 +924,14 @@ export const useStore = create((set, get) => ({
       if (sourceChart) {
         const nextChartId = createTimestampId([...s.charts, ...duplicatedCharts].map((chart) => chart?.id));
         chartIdMap.set(layoutItem.chartId, nextChartId);
-        duplicatedCharts.push({
+        duplicatedCharts.push(createStoredChartRecord(s.activeProjectId, {
           ...sourceChart,
           id: nextChartId,
           name: createCopyName(sourceChart.name || "Chart"),
-          config: normalizeChartConfig({
-            ...sourceChart.config,
-            name: createCopyName(sourceChart.config?.name || sourceChart.name || "Chart"),
-            title: createCopyName(sourceChart.config?.title || sourceChart.name || "Chart"),
-          }),
+          title: createCopyName(sourceChart.title || sourceChart.config?.title || sourceChart.name || "Chart"),
           createdAt: new Date().toISOString(),
-        });
+          updatedAt: new Date().toISOString(),
+        }));
       }
 
       return {
@@ -891,7 +1100,7 @@ export const useStore = create((set, get) => ({
 
   addChartToDashboard: (chartId) => set((s) => {
     const savedChart = s.charts.find(c => c.id === chartId);
-    if (!savedChart) return {};
+    if (!savedChart || savedChart.projectId !== s.activeProjectId) return {};
 
     const projects = s.projects.map((p) =>
       p.id !== s.activeProjectId ? p : {
@@ -954,14 +1163,19 @@ export const useStore = create((set, get) => ({
   updateChart: (chartId, updates) => set((s) => {
     const charts = s.charts.map((c) =>
       c.id === chartId
-        ? normalizeStoredChart({
+        ? createStoredChartRecord(c.projectId, {
             ...c,
+            ...updates,
+            id: c.id,
+            createdAt: c.createdAt,
+            updatedAt: new Date().toISOString(),
             data: Array.isArray(updates?.data)
               ? updates.data
-              : Array.isArray(updates?.queryResult?.rows)
-                ? updates.queryResult.rows
-                : c.data,
-            config: normalizeChartConfig({ ...c.config, ...updates }),
+              : Array.isArray(updates?.rows)
+                ? updates.rows
+                : Array.isArray(updates?.queryResult?.rows)
+                  ? updates.queryResult.rows
+                  : c.data,
           })
         : c
     );
@@ -986,17 +1200,13 @@ export const useStore = create((set, get) => ({
     const newChartId = createTimestampId(s.charts.map((chart) => chart?.id));
     const baseName = origChart.name || origChart.config?.name || origChart.config?.title || "Untitled";
     const baseTitle = layoutItem.titleOverride || origChart.config.title || origChart.name || "Untitled";
-    const duplicatedConfig = normalizeChartConfig({
-      ...origChart.config,
-      title: createCopyName(baseTitle),
-      name: createCopyName(baseName),
-    });
-    const newChart = normalizeStoredChart({
+    const newChart = createStoredChartRecord(s.activeProjectId, {
       ...origChart,
       id: newChartId,
       name: createCopyName(baseName),
-      config: duplicatedConfig,
+      title: createCopyName(baseTitle),
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     });
 
     const newL = tryCreateAdjacentLayoutItem(dash.layout, layoutItem, newChartId);

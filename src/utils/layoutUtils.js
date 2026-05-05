@@ -1,7 +1,7 @@
 import { createInstanceId } from "./id";
 
 export const GRID_BREAKPOINTS = { lg: 1280, md: 960, sm: 640, xs: 0 };
-export const GRID_COLUMNS = { lg: 12, md: 12, sm: 6, xs: 1 };
+export const GRID_COLUMNS = { lg: 12, md: 10, sm: 6, xs: 1 };
 export const DASHBOARD_GRID_COLS = 12;
 export const DASHBOARD_GRID_MARGIN = [12, 12];
 export const DASHBOARD_GRID_PADDING = [0, 0];
@@ -113,11 +113,24 @@ const AUTO_LAYOUT_PRESETS = {
 
 export function buildResponsiveLayouts(layout = []) {
   const safeLayout = Array.isArray(layout) ? layout : [];
+  const scaleLayout = (cols) => safeLayout.map((item) => {
+    const width = Math.max(1, Math.min(cols, Math.round(((item.w ?? 6) / DASHBOARD_GRID_COLS) * cols)));
+    const x = Math.max(0, Math.min(cols - width, Math.round(((item.x ?? 0) / DASHBOARD_GRID_COLS) * cols)));
+    const minW = Math.max(1, Math.min(width, Math.round(((item.minW ?? 3) / DASHBOARD_GRID_COLS) * cols) || 1));
+
+    return {
+      ...item,
+      x,
+      w: width,
+      minW,
+    };
+  });
+
   return {
     lg: safeLayout,
-    md: safeLayout.map((item) => ({ ...item, x: Math.min(item.x ?? 0, 6), w: Math.min(item.w ?? 6, 6) })),
-    sm: safeLayout.map((item) => ({ ...item, x: 0, w: 6 })),
-    xs: safeLayout.map((item) => ({ ...item, x: 0, w: 1 })),
+    md: scaleLayout(GRID_COLUMNS.md),
+    sm: safeLayout.map((item) => ({ ...item, x: 0, w: GRID_COLUMNS.sm, minW: 1 })),
+    xs: safeLayout.map((item) => ({ ...item, x: 0, w: GRID_COLUMNS.xs, minW: 1 })),
   };
 }
 
@@ -131,8 +144,8 @@ export function collides(a, b) {
 }
 
 export function createLayoutItem(layout = [], chartId, overrides = {}) {
-  const width = overrides.w ?? 4;
-  const height = overrides.h ?? 4;
+  const width = overrides.w ?? 6;
+  const height = overrides.h ?? 5;
   const cols = 12;
   const maxX = Math.max(cols - width, 0);
 
@@ -147,8 +160,8 @@ export function createLayoutItem(layout = [], chartId, overrides = {}) {
           y,
           w: width,
           h: height,
-          minW: 2,
-          minH: 3,
+          minW: 3,
+          minH: 4,
           ...overrides,
         };
       }
@@ -162,8 +175,8 @@ export function createLayoutItem(layout = [], chartId, overrides = {}) {
     y: layout.reduce((maxY, item) => Math.max(maxY, item.y + item.h), 0),
     w: width,
     h: height,
-    minW: 2,
-    minH: 3,
+    minW: 3,
+    minH: 4,
     ...overrides,
   };
 }

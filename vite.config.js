@@ -20,6 +20,12 @@ export default defineConfig({
       // Allow serving files from the entire node_modules directory
       allow: [".."],
     },
+    proxy: {
+      "/api": {
+        target: process.env.VITE_API_PROXY_TARGET || "http://localhost:3000",
+        changeOrigin: true,
+      },
+    },
   },
   optimizeDeps: {
     // Force include react-grid-layout so Vite pre-bundles it

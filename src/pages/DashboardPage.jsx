@@ -8,11 +8,11 @@ import DashboardGrid from "../components/dashboard/DashboardGrid";
 import DashboardFullscreenModal from "../components/dashboard/DashboardFullscreenModal";
 import DashboardShareModal from "../components/dashboard/DashboardShareModal";
 import SidebarRight from "../layout/SidebarRight";
+import useDashboard from "../features/dashboard/hooks/useDashboard";
 import {
   createBuilderContextForDashboard,
   getDashboardWorkspaceStats,
   readBuilderReturnState,
-  resolveDashboardWidgets,
   toDashboardChartModel,
 } from "../utils/dashboardWorkspace";
 import {
@@ -267,10 +267,13 @@ export default function DashboardPage() {
     () => chartsPool.filter((chart) => chart.projectId === currentProjectId),
     [chartsPool, currentProjectId]
   );
-  const dashboardWidgets = useMemo(
-    () => resolveDashboardWidgets(activeDashboard?.layout ?? [], chartsPool),
-    [activeDashboard?.layout, chartsPool]
-  );
+  const dashboardWidgets = useDashboard({
+    projectId: currentProjectId,
+    sheetId: activeSheet?.id,
+    dashboardId: activeDashboard?.id,
+    layout: activeDashboard?.layout ?? [],
+    charts: chartsPool,
+  });
   const workspaceStats = useMemo(() => getDashboardWorkspaceStats(dashboardWidgets), [dashboardWidgets]);
   const hasWidgets = dashboardWidgets.length > 0;
   const selectedWidgetId = ui.selectedWidgetIdByDashboard?.[activeDashboard?.id] ?? null;

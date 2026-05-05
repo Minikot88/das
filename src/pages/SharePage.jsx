@@ -1,16 +1,15 @@
-﻿import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useStore } from "../store/useStore";
-import { normalizeChartConfig } from "../utils/normalizeChartConfig";
 import ReadOnlyDashboardHeader from "../components/ui/ReadOnlyDashboardHeader";
 import ReadOnlyChartFrame from "../components/ui/ReadOnlyChartFrame";
 import ReadOnlyStateCard from "../components/ui/ReadOnlyStateCard";
 
 export default function SharePage() {
   const { sheetId } = useParams();
-  const projects = useStore((s) => s.projects);
-  const chartsPool = useStore((s) => s.charts);
-  const resolveShareLink = useStore((s) => s.resolveShareLink);
+  const projects = useStore((state) => state.projects);
+  const chartsPool = useStore((state) => state.charts);
+  const resolveShareLink = useStore((state) => state.resolveShareLink);
   const [loading, setLoading] = useState(true);
 
   const sheet = useMemo(() => {
@@ -27,10 +26,7 @@ export default function SharePage() {
   }, [projects, resolveShareLink, sheetId]);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setLoading(false);
-    }, 180);
-
+    const timer = window.setTimeout(() => setLoading(false), 180);
     return () => window.clearTimeout(timer);
   }, [sheetId, sheet]);
 
@@ -40,10 +36,21 @@ export default function SharePage() {
 
     return activeDashboard.layout
       .map((item) => {
-        const saved = chartsPool.find((chart) => chart.id === item.chartId);
-        return saved
-          ? { ...normalizeChartConfig(saved.config), id: item.i, chartId: saved.id }
-          : null;
+        const savedChart = chartsPool.find((chart) => chart.id === item.chartId);
+        if (!savedChart) return null;
+
+        return {
+          ...savedChart,
+          id: item.i,
+          chartId: savedChart.id,
+          title: item.titleOverride || savedChart.title || savedChart.name,
+          name: item.titleOverride || savedChart.title || savedChart.name,
+          rows: Array.isArray(savedChart.rows)
+            ? savedChart.rows
+            : Array.isArray(savedChart.data)
+              ? savedChart.data
+              : savedChart.config?.rows ?? [],
+        };
       })
       .filter(Boolean);
   }, [activeDashboard, chartsPool]);
@@ -53,8 +60,8 @@ export default function SharePage() {
       return {
         chartCount: 0,
         chartTypes: 0,
-        primaryDataset: "ไม่พบข้อมูล",
-        updatedLabel: "พร้อมดู",
+        primaryDataset: "No dataset",
+        updatedLabel: "Ready",
       };
     }
 
@@ -62,32 +69,32 @@ export default function SharePage() {
     const datasetCounts = new Map();
 
     for (const chart of dashboardCharts) {
-      if (chart.chartType) typeSet.add(chart.chartType);
+      if (chart.type) typeSet.add(chart.type);
       if (chart.dataset) {
         datasetCounts.set(chart.dataset, (datasetCounts.get(chart.dataset) ?? 0) + 1);
       }
     }
 
-    const primaryDataset = [...datasetCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "ไม่พบข้อมูล";
+    const primaryDataset = [...datasetCounts.entries()].sort((left, right) => right[1] - left[1])[0]?.[0] ?? "No dataset";
 
     return {
       chartCount: dashboardCharts.length,
       chartTypes: typeSet.size,
       primaryDataset,
-      updatedLabel: activeDashboard?.name ? "เผยแพร่แล้ว" : "พร้อมดู",
+      updatedLabel: activeDashboard?.name ? "Published" : "Ready",
     };
   }, [activeDashboard?.name, dashboardCharts]);
 
-  const dashboardTitle = activeDashboard?.name ?? "หน้าที่แชร์";
+  const dashboardTitle = activeDashboard?.name ?? "Shared dashboard";
 
   if (loading) {
     return (
       <div className="share-page share-page-shell">
         <ReadOnlyStateCard
           loading
-          kicker="กำลังเตรียมหน้าที่แชร์"
-          title="กำลังโหลด Dashboard"
-          description="โปรดรอสักครู่"
+          kicker="Preparing shared view"
+          title="Loading dashboard"
+          description="Please wait a moment."
         />
       </div>
     );
@@ -97,11 +104,11 @@ export default function SharePage() {
     return (
       <div className="share-page share-page-shell">
         <ReadOnlyStateCard
-          kicker="ลิงก์ใช้งานไม่ได้"
-          title="ไม่พบ Dashboard"
-          description="ลิงก์นี้อาจหมดอายุหรือถูกลบแล้ว"
+          kicker="Link unavailable"
+          title="Dashboard not found"
+          description="This shared link may have expired or been removed."
           linkTo="/login"
-          linkLabel="ไปหน้าเข้าสู่ระบบ"
+          linkLabel="Go to sign in"
         />
       </div>
     );
@@ -110,7 +117,7 @@ export default function SharePage() {
   return (
     <div className="share-page share-page-shell">
       <ReadOnlyDashboardHeader
-        title={sheet?.name ?? "ชีตที่แชร์"}
+        title={sheet?.name ?? "Shared sheet"}
         dashboardName={dashboardTitle}
         chartCount={dashboardCharts.length}
         chartTypes={shareSummary.chartTypes}
@@ -121,28 +128,28 @@ export default function SharePage() {
       <section className="share-content-shell">
         {dashboardCharts.length ? (
           <div className="readonly-overview-grid">
-            <div className="readonly-summary-strip" role="region" aria-label="สรุป Dashboard ที่แชร์">
+            <div className="readonly-summary-strip" role="region" aria-label="Shared dashboard summary">
               <div className="readonly-summary-card accent">
                 <span className="readonly-summary-label">Charts</span>
                 <strong className="readonly-summary-value">{shareSummary.chartCount}</strong>
               </div>
               <div className="readonly-summary-card">
-                <span className="readonly-summary-label">ประเภท</span>
-                <strong className="readonly-summary-value">{shareSummary.chartTypes} แบบ</strong>
+                <span className="readonly-summary-label">Types</span>
+                <strong className="readonly-summary-value">{shareSummary.chartTypes}</strong>
               </div>
               <div className="readonly-summary-card">
-                <span className="readonly-summary-label">Dataset หลัก</span>
+                <span className="readonly-summary-label">Dataset</span>
                 <strong className="readonly-summary-value">{shareSummary.primaryDataset}</strong>
               </div>
             </div>
 
-            <aside className="readonly-viewer-note" aria-label="รายละเอียดมุมมองแบบอ่านอย่างเดียว">
-              <span className="readonly-viewer-note-kicker">อ่านอย่างเดียว</span>
+            <aside className="readonly-viewer-note" aria-label="Read only details">
+              <span className="readonly-viewer-note-kicker">Read only</span>
               <h2 className="readonly-viewer-note-title">{dashboardTitle}</h2>
               <div className="readonly-viewer-note-list">
-                <span>แก้ไขไม่ได้</span>
-                <span>คง layout เดิม</span>
-                <span>ไม่ต้องเข้าสู่ระบบ</span>
+                <span>Editing disabled</span>
+                <span>Layout preserved</span>
+                <span>No sign in required</span>
               </div>
             </aside>
           </div>
@@ -150,14 +157,14 @@ export default function SharePage() {
 
         {!dashboardCharts.length ? (
           <ReadOnlyStateCard
-            kicker="ยังไม่มี Chart"
-            title="Dashboard นี้ยังไม่มี Chart"
-            description="โปรดลองอีกครั้งภายหลัง"
+            kicker="No charts yet"
+            title="This dashboard does not have any charts"
+            description="Try again later after new charts have been saved."
             linkTo="/login"
-            linkLabel="เข้าสู่ระบบ"
+            linkLabel="Sign in"
           />
         ) : (
-          <div className="share-grid" role="list" aria-label="Charts ที่แชร์">
+          <div className="share-grid" role="list" aria-label="Shared charts">
             {dashboardCharts.map((chart) => (
               <ReadOnlyChartFrame key={chart.id} chart={chart} />
             ))}

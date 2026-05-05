@@ -1,36 +1,26 @@
-import { TYPE_BADGE, TYPE_COLOR, schema as dataSchema } from "./mockData";
+import { mockDataset } from "./mockData.js";
 
-export { TYPE_BADGE, TYPE_COLOR };
+export const mockSchema = {
+  datasetId: mockDataset.id,
+  name: mockDataset.name,
+  fields: mockDataset.fields.map((field) => ({
+    name: field.name,
+    label: field.label,
+    type: field.semanticType ?? field.type,
+    sourceType: field.type,
+  })),
+};
 
-function toLabel(value) {
-  return String(value)
-    .replace(/[_-]+/g, " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase());
+export const schema = mockSchema;
+
+export function getSchemaField(name) {
+  return mockSchema.fields.find((field) => field.name === name) ?? null;
 }
 
-function buildTableSchema(tableName, table) {
-  return {
-    label: toLabel(tableName),
-    dataKey: tableName,
-    fields: table.fields,
-  };
+export function getSchemaFieldMap() {
+  return Object.fromEntries(mockSchema.fields.map((field) => [field.name, field]));
 }
 
-export const schema = Object.fromEntries(
-  Object.entries(dataSchema).map(([dbName, tables]) => [
-    dbName,
-    {
-      label: toLabel(dbName),
-      tables: Object.fromEntries(
-        Object.entries(tables).map(([tableName, table]) => [
-          tableName,
-          buildTableSchema(tableName, table),
-        ])
-      ),
-    },
-  ])
-);
-
-export function findTable(dbName, tableName) {
-  return schema[dbName]?.tables?.[tableName] ?? null;
+export function getFieldsByType(type) {
+  return mockSchema.fields.filter((field) => field.type === type);
 }

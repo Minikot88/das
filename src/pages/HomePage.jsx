@@ -1,5 +1,6 @@
 ﻿import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { createProject as createProjectApi } from "../api/projectApi";
 import { PageContainer, PageHeader, Toolbar } from "../components/layout/Layout";
 import Badge from "../components/ui/Badge";
 import Button from "../components/ui/Button";
@@ -43,7 +44,6 @@ export default function HomePage() {
   const activeProjectId = useStore((state) => state.activeProjectId);
   const activeSheetId = useStore((state) => state.activeSheetId);
   const activeDashboardId = useStore((state) => state.activeDashboardId);
-  const createProject = useStore((state) => state.createProject);
   const renameProject = useStore((state) => state.renameProject);
   const deleteProject = useStore((state) => state.deleteProject);
   const setActiveProject = useStore((state) => state.setActiveProject);
@@ -119,8 +119,8 @@ export default function HomePage() {
     navigate("/dashboard");
   };
 
-  const handleCreate = (name) => {
-    createProject(name);
+  const handleCreate = async (name) => {
+    await createProjectApi(name);
     navigate("/dashboard");
   };
 

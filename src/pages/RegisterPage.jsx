@@ -1,11 +1,10 @@
 ﻿import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useStore } from "../store/useStore";
+import { register as registerApi } from "../api/authApi";
 import { useI18n } from "../utils/i18n";
 
 export default function RegisterPage() {
   const { t } = useI18n();
-  const register = useStore((state) => state.register);
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -27,7 +26,7 @@ export default function RegisterPage() {
     setLoading(true);
     setError("");
     await new Promise((resolve) => setTimeout(resolve, 700));
-    register(email, password, name);
+    await registerApi({ email, password, name });
     navigate("/dashboard", { replace: true });
   }
 

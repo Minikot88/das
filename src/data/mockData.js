@@ -1,3 +1,14 @@
+const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const REGIONS = ["North", "South", "East", "West"];
+const CATEGORIES = ["Technology", "Furniture", "Office Supplies"];
+const PRODUCTS = {
+  Technology: ["Laptop", "Monitor", "Keyboard"],
+  Furniture: ["Desk", "Chair", "Cabinet"],
+  "Office Supplies": ["Notebook", "Pen Set", "Binder"],
+};
+const CHANNELS = ["Online", "Retail"];
+const SEGMENTS = ["Enterprise", "SMB"];
+
 export const TYPE_BADGE = {
   string: "STR",
   number: "NUM",
@@ -6,144 +17,122 @@ export const TYPE_BADGE = {
 };
 
 export const TYPE_COLOR = {
-  string: "#52c41a",
-  number: "#1677ff",
-  date: "#fa8c16",
-  boolean: "#722ed1",
+  string: "#64748b",
+  number: "#2563eb",
+  date: "#0f766e",
+  boolean: "#7c3aed",
 };
 
-function createField(name, type, role = []) {
-  return { name, type, role };
+function createField(name, label, type, semanticType = type) {
+  return {
+    name,
+    label,
+    type,
+    semanticType,
+  };
 }
 
-function toLabel(value) {
-  return String(value)
-    .replace(/[_-]+/g, " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase());
+function getQuarter(monthIndex) {
+  return `Q${Math.floor(monthIndex / 3) + 1}`;
 }
 
-const salesFields = [
-  createField("month", "string", ["time", "category"]),
-  createField("category", "string", ["category", "series"]),
-  createField("sales", "number", ["value"]),
-  createField("profit", "number", ["value"]),
-];
+function createMockRow(monthIndex, regionIndex, categoryIndex) {
+  const category = CATEGORIES[categoryIndex];
+  const productOptions = PRODUCTS[category];
+  const product = productOptions[(monthIndex + regionIndex) % productOptions.length];
+  const channel = CHANNELS[(monthIndex + categoryIndex) % CHANNELS.length];
+  const segment = SEGMENTS[(regionIndex + categoryIndex) % SEGMENTS.length];
+  const date = new Date(Date.UTC(2025, monthIndex, 1));
+  const month = MONTH_NAMES[monthIndex];
+  const base = 920 + (monthIndex * 62) + (regionIndex * 88) + (categoryIndex * 96);
+  const quantity = 28 + (monthIndex % 4) * 4 + regionIndex * 3 + categoryIndex * 5;
+  const orders = 18 + monthIndex + regionIndex * 4 + categoryIndex * 3;
+  const discount = Number((0.04 + categoryIndex * 0.015 + (monthIndex % 3) * 0.01).toFixed(2));
+  const rating = Number((3.6 + regionIndex * 0.18 + categoryIndex * 0.11 + (monthIndex % 5) * 0.05).toFixed(1));
+  const sales = Math.round(base * quantity * (1 + discount));
+  const cost = Math.round(sales * (0.58 + categoryIndex * 0.05));
+  const profit = sales - cost;
+  const target = Math.round(sales * (1.08 + (regionIndex % 2) * 0.04));
+  const minRange = Math.round(sales * 0.72);
+  const maxRange = Math.round(sales * 1.18);
 
-const salesRows = [
-  { month: "Jan", category: "Technology", sales: 120000, profit: 26000 },
-  { month: "Feb", category: "Technology", sales: 138000, profit: 32000 },
-  { month: "Mar", category: "Technology", sales: 149000, profit: 35000 },
-  { month: "Apr", category: "Technology", sales: 143000, profit: 31000 },
-  { month: "Jan", category: "Furniture", sales: 82000, profit: 14000 },
-  { month: "Feb", category: "Furniture", sales: 91000, profit: 17000 },
-  { month: "Mar", category: "Furniture", sales: 98000, profit: 19500 },
-  { month: "Apr", category: "Furniture", sales: 104000, profit: 21000 },
-];
+  return {
+    date: date.toISOString().slice(0, 10),
+    month,
+    quarter: getQuarter(monthIndex),
+    year: date.getUTCFullYear(),
+    region: REGIONS[regionIndex],
+    category,
+    product,
+    channel,
+    segment,
+    sales,
+    profit,
+    orders,
+    quantity,
+    discount,
+    target,
+    cost,
+    rating,
+    minRange,
+    maxRange,
+  };
+}
 
-const financeFields = [
-  createField("quarter", "string", ["time", "category"]),
-  createField("revenue", "number", ["value"]),
-  createField("expense", "number", ["value"]),
-];
-
-const financeRows = [
-  { quarter: "Q1 2024", revenue: 420000, expense: 290000 },
-  { quarter: "Q2 2024", revenue: 465000, expense: 305000 },
-  { quarter: "Q3 2024", revenue: 488000, expense: 319000 },
-  { quarter: "Q4 2024", revenue: 530000, expense: 344000 },
-  { quarter: "Q1 2025", revenue: 548000, expense: 356000 },
-  { quarter: "Q2 2025", revenue: 582000, expense: 371000 },
-];
-
-const geoFields = [
-  createField("country", "string", ["geo", "category"]),
-  createField("value", "number", ["value"]),
-];
-
-const geoRows = [
-  { country: "United States", value: 185000 },
-  { country: "Canada", value: 92000 },
-  { country: "Germany", value: 110000 },
-  { country: "Japan", value: 98000 },
-  { country: "Australia", value: 76000 },
-  { country: "Brazil", value: 69000 },
-];
-
-const scatterFields = [
-  createField("x", "number", ["value"]),
-  createField("y", "number", ["value"]),
-  createField("group", "string", ["category", "series"]),
-  createField("size", "number", ["value"]),
-];
-
-const scatterRows = [
-  { x: 12, y: 18, group: "Core", size: 10 },
-  { x: 18, y: 26, group: "Core", size: 12 },
-  { x: 24, y: 31, group: "Growth", size: 16 },
-  { x: 29, y: 35, group: "Growth", size: 18 },
-  { x: 34, y: 22, group: "Legacy", size: 11 },
-  { x: 39, y: 29, group: "Legacy", size: 13 },
-  { x: 45, y: 42, group: "Emerging", size: 19 },
-  { x: 52, y: 48, group: "Emerging", size: 22 },
-];
-
-const hierarchyFields = [
-  createField("level1", "string", ["hierarchy", "category", "series"]),
-  createField("level2", "string", ["hierarchy", "category"]),
-  createField("label", "string", ["hierarchy", "category", "series"]),
-  createField("value", "number", ["value"]),
-];
-
-const hierarchyRows = [
-  { level1: "Technology", level2: "Laptops", label: "ApexBook Pro", value: 120 },
-  { level1: "Technology", level2: "Laptops", label: "Nimbus Air", value: 95 },
-  { level1: "Technology", level2: "Accessories", label: "Pulse Mouse", value: 74 },
-  { level1: "Technology", level2: "Accessories", label: "Vector Keyboard", value: 68 },
-  { level1: "Furniture", level2: "Chairs", label: "Ergo Chair", value: 88 },
-  { level1: "Furniture", level2: "Chairs", label: "Summit Task Chair", value: 79 },
-  { level1: "Furniture", level2: "Desks", label: "Lift Desk 120", value: 101 },
-  { level1: "Furniture", level2: "Desks", label: "Studio Table", value: 84 },
-];
-
-const calendarFields = [
-  createField("date", "date", ["time"]),
-  createField("value", "number", ["value"]),
-];
-
-const calendarRows = [
-  { date: "2024-01-01", value: 42 },
-  { date: "2024-01-02", value: 38 },
-  { date: "2024-01-03", value: 45 },
-  { date: "2024-01-04", value: 51 },
-  { date: "2024-01-05", value: 47 },
-  { date: "2024-01-06", value: 36 },
-  { date: "2024-01-07", value: 33 },
-  { date: "2024-01-08", value: 49 },
-];
-
-export const schema = {
-  business: {
-    sales: { fields: salesFields, data: salesRows },
-    finance: { fields: financeFields, data: financeRows },
-    geo_data: { fields: geoFields, data: geoRows },
-    scatter_data: { fields: scatterFields, data: scatterRows },
-    hierarchy_data: { fields: hierarchyFields, data: hierarchyRows },
-    calendar_data: { fields: calendarFields, data: calendarRows },
-  },
-};
-
-export const datasets = Object.fromEntries(
-  Object.values(schema).flatMap((database) =>
-    Object.entries(database).map(([tableName, table]) => [tableName, table.data])
+export const mockRows = Array.from({ length: 12 }).flatMap((_, monthIndex) =>
+  REGIONS.flatMap((_, regionIndex) =>
+    CATEGORIES.map((__, categoryIndex) => createMockRow(monthIndex, regionIndex, categoryIndex))
   )
 );
 
-export const datasetSummaries = Object.fromEntries(
-  Object.entries(datasets).map(([name, rows]) => [
-    name,
-    {
-      label: toLabel(name),
-      rowCount: rows.length,
+export const mockFields = [
+  createField("date", "Date", "date", "date"),
+  createField("month", "Month", "string", "category"),
+  createField("quarter", "Quarter", "string", "category"),
+  createField("year", "Year", "number", "number"),
+  createField("region", "Region", "string", "category"),
+  createField("category", "Category", "string", "category"),
+  createField("product", "Product", "string", "category"),
+  createField("channel", "Channel", "string", "category"),
+  createField("segment", "Segment", "string", "category"),
+  createField("sales", "Sales", "number", "number"),
+  createField("profit", "Profit", "number", "number"),
+  createField("orders", "Orders", "number", "number"),
+  createField("quantity", "Quantity", "number", "number"),
+  createField("discount", "Discount", "number", "number"),
+  createField("target", "Target", "number", "number"),
+  createField("cost", "Cost", "number", "number"),
+  createField("rating", "Rating", "number", "number"),
+  createField("minRange", "Min Range", "number", "number"),
+  createField("maxRange", "Max Range", "number", "number"),
+];
+
+export const mockDataset = {
+  id: "sales_performance",
+  name: "Sales Performance",
+  fields: mockFields,
+  rows: mockRows,
+};
+
+export const datasets = {
+  [mockDataset.id]: mockRows,
+};
+
+export const schema = {
+  business: {
+    [mockDataset.id]: {
+      fields: mockFields,
+      data: mockRows,
     },
-  ])
-);
+  },
+};
+
+export const datasetSummaries = {
+  [mockDataset.id]: {
+    label: mockDataset.name,
+    rowCount: mockRows.length,
+  },
+};
+
+export const mockData = mockDataset;
+

@@ -2848,3 +2848,62 @@ body.dark .dashboard-sidebar-rail-button {
     min-width: 0;
   }
 }
+
+/* Responsive canvas refinement */
+.dashboard-workspace-canvas-frame {
+  min-height: clamp(380px, calc(100vh - 380px), 760px);
+}
+
+.dashboard-canvas-grid {
+  min-height: clamp(360px, calc(100vh - 470px), 720px);
+}
+
+.dashboard-canvas-grid .react-grid-item {
+  transition: transform 180ms ease, width 180ms ease, height 180ms ease;
+}
+
+.dashboard-canvas-grid-item,
+.dashboard-widget-slot,
+.dashboard-workspace-page .chart-card,
+.dashboard-workspace-page .chart-card-body {
+  min-height: 0;
+}
+
+.dashboard-widget-slot {
+  display: flex;
+  height: 100%;
+}
+
+.dashboard-widget-slot > .chart-card {
+  flex: 1 1 auto;
+  height: 100%;
+}
+
+.dashboard-workspace-page .chart-card {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.dashboard-workspace-page .chart-card,
+.dashboard-workspace-page .chart-card-header {
+  background: var(--chart-card-surface, var(--surface));
+}
+
+.dashboard-workspace-page .chart-card-body {
+  height: 100%;
+}
+
+.dashboard-workspace-page .chart-renderer-root,
+.dashboard-workspace-page .chartjs-renderer {
+  min-height: 100%;
+}
+
+@media (max-width: 960px) {
+  .dashboard-workspace-canvas-frame {
+    min-height: clamp(320px, calc(100vh - 340px), 640px);
+  }
+
+  .dashboard-canvas-grid {
+    min-height: clamp(300px, calc(100vh - 430px), 620px);
+  }
+}

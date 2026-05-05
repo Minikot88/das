@@ -1,24 +1,37 @@
-﻿/**
- * components/charts/KPIWidget.jsx
- * Visual widget for single-value data points.
- */
-import React from "react";
+import React, { useMemo } from "react";
 
 function formatValue(value) {
-  if (typeof value === "number") {
-    if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(2)}M`;
-    if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
-    return value.toLocaleString();
-  }
-  return value ?? "";
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return value ?? "0";
+  return new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: numeric >= 100 ? 0 : 2,
+  }).format(numeric);
 }
 
-export default function KPIWidget({ title, value, showTitle = true, showCaption = true }) {
+function getFirstNumericValue(rows = []) {
+  const firstRow = rows[0] ?? {};
+  const firstNumericKey = Object.keys(firstRow).find((key) => Number.isFinite(Number(firstRow[key])));
+  return {
+    key: firstNumericKey ?? "value",
+    value: firstNumericKey ? firstRow[firstNumericKey] : 0,
+  };
+}
+
+export default function KPIWidget({ chart = {}, className = "" }) {
+  const rows = Array.isArray(chart.rows)
+    ? chart.rows
+    : Array.isArray(chart.data)
+      ? chart.data
+      : Array.isArray(chart.config?.rows)
+        ? chart.config.rows
+        : [];
+  const metric = useMemo(() => getFirstNumericValue(rows), [rows]);
+
   return (
-    <div className="kpi-widget">
-      {showTitle ? <div className="kpi-label">{title}</div> : null}
-      <div className="kpi-value">{formatValue(value)}</div>
-      {showCaption ? <div className="kpi-caption">Single metric snapshot</div> : null}
+    <div className={`kpi-widget${className ? ` ${className}` : ""}`}>
+      <span className="kpi-label">{chart.subtitle || metric.key}</span>
+      <strong className="kpi-value">{formatValue(metric.value)}</strong>
+      <span>{chart.title || chart.name || "KPI"}</span>
     </div>
   );
 }

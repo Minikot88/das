@@ -2,15 +2,29 @@
 
 const CHART_TYPE_ICONS = {
   line: "LN",
-  area: "AR",
   bar: "BR",
-  "stacked-bar": "SB",
-  "grouped-bar": "GB",
+  doughnut: "DN",
   pie: "PI",
-  donut: "DN",
+  polarArea: "PA",
+  radar: "RD",
   scatter: "SC",
-  heatmap: "HM",
-  kpi: "KP",
+  bubble: "BB",
+};
+
+function resolveChartType(chart) {
+  return chart.type || chart.config?.type || chart.family || "chart";
+}
+
+const CHART_FAMILY_ICONS = {
+  bar: "BR",
+  line: "LN",
+  area: "AR",
+  doughnut: "DN",
+  pie: "PI",
+  radar: "RD",
+  scatter: "SC",
+  bubble: "BB",
+  mixed: "MX",
 };
 
 const ChartPicker = memo(function ChartPicker({ charts, onSelect, onClose }) {
@@ -31,7 +45,8 @@ const ChartPicker = memo(function ChartPicker({ charts, onSelect, onClose }) {
             <div className="chart-picker-empty">No saved charts.</div>
           ) : (
             charts.map((chart) => {
-              const chartType = chart.config?.chartType || chart.config?.type || "bar";
+              const chartType = resolveChartType(chart);
+              const icon = CHART_TYPE_ICONS[chartType] || CHART_FAMILY_ICONS[chart.family] || "CH";
               return (
                 <button
                   key={chart.id}
@@ -42,10 +57,10 @@ const ChartPicker = memo(function ChartPicker({ charts, onSelect, onClose }) {
                     onClose();
                   }}
                 >
-                  <span className="chart-picker-item-code">{CHART_TYPE_ICONS[chartType] || "CH"}</span>
+                  <span className="chart-picker-item-code">{icon}</span>
                   <span className="chart-picker-item-copy">
-                    <strong>{chart.name}</strong>
-                    <span>{chartType}</span>
+                    <strong>{chart.title || chart.name}</strong>
+                    <span>{chart.variant || chart.family || chartType}</span>
                   </span>
                 </button>
               );

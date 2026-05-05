@@ -1,11 +1,10 @@
 ﻿import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useStore } from "../store/useStore";
+import { login as loginApi } from "../api/authApi";
 import { useI18n } from "../utils/i18n";
 
 export default function LoginPage() {
   const { locale, t } = useI18n();
-  const login = useStore((state) => state.login);
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -60,7 +59,7 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
     await new Promise((resolve) => setTimeout(resolve, 700));
-    login(email, password);
+    await loginApi({ email, password });
     navigate("/dashboard", { replace: true });
   }
 

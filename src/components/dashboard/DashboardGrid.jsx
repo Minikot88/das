@@ -54,6 +54,7 @@ export default function DashboardGrid({
       containerPadding={DASHBOARD_GRID_PADDING}
       isResizable={isEditable}
       isDraggable={isEditable}
+      draggableHandle=".card-drag-handle"
       compactType={DASHBOARD_COMPACT_TYPE}
       preventCollision={false}
       onLayoutChange={isEditable ? handleLayoutChange : undefined}
@@ -65,9 +66,9 @@ export default function DashboardGrid({
           x: 0,
           y: 0,
           w: 6,
-          h: 4,
-          minW: 2,
-          minH: 3,
+          h: 5,
+          minW: 3,
+          minH: 4,
         };
         const chart = toDashboardChartModel(widget);
 

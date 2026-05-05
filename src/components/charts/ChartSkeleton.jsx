@@ -1,25 +1,14 @@
-/**
- * components/charts/ChartSkeleton.jsx
- * Animated loading placeholder.
- */
 import React from "react";
 
-export default function ChartSkeleton({ height = 300 }) {
+export default function ChartSkeleton({ height = 320 }) {
+  const resolvedHeight = typeof height === "number" ? `${height}px` : height;
+
   return (
-    <div className="chart-skeleton" style={{ height }} aria-label="Loading chart" aria-busy="true">
-      <div className="skeleton-header">
-        <div className="skeleton-line" style={{ width: "55%", height: 12 }} />
-        <div className="skeleton-line" style={{ width: "18%", height: 12 }} />
-      </div>
-      <div className="skeleton-body">
-        {[60, 85, 45, 95, 70, 55, 80].map((h, i) => (
-          <div
-            key={i}
-            className="skeleton-bar"
-            style={{ height: `${h}%`, animationDelay: `${i * 0.08}s` }}
-          />
-        ))}
-      </div>
+    <div className="chart-status-card" style={{ minHeight: resolvedHeight, height: resolvedHeight }}>
+      <span className="chart-status-kicker">Loading</span>
+      <strong className="chart-status-title">Preparing chart</strong>
+      <p className="chart-status-description">Generating a fresh Chart.js preview.</p>
     </div>
   );
 }
+

@@ -8,6 +8,7 @@ const CHART_TYPE_LABELS = {
   "stacked-bar": "Stacked Bar",
   "grouped-bar": "Grouped Bar",
   pie: "Pie",
+  doughnut: "Doughnut",
   donut: "Donut",
   scatter: "Scatter",
   bubble: "Bubble",
@@ -21,11 +22,11 @@ const CHART_TYPE_LABELS = {
 };
 
 export default function ReadOnlyChartFrame({ chart }) {
-  const chartType = chart.chartType ?? chart.type;
+  const chartType = chart.type ?? chart.config?.type;
   const chartLabel = CHART_TYPE_LABELS[chartType] ?? chartType ?? "Chart";
-  const xField = chart.x || "Not set";
-  const yField = chart.y || "Not set";
-  const groupField = chart.groupBy || "None";
+  const xField = chart.mapping?.x || chart.mapping?.label || "Not set";
+  const yField = chart.mapping?.y || chart.mapping?.value || chart.mapping?.bar || "Not set";
+  const groupField = chart.mapping?.series || "None";
   const dataset = chart.dataset || "Unavailable";
 
   return (

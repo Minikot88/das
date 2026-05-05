@@ -1,8 +1,8 @@
-﻿import React, { memo, useCallback, useEffect, useRef, useState } from "react";
+import React, { memo, useEffect, useRef, useState } from "react";
 import ChartRenderer from "../charts/ChartRenderer";
 import ChartSkeleton from "../charts/ChartSkeleton";
 import CardActions from "./CardActions";
-import { getChartPalette } from "../../utils/chartPalette";
+import { pickChartColor } from "../../utils/chartPalette";
 
 const ChartCard = memo(function ChartCard({
   chart,
@@ -12,24 +12,31 @@ const ChartCard = memo(function ChartCard({
   onExportCSV,
   onExportPNG,
   onInsightData,
-  drilldown = null,
-  onDrilldown,
   isFullscreen = false,
   onToggleFullscreen,
   themeMode,
 }) {
   const [loaded, setLoaded] = useState(false);
-  const [renderRows, setRenderRows] = useState([]);
-  const lastRowsKeyRef = useRef("");
   const cardRef = useRef(null);
   const bodyRef = useRef(null);
   const resizeFrameRef = useRef(0);
   const [bodyHeight, setBodyHeight] = useState(0);
+  const rows = Array.isArray(chart.rows)
+    ? chart.rows
+    : Array.isArray(chart.data)
+      ? chart.data
+      : Array.isArray(chart.config?.rows)
+        ? chart.config.rows
+        : [];
 
   useEffect(() => {
-    const timer = setTimeout(() => setLoaded(true), 100);
-    return () => clearTimeout(timer);
+    const timer = window.setTimeout(() => setLoaded(true), 80);
+    return () => window.clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    onInsightData?.(chart, rows);
+  }, [chart, onInsightData, rows]);
 
   useEffect(() => {
     const bodyElement = bodyRef.current;
@@ -48,9 +55,7 @@ const ChartCard = memo(function ChartCard({
     updateBodyHeight();
 
     const resizeObserver = typeof ResizeObserver !== "undefined"
-      ? new ResizeObserver(() => {
-          updateBodyHeight();
-        })
+      ? new ResizeObserver(() => updateBodyHeight())
       : null;
 
     resizeObserver?.observe(bodyElement);
@@ -64,25 +69,19 @@ const ChartCard = memo(function ChartCard({
     };
   }, [pixelHeight]);
 
-  const accent = getChartPalette(chart.colorTheme).single;
+  const accent = chart.settings?.datasetColors?.[0] || pickChartColor(0);
   const contentHeight = Math.max(180, bodyHeight || (pixelHeight - 42));
-
-  const handleDataReady = useCallback((rows) => {
-    const nextRows = rows ?? [];
-    const nextKey = JSON.stringify(nextRows);
-
-    if (lastRowsKeyRef.current === nextKey) return;
-
-    lastRowsKeyRef.current = nextKey;
-    setRenderRows(nextRows);
-    onInsightData?.(chart, nextRows);
-  }, [chart, onInsightData]);
+  const cardBackground = chart.settings?.cardBackground || chart.config?.meta?.settings?.cardBackground || "";
 
   return (
     <div
       className={`chart-card${isFullscreen ? " is-fullscreen" : ""}`}
       ref={cardRef}
-      style={{ height: pixelHeight, "--card-accent": accent }}
+      style={{
+        height: pixelHeight,
+        "--card-accent": accent,
+        ...(cardBackground ? { "--chart-card-surface": cardBackground, background: cardBackground } : {}),
+      }}
       role="article"
       aria-label={`Chart: ${chart.title}`}
     >
@@ -101,7 +100,7 @@ const ChartCard = memo(function ChartCard({
               chart={chart}
               sheetId={sheetId}
               cardRef={cardRef}
-              onExportCSV={(activeChart) => onExportCSV?.(activeChart, renderRows)}
+              onExportCSV={(activeChart) => onExportCSV?.(activeChart, rows)}
               onExportPNG={onExportPNG}
               onToggleFullscreen={onToggleFullscreen}
               isFullscreen={isFullscreen}
@@ -116,16 +115,8 @@ const ChartCard = memo(function ChartCard({
         ) : (
           <ChartRenderer
             chart={chart}
-            data={Array.isArray(chart.data) && chart.data.length > 0
-              ? chart.data
-              : Array.isArray(chart.queryResult?.rows)
-                ? chart.queryResult.rows
-                : undefined}
-            containerHeight={contentHeight}
+            height={contentHeight}
             filters={filters}
-            drilldown={drilldown}
-            onDrilldown={onDrilldown}
-            onDataReady={handleDataReady}
             chrome="minimal"
             themeMode={themeMode}
           />

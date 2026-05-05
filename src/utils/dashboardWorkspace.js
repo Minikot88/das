@@ -1,5 +1,29 @@
-import { normalizeChartConfig } from "./normalizeChartConfig";
-import { buildChartOptionByType, createDefaultWidgetName, getChartTypeLabel } from "./builderChartUtils";
+function formatChartTypeLabel(value = "chart") {
+  return String(value)
+    .replace(/[-_]+/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function createChartRows(chart = {}) {
+  return Array.isArray(chart.rows)
+    ? chart.rows
+    : Array.isArray(chart.data)
+      ? chart.data
+      : Array.isArray(chart.config?.rows)
+        ? chart.config.rows
+        : Array.isArray(chart.config?.queryResult?.rows)
+          ? chart.config.queryResult.rows
+          : [];
+}
+
+function createMetaLabel(createdAt, fallbackId) {
+  if (!createdAt) return String(fallbackId ?? "").slice(-6);
+
+  return new Date(createdAt).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+}
 
 export function createBuilderContextForDashboard({
   projectId,
@@ -20,22 +44,11 @@ export function createBuilderContextForDashboard({
 }
 
 export function createBuilderReturnState(context, overrides = {}) {
-  if (!context?.projectId || !context?.sheetId || !context?.dashboardId) {
-    return {
-      builderReturn: {
-        projectId: null,
-        sheetId: null,
-        dashboardId: null,
-        ...overrides,
-      },
-    };
-  }
-
   return {
     builderReturn: {
-      projectId: context.projectId,
-      sheetId: context.sheetId,
-      dashboardId: context.dashboardId,
+      projectId: context?.projectId ?? null,
+      sheetId: context?.sheetId ?? null,
+      dashboardId: context?.dashboardId ?? null,
       ...overrides,
     },
   };
@@ -50,39 +63,21 @@ export function readBuilderReturnState(routeState) {
 export function toDashboardChartModel(widget) {
   if (!widget) return null;
 
-  const config = normalizeChartConfig({
-    ...(widget.config ?? {}),
-    renderer: "chartjs",
-    chartPreset: widget.config?.chartPreset ?? "dashboard",
-  });
-  const title = widget.name || config.title || config.name || "Chart";
-  const data = Array.isArray(widget.data) && widget.data.length > 0
-    ? widget.data
-    : Array.isArray(config.queryResult?.rows) && config.queryResult.rows.length > 0
-      ? config.queryResult.rows
-      : [];
+  const rows = createChartRows(widget);
+  const title = widget.title || widget.name || widget.config?.options?.plugins?.title?.text || "Chart";
 
   return {
-    ...config,
-    id: widget.id,
-    chartId: widget.chartId,
-    sheetId: widget.sheetId,
+    ...widget,
     title,
     name: title,
-    data,
-    queryResult: config.queryResult ?? (data.length
-      ? {
-          rows: data,
-          columns: Object.keys(data[0] ?? {}),
-          fieldMeta: [],
-          rowCount: data.length,
-          columnCount: Object.keys(data[0] ?? {}).length,
-          sourceTable: config.dataset ?? null,
-        }
-      : null),
-    createdAt: widget.createdAt,
-    colorTheme: config.colorTheme,
-    dataset: config.dataset,
+    rows,
+    data: rows,
+    engine: widget.engine ?? "chartjs",
+    type: widget.type ?? widget.config?.type ?? "bar",
+    config: {
+      ...(widget.config ?? {}),
+      rows,
+    },
   };
 }
 
@@ -92,62 +87,33 @@ export function resolveDashboardWidgets(layout = [], charts = []) {
       const savedChart = charts.find((chart) => chart.id === item.chartId);
       if (!savedChart) return null;
 
-      const config = normalizeChartConfig({
-        ...(savedChart.config ?? {}),
-        renderer: "chartjs",
-        chartPreset: savedChart.config?.chartPreset ?? "dashboard",
-      });
-      const chartRows = (Array.isArray(savedChart.data) && savedChart.data.length > 0)
-        ? savedChart.data
-        : Array.isArray(config.queryResult?.rows) && config.queryResult.rows.length > 0
-          ? config.queryResult.rows
-          : Array.isArray(savedChart.data)
-            ? savedChart.data
-            : [];
-      const fallbackName = `Chart ${index + 1}`;
-      const name = item.titleOverride || savedChart.name || config.title || config.name || fallbackName;
-      const type = config.chartType || config.type || "bar";
+      const rows = createChartRows(savedChart);
+      const title = item.titleOverride || savedChart.title || savedChart.name || `Chart ${index + 1}`;
+      const type = savedChart.type ?? savedChart.config?.type ?? "bar";
 
       return {
         id: item.i,
         chartId: savedChart.id,
-        name,
+        name: title,
+        title,
         type,
-        typeLabel: getChartTypeLabel(type),
+        typeLabel: formatChartTypeLabel(savedChart.variant ?? savedChart.templateId ?? type),
         createdAt: savedChart.createdAt,
-        metaLabel: savedChart.createdAt
-          ? new Date(savedChart.createdAt).toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-            })
-          : String(savedChart.id).slice(-6),
+        metaLabel: createMetaLabel(savedChart.createdAt, savedChart.id),
         layout: item,
-        data: chartRows,
-        config: normalizeChartConfig({
-          ...config,
-          title: name,
-          name,
-          renderer: "chartjs",
-          chartPreset: "dashboard",
-          queryResult: config.queryResult ?? (chartRows.length
-            ? {
-                rows: chartRows,
-                columns: Object.keys(chartRows[0] ?? {}),
-                fieldMeta: [],
-                rowCount: chartRows.length,
-                columnCount: Object.keys(chartRows[0] ?? {}).length,
-                sourceTable: config.dataset ?? null,
-              }
-            : null),
-        }),
-        echartsOption: buildChartOptionByType(type, {
-          rows: chartRows,
-          config: {
-            ...config,
-            title: name,
-            name,
-          },
-        }),
+        rows,
+        data: rows,
+        engine: savedChart.engine ?? "chartjs",
+        templateId: savedChart.templateId ?? null,
+        family: savedChart.family ?? null,
+        variant: savedChart.variant ?? null,
+        mapping: savedChart.mapping ?? {},
+        settings: savedChart.settings ?? {},
+        dataset: savedChart.dataset ?? savedChart.datasetId ?? null,
+        config: {
+          ...(savedChart.config ?? {}),
+          rows,
+        },
       };
     })
     .filter(Boolean);
@@ -175,35 +141,14 @@ export function findDashboardContextById(projects = [], charts = [], dashboardId
 }
 
 export function createWidgetFromBuilder({
-  chartConfig,
-  chartRows,
-  context,
+  savedChart,
   existingCharts = [],
 } = {}) {
-  const normalizedType = chartConfig?.chartType || "bar";
-  const widgetName =
-    chartConfig?.name?.trim() || createDefaultWidgetName(normalizedType, existingCharts);
-  const title = chartConfig?.title?.trim() || widgetName;
-  const normalizedConfig = normalizeChartConfig({
-    ...chartConfig,
-    name: widgetName,
-    title,
-    renderer: "chartjs",
-    chartPreset: "dashboard",
-  });
+  if (!savedChart) return null;
 
   return {
-    name: widgetName,
-    type: normalizedType,
-    sourceProjectId: context?.projectId,
-    createdAt: new Date().toISOString(),
-    data: chartRows ?? [],
-    echartsOption: buildChartOptionByType(normalizedType, {
-      rows: chartRows ?? [],
-      config: normalizedConfig,
-    }),
-    config: normalizedConfig,
-    layout: {
+    ...savedChart,
+    layout: savedChart.layout ?? {
       w: existingCharts.length ? 6 : 12,
       h: existingCharts.length ? 4 : 5,
       minW: 3,
