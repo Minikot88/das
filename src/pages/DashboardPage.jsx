@@ -543,10 +543,11 @@ export default function DashboardPage() {
 
   function removeWidget(widgetId) {
     if (!activeSheet?.id || !activeDashboard?.id) return;
+    console.log("[Dashboard Remove]", widgetId);
     if (activeDashboardId !== activeDashboard.id) {
       setActiveDashboard(activeDashboard.id);
     }
-    removeChart(activeSheet.id, widgetId);
+    removeChart(activeSheet.id, widgetId, activeDashboard.id);
     if (widgetId === selectedWidgetId) {
       setSelectedWidget(activeDashboard?.id, null);
     }

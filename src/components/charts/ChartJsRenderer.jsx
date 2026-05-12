@@ -36,6 +36,71 @@ function isDefaultAxisColor(color) {
   return !value || value === "#475569" || value === "rgb(71, 85, 105)";
 }
 
+function parseColor(color) {
+  const value = String(color ?? "").trim().toLowerCase();
+  const hex = value.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+  if (hex) {
+    const raw = hex[1].length === 3
+      ? hex[1].split("").map((char) => char + char).join("")
+      : hex[1];
+    return {
+      r: parseInt(raw.slice(0, 2), 16),
+      g: parseInt(raw.slice(2, 4), 16),
+      b: parseInt(raw.slice(4, 6), 16),
+    };
+  }
+  const rgb = value.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+  if (rgb) return { r: Number(rgb[1]), g: Number(rgb[2]), b: Number(rgb[3]) };
+  if (value === "white") return { r: 255, g: 255, b: 255 };
+  if (value === "black") return { r: 0, g: 0, b: 0 };
+  return null;
+}
+
+function isDarkBackground(color) {
+  const rgb = parseColor(color);
+  if (!rgb) return false;
+  const channels = [rgb.r, rgb.g, rgb.b].map((channel) => {
+    const value = channel / 255;
+    return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  });
+  const luminance = 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+  return luminance < 0.38;
+}
+
+function applyReadableChartColors(config) {
+  const nextConfig = config;
+  const background = nextConfig.options?.plugins?.canvasSurface?.color ?? "#ffffff";
+  const dark = isDarkBackground(background);
+  const titleColor = dark ? "#f8fafc" : "#0f172a";
+  const axisColor = dark ? "#dbe7f3" : "#475569";
+  const gridColor = dark ? "rgba(226, 232, 240, 0.18)" : "rgba(148, 163, 184, 0.14)";
+
+  nextConfig.options = nextConfig.options ?? {};
+  nextConfig.options.plugins = nextConfig.options.plugins ?? {};
+
+  const title = nextConfig.options.plugins.title;
+  if (title && isDefaultTitleColor(title.color)) title.color = titleColor;
+
+  const subtitle = nextConfig.options.plugins.subtitle;
+  if (subtitle && (isDefaultAxisColor(subtitle.color) || isDefaultTitleColor(subtitle.color))) subtitle.color = titleColor;
+
+  const legendLabels = nextConfig.options.plugins.legend?.labels;
+  if (legendLabels && isDefaultAxisColor(legendLabels.color)) legendLabels.color = axisColor;
+
+  Object.values(nextConfig.options.scales ?? {}).forEach((scale) => {
+    if (scale?.title && isDefaultAxisColor(scale.title.color)) scale.title.color = axisColor;
+    if (scale?.ticks && isDefaultAxisColor(scale.ticks.color)) scale.ticks.color = axisColor;
+    if (scale?.pointLabels && isDefaultAxisColor(scale.pointLabels.color)) scale.pointLabels.color = axisColor;
+    if (scale?.grid) scale.grid.color = gridColor;
+    if (scale?.angleLines) scale.angleLines.color = gridColor;
+    if (scale?.ticks && "backdropColor" in scale.ticks) {
+      scale.ticks.backdropColor = dark ? "rgba(15, 23, 42, 0.72)" : "rgba(255,255,255,0.85)";
+    }
+  });
+
+  return nextConfig;
+}
+
 function applyBuilderPreviewDarkTheme(config) {
   const nextConfig = config;
   nextConfig.options = nextConfig.options ?? {};
@@ -155,6 +220,18 @@ function applyResponsiveOptions(config, chartKind, density = "normal") {
   }
 
   Object.values(nextConfig.options.scales ?? {}).forEach((scale) => {
+    if (scale?.title?.display) {
+      scale.title.font = {
+        ...(scale.title.font ?? {}),
+        size: density === "tiny" ? 10 : density === "compact" ? 11 : 12,
+        weight: "600",
+      };
+      scale.title.padding = density === "tiny"
+        ? { top: 6, bottom: 2 }
+        : density === "compact"
+          ? { top: 8, bottom: 4 }
+          : { top: 10, bottom: 6 };
+    }
     if (!scale?.ticks) return;
     scale.ticks.autoSkip = scale.ticks.autoSkip ?? true;
     scale.ticks.maxRotation = 0;
@@ -332,6 +409,7 @@ export default function ChartJsRenderer({
       const nextConfig = cloneConfig(resolvedConfig);
       applyResponsiveOptions(nextConfig, chartKind, density);
       applyCanvasTitleVisibility(nextConfig, chart);
+      applyReadableChartColors(nextConfig);
       if (isBuilderPreview && darkBuilderPreview) {
         applyBuilderPreviewDarkTheme(nextConfig);
       }
@@ -368,6 +446,26 @@ export default function ChartJsRenderer({
 
     return () => cancelAnimationFrame(frameId);
   }, [height]);
+
+  useEffect(() => {
+    const frame = canvasRef.current?.parentElement;
+    if (!frame || typeof ResizeObserver === "undefined") return undefined;
+
+    const resizeObserver = new ResizeObserver(() => {
+      const canvas = canvasRef.current;
+      if (!chartRef.current || !canUseCanvas(canvas)) return;
+      try {
+        chartRef.current.resize();
+      } catch (error) {
+        if (!String(error?.message ?? "").includes("ownerDocument")) {
+          throw error;
+        }
+      }
+    });
+
+    resizeObserver.observe(frame);
+    return () => resizeObserver.disconnect();
+  }, []);
 
   if (!resolvedConfig) {
     return (

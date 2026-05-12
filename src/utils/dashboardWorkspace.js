@@ -94,7 +94,12 @@ export function resolveDashboardWidgets(layout = [], charts = []) {
       if (!savedChart) return null;
 
       const rows = createChartRows(savedChart);
-      const title = toSafeTitle(item.titleOverride ?? savedChart.settings?.title);
+      const title = toSafeTitle(
+        item.titleOverride ??
+        savedChart.settings?.title ??
+        savedChart.title ??
+        savedChart.name
+      );
       const type = savedChart.type ?? savedChart.config?.type ?? "bar";
 
       return {

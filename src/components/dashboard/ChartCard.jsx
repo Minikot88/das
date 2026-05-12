@@ -92,7 +92,7 @@ const ChartCard = memo(function ChartCard({
   const isTiny = cardWidth > 0 && cardHeight > 0 && (cardWidth < 260 || cardHeight < 240);
   const isCompact = cardWidth > 0 && cardHeight > 0 && (cardWidth < 360 || cardHeight < 300);
   const isSquareMin = cardWidth > 0 && cardHeight > 0 && isCompact && Math.max(cardWidth, cardHeight) <= 460;
-  const contentHeight = Math.max(180, bodySize.height || (pixelHeight - (shouldRenderHeader ? 42 : 0)));
+  const contentHeight = Math.max(120, bodySize.height || (pixelHeight - (shouldRenderHeader ? 42 : 0)));
   const sizeClass = [
     chartKind === "axis" ? "chart-card--axis" : "",
     chartKind === "circular" ? "chart-card--circular" : "",
@@ -102,7 +102,7 @@ const ChartCard = memo(function ChartCard({
     isSquareMin ? "chart-card--square-min" : "",
   ].filter(Boolean).join(" ");
   const circularSize = chartKind === "circular"
-    ? Math.max(isTiny ? 130 : 150, Math.min(cardWidth || 320, contentHeight, isFullscreen ? 460 : 330))
+    ? Math.max(isTiny ? 112 : 144, Math.min(cardWidth || 320, contentHeight, isFullscreen ? 460 : 310))
     : null;
   const cardBackground =
     chart.settings?.cardBackground ||
@@ -122,7 +122,7 @@ const ChartCard = memo(function ChartCard({
         ...(shouldRenderHeader ? {} : { gridTemplateRows: "minmax(0, 1fr)" }),
         "--card-accent": accent,
         ...(circularSize ? { "--chart-circular-size": `${circularSize}px` } : {}),
-        ...(cardBackground ? { "--chart-card-surface": cardBackground, background: cardBackground } : {}),
+        ...(cardBackground ? { "--chart-card-surface": cardBackground } : {}),
       }}
       role="article"
       aria-label={safeTitle ? `Chart: ${safeTitle}` : "Chart card"}
@@ -154,7 +154,11 @@ const ChartCard = memo(function ChartCard({
         </div>
       ) : null}
 
-      <div ref={bodyRef} className="chart-card-body">
+      <div
+        ref={bodyRef}
+        className="chart-card-body"
+        style={cardBackground ? { background: cardBackground } : undefined}
+      >
         {!loaded ? (
           <ChartSkeleton height={contentHeight} />
         ) : (

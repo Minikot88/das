@@ -5562,9 +5562,34 @@ body.dark .builder-v3-preview-frame {
 }
 
 .builder-v3-field input[type="color"] {
-  width: 56px;
-  min-height: 36px;
+  width: 44px;
+  min-width: 44px;
+  max-width: 44px;
+  height: 34px;
+  min-height: 34px;
+  padding: 3px;
   border-radius: 8px;
+  cursor: pointer;
+  align-self: start;
+}
+
+.builder-v3-field:has(input[type="color"]) {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px 10px;
+}
+
+.builder-v3-field:has(input[type="color"]) > span {
+  grid-column: 1 / -1;
+}
+
+.builder-v3-settings-panel {
+  overflow-x: hidden;
+  padding-bottom: 18px;
+}
+
+.builder-v3-settings-panel .builder-v3-form-grid {
+  align-items: start;
 }
 
 @media (max-width: 1400px) {

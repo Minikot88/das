@@ -1,14 +1,19 @@
 .dashboard-workspace-page .dashboard-canvas-grid-item,
 .dashboard-workspace-page .dashboard-widget-slot,
 .dashboard-workspace-page .chart-card,
-.dashboard-workspace-page .chart-card-body {
+.dashboard-workspace-page .chart-card-body,
+.dashboard-workspace-page .chart-card .chart-renderer-root,
+.dashboard-workspace-page .chart-card .chartjs-renderer,
+.dashboard-workspace-page .chart-card .chartjs-canvas-frame {
   min-width: 0;
   min-height: 0;
+  box-sizing: border-box;
 }
 
 .dashboard-workspace-page .chart-card {
   overflow: hidden;
   contain: layout paint;
+  background-clip: padding-box;
 }
 
 .dashboard-workspace-page .chart-card-body {
@@ -16,6 +21,7 @@
   display: grid;
   align-items: stretch;
   justify-items: stretch;
+  border-radius: inherit;
 }
 
 .dashboard-workspace-page .chart-card .chart-renderer-root,
@@ -23,8 +29,10 @@
 .dashboard-workspace-page .chart-card .chartjs-canvas-frame {
   width: 100%;
   height: 100%;
-  min-width: 0;
-  min-height: 0;
+  max-width: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  border-radius: inherit;
 }
 
 .dashboard-workspace-page .chart-card--compact .chart-card-header {
@@ -119,11 +127,11 @@
 }
 
 .dashboard-workspace-page .chart-card.has-no-card-header .chart-card-body {
-  padding: clamp(8px, 0.8vw, 12px);
+  padding: clamp(10px, 0.95vw, 14px);
 }
 
 .dashboard-workspace-page .chart-card.has-no-card-header.chart-card--compact .chart-card-body,
 .dashboard-workspace-page .chart-card.has-no-card-header.chart-card--tiny .chart-card-body,
 .dashboard-workspace-page .chart-card.has-no-card-header.chart-card--square-min .chart-card-body {
-  padding: clamp(6px, 0.7vw, 10px);
+  padding: clamp(8px, 0.75vw, 11px);
 }

@@ -1958,14 +1958,14 @@ body.dark .builder-chart-support-badge.is-supported {
   display: grid;
   align-items: stretch;
   justify-items: stretch;
-  padding: clamp(8px, 0.8vw, 12px);
+  padding: clamp(10px, 0.95vw, 14px);
   overflow: hidden;
 }
 
 .dashboard-workspace-page .chart-card.is-circular-chart .chart-card-body {
   align-items: center;
   justify-items: center;
-  padding: clamp(8px, 1vw, 16px);
+  padding: clamp(12px, 1.1vw, 18px);
 }
 
 .dashboard-workspace-page .chart-renderer-root,
@@ -1985,6 +1985,7 @@ body.dark .builder-chart-support-badge.is-supported {
   height: var(--chart-circular-size, min(100%, 360px));
   max-width: 100%;
   max-height: 100%;
+  margin: auto;
 }
 
 .dashboard-workspace-page .chart-card.is-fullscreen .chartjs-renderer.is-circular-chart .chartjs-canvas-frame {
@@ -2122,7 +2123,7 @@ body.dark .dashboard-workspace-page .dashboard-canvas-grid .react-grid-placehold
 
 .dashboard-workspace-page .dashboard-workspace-canvas-frame {
   gap: 10px;
-  padding: clamp(10px, 1vw, 14px);
+  padding: 0;
   border-radius: 8px;
   background:
     linear-gradient(90deg, color-mix(in srgb, var(--border) 58%, transparent) 1px, transparent 1px),
@@ -2184,8 +2185,12 @@ body.dark .dashboard-workspace-page .dashboard-canvas-grid .react-grid-placehold
 }
 
 .dashboard-workspace-page .chart-card {
+  position: relative;
+  overflow: hidden;
   border-color: color-mix(in srgb, var(--border-strong) 68%, transparent);
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.055);
+  background: var(--surface);
+  background-clip: padding-box;
 }
 
 .dashboard-workspace-page .chart-card-header {
@@ -2196,14 +2201,26 @@ body.dark .dashboard-workspace-page .dashboard-canvas-grid .react-grid-placehold
 
 .dashboard-workspace-page .chart-card-body {
   padding: 9px;
+  border-radius: inherit;
+  overflow: hidden;
 }
 
 .dashboard-workspace-page .chart-card.is-axis-chart .chart-card-body {
-  padding: 8px 10px 10px;
+  padding: 10px 12px 14px;
 }
 
 .dashboard-workspace-page .chart-card.is-circular-chart .chart-card-body {
   padding: 10px;
+}
+
+.dashboard-workspace-page .chart-card .chart-renderer-root,
+.dashboard-workspace-page .chart-card .chartjs-renderer,
+.dashboard-workspace-page .chart-card .chartjs-canvas-frame {
+  max-width: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  border-radius: inherit;
+  box-sizing: border-box;
 }
 
 .dashboard-workspace-page .chartjs-renderer.is-circular-chart .chartjs-canvas-frame {

@@ -1280,26 +1280,37 @@ export const useStore = create((set, get) => ({
     return { projects };
   }),
 
-  removeChart: (sheetId, instanceId) => set((s) => {
+  removeChart: (sheetId, instanceId, dashboardId = null) => set((s) => {
+    const targetDashboardId = dashboardId ?? s.activeDashboardId;
     const projects = s.projects.map((p) =>
       p.id !== s.activeProjectId ? p : {
         ...p,
         sheets: p.sheets.map((sh) =>
           sh.id !== sheetId ? sh : {
             ...sh,
-            dashboards: sh.dashboards.map((d) => {
-              if (d.id !== s.activeDashboardId) return d;
-              return { 
-                ...d, 
-                layout: d.layout.filter((l) => l.i !== instanceId) 
-              };
-            }),
+            dashboards: sh.dashboards.map((d) =>
+              d.id !== targetDashboardId
+                ? d
+                : {
+                    ...d,
+                    layout: (d.layout ?? []).filter((l) => l.i !== instanceId),
+                  }
+            ),
           }
         ),
       }
     );
-    saveState({ ...s, projects });
-    return { projects };
+    const ui = {
+      ...s.ui,
+      selectedWidgetIdByDashboard: Object.fromEntries(
+        Object.entries(s.ui.selectedWidgetIdByDashboard ?? {}).map(([dashboardId, widgetId]) => [
+          dashboardId,
+          widgetId === instanceId ? null : widgetId,
+        ])
+      ),
+    };
+    saveState({ ...s, projects, ui });
+    return { projects, ui };
   }),
 
   deleteChart: (chartId) => set((s) => {
