@@ -11,10 +11,12 @@ import {
 } from "../utils/storage";
 import {
   createLayoutItem,
+  getPreferredChartLayout,
   sanitizeLayout,
   tryCreateAdjacentLayoutItem,
 } from "../utils/layoutUtils";
 import { createCopyName, createEntityId, createTimestampId } from "../utils/id";
+import { createShareToken } from "../utils/shareTokens";
 
 const defaultDashboard = (id = "dash-1", name = "Dashboard 1") => ({
   id,
@@ -511,7 +513,7 @@ function _getActiveDashboard(s) {
 export const useStore = create((set, get) => ({
 
   user:            saved?.user            ?? null,
-  isAuthenticated: saved?.isAuthenticated ?? true,
+  isAuthenticated: saved?.isAuthenticated ?? false,
 
   projects:          saved?.projects          ?? [defaultProject()],
   activeProjectId:   saved?.activeProjectId   ?? "project-1",
@@ -549,12 +551,21 @@ export const useStore = create((set, get) => ({
   builderNavigationContext: defaultBuilderNavigationContext,
   builderDraft:      savedBuilderDraft ?? null,
 
+  setAuthenticatedUser: (user) => set((s) => {
+    if (!user) return {};
+    saveState({ ...s, user, isAuthenticated: true });
+    return { user, isAuthenticated: true };
+  }),
+
   login: (email, password, name) => set((s) => {
-    void password;
+    const trimmedEmail = String(email ?? "").trim();
+    if (!trimmedEmail || !password) {
+      throw new Error("Email and password are required.");
+    }
     const user = {
       id: `user-${Date.now()}`,
-      email,
-      name: name?.trim() || email.split("@")[0],
+      email: trimmedEmail,
+      name: name?.trim() || trimmedEmail.split("@")[0],
       role: "owner",
       lastLoginAt: new Date().toISOString(),
     };
@@ -563,11 +574,17 @@ export const useStore = create((set, get) => ({
   }),
 
   register: (email, password, name) => set((s) => {
-    void password;
+    const trimmedEmail = String(email ?? "").trim();
+    if (!trimmedEmail || !password) {
+      throw new Error("Email and password are required.");
+    }
+    if (String(password).length < 6) {
+      throw new Error("Password must be at least 6 characters.");
+    }
     const user = {
       id: `user-${Date.now()}`,
-      email,
-      name: name?.trim() || email.split("@")[0],
+      email: trimmedEmail,
+      name: name?.trim() || trimmedEmail.split("@")[0],
       role: "owner",
       createdAt: new Date().toISOString(),
     };
@@ -1029,7 +1046,7 @@ export const useStore = create((set, get) => ({
       const nextLayoutItem = createLayoutItem(
         dashboard.layout,
         newChart.id,
-        chart.layout ?? {}
+        chart.layout ?? getPreferredChartLayout(newChart, dashboard.layout.length)
       );
 
       const projects = state.projects.map((projectItem) =>
@@ -1110,7 +1127,7 @@ export const useStore = create((set, get) => ({
             ...sh,
             dashboards: sh.dashboards.map((d) => {
               if (d.id !== s.activeDashboardId) return d;
-              const nextItem = createLayoutItem(d.layout, chartId);
+              const nextItem = createLayoutItem(d.layout, chartId, getPreferredChartLayout(savedChart, d.layout.length));
               const layout = [...d.layout, nextItem];
               return { 
                 ...d, 
@@ -1147,7 +1164,10 @@ export const useStore = create((set, get) => ({
               ...sh,
               dashboards: sh.dashboards.map((d) => {
                 if (d.id !== s.activeDashboardId) return d;
-                const layoutItem = createLayoutItem(d.layout, chart.id, { i: chart.id });
+                const layoutItem = createLayoutItem(d.layout, chart.id, {
+                  i: chart.id,
+                  ...getPreferredChartLayout(chart, d.layout.length),
+                });
                 const layout = [...d.layout, layoutItem];
                 return { ...d, charts: [...d.charts, chart], layout };
               }),
@@ -1282,6 +1302,39 @@ export const useStore = create((set, get) => ({
     return { projects };
   }),
 
+  deleteChart: (chartId) => set((s) => {
+    if (!chartId) return {};
+
+    const charts = s.charts.filter((chart) => chart.id !== chartId);
+    const projects = s.projects.map((project) => ({
+      ...project,
+      sheets: (project.sheets ?? []).map((sheet) => ({
+        ...sheet,
+        dashboards: (sheet.dashboards ?? []).map((dashboard) => ({
+          ...dashboard,
+          layout: (dashboard.layout ?? []).filter((item) => item.chartId !== chartId),
+        })),
+      })),
+    }));
+    const ui = {
+      ...s.ui,
+      selectedWidgetIdByDashboard: Object.fromEntries(
+        Object.entries(s.ui.selectedWidgetIdByDashboard ?? {}).filter(([, widgetId]) =>
+          projects.some((project) =>
+            project.sheets?.some((sheet) =>
+              sheet.dashboards?.some((dashboard) =>
+                dashboard.layout?.some((item) => item.i === widgetId)
+              )
+            )
+          )
+        )
+      ),
+    };
+
+    saveState({ ...s, projects, charts, ui });
+    return { projects, charts, ui };
+  }),
+
   clearDashboard: (sheetId, dashId) => set((s) => {
     const projects = s.projects.map((p) =>
       p.id !== s.activeProjectId ? p : {
@@ -1300,7 +1353,7 @@ export const useStore = create((set, get) => ({
     return { projects, aiInsights: [] };
   }),
 
-  // Backwards compat: clearSheet(sheetId) â†’ clears active dashboard
+  // Backwards compat: clearSheet(sheetId) clears the active dashboard.
   clearSheet: (sheetId) => {
     const s = get();
     get().clearDashboard(sheetId, s.activeDashboardId);
@@ -1393,16 +1446,48 @@ export const useStore = create((set, get) => ({
 
   setAiInsights:      (insights) => set({ aiInsights: insights, isLoadingInsights: false }),
   setLoadingInsights: (v)        => set({ isLoadingInsights: v }),
+  // Share records are local mock records only. A production app must validate
+  // every shared dashboard on the server before returning any workspace data.
   generateShareLink: (sheetId) => {
-    const shareId = `shr-${Math.random().toString(36).slice(2, 10)}`;
+    const shareId = createShareToken("shr");
     set((s) => {
+      const project = s.projects.find((item) =>
+        item.sheets?.some((sheet) => sheet.id === sheetId)
+      );
       const shareLinks = {
         ...s.shareLinks,
         [shareId]: {
           id: shareId,
           sheetId,
+          projectId: project?.id ?? s.activeProjectId ?? null,
           createdAt: new Date().toISOString(),
           mode: "readonly",
+        },
+      };
+      saveState({ ...s, shareLinks });
+      return { shareLinks };
+    });
+    return shareId;
+  },
+  getOrCreateDashboardShareLink: ({ projectId, sheetId, dashboardId } = {}) => {
+    if (!dashboardId) return "";
+
+    const existing = Object.values(get().shareLinks ?? {}).find(
+      (link) => link?.dashboardId === dashboardId && link?.mode === "dashboard-readonly"
+    );
+    if (existing?.id) return existing.id;
+
+    const shareId = createShareToken("dash");
+    set((s) => {
+      const shareLinks = {
+        ...s.shareLinks,
+        [shareId]: {
+          id: shareId,
+          projectId: projectId ?? s.activeProjectId ?? null,
+          sheetId: sheetId ?? s.activeSheetId ?? null,
+          dashboardId,
+          createdAt: new Date().toISOString(),
+          mode: "dashboard-readonly",
         },
       };
       saveState({ ...s, shareLinks });

@@ -1,11 +1,12 @@
 ﻿import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { login as loginApi } from "../api/authApi";
 import { useI18n } from "../utils/i18n";
 
 export default function LoginPage() {
   const { locale, t } = useI18n();
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -58,9 +59,16 @@ export default function LoginPage() {
     }
     setLoading(true);
     setError("");
-    await new Promise((resolve) => setTimeout(resolve, 700));
-    await loginApi({ email, password });
-    navigate("/dashboard", { replace: true });
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      await loginApi({ email, password });
+      const target = location.state?.from?.pathname || "/dashboard";
+      navigate(target, { replace: true });
+    } catch (submitError) {
+      setError(submitError?.message || "Unable to sign in. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (

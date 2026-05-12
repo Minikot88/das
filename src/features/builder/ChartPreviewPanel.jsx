@@ -1,13 +1,15 @@
 import React from "react";
 import ChartRenderer from "../../components/charts/ChartRenderer";
 
-export default function ChartPreviewPanel({ template, previewConfig, settings, validation }) {
+export default function ChartPreviewPanel({ previewConfig, settings, validation }) {
+  const previewTitle = typeof settings.title === "string" ? settings.title.trim() : "";
+
   return (
     <section className="builder-v3-panel builder-v3-preview-panel">
       <div className="builder-v3-section-head">
         <div>
           <span className="builder-v3-kicker">Preview</span>
-          <h2 className="builder-v3-title">{settings.title || template?.name || "Chart preview"}</h2>
+          <h2 className="builder-v3-title">{previewTitle || "Preview"}</h2>
         </div>
         <span className={`builder-v3-pill${validation.valid ? " is-success" : " is-warning"}`}>
           {validation.valid ? "Ready" : "Needs mapping"}
@@ -33,8 +35,12 @@ export default function ChartPreviewPanel({ template, previewConfig, settings, v
       <div className="builder-v3-preview-frame">
         <ChartRenderer
           chart={{
-            title: settings.title || template?.name || "Chart preview",
+            title: previewTitle,
             subtitle: settings.subtitle,
+            settings: {
+              ...(settings ?? {}),
+              title: previewTitle,
+            },
             engine: "chartjs",
             type: previewConfig?.type,
             config: previewConfig,

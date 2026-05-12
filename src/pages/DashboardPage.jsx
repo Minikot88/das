@@ -35,16 +35,16 @@ function getChartExportRows(chart = {}, rows = []) {
   return [];
 }
 
-function downloadCsv(rows = [], filename = "chart-data") {
+function downloadCsv(rows = [], filename = "chart-data", onError = () => {}) {
   const safeRows = Array.isArray(rows) ? rows : [];
   if (!safeRows.length) {
-    window.alert("No rows available to export yet.");
+    onError("No rows available to export yet.");
     return false;
   }
 
   const columns = Array.from(new Set(safeRows.flatMap((row) => Object.keys(row ?? {}))));
   if (!columns.length) {
-    window.alert("No columns available to export yet.");
+    onError("No columns available to export yet.");
     return false;
   }
   const csv = [
@@ -72,7 +72,7 @@ function downloadCsv(rows = [], filename = "chart-data") {
   return true;
 }
 
-async function downloadChartAsPng(cardNode, title = "chart") {
+async function downloadChartAsPng(cardNode, title = "chart", onError = () => {}) {
   const canvas = cardNode?.querySelector("canvas");
   if (!canvas) {
     if (cardNode instanceof HTMLElement) {
@@ -84,7 +84,7 @@ async function downloadChartAsPng(cardNode, title = "chart") {
       return true;
     }
 
-    window.alert("Unable to find a rendered chart to export.");
+    onError("Unable to find a rendered chart to export.");
     return false;
   }
 
@@ -95,6 +95,55 @@ async function downloadChartAsPng(cardNode, title = "chart") {
   link.click();
   link.remove();
   return true;
+}
+
+function DashboardNotice({ notice, onClose }) {
+  if (!notice) return null;
+
+  return (
+    <div className={`dashboard-notice is-${notice.tone ?? "info"}`} role="status">
+      <span>{notice.message}</span>
+      <button type="button" onClick={onClose} aria-label="Dismiss notification">
+        x
+      </button>
+    </div>
+  );
+}
+
+function RenameWidgetModal({ widget, value, onChange, onCancel, onSave }) {
+  if (!widget) return null;
+
+  return (
+    <div className="modal-backdrop" role="dialog" aria-modal="true" onClick={onCancel}>
+      <div className="modal-box ui-surface" onClick={(event) => event.stopPropagation()}>
+        <div className="modal-header">
+          <div className="modal-header-copy">
+            <h2 className="modal-title">Rename chart</h2>
+          </div>
+          <button type="button" className="modal-close-btn" onClick={onCancel} aria-label="Close rename dialog">x</button>
+        </div>
+        <form className="modal-body" onSubmit={onSave}>
+          <label className="input-label" htmlFor="rename-widget-input">Chart name</label>
+          <input
+            id="rename-widget-input"
+            className="input-control modal-field"
+            value={value}
+            maxLength={80}
+            autoFocus
+            onChange={(event) => onChange(event.target.value)}
+          />
+          <div className="modal-actions">
+            <button type="button" className="ui-button is-ghost modal-btn cancel" onClick={onCancel}>
+              Cancel
+            </button>
+            <button type="submit" className="ui-button is-primary modal-btn primary" disabled={!value.trim()}>
+              Save
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
 }
 
 function WorkspaceTab({
@@ -157,11 +206,17 @@ function WorkspaceTab({
   );
 }
 
-function ContextMenu({ menu, onRename, onDelete }) {
+function ContextMenu({ menu, onEdit, onRename, onDelete }) {
   if (!menu) return null;
+  const canEdit = menu.type === "widget";
 
   return (
     <div className="dashboard-workspace-context-menu" style={{ left: menu.x, top: menu.y }} role="menu">
+      {canEdit ? (
+        <button type="button" className="dashboard-context-menu-item" onClick={onEdit}>
+          Edit
+        </button>
+      ) : null}
       <button type="button" className="dashboard-context-menu-item" onClick={onRename}>
         Rename
       </button>
@@ -225,6 +280,7 @@ export default function DashboardPage() {
   const renameChartWidget = useStore((state) => state.renameChartWidget);
   const setBuilderNavigationContext = useStore((state) => state.setBuilderNavigationContext);
   const setSelectedWidget = useStore((state) => state.setSelectedWidget);
+  const getOrCreateDashboardShareLink = useStore((state) => state.getOrCreateDashboardShareLink);
   const rightPanelOpen = useStore((state) => state.rightPanelOpen);
   const setRightPanelOpen = useStore((state) => state.setRightPanelOpen);
 
@@ -236,6 +292,10 @@ export default function DashboardPage() {
   const [fullscreenWidgetId, setFullscreenWidgetId] = useState(null);
   const [shareModalTab, setShareModalTab] = useState("share");
   const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [dashboardShareId, setDashboardShareId] = useState("");
+  const [notice, setNotice] = useState(null);
+  const [renameWidgetTarget, setRenameWidgetTarget] = useState(null);
+  const [renameWidgetValue, setRenameWidgetValue] = useState("");
   const [dashboardExporting, setDashboardExporting] = useState(false);
   const [shareOptions, setShareOptions] = useState({
     width: 1200,
@@ -248,6 +308,10 @@ export default function DashboardPage() {
   const contextMenuRef = useRef(null);
   const dashboardCaptureRef = useRef(null);
   const previousWidgetCountRef = useRef(0);
+
+  function notify(message, tone = "info") {
+    setNotice({ message, tone, id: Date.now() });
+  }
 
   const activeProject = useMemo(
     () => projects.find((project) => project.id === activeProjectId) ?? projects[0] ?? null,
@@ -287,9 +351,10 @@ export default function DashboardPage() {
           mode: "view",
           theme: shareOptions.theme,
           showHeader: true,
+          shareId: dashboardShareId,
         })
       : "",
-    [activeDashboard?.id, shareOptions.theme]
+    [activeDashboard?.id, dashboardShareId, shareOptions.theme]
   );
   const embedViewUrl = useMemo(
     () => activeDashboard?.id
@@ -298,9 +363,10 @@ export default function DashboardPage() {
           mode: "embed",
           theme: shareOptions.theme,
           showHeader: shareOptions.showHeader,
+          shareId: dashboardShareId,
         })
       : "",
-    [activeDashboard?.id, shareOptions.showHeader, shareOptions.theme]
+    [activeDashboard?.id, dashboardShareId, shareOptions.showHeader, shareOptions.theme]
   );
   const embedCode = useMemo(
     () =>
@@ -334,6 +400,12 @@ export default function DashboardPage() {
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [contextMenuState]);
+
+  useEffect(() => {
+    if (!notice) return undefined;
+    const timer = window.setTimeout(() => setNotice(null), 3200);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
 
   useEffect(() => {
     const previousCount = previousWidgetCountRef.current;
@@ -379,6 +451,20 @@ export default function DashboardPage() {
     }
   }, [dashboardWidgets, fullscreenWidgetId]);
 
+  useEffect(() => {
+    if (!currentProjectId || !activeSheet?.id || !activeDashboard?.id) {
+      setDashboardShareId("");
+      return;
+    }
+
+    const shareId = getOrCreateDashboardShareLink({
+      projectId: currentProjectId,
+      sheetId: activeSheet.id,
+      dashboardId: activeDashboard.id,
+    });
+    setDashboardShareId(shareId);
+  }, [activeDashboard?.id, activeSheet?.id, currentProjectId, getOrCreateDashboardShareLink]);
+
   if (!activeProject || !activeSheet || !activeDashboard) {
     return (
       <PageContainer className="dashboard-workspace-page">
@@ -390,10 +476,8 @@ export default function DashboardPage() {
   function startEdit(type, item) {
     setContextMenuState(null);
     if (type === "widget") {
-      const nextName = window.prompt("Rename chart", item.name);
-      if (nextName && nextName.trim() && activeSheet?.id) {
-        renameChartWidget(activeSheet.id, item.id, nextName.trim());
-      }
+      setRenameWidgetTarget(item);
+      setRenameWidgetValue(item.name ?? "");
       return;
     }
 
@@ -497,6 +581,24 @@ export default function DashboardPage() {
     navigate("/builder", { state: { builderContext } });
   }
 
+  function openBuilderForSavedChart(chart) {
+    const savedChartId = chart?.chartId ?? chart?.id;
+    const builderContext = createBuilderContextForDashboard({
+      projectId: currentProjectId,
+      sheetId: activeSheet?.id,
+      dashboardId: activeDashboard?.id,
+      returnTo: "/dashboard",
+    });
+
+    if (!savedChartId || !builderContext) {
+      notify("Unable to open this chart for editing.", "warning");
+      return;
+    }
+
+    setBuilderNavigationContext(builderContext);
+    navigate(`/builder?chartId=${encodeURIComponent(savedChartId)}`, { state: { builderContext } });
+  }
+
   function autoArrangeDashboard() {
     if (!activeSheet?.id || !dashboardWidgets.length) return;
     updateLayout(activeSheet.id, autoArrangeDashboardLayout(dashboardWidgets));
@@ -536,6 +638,13 @@ export default function DashboardPage() {
     startEdit(contextMenuState.type, contextMenuState.target);
   }
 
+  function handleContextEdit() {
+    if (!contextMenuState || contextMenuState.type !== "widget") return;
+    const target = contextMenuState.target;
+    setContextMenuState(null);
+    openBuilderForSavedChart(target);
+  }
+
   function handleContextDelete() {
     if (!contextMenuState) return;
     if (contextMenuState.type === "sheet") return deleteSheet(contextMenuState.target.id);
@@ -543,15 +652,28 @@ export default function DashboardPage() {
     return removeWidget(contextMenuState.target.id);
   }
 
+  function closeRenameWidgetModal() {
+    setRenameWidgetTarget(null);
+    setRenameWidgetValue("");
+  }
+
+  function commitWidgetRename(event) {
+    event.preventDefault();
+    const nextName = renameWidgetValue.trim();
+    if (!renameWidgetTarget || !activeSheet?.id || !nextName) return;
+    renameChartWidget(activeSheet.id, renameWidgetTarget.id, nextName);
+    closeRenameWidgetModal();
+  }
+
   function handleExportCsv(chart, rows) {
-    downloadCsv(getChartExportRows(chart, rows), chart?.title || chart?.name || "chart-data");
+    downloadCsv(getChartExportRows(chart, rows), chart?.title || chart?.name || "chart-data", (message) => notify(message, "warning"));
   }
 
   async function handleExportPng(cardNode, chart) {
     try {
-      await downloadChartAsPng(cardNode, chart?.title || chart?.name || "chart");
+      await downloadChartAsPng(cardNode, chart?.title || chart?.name || "chart", (message) => notify(message, "warning"));
     } catch (error) {
-      window.alert(error?.message || "Unable to export this chart right now.");
+      notify(error?.message || "Unable to export this chart right now.", "warning");
     }
   }
 
@@ -568,7 +690,7 @@ export default function DashboardPage() {
         backgroundColor: getComputedStyle(document.documentElement).getPropertyValue("--surface")?.trim() || "#ffffff",
       });
     } catch (error) {
-      window.alert(error?.message || "Unable to export this dashboard right now.");
+      notify(error?.message || "Unable to export this dashboard right now.", "warning");
     } finally {
       setDashboardExporting(false);
     }
@@ -617,7 +739,12 @@ export default function DashboardPage() {
 
   return (
     <PageContainer className="dashboard-workspace-page">
-      <WorkspaceLayout columns="two" className={`dashboard-workspace-shell${rightPanelOpen ? "" : " is-rail-collapsed"}`}>
+      <DashboardNotice notice={notice} onClose={() => setNotice(null)} />
+
+      <WorkspaceLayout
+        columns="two"
+        className={`dashboard-workspace-shell${rightPanelOpen ? " is-inspector-open" : " is-rail-collapsed"}`}
+      >
         <div className="dashboard-workspace-main">
           <header className="dashboard-workspace-header">
             <div className="dashboard-workspace-header-copy">
@@ -754,7 +881,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="dashboard-workspace-canvas-frame">
+            <div className={`dashboard-workspace-canvas-frame${hasWidgets ? " is-populated" : " is-empty"}`}>
               <div className="dashboard-workspace-canvas-strip">
                 <span className="dashboard-workspace-canvas-strip-item">{workspaceStats.chartCount} charts</span>
                 <span className="dashboard-workspace-canvas-strip-item">{activeSelectionLabel}</span>
@@ -771,6 +898,7 @@ export default function DashboardPage() {
                   onLayoutChange={handleLayoutChange}
                   onExportCSV={handleExportCsv}
                   onExportPNG={handleExportPng}
+                  onEditChart={openBuilderForSavedChart}
                   fullscreenChartId={fullscreenWidgetId}
                   onToggleFullscreen={(widgetId) => setFullscreenWidgetId((current) => current === widgetId ? null : widgetId)}
                 />
@@ -823,7 +951,12 @@ export default function DashboardPage() {
       ) : null}
 
       <div ref={contextMenuRef}>
-        <ContextMenu menu={contextMenuState} onRename={handleContextRename} onDelete={handleContextDelete} />
+        <ContextMenu
+          menu={contextMenuState}
+          onEdit={handleContextEdit}
+          onRename={handleContextRename}
+          onDelete={handleContextDelete}
+        />
       </div>
 
       {pickingChart ? (
@@ -839,6 +972,14 @@ export default function DashboardPage() {
           onClose={() => setFullscreenWidgetId(null)}
         />
       ) : null}
+
+      <RenameWidgetModal
+        widget={renameWidgetTarget}
+        value={renameWidgetValue}
+        onChange={setRenameWidgetValue}
+        onCancel={closeRenameWidgetModal}
+        onSave={commitWidgetRename}
+      />
 
       {shareModalOpen ? (
         <DashboardShareModal

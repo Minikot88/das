@@ -7,6 +7,14 @@ function sanitizeThemeMode(value = "auto") {
   return ["auto", "light", "dark"].includes(value) ? value : "auto";
 }
 
+function escapeAttribute(value = "") {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 export function sanitizeFileName(value = "dashboard") {
   return String(value ?? "dashboard")
     .trim()
@@ -22,9 +30,14 @@ export function buildDashboardViewUrl({
   mode = "view",
   theme = "auto",
   showHeader = true,
+  shareId = "",
 } = {}) {
   const url = new URL(`/dashboard/${dashboardId}/${mode}`, origin);
   const resolvedTheme = sanitizeThemeMode(theme);
+
+  if (shareId) {
+    url.searchParams.set("share", shareId);
+  }
 
   if (resolvedTheme !== "auto") {
     url.searchParams.set("theme", resolvedTheme);
@@ -50,7 +63,7 @@ export function buildDashboardEmbedCode({
     ? `border:0;width:100%;max-width:${safeWidth}px;`
     : "border:0;";
 
-  return `<iframe src="${src}" width="${widthValue}" height="${safeHeight}" style="${styleValue}" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>`;
+  return `<iframe src="${escapeAttribute(src)}" width="${escapeAttribute(widthValue)}" height="${safeHeight}" style="${escapeAttribute(styleValue)}" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>`;
 }
 
 export function resolveDashboardViewOptions(search = "", fallbackMode = "view") {

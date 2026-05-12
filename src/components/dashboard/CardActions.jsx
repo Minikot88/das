@@ -2,6 +2,7 @@
 import { useStore } from "../../store/useStore";
 
 const QUICK_ACTIONS = [
+  { key: "edit", label: "แก้ไขกราฟ", icon: "ED" },
   { key: "fullscreen", label: "เปิดเต็มจอ", icon: "FS" },
   { key: "duplicate", label: "ทำซ้ำ", icon: "CP" },
 ];
@@ -17,6 +18,7 @@ export default function CardActions({
   cardRef,
   onExportCSV,
   onExportPNG,
+  onEditChart,
   onToggleFullscreen,
   isFullscreen = false,
 }) {
@@ -99,6 +101,12 @@ export default function CardActions({
 
     if (actionKey === "fullscreen") {
       onToggleFullscreen?.();
+      closeMenus();
+      return;
+    }
+
+    if (actionKey === "edit") {
+      onEditChart?.(chart);
       closeMenus();
       return;
     }

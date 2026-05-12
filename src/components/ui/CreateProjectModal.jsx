@@ -7,15 +7,24 @@ export default function CreateProjectModal({ onClose, onCreate }) {
   const { t } = useI18n();
   const [name, setName] = useState("");
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     if (!name.trim()) {
       setError(t("home.projectNameRequired"));
       return;
     }
-    onCreate(name.trim());
-    onClose();
+    setSubmitting(true);
+    setError("");
+    try {
+      await onCreate(name.trim());
+      onClose();
+    } catch (submitError) {
+      setError(submitError?.message || "Unable to create project. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -41,10 +50,11 @@ export default function CreateProjectModal({ onClose, onCreate }) {
               setError("");
             }}
             autoFocus
+            disabled={submitting}
           />
           <div className="modal-actions">
-            <Button type="button" variant="ghost" className="modal-btn cancel" onClick={onClose}>{t("common.cancel")}</Button>
-            <Button type="submit" variant="primary" className="modal-btn primary">{t("home.createProject")}</Button>
+            <Button type="button" variant="ghost" className="modal-btn cancel" onClick={onClose} disabled={submitting}>{t("common.cancel")}</Button>
+            <Button type="submit" variant="primary" className="modal-btn primary" disabled={submitting}>{submitting ? "Creating..." : t("home.createProject")}</Button>
           </div>
         </form>
       </div>

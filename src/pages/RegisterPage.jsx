@@ -25,9 +25,15 @@ export default function RegisterPage() {
     }
     setLoading(true);
     setError("");
-    await new Promise((resolve) => setTimeout(resolve, 700));
-    await registerApi({ email, password, name });
-    navigate("/dashboard", { replace: true });
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      await registerApi({ email, password, name });
+      navigate("/dashboard", { replace: true });
+    } catch (submitError) {
+      setError(submitError?.message || "Unable to create your account. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (

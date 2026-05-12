@@ -1,6 +1,10 @@
 # Logs
 logs
 *.log
+eslint_report.json
+eslint_temp.json
+lint-output.txt
+tmp_*.txt
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

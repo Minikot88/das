@@ -10,19 +10,34 @@ function countChartTypes(widgets = []) {
   return new Set(widgets.map((widget) => widget.type).filter(Boolean)).size;
 }
 
+function getRouteMode(pathname = "", routeMode = "") {
+  if (routeMode === "embed" || pathname.endsWith("/embed")) return "embed";
+  return "view";
+}
+
 export default function DashboardPublicPage() {
-  const { dashboardId, mode = "view" } = useParams();
+  const { dashboardId, mode: routeMode } = useParams();
   const location = useLocation();
   const projects = useStore((state) => state.projects);
   const charts = useStore((state) => state.charts);
   const storeTheme = useStore((state) => state.theme);
+  const resolveShareLink = useStore((state) => state.resolveShareLink);
+  const mode = getRouteMode(location.pathname, routeMode);
+  const shareId = useMemo(() => new URLSearchParams(location.search).get("share") ?? "", [location.search]);
+  const shareRecord = useMemo(() => resolveShareLink(shareId), [resolveShareLink, shareId]);
   const viewOptions = useMemo(
     () => resolveDashboardViewOptions(location.search, mode),
     [location.search, mode]
   );
   const dashboardContext = useMemo(
-    () => findDashboardContextById(projects, charts, dashboardId),
-    [charts, dashboardId, projects]
+    () => {
+      if (!shareRecord || shareRecord.dashboardId !== dashboardId) return null;
+      const context = findDashboardContextById(projects, charts, dashboardId);
+      if (shareRecord.projectId && context?.project?.id !== shareRecord.projectId) return null;
+      if (shareRecord.sheetId && context?.sheet?.id !== shareRecord.sheetId) return null;
+      return context;
+    },
+    [charts, dashboardId, projects, shareRecord]
   );
   const effectiveTheme = viewOptions.theme === "auto" ? storeTheme : viewOptions.theme;
 
@@ -49,7 +64,7 @@ export default function DashboardPublicPage() {
         <ReadOnlyStateCard
           kicker="ไม่พร้อมใช้งาน"
           title="ไม่พบแดชบอร์ด"
-          description="ลิงก์สำหรับแชร์หรือฝังนี้ไม่ชี้ไปยังแดชบอร์ดที่ใช้งานได้แล้ว"
+          description="ลิงก์สำหรับแชร์หรือฝังนี้ไม่ได้ชี้ไปยังแดชบอร์ดที่ใช้งานได้แล้ว"
         />
       </div>
     );

@@ -5,8 +5,20 @@ function copyWithFallback(text) {
     return navigator.clipboard.writeText(text);
   }
 
-  window.prompt("คัดลอกข้อความด้านล่าง", text);
-  return Promise.resolve();
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.left = "-9999px";
+  document.body.appendChild(textarea);
+  textarea.select();
+
+  try {
+    document.execCommand("copy");
+    return Promise.resolve();
+  } finally {
+    textarea.remove();
+  }
 }
 
 function TabButton({ id, label, isActive, onSelect }) {
@@ -71,7 +83,7 @@ export default function DashboardShareModal({
   }, [onClose]);
 
   const exportHint = useMemo(() => {
-    if (canExport) return "ส่งออกเฉพาะพื้นที่แดชบอร์ดในรูปแบบภาพที่สะอาด พร้อมใช้งานต่อได้ทันที";
+    if (canExport) return "ส่งออกเฉพาะพื้นที่แดชบอร์ดเป็นรูปภาพที่สะอาด พร้อมใช้งานต่อได้ทันที";
     return "เพิ่มอย่างน้อย 1 วิดเจ็ตก่อน จึงจะส่งออกภาพแดชบอร์ดได้";
   }, [canExport]);
 

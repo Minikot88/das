@@ -5,13 +5,13 @@ export default function useDashboard({ projectId, sheetId, dashboardId, layout =
   const [widgets, setWidgets] = useState([]);
   const refreshKey = useMemo(
     () =>
-      JSON.stringify({
+      [
         projectId,
         sheetId,
         dashboardId,
-        layout: layout.map((item) => [item.i, item.chartId, item.x, item.y, item.w, item.h, item.titleOverride]),
-        charts: charts.map((chart) => [chart.id, chart.updatedAt, chart.title, chart.type]),
-      }),
+        layout.map((item) => `${item.i}:${item.chartId}:${item.x}:${item.y}:${item.w}:${item.h}:${item.titleOverride ?? ""}`).join("|"),
+        charts.map((chart) => `${chart.id}:${chart.updatedAt ?? ""}:${chart.title ?? ""}:${chart.type ?? ""}`).join("|"),
+      ].join("::"),
     [charts, dashboardId, layout, projectId, sheetId]
   );
 

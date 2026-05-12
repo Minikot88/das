@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { PageContainer, WorkspaceLayout } from "../../components/layout/Layout";
 import { useStore } from "../../store/useStore";
 import {
@@ -23,11 +23,13 @@ function getBuilderContextFromRoute(locationState, fallbackContext) {
 export default function BuilderPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const activeProjectId = useStore((state) => state.activeProjectId);
   const activeSheetId = useStore((state) => state.activeSheetId);
   const activeDashboardId = useStore((state) => state.activeDashboardId);
   const builderNavigationContext = useStore((state) => state.builderNavigationContext);
   const clearBuilderNavigationContext = useStore((state) => state.clearBuilderNavigationContext);
+  const editingChartId = searchParams.get("chartId") ?? "";
 
   const fallbackContext = useMemo(
     () =>
@@ -45,19 +47,23 @@ export default function BuilderPage() {
     [builderNavigationContext, fallbackContext, location.state]
   );
 
-  const builder = useChartBuilder(builderContext);
+  const builder = useChartBuilder(builderContext, editingChartId);
 
   async function handleSave() {
     try {
       const result = await builder.saveChartToDashboard();
-      clearBuilderDraft();
+      if (!builder.isEditing) {
+        clearBuilderDraft();
+      }
       clearBuilderNavigationContext();
       navigate(builderContext?.returnTo || "/dashboard", {
         replace: true,
-        state: createBuilderReturnState(builderContext, {
-          createdWidgetId: result.layoutItem?.i ?? null,
-          shouldSelectCreatedWidget: true,
-        }),
+        state: result.updated
+          ? createBuilderReturnState(builderContext)
+          : createBuilderReturnState(builderContext, {
+              createdWidgetId: result.layoutItem?.i ?? null,
+              shouldSelectCreatedWidget: true,
+            }),
       });
     } catch {
       // Hook already stores the error state.
@@ -76,8 +82,12 @@ export default function BuilderPage() {
     <PageContainer className="builder-shell builder-v3-shell">
       <header className="builder-v3-header builder-v3-header-compact">
         <div>
-          <h1 className="builder-v3-page-title">Chart Builder</h1>
-          <p className="builder-v3-page-copy">Choose a chart type, map fields, preview, and save.</p>
+          <h1 className="builder-v3-page-title">{builder.isEditing ? "Edit Chart" : "Chart Builder"}</h1>
+          <p className="builder-v3-page-copy">
+            {builder.isEditing
+              ? "Edit the saved chart, preview changes, and update the existing dashboard chart."
+              : "Choose a chart type, map fields, preview, and save."}
+          </p>
         </div>
       </header>
 
@@ -110,7 +120,6 @@ export default function BuilderPage() {
               canAssignField={builder.canAssignField}
             />
             <ChartPreviewPanel
-              template={builder.selectedTemplate}
               previewConfig={builder.previewConfig}
               settings={builder.settings}
               validation={builder.validation}
@@ -135,12 +144,14 @@ export default function BuilderPage() {
             template={builder.selectedTemplate}
             settings={builder.settings}
             onSettingChange={builder.updateSetting}
+            titleError={builder.error}
           />
           <ChartSavePanel
             builderContext={builderContext}
             validation={builder.validation}
             saving={builder.saving}
             error={builder.error}
+            isEditing={builder.isEditing}
             onSave={handleSave}
             onCancel={handleCancel}
           />

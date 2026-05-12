@@ -2907,3 +2907,31 @@ body.dark .dashboard-sidebar-rail-button {
     min-height: clamp(300px, calc(100vh - 430px), 620px);
   }
 }
+.dashboard-notice {
+  position: fixed;
+  right: 24px;
+  top: 24px;
+  z-index: 80;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  max-width: min(420px, calc(100vw - 32px));
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  color: var(--text);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.dashboard-notice.is-warning {
+  border-color: color-mix(in srgb, #f59e0b 45%, var(--border));
+}
+
+.dashboard-notice button {
+  border: 0;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+}

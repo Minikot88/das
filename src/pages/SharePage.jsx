@@ -14,10 +14,11 @@ export default function SharePage() {
 
   const sheet = useMemo(() => {
     const shareRecord = resolveShareLink(sheetId);
-    const resolvedSheetId = shareRecord?.sheetId ?? sheetId;
+    const resolvedSheetId = shareRecord?.sheetId;
     if (!resolvedSheetId) return null;
 
     for (const project of projects ?? []) {
+      if (shareRecord?.projectId && project?.id !== shareRecord.projectId) continue;
       const foundSheet = project?.sheets?.find((candidate) => candidate?.id === resolvedSheetId);
       if (foundSheet) return foundSheet;
     }

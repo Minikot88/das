@@ -18,13 +18,16 @@ function getFirstNumericValue(rows = []) {
 }
 
 export default function KPIWidget({ chart = {}, className = "" }) {
-  const rows = Array.isArray(chart.rows)
-    ? chart.rows
-    : Array.isArray(chart.data)
-      ? chart.data
-      : Array.isArray(chart.config?.rows)
-        ? chart.config.rows
-        : [];
+  const rows = useMemo(
+    () => Array.isArray(chart.rows)
+      ? chart.rows
+      : Array.isArray(chart.data)
+        ? chart.data
+        : Array.isArray(chart.config?.rows)
+          ? chart.config.rows
+          : [],
+    [chart]
+  );
   const metric = useMemo(() => getFirstNumericValue(rows), [rows]);
 
   return (
@@ -35,4 +38,3 @@ export default function KPIWidget({ chart = {}, className = "" }) {
     </div>
   );
 }
-

@@ -5,6 +5,7 @@ export default function ChartSavePanel({
   validation,
   saving,
   error,
+  isEditing = false,
   onSave,
   onCancel,
 }) {
@@ -17,7 +18,7 @@ export default function ChartSavePanel({
       <div className="builder-v3-section-head">
         <div>
           <span className="builder-v3-kicker">Save</span>
-          <h2 className="builder-v3-title">Add to dashboard</h2>
+          <h2 className="builder-v3-title">{isEditing ? "Update chart" : "Add to dashboard"}</h2>
         </div>
       </div>
 
@@ -45,7 +46,7 @@ export default function ChartSavePanel({
           onClick={onSave}
           disabled={!validation.valid || saving}
         >
-          {saving ? "Saving..." : "Save chart"}
+          {saving ? "Saving..." : isEditing ? "Update chart" : "Save chart"}
         </button>
       </div>
     </section>

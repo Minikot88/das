@@ -1807,3 +1807,457 @@ body.dark .builder-chart-support-badge.is-supported {
     max-height: 80px;
   }
 }
+
+/* Dashboard responsive canvas and resize polish */
+.dashboard-workspace-page .dashboard-workspace-canvas {
+  overflow: hidden;
+}
+
+.dashboard-workspace-page .dashboard-workspace-canvas-frame {
+  overflow: hidden;
+  padding: clamp(10px, 1vw, 16px);
+}
+
+.dashboard-workspace-page .dashboard-workspace-canvas-strip {
+  row-gap: 6px;
+}
+
+.dashboard-workspace-page .dashboard-command-strip {
+  align-items: center;
+}
+
+.dashboard-workspace-page .dashboard-command-strip .dashboard-workspace-action-strip {
+  display: flex !important;
+  grid-template-columns: none !important;
+  flex-wrap: wrap;
+  width: 100%;
+  align-items: center;
+  align-content: flex-start;
+  justify-content: flex-start;
+}
+
+.dashboard-workspace-page .dashboard-command-strip .dashboard-toolbar-btn {
+  display: inline-flex !important;
+  flex: 0 1 auto;
+  width: auto;
+  min-width: max-content;
+  min-height: 34px !important;
+  height: 34px !important;
+  padding: 0 12px !important;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  line-height: 1;
+  max-height: 34px !important;
+  overflow: hidden;
+}
+
+.dashboard-workspace-page .dashboard-canvas-grid {
+  width: 100%;
+  min-height: clamp(360px, calc(100vh - 450px), 740px);
+  touch-action: none;
+}
+
+.dashboard-workspace-page .dashboard-canvas-grid .react-grid-item {
+  transition:
+    transform 140ms ease,
+    width 140ms ease,
+    height 140ms ease;
+  will-change: transform, width, height;
+}
+
+.dashboard-workspace-page .dashboard-canvas-grid .react-grid-item.react-draggable-dragging,
+.dashboard-workspace-page .dashboard-canvas-grid .react-grid-item.resizing {
+  z-index: 30;
+  transition: none;
+  user-select: none;
+}
+
+.dashboard-workspace-page .dashboard-canvas-grid .react-grid-placeholder {
+  border: 1px dashed color-mix(in srgb, var(--accent) 46%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.dashboard-workspace-page .dashboard-canvas-grid .react-resizable-handle {
+  right: 7px;
+  bottom: 7px;
+  width: 18px;
+  height: 18px;
+  opacity: 0;
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+
+.dashboard-workspace-page .react-grid-item:hover .react-resizable-handle,
+.dashboard-workspace-page .react-grid-item.is-selected .react-resizable-handle,
+.dashboard-workspace-page .react-grid-item.resizing .react-resizable-handle {
+  opacity: 0.72;
+}
+
+.dashboard-workspace-page .dashboard-canvas-grid .react-resizable-handle::after {
+  right: 3px;
+  bottom: 3px;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid color-mix(in srgb, var(--text-secondary) 70%, transparent);
+  border-bottom: 2px solid color-mix(in srgb, var(--text-secondary) 70%, transparent);
+}
+
+.dashboard-workspace-page .dashboard-widget-slot {
+  min-width: 0;
+  border-radius: 8px;
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    transform 140ms ease;
+}
+
+.dashboard-workspace-page .dashboard-widget-slot.is-selected {
+  border-color: color-mix(in srgb, var(--accent) 42%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.dashboard-workspace-page .react-grid-item.react-draggable-dragging .dashboard-widget-slot,
+.dashboard-workspace-page .react-grid-item.resizing .dashboard-widget-slot {
+  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.16);
+}
+
+.dashboard-workspace-page .chart-card {
+  min-width: 0;
+  min-height: 180px;
+  grid-template-rows: 40px minmax(0, 1fr);
+}
+
+.dashboard-workspace-page .chart-card:hover {
+  transform: none;
+}
+
+.dashboard-workspace-page .chart-card-header {
+  min-height: 40px;
+  align-items: center;
+  cursor: default;
+  user-select: none;
+}
+
+.dashboard-workspace-page .chart-card-header.card-drag-handle {
+  cursor: grab;
+}
+
+.dashboard-workspace-page .react-grid-item.react-draggable-dragging .chart-card-header.card-drag-handle {
+  cursor: grabbing;
+}
+
+.dashboard-workspace-page .chart-title-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-workspace-page .chart-card-body {
+  display: grid;
+  align-items: stretch;
+  justify-items: stretch;
+  padding: clamp(8px, 0.8vw, 12px);
+  overflow: hidden;
+}
+
+.dashboard-workspace-page .chart-card.is-circular-chart .chart-card-body {
+  align-items: center;
+  justify-items: center;
+  padding: clamp(8px, 1vw, 16px);
+}
+
+.dashboard-workspace-page .chart-renderer-root,
+.dashboard-workspace-page .chartjs-renderer,
+.dashboard-workspace-page .chartjs-canvas-frame {
+  min-width: 0;
+  min-height: 0;
+}
+
+.dashboard-workspace-page .chartjs-renderer.is-axis-chart .chartjs-canvas-frame {
+  width: 100%;
+  height: 100%;
+}
+
+.dashboard-workspace-page .chartjs-renderer.is-circular-chart .chartjs-canvas-frame {
+  width: var(--chart-circular-size, min(100%, 360px));
+  height: var(--chart-circular-size, min(100%, 360px));
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.dashboard-workspace-page .chart-card.is-fullscreen .chartjs-renderer.is-circular-chart .chartjs-canvas-frame {
+  width: var(--chart-circular-size, min(100%, 460px));
+  height: var(--chart-circular-size, min(100%, 460px));
+}
+
+.dashboard-workspace-page .kpi-widget {
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  overflow: hidden;
+  padding: clamp(12px, 1.4vw, 22px);
+}
+
+.dashboard-workspace-page .kpi-value {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  font-size: clamp(26px, 3vw, 42px);
+}
+
+body.dark .dashboard-workspace-page .dashboard-canvas-grid .react-grid-placeholder {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+@media (min-width: 1600px) {
+  .dashboard-workspace-page .chartjs-renderer.is-circular-chart .chartjs-canvas-frame {
+    width: var(--chart-circular-size, min(100%, 390px));
+    height: var(--chart-circular-size, min(100%, 390px));
+  }
+}
+
+@media (max-width: 760px) {
+  .dashboard-workspace-page .dashboard-workspace-canvas-frame {
+    padding: 8px;
+  }
+
+  .dashboard-workspace-page .dashboard-command-strip .dashboard-toolbar-btn {
+    flex: 1 1 calc(50% - 6px);
+    min-width: 120px;
+    max-width: none;
+  }
+
+  .dashboard-workspace-page .dashboard-canvas-grid {
+    height: auto !important;
+    min-height: clamp(320px, calc(100vh - 410px), 620px);
+    touch-action: pan-y;
+  }
+
+  .dashboard-workspace-page .dashboard-canvas-grid .react-grid-item {
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    width: 100% !important;
+    height: auto !important;
+    transform: none !important;
+    margin-bottom: 14px;
+  }
+
+  .dashboard-workspace-page .dashboard-canvas-grid .react-grid-item:last-child {
+    margin-bottom: 0;
+  }
+
+  .dashboard-workspace-page .dashboard-canvas-grid .react-resizable-handle {
+    display: none !important;
+  }
+
+  .dashboard-workspace-page .chart-card {
+    height: clamp(320px, 82vw, 420px) !important;
+    min-height: 210px;
+  }
+
+  .dashboard-workspace-page .chart-card-body {
+    padding: 8px;
+  }
+
+  .dashboard-workspace-page .chartjs-renderer.is-circular-chart .chartjs-canvas-frame {
+    width: var(--chart-circular-size, min(100%, 300px));
+    height: var(--chart-circular-size, min(100%, 300px));
+  }
+}
+
+.dashboard-command-strip .dashboard-workspace-action-strip {
+  display: flex !important;
+  grid-template-columns: none !important;
+  align-items: center !important;
+  align-content: flex-start !important;
+}
+
+.dashboard-command-strip .dashboard-toolbar-btn {
+  display: inline-flex !important;
+  min-height: 34px !important;
+  height: 34px !important;
+  max-height: 34px !important;
+  padding-block: 0 !important;
+  align-items: center !important;
+  align-content: center !important;
+  justify-content: center !important;
+  justify-items: center !important;
+  overflow: hidden;
+}
+
+/* Canvas composition pass */
+.dashboard-workspace-page .dashboard-workspace-shell {
+  grid-template-columns: minmax(0, 1fr) clamp(300px, 22vw, 352px);
+  gap: clamp(12px, 1.2vw, 18px);
+  align-items: start;
+}
+
+.dashboard-workspace-page .dashboard-workspace-shell.is-rail-collapsed {
+  grid-template-columns: minmax(0, 1fr) 52px;
+}
+
+.dashboard-workspace-page .dashboard-workspace-main {
+  grid-template-rows: auto auto auto auto;
+  gap: 12px;
+}
+
+.dashboard-workspace-page .dashboard-workspace-canvas {
+  gap: 8px;
+  padding: clamp(10px, 1vw, 14px);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface) 98%, var(--surface-secondary) 2%), var(--surface));
+}
+
+.dashboard-workspace-page .dashboard-workspace-canvas-head {
+  min-height: 30px;
+  padding: 0 2px;
+}
+
+.dashboard-workspace-page .dashboard-workspace-canvas-title {
+  font-size: 18px;
+  letter-spacing: 0;
+}
+
+.dashboard-workspace-page .dashboard-workspace-canvas-frame {
+  gap: 10px;
+  padding: clamp(10px, 1vw, 14px);
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--border) 58%, transparent) 1px, transparent 1px),
+    linear-gradient(180deg, color-mix(in srgb, var(--border) 58%, transparent) 1px, transparent 1px),
+    color-mix(in srgb, var(--surface-secondary) 62%, var(--surface) 38%);
+  background-size: 32px 32px, 32px 32px, auto;
+}
+
+.dashboard-workspace-page .dashboard-workspace-canvas-frame.is-populated {
+  min-height: 0;
+}
+
+.dashboard-workspace-page .dashboard-workspace-canvas-frame.is-empty {
+  min-height: clamp(320px, calc(100vh - 440px), 560px);
+}
+
+.dashboard-workspace-page .dashboard-workspace-canvas-strip {
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+}
+
+.dashboard-workspace-page .dashboard-workspace-canvas-strip-item {
+  min-height: 26px;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.03);
+}
+
+.dashboard-workspace-page .dashboard-canvas-grid {
+  max-width: 1440px;
+  min-height: 0;
+  margin: 0 auto;
+}
+
+.dashboard-workspace-page .dashboard-canvas-grid .react-grid-item {
+  padding: 0;
+}
+
+.dashboard-workspace-page .dashboard-canvas-grid .react-grid-placeholder {
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--accent) 18%, transparent), color-mix(in srgb, var(--accent) 10%, transparent));
+}
+
+.dashboard-workspace-page .dashboard-widget-slot {
+  border-radius: 8px;
+}
+
+.dashboard-workspace-page .dashboard-widget-slot > .chart-card {
+  border-radius: 8px;
+}
+
+.dashboard-workspace-page .dashboard-widget-slot.is-selected > .chart-card {
+  border-color: color-mix(in srgb, var(--accent) 58%, var(--border-strong));
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--accent) 14%, transparent),
+    0 18px 38px rgba(15, 23, 42, 0.10);
+}
+
+.dashboard-workspace-page .chart-card {
+  border-color: color-mix(in srgb, var(--border-strong) 68%, transparent);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.055);
+}
+
+.dashboard-workspace-page .chart-card-header {
+  min-height: 38px;
+  padding: 8px 11px;
+  border-bottom: 1px solid color-mix(in srgb, var(--divider) 86%, transparent);
+}
+
+.dashboard-workspace-page .chart-card-body {
+  padding: 9px;
+}
+
+.dashboard-workspace-page .chart-card.is-axis-chart .chart-card-body {
+  padding: 8px 10px 10px;
+}
+
+.dashboard-workspace-page .chart-card.is-circular-chart .chart-card-body {
+  padding: 10px;
+}
+
+.dashboard-workspace-page .chartjs-renderer.is-circular-chart .chartjs-canvas-frame {
+  width: var(--chart-circular-size, min(100%, 330px));
+  height: var(--chart-circular-size, min(100%, 330px));
+}
+
+.dashboard-workspace-page .react-grid-item.react-draggable-dragging .chart-card,
+.dashboard-workspace-page .react-grid-item.resizing .chart-card {
+  border-color: color-mix(in srgb, var(--accent) 48%, var(--border-strong));
+  box-shadow: 0 22px 44px rgba(15, 23, 42, 0.16);
+}
+
+body.dark .dashboard-workspace-page .dashboard-workspace-canvas-frame {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--border) 50%, transparent) 1px, transparent 1px),
+    linear-gradient(180deg, color-mix(in srgb, var(--border) 50%, transparent) 1px, transparent 1px),
+    color-mix(in srgb, var(--bg-surface) 74%, var(--bg-body) 26%);
+  background-size: 32px 32px, 32px 32px, auto;
+}
+
+@media (min-width: 1680px) {
+  .dashboard-workspace-page .dashboard-canvas-grid {
+    max-width: 1520px;
+  }
+}
+
+@media (max-width: 1280px) {
+  .dashboard-workspace-page .dashboard-workspace-shell {
+    grid-template-columns: minmax(0, 1fr) 300px;
+  }
+}
+
+@media (max-width: 1180px) {
+  .dashboard-workspace-page .dashboard-workspace-shell,
+  .dashboard-workspace-page .dashboard-workspace-shell.is-rail-collapsed {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .dashboard-workspace-page .dashboard-workspace-main {
+    gap: 10px;
+  }
+
+  .dashboard-workspace-page .dashboard-workspace-canvas-frame {
+    background-size: 24px 24px, 24px 24px, auto;
+  }
+
+  .dashboard-workspace-page .dashboard-canvas-grid {
+    max-width: none;
+  }
+
+  .dashboard-workspace-page .chart-card {
+    height: clamp(300px, 76vw, 390px) !important;
+  }
+}

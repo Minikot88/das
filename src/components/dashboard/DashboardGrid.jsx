@@ -7,6 +7,7 @@ import {
   DASHBOARD_GRID_MARGIN,
   DASHBOARD_GRID_PADDING,
   DASHBOARD_ROW_HEIGHT,
+  getChartLayoutConstraints,
   GRID_BREAKPOINTS,
   GRID_COLUMNS,
   normalizeLayoutItems,
@@ -28,6 +29,7 @@ export default function DashboardGrid({
   onLayoutChange,
   onExportCSV,
   onExportPNG,
+  onEditChart,
   fullscreenChartId,
   onToggleFullscreen,
   onInsightData,
@@ -36,10 +38,11 @@ export default function DashboardGrid({
   themeMode,
   className = "",
 }) {
-  const responsiveLayouts = buildResponsiveLayouts(layout);
+  const normalizedLayout = normalizeLayoutItems(layout, widgets);
+  const responsiveLayouts = buildResponsiveLayouts(normalizedLayout);
 
-  function handleLayoutChange(currentLayout, allLayouts) {
-    const nextLayout = normalizeLayoutItems(allLayouts?.lg ?? currentLayout, widgets);
+  function handleLayoutChange(currentLayout) {
+    const nextLayout = normalizeLayoutItems(currentLayout, widgets);
     onLayoutChange?.(nextLayout);
   }
 
@@ -55,36 +58,58 @@ export default function DashboardGrid({
       isResizable={isEditable}
       isDraggable={isEditable}
       draggableHandle=".card-drag-handle"
+      draggableCancel=".chart-card-controls, .card-actions-wrap, .card-actions-menu, button, input, textarea, select, a, [data-grid-drag-cancel='true']"
+      resizeHandles={isEditable ? ["se"] : []}
       compactType={DASHBOARD_COMPACT_TYPE}
       preventCollision={false}
+      useCSSTransforms
       onLayoutChange={isEditable ? handleLayoutChange : undefined}
     >
       {widgets.map((widget) => {
-        const layoutItem = layout.find((item) => item.i === widget.id) ?? {
+        const chart = toDashboardChartModel(widget);
+        const constraints = getChartLayoutConstraints(chart);
+        const layoutItem = normalizedLayout.find((item) => item.i === widget.id) ?? {
           i: widget.id,
           chartId: widget.chartId,
           x: 0,
           y: 0,
-          w: 6,
+          w: 5,
           h: 5,
-          minW: 3,
-          minH: 4,
+          minW: constraints.minW,
+          minH: constraints.minH,
         };
-        const chart = toDashboardChartModel(widget);
+        const gridItem = {
+          i: layoutItem.i,
+          chartId: layoutItem.chartId,
+          x: layoutItem.x,
+          y: layoutItem.y,
+          w: layoutItem.w,
+          h: layoutItem.h,
+          minW: Math.max(layoutItem.minW ?? 1, constraints.minW),
+          minH: Math.max(layoutItem.minH ?? 1, constraints.minH),
+          maxH: constraints.maxH,
+          ...(layoutItem.titleOverride ? { titleOverride: layoutItem.titleOverride } : {}),
+        };
+        const isSelected = widget.id === selectedWidgetId;
 
         return (
-          <div key={widget.id} className="dashboard-canvas-grid-item" data-grid={layoutItem}>
+          <div
+            key={widget.id}
+            className={`dashboard-canvas-grid-item${isSelected ? " is-selected" : ""}`}
+            data-grid={gridItem}
+          >
             <div
-              className={`dashboard-widget-slot${widget.id === selectedWidgetId ? " is-selected" : ""}`}
+              className={`dashboard-widget-slot${isSelected ? " is-selected" : ""}`}
               onClick={isSelectable ? () => onSelectWidget?.(widget.id) : undefined}
               onContextMenu={isEditable ? (event) => onOpenWidgetMenu?.(widget, event) : undefined}
             >
               <ChartCard
                 chart={chart}
-                pixelHeight={itemPixelHeight(layoutItem.h ?? 4)}
+                pixelHeight={itemPixelHeight(gridItem.h ?? 4)}
                 sheetId={chart.sheetId}
                 onExportCSV={onExportCSV}
                 onExportPNG={onExportPNG}
+                onEditChart={isEditable ? onEditChart : undefined}
                 onInsightData={onInsightData}
                 isFullscreen={fullscreenChartId === widget.id}
                 onToggleFullscreen={isEditable ? () => onToggleFullscreen?.(widget.id) : undefined}

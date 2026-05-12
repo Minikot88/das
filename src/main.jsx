@@ -7,6 +7,7 @@ import "./styles/homeWorkspaceCompact.css";
 import "./styles/workspaceSidebarRefresh.css";
 import "./styles/builderDocs.css";
 import "./styles/themeModes.css";
+import "./styles/dashboardSquareTiles.css";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>

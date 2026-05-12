@@ -275,8 +275,7 @@ export async function updateChart(id, payload) {
 export async function deleteChart(id) {
   if (isMockMode()) {
     const state = useStore.getState();
-    const nextCharts = state.charts.filter((chart) => chart.id !== id);
-    useStore.setState({ charts: nextCharts });
+    state.deleteChart(id);
     return { success: true };
   }
 

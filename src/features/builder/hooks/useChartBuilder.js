@@ -3,10 +3,12 @@ import {
   createChart,
   createChartConfig,
   generateVisualSql,
+  getChartById,
   getChartTemplates,
   getDataset,
   getDatasetSchema,
   runDatasetSql,
+  updateChart,
   validateChartMapping,
 } from "../../../api/chartApi";
 import { addSavedChartToDashboard } from "../../../api/dashboardApi";
@@ -18,6 +20,7 @@ import { loadBuilderDraft, saveBuilderDraft } from "../../../utils/storage";
 
 const BASE_SETTINGS = {
   title: "",
+  showTitle: true,
   subtitle: "",
   aggregation: "sum",
   legendPosition: "bottom",
@@ -36,6 +39,8 @@ const BASE_SETTINGS = {
   lineWidth: 2,
   barBorderRadius: 8,
 };
+
+const REQUIRED_TITLE_MESSAGE = "\u0E01\u0E23\u0E38\u0E13\u0E32\u0E01\u0E23\u0E2D\u0E01\u0E0A\u0E37\u0E48\u0E2D\u0E01\u0E23\u0E32\u0E1F\u0E01\u0E48\u0E2D\u0E19\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01";
 
 function createEmptyState() {
   return {
@@ -147,7 +152,103 @@ function createPendingSqlValidation(template) {
   };
 }
 
-export default function useChartBuilder(builderContext) {
+function getChartRows(chart = {}) {
+  return Array.isArray(chart.rows)
+    ? chart.rows
+    : Array.isArray(chart.data)
+      ? chart.data
+      : Array.isArray(chart.config?.rows)
+        ? chart.config.rows
+        : Array.isArray(chart.config?.queryResult?.rows)
+          ? chart.config.queryResult.rows
+          : [];
+}
+
+function getChartTemplateId(chart = {}, templates = []) {
+  const candidate = chart.templateId ?? chart.config?.meta?.templateId;
+  if (candidate && templates.some((template) => template.id === candidate)) return candidate;
+  return templates.find((template) => template.type === (chart.type ?? chart.config?.type))?.id ?? templates[0]?.id;
+}
+
+function createEditingState(chart, templates, dataset, schema) {
+  const templateId = getChartTemplateId(chart, templates);
+  const template = templates.find((item) => item.id === templateId) ?? templates[0];
+  const queryMode = chart.queryMode ?? chart.config?.queryMode ?? "visual";
+  const queryResult = chart.queryResult ?? chart.config?.queryResult ?? null;
+  const querySchema = chart.schema ?? chart.querySchema ?? schema;
+  const rawTitle = chart.settings?.title;
+  const resolvedTitle = typeof rawTitle === "string"
+    ? rawTitle.trim()
+    : "";
+  const defaults = normalizeTemplateState(template, {
+    mapping: chart.mapping ?? chart.config?.mapping ?? {},
+    settings: {
+      ...(chart.settings ?? {}),
+      title: resolvedTitle,
+      showTitle: chart.settings?.showTitle ?? true,
+      subtitle: chart.settings?.subtitle ?? chart.config?.options?.plugins?.subtitle?.text ?? "",
+    },
+  });
+
+  return {
+    dataset: dataset ?? { rows: getChartRows(chart) },
+    schema,
+    templates,
+    selectedTemplateId: template?.id ?? "bar-vertical",
+    mapping: defaults.mapping,
+    settings: defaults.settings,
+    previewConfig: chart.config ?? null,
+    validation: {
+      valid: false,
+      errors: [],
+      warnings: [],
+      requiredRoles: template?.requiredRoles ?? [],
+      message: "Loading saved chart.",
+    },
+    queryMode,
+    generatedSql: chart.generatedSql ?? chart.config?.generatedSql ?? "",
+    customSql: chart.customSql ?? chart.config?.customSql ?? chart.generatedSql ?? chart.config?.generatedSql ?? "",
+    lastExecutedSql: chart.lastExecutedSql ?? chart.config?.lastExecutedSql ?? "",
+    queryResult,
+    querySchema: queryMode === "sql" ? querySchema : null,
+    queryStatus: queryMode === "sql" && queryResult ? "ready" : "idle",
+    queryError: "",
+    loading: false,
+    saving: false,
+    error: "",
+    isEditing: true,
+    editingChartId: chart.id,
+  };
+}
+
+function createChartPayload({
+  projectId,
+  selectedTemplate,
+  state,
+  effectiveRows,
+  effectiveSchema,
+}) {
+  const trimmedTitle = typeof state.settings.title === "string" ? state.settings.title.trim() : "";
+  return {
+    projectId,
+    templateId: selectedTemplate.id,
+    title: trimmedTitle,
+    name: trimmedTitle,
+    mapping: state.mapping,
+    settings: state.settings,
+    rows: effectiveRows,
+    schema: effectiveSchema,
+    querySchema: effectiveSchema,
+    config: state.previewConfig,
+    queryMode: state.queryMode,
+    generatedSql: state.generatedSql,
+    customSql: state.customSql,
+    lastExecutedSql: state.lastExecutedSql,
+    queryResult: state.queryResult,
+  };
+}
+
+export default function useChartBuilder(builderContext, editingChartId = "") {
   const [state, setState] = useState(createEmptyState);
 
   useEffect(() => {
@@ -155,6 +256,7 @@ export default function useChartBuilder(builderContext) {
 
     async function loadBuilder() {
       try {
+        setState((current) => ({ ...current, loading: true, error: "" }));
         const [dataset, schema, templates] = await Promise.all([
           getDataset(),
           getDatasetSchema(),
@@ -162,6 +264,27 @@ export default function useChartBuilder(builderContext) {
         ]);
 
         if (!isActive) return;
+
+        if (editingChartId) {
+          const chart = await getChartById(editingChartId);
+          if (!isActive) return;
+          if (!chart) {
+            setState((current) => ({
+              ...current,
+              dataset,
+              schema,
+              templates,
+              loading: false,
+              isEditing: true,
+              editingChartId,
+              error: "Saved chart not found. It may have been deleted.",
+            }));
+            return;
+          }
+
+          setState(createEditingState(chart, templates, dataset, schema));
+          return;
+        }
 
         const draft = loadBuilderDraft();
         const defaultTemplate = templates.find((template) => template.id === "bar-vertical") ?? templates[0];
@@ -201,7 +324,7 @@ export default function useChartBuilder(builderContext) {
     return () => {
       isActive = false;
     };
-  }, [builderContext?.dashboardId, builderContext?.projectId, builderContext?.sheetId]);
+  }, [builderContext?.dashboardId, builderContext?.projectId, builderContext?.sheetId, editingChartId]);
 
   const selectedTemplate = useMemo(
     () => state.templates.find((template) => template.id === state.selectedTemplateId) ?? null,
@@ -341,19 +464,9 @@ export default function useChartBuilder(builderContext) {
   ]);
 
   useEffect(() => {
-    if (!builderContext || !selectedTemplate || state.loading) return;
+    if (!builderContext || !selectedTemplate || state.loading || state.isEditing) return;
     saveBuilderDraft(createDraftPayload(builderContext, state));
-  }, [
-    builderContext,
-    selectedTemplate,
-    state.customSql,
-    state.loading,
-    state.lastExecutedSql,
-    state.mapping,
-    state.queryMode,
-    state.selectedTemplateId,
-    state.settings,
-  ]);
+  }, [builderContext, selectedTemplate, state]);
 
   function setSelectedTemplate(templateId) {
     const template = state.templates.find((item) => item.id === templateId);
@@ -381,6 +494,7 @@ export default function useChartBuilder(builderContext) {
   function updateSetting(key, value) {
     setState((current) => ({
       ...current,
+      error: key === "title" ? "" : current.error,
       settings: {
         ...current.settings,
         [key]: value,
@@ -511,26 +625,41 @@ export default function useChartBuilder(builderContext) {
       throw new Error("Chart is not ready to save.");
     }
 
+    const trimmedTitle = typeof state.settings.title === "string" ? state.settings.title.trim() : "";
+    if (!trimmedTitle) {
+      setState((current) => ({
+        ...current,
+        error: REQUIRED_TITLE_MESSAGE,
+      }));
+      throw new Error(REQUIRED_TITLE_MESSAGE);
+    }
+
     setState((current) => ({ ...current, saving: true, error: "" }));
 
     try {
-      const savedChart = await createChart({
+      const payload = createChartPayload({
         projectId: builderContext.projectId,
-        templateId: selectedTemplate.id,
-        title: state.settings.title?.trim() || selectedTemplate.name,
-        name: state.settings.title?.trim() || selectedTemplate.name,
-        mapping: state.mapping,
-        settings: state.settings,
-        rows: effectiveRows,
-        schema: effectiveSchema,
-        querySchema: effectiveSchema,
-        config: state.previewConfig,
-        queryMode: state.queryMode,
-        generatedSql: state.generatedSql,
-        customSql: state.customSql,
-        lastExecutedSql: state.lastExecutedSql,
-        queryResult: state.queryResult,
+        selectedTemplate,
+        state,
+        effectiveRows,
+        effectiveSchema,
       });
+
+      if (state.isEditing && state.editingChartId) {
+        const updatedChart = await updateChart(state.editingChartId, payload);
+        setState((current) => ({
+          ...current,
+          saving: false,
+        }));
+
+        return {
+          chart: updatedChart,
+          layoutItem: null,
+          updated: true,
+        };
+      }
+
+      const savedChart = await createChart(payload);
       const attachResult = await addSavedChartToDashboard({
         chartId: savedChart.id,
         projectId: builderContext.projectId,
@@ -564,6 +693,8 @@ export default function useChartBuilder(builderContext) {
     effectiveRows,
     explorerDataset,
     chartFamilies: Array.from(new Set(state.templates.map((template) => template.family))),
+    isEditing: Boolean(state.isEditing),
+    editingChartId: state.editingChartId ?? "",
     setSelectedTemplate,
     updateSetting,
     setQueryMode,

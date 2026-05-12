@@ -44,7 +44,9 @@ function ColorGroup({ label, colors = [], onChange }) {
   );
 }
 
-export default function ChartSettingsPanel({ template, settings, onSettingChange }) {
+const TITLE_REQUIRED_MESSAGE = "\u0E01\u0E23\u0E38\u0E13\u0E32\u0E01\u0E23\u0E2D\u0E01\u0E0A\u0E37\u0E48\u0E2D\u0E01\u0E23\u0E32\u0E1F\u0E01\u0E48\u0E2D\u0E19\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01";
+
+export default function ChartSettingsPanel({ template, settings, onSettingChange, titleError = "" }) {
   const allowStacked = ["bar", "area", "mixed"].includes(template?.family);
   const allowHorizontal = template?.family === "bar" && template?.variant !== "floating";
   const allowLineWidth = ["line", "area", "mixed", "scatter", "bubble", "radar"].includes(template?.family);
@@ -68,7 +70,19 @@ export default function ChartSettingsPanel({ template, settings, onSettingChange
         <div className="builder-v3-form-grid">
           <label className="builder-v3-field">
             <span>Chart title</span>
-            <input value={settings.title} onChange={(event) => onSettingChange("title", event.target.value)} />
+            <input
+              value={settings.title}
+              placeholder="กรอกชื่อกราฟ"
+              onChange={(event) => onSettingChange("title", event.target.value)}
+            />
+            {titleError === TITLE_REQUIRED_MESSAGE ? (
+              <small
+                role="alert"
+                style={{ color: "var(--danger, #dc2626)", fontSize: "11px", fontWeight: 600, marginTop: "4px" }}
+              >
+                {TITLE_REQUIRED_MESSAGE}
+              </small>
+            ) : null}
           </label>
 
           <label className="builder-v3-field">
@@ -97,6 +111,11 @@ export default function ChartSettingsPanel({ template, settings, onSettingChange
         </div>
 
         <div className="builder-v3-toggle-grid">
+          <Toggle
+            label="Show title on canvas"
+            checked={settings.showTitle !== false}
+            onChange={(value) => onSettingChange("showTitle", value)}
+          />
           <Toggle label="Show legend" checked={settings.showLegend} onChange={(value) => onSettingChange("showLegend", value)} />
           <Toggle label="Show grid" checked={settings.showGrid} onChange={(value) => onSettingChange("showGrid", value)} />
           <Toggle label="Begin at zero" checked={settings.beginAtZero} onChange={(value) => onSettingChange("beginAtZero", value)} />

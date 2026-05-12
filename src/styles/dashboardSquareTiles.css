@@ -1,0 +1,115 @@
+.dashboard-workspace-page .dashboard-canvas-grid-item,
+.dashboard-workspace-page .dashboard-widget-slot,
+.dashboard-workspace-page .chart-card,
+.dashboard-workspace-page .chart-card-body {
+  min-width: 0;
+  min-height: 0;
+}
+
+.dashboard-workspace-page .chart-card {
+  overflow: hidden;
+  contain: layout paint;
+}
+
+.dashboard-workspace-page .chart-card-body {
+  overflow: hidden;
+  display: grid;
+  align-items: stretch;
+  justify-items: stretch;
+}
+
+.dashboard-workspace-page .chart-card .chart-renderer-root,
+.dashboard-workspace-page .chart-card .chartjs-renderer,
+.dashboard-workspace-page .chart-card .chartjs-canvas-frame {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+.dashboard-workspace-page .chart-card--compact .chart-card-header {
+  min-height: 34px;
+  padding: 6px 10px;
+}
+
+.dashboard-workspace-page .chart-card--compact .chart-card-body {
+  padding: 8px;
+}
+
+.dashboard-workspace-page .chart-card--compact .chart-title-text {
+  font-size: 13px;
+}
+
+.dashboard-workspace-page .chart-card--tiny .chart-card-header {
+  min-height: 32px;
+  padding: 6px 8px;
+}
+
+.dashboard-workspace-page .chart-card--tiny .chart-card-body {
+  padding: 6px;
+}
+
+.dashboard-workspace-page .chart-card--tiny .chart-card-accent-bar {
+  height: 2px;
+}
+
+.dashboard-workspace-page .chart-card--tiny .chart-title-text {
+  font-size: 12px;
+}
+
+.dashboard-workspace-page .chart-card--tiny .chart-card-controls {
+  gap: 2px;
+}
+
+.dashboard-workspace-page .chart-card--tiny .chart-card-control-btn,
+.dashboard-workspace-page .chart-card--tiny .card-menu-btn,
+.dashboard-workspace-page .chart-card--tiny .card-export-btn {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  min-height: 24px;
+}
+
+.dashboard-workspace-page .chart-card--square-min .chart-card-body {
+  padding: 6px;
+}
+
+.dashboard-workspace-page .chart-card--axis.chart-card--tiny .chartjs-canvas-frame {
+  padding: 1px;
+}
+
+.dashboard-workspace-page .chart-card--circular .chartjs-renderer.is-circular-chart {
+  display: grid;
+  place-items: center;
+}
+
+.dashboard-workspace-page .chart-card--circular.chart-card--compact .chartjs-renderer.is-circular-chart .chartjs-canvas-frame {
+  width: min(100%, 210px);
+  height: min(100%, 210px);
+}
+
+.dashboard-workspace-page .chart-card--circular.chart-card--tiny .chartjs-renderer.is-circular-chart .chartjs-canvas-frame {
+  width: min(100%, 170px);
+  height: min(100%, 170px);
+}
+
+.dashboard-workspace-page .chart-card--kpi .kpi-widget {
+  padding: 10px;
+  gap: 6px;
+}
+
+.dashboard-workspace-page .chart-card--kpi.chart-card--tiny .kpi-value {
+  font-size: clamp(20px, 6vw, 30px);
+}
+
+.dashboard-workspace-page .chart-card--kpi.chart-card--compact .kpi-value {
+  font-size: clamp(24px, 5vw, 34px);
+}
+
+.dashboard-workspace-page .dashboard-canvas-grid .react-grid-item .react-resizable-handle {
+  opacity: 0.75;
+}
+
+.dashboard-workspace-page .dashboard-canvas-grid .react-grid-item.resizing .chart-card {
+  will-change: width, height, transform;
+}

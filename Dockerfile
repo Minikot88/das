@@ -1,51 +1,38 @@
-# ──────────────────────────────────────────────────────────────────
-# Dockerfile — Frontend (React / Vite)
-#
-# BUILD:
-#   docker build -t mini-bi-frontend .
-#
-# RUN (standalone):
-#   docker run -p 80:80 mini-bi-frontend
-#
-# VPS DEPLOY (after docker-compose up):
-#   Nginx serves the built SPA on port 80.
-#   Make sure your VPS firewall opens ports 80 and 443.
-#   For HTTPS: mount Let's Encrypt certs into the Nginx container.
-# ──────────────────────────────────────────────────────────────────
+# Frontend-only production image for the Dashboard Mini BI Vite app.
 
-# Stage 1: Build
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy dependency files first to leverage Docker layer cache
-COPY package*.json ./
-RUN npm ci --frozen-lockfile
+ARG VITE_USE_MOCK=true
+ARG VITE_API_BASE_URL=
+ARG VITE_API_TIMEOUT_MS=15000
+ENV VITE_USE_MOCK=${VITE_USE_MOCK}
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
+ENV VITE_API_TIMEOUT_MS=${VITE_API_TIMEOUT_MS}
 
-# Copy source and build
+COPY package*.json ./
+RUN npm ci
+
 COPY . .
 RUN npm run build
-# Output: /app/dist
 
-
-# Stage 2: Serve with Nginx
 FROM nginx:stable-alpine AS production
 
-# Remove default Nginx page
 RUN rm -rf /usr/share/nginx/html/*
-
-# Copy built files
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Nginx config for SPA routing (client-side routes → index.html)
-RUN echo 'server { \
-  listen 80; \
-  root /usr/share/nginx/html; \
-  index index.html; \
-  location / { try_files $uri $uri/ /index.html; } \
-  gzip on; \
-  gzip_types text/plain text/css application/javascript application/json; \
-}' > /etc/nginx/conf.d/default.conf
+RUN printf '%s\n' \
+  'server {' \
+  '  listen 80;' \
+  '  root /usr/share/nginx/html;' \
+  '  index index.html;' \
+  '  location / { try_files $uri $uri/ /index.html; }' \
+  '  gzip on;' \
+  '  gzip_types text/plain text/css application/javascript application/json image/svg+xml;' \
+  '  add_header X-Content-Type-Options nosniff always;' \
+  '  add_header Referrer-Policy strict-origin-when-cross-origin always;' \
+  '}' > /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 

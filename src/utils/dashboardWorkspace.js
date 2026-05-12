@@ -1,3 +1,5 @@
+import { getPreferredChartLayout } from "./layoutUtils";
+
 function formatChartTypeLabel(value = "chart") {
   return String(value)
     .replace(/[-_]+/g, " ")
@@ -14,6 +16,10 @@ function createChartRows(chart = {}) {
         : Array.isArray(chart.config?.queryResult?.rows)
           ? chart.config.queryResult.rows
           : [];
+}
+
+function toSafeTitle(value) {
+  return typeof value === "string" ? value.trim() : "";
 }
 
 function createMetaLabel(createdAt, fallbackId) {
@@ -64,7 +70,7 @@ export function toDashboardChartModel(widget) {
   if (!widget) return null;
 
   const rows = createChartRows(widget);
-  const title = widget.title || widget.name || widget.config?.options?.plugins?.title?.text || "Chart";
+  const title = toSafeTitle(widget.title ?? widget.settings?.title);
 
   return {
     ...widget,
@@ -83,12 +89,12 @@ export function toDashboardChartModel(widget) {
 
 export function resolveDashboardWidgets(layout = [], charts = []) {
   return (layout ?? [])
-    .map((item, index) => {
+    .map((item) => {
       const savedChart = charts.find((chart) => chart.id === item.chartId);
       if (!savedChart) return null;
 
       const rows = createChartRows(savedChart);
-      const title = item.titleOverride || savedChart.title || savedChart.name || `Chart ${index + 1}`;
+      const title = toSafeTitle(item.titleOverride ?? savedChart.settings?.title);
       const type = savedChart.type ?? savedChart.config?.type ?? "bar";
 
       return {
@@ -145,15 +151,11 @@ export function createWidgetFromBuilder({
   existingCharts = [],
 } = {}) {
   if (!savedChart) return null;
+  const preferredLayout = getPreferredChartLayout(savedChart, existingCharts.length);
 
   return {
     ...savedChart,
-    layout: savedChart.layout ?? {
-      w: existingCharts.length ? 6 : 12,
-      h: existingCharts.length ? 4 : 5,
-      minW: 3,
-      minH: 3,
-    },
+    layout: savedChart.layout ?? preferredLayout,
   };
 }
 
