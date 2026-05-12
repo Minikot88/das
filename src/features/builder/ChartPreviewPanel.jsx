@@ -3,6 +3,12 @@ import ChartRenderer from "../../components/charts/ChartRenderer";
 
 export default function ChartPreviewPanel({ previewConfig, settings, validation }) {
   const previewTitle = typeof settings.title === "string" ? settings.title.trim() : "";
+  const previewSubtitle = typeof settings.subtitle === "string" ? settings.subtitle.trim() : "";
+  const previewType = String(previewConfig?.type ?? "").toLowerCase();
+  const isPieLike = ["pie", "doughnut"].includes(previewType);
+  const frameStyle = settings.backgroundColor
+    ? { background: settings.backgroundColor }
+    : undefined;
 
   return (
     <section className="builder-v3-panel builder-v3-preview-panel">
@@ -10,6 +16,7 @@ export default function ChartPreviewPanel({ previewConfig, settings, validation 
         <div>
           <span className="builder-v3-kicker">Preview</span>
           <h2 className="builder-v3-title">{previewTitle || "Preview"}</h2>
+          {previewSubtitle ? <p className="builder-v3-preview-subtitle">{previewSubtitle}</p> : null}
         </div>
         <span className={`builder-v3-pill${validation.valid ? " is-success" : " is-warning"}`}>
           {validation.valid ? "Ready" : "Needs mapping"}
@@ -32,14 +39,15 @@ export default function ChartPreviewPanel({ previewConfig, settings, validation 
         </div>
       ) : null}
 
-      <div className="builder-v3-preview-frame">
+      <div className={`builder-v3-preview-frame${isPieLike ? " is-pie-like" : ""}`} style={frameStyle}>
         <ChartRenderer
           chart={{
             title: previewTitle,
-            subtitle: settings.subtitle,
+            subtitle: previewSubtitle,
             settings: {
               ...(settings ?? {}),
               title: previewTitle,
+              subtitle: previewSubtitle,
             },
             engine: "chartjs",
             type: previewConfig?.type,

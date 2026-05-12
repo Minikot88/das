@@ -30,15 +30,15 @@ function uniqueValues(rows = [], field) {
 }
 
 function createMeta(template, settings = {}) {
+  const unifiedBackground = settings.backgroundColor ?? settings.cardBackground ?? "#ffffff";
   return {
     templateId: template.id,
     family: template.family,
     variant: template.variant,
     settings: {
       palette: settings.palette ?? "chartjs",
-      backgroundColor: settings.backgroundColor ?? "#ffffff",
+      backgroundColor: unifiedBackground,
       borderColor: settings.borderColor ?? "",
-      cardBackground: settings.cardBackground ?? "",
     },
   };
 }
@@ -681,7 +681,6 @@ function mergeSettings(template, settings = {}) {
     borderColor: "",
     titleColor: "#0f172a",
     axisLabelColor: "#475569",
-    cardBackground: "",
     lineWidth: 2,
     barBorderRadius: 8,
     ...template.defaultSettings,

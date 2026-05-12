@@ -144,7 +144,6 @@ export default function BuilderPage() {
             template={builder.selectedTemplate}
             settings={builder.settings}
             onSettingChange={builder.updateSetting}
-            titleError={builder.error}
           />
           <ChartSavePanel
             builderContext={builderContext}

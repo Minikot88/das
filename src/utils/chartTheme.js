@@ -1,7 +1,8 @@
 function createPluginTitleOptions(text = "", display = false, fontSize = 13, color = "#0f172a") {
+  const safeText = typeof text === "string" ? text.trim() : "";
   return {
-    display: display && Boolean(text),
-    text,
+    display: display && Boolean(safeText),
+    text: safeText,
     align: "start",
     padding: { top: 0, bottom: 10 },
     color,
@@ -10,6 +11,12 @@ function createPluginTitleOptions(text = "", display = false, fontSize = 13, col
       weight: "600",
     },
   };
+}
+
+function normalizeLegendPosition(position = "bottom") {
+  const value = typeof position === "string" ? position.trim().toLowerCase() : "";
+  if (["top", "bottom", "left", "right"].includes(value)) return value;
+  return "bottom";
 }
 
 export function createChartJsBaseOptions({
@@ -21,6 +28,7 @@ export function createChartJsBaseOptions({
   titleColor = "#0f172a",
   axisLabelColor = "#475569",
 } = {}) {
+  const safeLegendPosition = normalizeLegendPosition(legendPosition);
   return {
     responsive: true,
     maintainAspectRatio: false,
@@ -41,7 +49,7 @@ export function createChartJsBaseOptions({
       },
       legend: {
         display: showLegend,
-        position: legendPosition,
+        position: safeLegendPosition,
         labels: {
           usePointStyle: true,
           boxWidth: 10,

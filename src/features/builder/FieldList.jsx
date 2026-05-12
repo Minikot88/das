@@ -13,15 +13,29 @@ function ExplorerNode({
   meta = "",
   icon = "DB",
   defaultOpen = true,
+  depth = 0,
+  isFirst = true,
+  isLast = true,
   children,
 }) {
   const [open, setOpen] = useState(defaultOpen);
+  const hasChildren = Boolean(children);
 
   return (
-    <div className="builder-v3-explorer-node">
+    <div
+      className={[
+        "builder-v3-explorer-node",
+        "tree-node",
+        `tree-node-depth-${depth}`,
+        `depth-${depth}`,
+        open ? "tree-node-expanded is-expanded" : "tree-node-collapsed",
+        isFirst ? "tree-node-first is-first" : "",
+        isLast ? "tree-node-last is-last" : "tree-node-has-next",
+      ].join(" ")}
+    >
       <button
         type="button"
-        className={`builder-v3-explorer-toggle${open ? " is-open" : ""}`}
+        className={`builder-v3-explorer-toggle tree-node-row${open ? " is-open" : ""}`}
         onClick={() => setOpen((current) => !current)}
         aria-expanded={open}
       >
@@ -36,7 +50,7 @@ function ExplorerNode({
           {meta ? <small>{meta}</small> : null}
         </span>
       </button>
-      {open ? <div className="builder-v3-explorer-children">{children}</div> : null}
+      {open && hasChildren ? <div className="builder-v3-explorer-children tree-children">{children}</div> : null}
     </div>
   );
 }
@@ -71,24 +85,36 @@ export default function FieldList({ dataset, schema, onDragStart, queryMode = "v
       </div>
 
       <div className="builder-v3-explorer">
-        <ExplorerNode label="Data Source" meta="Builder connection" icon="DB">
-          <ExplorerNode label={explorerMeta.connectionName} meta="Connection" icon="CN">
-            <ExplorerNode label={explorerMeta.namespace} meta="Schema" icon="SC">
+        <ExplorerNode label="Data Source" meta="Builder connection" icon="DB" depth={0} isFirst isLast>
+          <ExplorerNode label={explorerMeta.connectionName} meta="Connection" icon="CN" depth={1} isFirst isLast>
+            <ExplorerNode label={explorerMeta.namespace} meta="Schema" icon="SC" depth={2} isFirst isLast>
               <ExplorerNode
                 label={explorerMeta.tableName}
                 meta={`${dataset?.rows?.length ?? 0} rows`}
                 icon="TB"
+                depth={3}
+                isFirst
+                isLast
               >
-                <div className="builder-v3-explorer-fields">
-                  {fields.map((field) => {
+                <div className="builder-v3-explorer-fields tree-children">
+                  {fields.map((field, index) => {
                     const fieldMeta = TYPE_META[field.type] ?? TYPE_META.string;
+                    const isFirstField = index === 0;
+                    const isLastField = index === fields.length - 1;
                     return (
                       <button
                         key={field.name}
                         type="button"
-                        className="builder-v3-explorer-field"
+                        className={[
+                          "builder-v3-explorer-field",
+                          "tree-node-row",
+                          "tree-field-row",
+                          isFirstField ? "tree-node-first is-first" : "",
+                          isLastField ? "tree-node-last is-last" : "tree-node-has-next",
+                        ].join(" ")}
                         draggable
                         onDragStart={(event) => onDragStart(event, field)}
+                        title={field.label ?? field.name}
                       >
                         <span className={`builder-v3-field-type-badge ${fieldMeta.tone}`}>{fieldMeta.badge}</span>
                         <span className="builder-v3-explorer-field-copy">

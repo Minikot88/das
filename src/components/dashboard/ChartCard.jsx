@@ -103,7 +103,14 @@ const ChartCard = memo(function ChartCard({
   const circularSize = chartKind === "circular"
     ? Math.max(isTiny ? 130 : 150, Math.min(cardWidth || 320, contentHeight, isFullscreen ? 460 : 330))
     : null;
-  const cardBackground = chart.settings?.cardBackground || chart.config?.meta?.settings?.cardBackground || "";
+  const cardBackground =
+    chart.settings?.cardBackground ||
+    chart.settings?.chartCardBackground ||
+    chart.settings?.chartBackground ||
+    chart.settings?.backgroundColor ||
+    chart.config?.meta?.settings?.cardBackground ||
+    chart.config?.meta?.settings?.backgroundColor ||
+    "";
 
   return (
     <div

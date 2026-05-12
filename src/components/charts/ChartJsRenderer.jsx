@@ -206,7 +206,7 @@ function applyResponsiveOptions(config, chartKind, density = "normal") {
 }
 
 function getChartCardTitle(chart = {}) {
-  const title = chart?.title;
+  const title = chart?.title ?? chart?.settings?.title ?? chart?.chartTitle;
   return typeof title === "string" ? title.trim() : "";
 }
 
@@ -215,13 +215,22 @@ function applyCanvasTitleVisibility(config, chart = {}) {
   nextConfig.options = nextConfig.options ?? {};
   nextConfig.options.plugins = nextConfig.options.plugins ?? {};
   const currentTitlePlugin = nextConfig.options.plugins.title ?? {};
+  const currentSubtitlePlugin = nextConfig.options.plugins.subtitle ?? {};
   const safeTitle = getChartCardTitle(chart);
-  const shouldShowTitleInCanvas = false;
+  const safeSubtitle = typeof (chart?.subtitle ?? chart?.settings?.subtitle ?? "") === "string"
+    ? (chart.subtitle ?? chart.settings?.subtitle ?? "").trim()
+    : "";
+  const shouldShowTitleInCanvas = chart?.settings?.showTitle !== false && Boolean(safeTitle);
 
   nextConfig.options.plugins.title = {
     ...currentTitlePlugin,
     display: shouldShowTitleInCanvas,
     text: shouldShowTitleInCanvas ? safeTitle : "",
+  };
+  nextConfig.options.plugins.subtitle = {
+    ...currentSubtitlePlugin,
+    display: shouldShowTitleInCanvas && Boolean(safeSubtitle),
+    text: shouldShowTitleInCanvas ? safeSubtitle : "",
   };
 
   return nextConfig;

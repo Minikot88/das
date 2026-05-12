@@ -17,36 +17,7 @@ function Toggle({ label, checked, onChange }) {
   );
 }
 
-function ColorGroup({ label, colors = [], onChange }) {
-  const nextColors = [...colors];
-  while (nextColors.length < 4) nextColors.push("");
-
-  return (
-    <div className="builder-v3-field">
-      <span>{label}</span>
-      <div className="builder-v3-color-grid">
-        {nextColors.map((color, index) => (
-          <label key={`${label}-${index}`} className="builder-v3-color-swatch">
-            <input
-              type="color"
-              value={color || "#36a2eb"}
-              onChange={(event) => {
-                const updatedColors = [...nextColors];
-                updatedColors[index] = event.target.value;
-                onChange(updatedColors.filter(Boolean));
-              }}
-            />
-            <small>{index + 1}</small>
-          </label>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-const TITLE_REQUIRED_MESSAGE = "\u0E01\u0E23\u0E38\u0E13\u0E32\u0E01\u0E23\u0E2D\u0E01\u0E0A\u0E37\u0E48\u0E2D\u0E01\u0E23\u0E32\u0E1F\u0E01\u0E48\u0E2D\u0E19\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01";
-
-export default function ChartSettingsPanel({ template, settings, onSettingChange, titleError = "" }) {
+export default function ChartSettingsPanel({ template, settings, onSettingChange }) {
   const allowStacked = ["bar", "area", "mixed"].includes(template?.family);
   const allowHorizontal = template?.family === "bar" && template?.variant !== "floating";
   const allowLineWidth = ["line", "area", "mixed", "scatter", "bubble", "radar"].includes(template?.family);
@@ -72,31 +43,14 @@ export default function ChartSettingsPanel({ template, settings, onSettingChange
             <span>Chart title</span>
             <input
               value={settings.title}
-              placeholder="กรอกชื่อกราฟ"
+              placeholder="Leave blank to use chart type default when saving"
               onChange={(event) => onSettingChange("title", event.target.value)}
             />
-            {titleError === TITLE_REQUIRED_MESSAGE ? (
-              <small
-                role="alert"
-                style={{ color: "var(--danger, #dc2626)", fontSize: "11px", fontWeight: 600, marginTop: "4px" }}
-              >
-                {TITLE_REQUIRED_MESSAGE}
-              </small>
-            ) : null}
           </label>
 
           <label className="builder-v3-field">
             <span>Subtitle</span>
             <input value={settings.subtitle} onChange={(event) => onSettingChange("subtitle", event.target.value)} />
-          </label>
-
-          <label className="builder-v3-field">
-            <span>Aggregation</span>
-            <select value={settings.aggregation} onChange={(event) => onSettingChange("aggregation", event.target.value)}>
-              <option value="sum">Sum</option>
-              <option value="avg">Average</option>
-              <option value="count">Count</option>
-            </select>
           </label>
 
           <label className="builder-v3-field">
@@ -106,6 +60,15 @@ export default function ChartSettingsPanel({ template, settings, onSettingChange
               <option value="right">Right</option>
               <option value="top">Top</option>
               <option value="left">Left</option>
+            </select>
+          </label>
+
+          <label className="builder-v3-field">
+            <span>Aggregation</span>
+            <select value={settings.aggregation} onChange={(event) => onSettingChange("aggregation", event.target.value)}>
+              <option value="sum">Sum</option>
+              <option value="avg">Average</option>
+              <option value="count">Count</option>
             </select>
           </label>
         </div>
@@ -164,11 +127,6 @@ export default function ChartSettingsPanel({ template, settings, onSettingChange
             <input type="color" value={settings.axisLabelColor} onChange={(event) => onSettingChange("axisLabelColor", event.target.value)} />
           </label>
 
-          <label className="builder-v3-field">
-            <span>Chart card background</span>
-            <input type="color" value={settings.cardBackground || "#ffffff"} onChange={(event) => onSettingChange("cardBackground", event.target.value)} />
-          </label>
-
           {allowLineWidth ? (
             <label className="builder-v3-field">
               <span>Line width</span>
@@ -197,12 +155,6 @@ export default function ChartSettingsPanel({ template, settings, onSettingChange
             </label>
           ) : null}
         </div>
-
-        <ColorGroup
-          label="Dataset colors"
-          colors={settings.datasetColors}
-          onChange={(value) => onSettingChange("datasetColors", value)}
-        />
       </div>
     </section>
   );
