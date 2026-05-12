@@ -17,6 +17,7 @@ const ChartCard = memo(function ChartCard({
   isFullscreen = false,
   onToggleFullscreen,
   themeMode,
+  showCardHeader = true,
 }) {
   const [loaded, setLoaded] = useState(false);
   const cardRef = useRef(null);
@@ -85,13 +86,13 @@ const ChartCard = memo(function ChartCard({
   const showTitleSetting = chart.settings?.showTitle ?? chart.config?.meta?.settings?.showTitle ?? true;
   const shouldShowTitle = safeTitle.length > 0 && showTitleSetting !== false;
   const hasCardActions = Boolean(onExportCSV || onExportPNG || onEditChart || onToggleFullscreen);
-  const shouldRenderHeader = shouldShowTitle || (isFullscreen && hasCardActions);
+  const shouldRenderHeader = showCardHeader && (shouldShowTitle || (isFullscreen && hasCardActions));
   const cardWidth = bodySize.width || 0;
   const cardHeight = Math.max(pixelHeight || 0, bodySize.height || 0);
   const isTiny = cardWidth > 0 && cardHeight > 0 && (cardWidth < 260 || cardHeight < 240);
   const isCompact = cardWidth > 0 && cardHeight > 0 && (cardWidth < 360 || cardHeight < 300);
   const isSquareMin = cardWidth > 0 && cardHeight > 0 && isCompact && Math.max(cardWidth, cardHeight) <= 460;
-  const contentHeight = Math.max(180, bodySize.height || (pixelHeight - 42));
+  const contentHeight = Math.max(180, bodySize.height || (pixelHeight - (shouldRenderHeader ? 42 : 0)));
   const sizeClass = [
     chartKind === "axis" ? "chart-card--axis" : "",
     chartKind === "circular" ? "chart-card--circular" : "",
@@ -114,7 +115,7 @@ const ChartCard = memo(function ChartCard({
 
   return (
     <div
-      className={`chart-card is-${chartKind}-chart ${sizeClass}${isFullscreen ? " is-fullscreen" : ""}`}
+      className={`chart-card is-${chartKind}-chart ${sizeClass}${isFullscreen ? " is-fullscreen" : ""}${shouldRenderHeader ? "" : " has-no-card-header"}`}
       ref={cardRef}
       style={{
         height: pixelHeight,

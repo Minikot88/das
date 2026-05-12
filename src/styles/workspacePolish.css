@@ -2225,6 +2225,43 @@ body.dark .dashboard-workspace-page .dashboard-workspace-canvas-frame {
   background-size: 32px 32px, 32px 32px, auto;
 }
 
+.dashboard-workspace-page .dashboard-actions-menu {
+  position: relative;
+  display: inline-flex;
+}
+
+.dashboard-workspace-page .dashboard-actions-menu-list {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 40;
+  min-width: 148px;
+  display: grid;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.dashboard-workspace-page .dashboard-actions-menu-list .dashboard-context-menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.dashboard-workspace-page .dashboard-actions-menu-list .dashboard-context-menu-item:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.dashboard-workspace-page .dashboard-workspace-canvas-frame {
+  align-content: start;
+}
+
 @media (min-width: 1680px) {
   .dashboard-workspace-page .dashboard-canvas-grid {
     max-width: 1520px;

@@ -281,13 +281,12 @@ export default function DashboardPage() {
   const setBuilderNavigationContext = useStore((state) => state.setBuilderNavigationContext);
   const setSelectedWidget = useStore((state) => state.setSelectedWidget);
   const getOrCreateDashboardShareLink = useStore((state) => state.getOrCreateDashboardShareLink);
-  const rightPanelOpen = useStore((state) => state.rightPanelOpen);
-  const setRightPanelOpen = useStore((state) => state.setRightPanelOpen);
 
   const [pickingChart, setPickingChart] = useState(false);
   const [editingTab, setEditingTab] = useState(null);
   const [editingValue, setEditingValue] = useState("");
   const [contextMenuState, setContextMenuState] = useState(null);
+  const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
   const [pendingCreatedWidgetId, setPendingCreatedWidgetId] = useState(null);
   const [fullscreenWidgetId, setFullscreenWidgetId] = useState(null);
   const [shareModalTab, setShareModalTab] = useState("share");
@@ -306,6 +305,7 @@ export default function DashboardPage() {
   });
 
   const contextMenuRef = useRef(null);
+  const actionsMenuRef = useRef(null);
   const dashboardCaptureRef = useRef(null);
   const previousWidgetCountRef = useRef(0);
 
@@ -380,16 +380,19 @@ export default function DashboardPage() {
   );
 
   useEffect(() => {
-    if (!contextMenuState) return undefined;
+    if (!contextMenuState && !actionsMenuOpen) return undefined;
 
     function handlePointerDown(event) {
       if (contextMenuRef.current?.contains(event.target)) return;
+      if (actionsMenuRef.current?.contains(event.target)) return;
       setContextMenuState(null);
+      setActionsMenuOpen(false);
     }
 
     function handleKeyDown(event) {
       if (event.key === "Escape") {
         setContextMenuState(null);
+        setActionsMenuOpen(false);
       }
     }
 
@@ -399,7 +402,7 @@ export default function DashboardPage() {
       window.removeEventListener("pointerdown", handlePointerDown);
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [contextMenuState]);
+  }, [actionsMenuOpen, contextMenuState]);
 
   useEffect(() => {
     if (!notice) return undefined;
@@ -415,7 +418,7 @@ export default function DashboardPage() {
     } else if (dashboardWidgets.length > previousCount) {
       setSelectedWidget(activeDashboard?.id, dashboardWidgets[dashboardWidgets.length - 1].id);
     } else if (!dashboardWidgets.some((widget) => widget.id === selectedWidgetId)) {
-      setSelectedWidget(activeDashboard?.id, dashboardWidgets[0].id);
+      setSelectedWidget(activeDashboard?.id, null);
     }
 
     previousWidgetCountRef.current = dashboardWidgets.length;
@@ -539,8 +542,14 @@ export default function DashboardPage() {
   }
 
   function removeWidget(widgetId) {
-    if (!activeSheet?.id) return;
+    if (!activeSheet?.id || !activeDashboard?.id) return;
+    if (activeDashboardId !== activeDashboard.id) {
+      setActiveDashboard(activeDashboard.id);
+    }
     removeChart(activeSheet.id, widgetId);
+    if (widgetId === selectedWidgetId) {
+      setSelectedWidget(activeDashboard?.id, null);
+    }
     setContextMenuState(null);
   }
 
@@ -609,15 +618,12 @@ export default function DashboardPage() {
     setPickingChart(false);
   }
 
-  function toggleRightSidebar() {
-    setRightPanelOpen(!rightPanelOpen);
-  }
-
   function selectWidget(widgetId) {
     setSelectedWidget(activeDashboard?.id, widgetId);
   }
 
   function openShareModal(nextTab = "share") {
+    setActionsMenuOpen(false);
     setShareModalTab(nextTab);
     setShareModalOpen(true);
   }
@@ -698,11 +704,6 @@ export default function DashboardPage() {
 
   const toolbarItems = [
     {
-      key: "panel",
-      label: rightPanelOpen ? "Hide Inspector" : "Show Inspector",
-      onClick: toggleRightSidebar,
-    },
-    {
       key: "saved",
       label: "Add Chart",
       onClick: () => setPickingChart(true),
@@ -719,22 +720,6 @@ export default function DashboardPage() {
       onClick: autoArrangeDashboard,
       disabled: !dashboardWidgets.length,
     },
-    {
-      key: "export",
-      label: "Export",
-      onClick: () => openShareModal("export"),
-      disabled: !dashboardWidgets.length,
-    },
-    {
-      key: "share",
-      label: "Share",
-      onClick: () => openShareModal("share"),
-    },
-    {
-      key: "embed",
-      label: "Embed",
-      onClick: () => openShareModal("embed"),
-    },
   ];
 
   return (
@@ -743,7 +728,7 @@ export default function DashboardPage() {
 
       <WorkspaceLayout
         columns="two"
-        className={`dashboard-workspace-shell${rightPanelOpen ? " is-inspector-open" : " is-rail-collapsed"}`}
+        className="dashboard-workspace-shell is-inspector-open"
       >
         <div className="dashboard-workspace-main">
           <header className="dashboard-workspace-header">
@@ -805,6 +790,46 @@ export default function DashboardPage() {
                     {item.label}
                   </button>
                 ))}
+                <div className="dashboard-actions-menu" ref={actionsMenuRef}>
+                  <button
+                    type="button"
+                    onClick={() => setActionsMenuOpen((isOpen) => !isOpen)}
+                    className="dashboard-toolbar-btn"
+                    aria-haspopup="menu"
+                    aria-expanded={actionsMenuOpen}
+                  >
+                    Actions
+                  </button>
+                  {actionsMenuOpen ? (
+                    <div className="dashboard-actions-menu-list" role="menu">
+                      <button
+                        type="button"
+                        className="dashboard-context-menu-item"
+                        role="menuitem"
+                        onClick={() => openShareModal("export")}
+                        disabled={!dashboardWidgets.length}
+                      >
+                        Export
+                      </button>
+                      <button
+                        type="button"
+                        className="dashboard-context-menu-item"
+                        role="menuitem"
+                        onClick={() => openShareModal("share")}
+                      >
+                        Share
+                      </button>
+                      <button
+                        type="button"
+                        className="dashboard-context-menu-item"
+                        role="menuitem"
+                        onClick={() => openShareModal("embed")}
+                      >
+                        Embed
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
               </div>
             </div>
             <div className="dashboard-workspace-toolbar-summary">
@@ -882,12 +907,6 @@ export default function DashboardPage() {
             </div>
 
             <div className={`dashboard-workspace-canvas-frame${hasWidgets ? " is-populated" : " is-empty"}`}>
-              <div className="dashboard-workspace-canvas-strip">
-                <span className="dashboard-workspace-canvas-strip-item">{workspaceStats.chartCount} charts</span>
-                <span className="dashboard-workspace-canvas-strip-item">{activeSelectionLabel}</span>
-                <span className="dashboard-workspace-canvas-strip-item">{rightPanelOpen ? "Inspector on" : "Inspector off"}</span>
-              </div>
-
               {hasWidgets ? (
                 <DashboardGrid
                   widgets={dashboardWidgets}
@@ -901,6 +920,7 @@ export default function DashboardPage() {
                   onEditChart={openBuilderForSavedChart}
                   fullscreenChartId={fullscreenWidgetId}
                   onToggleFullscreen={(widgetId) => setFullscreenWidgetId((current) => current === widgetId ? null : widgetId)}
+                  showCardHeader={false}
                 />
               ) : (
                 <EmptyCanvasState
@@ -913,12 +933,10 @@ export default function DashboardPage() {
         </div>
 
         <SidebarRight
-          isOpen={rightPanelOpen}
           widgets={dashboardWidgets}
           selectedWidgetId={selectedWidget?.id ?? null}
           projectName={activeProject.name}
           dashboardName={activeDashboard.name}
-          onToggle={toggleRightSidebar}
           onSelectWidget={selectWidget}
           onRemoveWidget={removeWidget}
         />
@@ -944,6 +962,7 @@ export default function DashboardPage() {
                 isEditable={false}
                 isSelectable={false}
                 className="is-export-surface"
+                showCardHeader={false}
               />
             </div>
           </div>

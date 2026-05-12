@@ -113,3 +113,17 @@
 .dashboard-workspace-page .dashboard-canvas-grid .react-grid-item.resizing .chart-card {
   will-change: width, height, transform;
 }
+
+.dashboard-workspace-page .chart-card.has-no-card-header {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.dashboard-workspace-page .chart-card.has-no-card-header .chart-card-body {
+  padding: clamp(8px, 0.8vw, 12px);
+}
+
+.dashboard-workspace-page .chart-card.has-no-card-header.chart-card--compact .chart-card-body,
+.dashboard-workspace-page .chart-card.has-no-card-header.chart-card--tiny .chart-card-body,
+.dashboard-workspace-page .chart-card.has-no-card-header.chart-card--square-min .chart-card-body {
+  padding: clamp(6px, 0.7vw, 10px);
+}

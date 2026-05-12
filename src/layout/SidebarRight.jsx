@@ -69,12 +69,10 @@ function WidgetListItem({ widget, isActive, onSelectWidget, onRemoveWidget }) {
 }
 
 export default function SidebarRight({
-  isOpen = true,
   widgets = [],
   selectedWidgetId = null,
   projectName = "",
   dashboardName = "",
-  onToggle,
   onSelectWidget,
   onRemoveWidget,
 }) {
@@ -98,23 +96,6 @@ export default function SidebarRight({
   const hasWidgets = widgets.length > 0;
   const dashboardContextLabel = [projectName, dashboardName].filter(Boolean).join(" / ");
   const workspaceContextLabel = [activeSheet?.name ?? "No sheet", activeDashboard?.name ?? "No dashboard"].join(" / ");
-
-  if (!isOpen) {
-    return (
-      <InspectorLayout className="dashboard-sidebar is-collapsed" aria-label="Dashboard inspector">
-        <button
-          type="button"
-          onClick={onToggle}
-          className="dashboard-sidebar-rail-button"
-          aria-label="Open dashboard inspector"
-        >
-          <span className="dashboard-sidebar-rail-pulse" />
-          <span className="dashboard-sidebar-rail-icon">BI</span>
-          <span className="dashboard-sidebar-rail-text">Inspector</span>
-        </button>
-      </InspectorLayout>
-    );
-  }
 
   if (!isWorkspaceInspector) {
     return (
@@ -177,14 +158,6 @@ export default function SidebarRight({
           <span className={`dashboard-sidebar-overview-badge${hasWidgets ? " is-live" : ""}`}>
             {hasWidgets ? "Active" : "Draft"}
           </span>
-          <button
-            type="button"
-            onClick={onToggle}
-            className="dashboard-sidebar-toggle"
-            aria-label="Collapse dashboard inspector"
-          >
-            -
-          </button>
         </div>
       </div>
 

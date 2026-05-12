@@ -17,11 +17,44 @@ function Toggle({ label, checked, onChange }) {
   );
 }
 
-export default function ChartSettingsPanel({ template, settings, onSettingChange }) {
+const CARTESIAN_FAMILIES = new Set(["bar", "line", "area", "scatter", "bubble", "mixed"]);
+
+function firstMappingValue(mapping = {}, roles = []) {
+  for (const role of roles) {
+    const value = mapping?.[role];
+    if (Array.isArray(value)) {
+      const first = value.find(Boolean);
+      if (first) return first;
+      continue;
+    }
+    if (value) return value;
+  }
+  return "";
+}
+
+function getAxisTitleFallbacks(template, mapping = {}) {
+  if (!CARTESIAN_FAMILIES.has(template?.family) || template?.variant === "floating") {
+    return { xAxisTitle: "", yAxisTitle: "" };
+  }
+
+  const horizontal = template?.family === "bar" && (template?.variant === "horizontal" || template?.defaultSettings?.horizontal);
+  const categoryField = firstMappingValue(mapping, ["x"]);
+  const valueField = firstMappingValue(mapping, ["y", "value", "bar", "line", "measures", "size"]);
+
+  return horizontal
+    ? { xAxisTitle: valueField, yAxisTitle: categoryField }
+    : { xAxisTitle: categoryField, yAxisTitle: valueField };
+}
+
+export default function ChartSettingsPanel({ template, mapping = {}, settings, onSettingChange }) {
   const allowStacked = ["bar", "area", "mixed"].includes(template?.family);
   const allowHorizontal = template?.family === "bar" && template?.variant !== "floating";
   const allowLineWidth = ["line", "area", "mixed", "scatter", "bubble", "radar"].includes(template?.family);
   const allowBarRadius = ["bar", "mixed"].includes(template?.family);
+  const showAxisTitleControls = CARTESIAN_FAMILIES.has(template?.family) && template?.variant !== "floating";
+  const axisTitleFallbacks = getAxisTitleFallbacks(template, mapping);
+  const xAxisTitleValue = settings.xAxisTitle || axisTitleFallbacks.xAxisTitle;
+  const yAxisTitleValue = settings.yAxisTitle || axisTitleFallbacks.yAxisTitle;
 
   return (
     <section className="builder-v3-panel builder-v3-settings-panel">
@@ -71,6 +104,28 @@ export default function ChartSettingsPanel({ template, settings, onSettingChange
               <option value="count">Count</option>
             </select>
           </label>
+
+          {showAxisTitleControls ? (
+            <>
+              <label className="builder-v3-field">
+                <span>X-axis title</span>
+                <input
+                  value={xAxisTitleValue}
+                  placeholder={axisTitleFallbacks.xAxisTitle || "Mapped X field"}
+                  onChange={(event) => onSettingChange("xAxisTitle", event.target.value)}
+                />
+              </label>
+
+              <label className="builder-v3-field">
+                <span>Y-axis title</span>
+                <input
+                  value={yAxisTitleValue}
+                  placeholder={axisTitleFallbacks.yAxisTitle || "Mapped Y field"}
+                  onChange={(event) => onSettingChange("yAxisTitle", event.target.value)}
+                />
+              </label>
+            </>
+          ) : null}
         </div>
 
         <div className="builder-v3-toggle-grid">
@@ -80,6 +135,20 @@ export default function ChartSettingsPanel({ template, settings, onSettingChange
             onChange={(value) => onSettingChange("showTitle", value)}
           />
           <Toggle label="Show legend" checked={settings.showLegend} onChange={(value) => onSettingChange("showLegend", value)} />
+          {showAxisTitleControls ? (
+            <>
+              <Toggle
+                label="Show X-axis title"
+                checked={settings.showXAxisTitle ?? Boolean(axisTitleFallbacks.xAxisTitle)}
+                onChange={(value) => onSettingChange("showXAxisTitle", value)}
+              />
+              <Toggle
+                label="Show Y-axis title"
+                checked={settings.showYAxisTitle ?? Boolean(axisTitleFallbacks.yAxisTitle)}
+                onChange={(value) => onSettingChange("showYAxisTitle", value)}
+              />
+            </>
+          ) : null}
           <Toggle label="Show grid" checked={settings.showGrid} onChange={(value) => onSettingChange("showGrid", value)} />
           <Toggle label="Begin at zero" checked={settings.beginAtZero} onChange={(value) => onSettingChange("beginAtZero", value)} />
           {allowStacked ? (

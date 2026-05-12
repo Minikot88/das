@@ -142,6 +142,7 @@ export default function BuilderPage() {
         <div className="builder-v3-column builder-v3-column-right">
           <ChartSettingsPanel
             template={builder.selectedTemplate}
+            mapping={builder.mapping}
             settings={builder.settings}
             onSettingChange={builder.updateSetting}
           />

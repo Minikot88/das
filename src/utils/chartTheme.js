@@ -19,6 +19,20 @@ function normalizeLegendPosition(position = "bottom") {
   return "bottom";
 }
 
+function createScaleTitleOptions({ display = false, text = "", color = "#475569" } = {}) {
+  const safeText = typeof text === "string" ? text.trim() : "";
+  return {
+    display: Boolean(display && safeText),
+    text: safeText,
+    color,
+    font: {
+      size: 12,
+      weight: "600",
+    },
+    padding: { top: 8, bottom: 4 },
+  };
+}
+
 export function createChartJsBaseOptions({
   title = "",
   subtitle = "",
@@ -89,6 +103,10 @@ export function createCartesianOptions({
   beginAtZero = true,
   showGrid = true,
   secondaryAxis = false,
+  showXAxisTitle = false,
+  xAxisTitle = "",
+  showYAxisTitle = false,
+  yAxisTitle = "",
   backgroundColor = "#ffffff",
   titleColor = "#0f172a",
   axisLabelColor = "#475569",
@@ -108,6 +126,11 @@ export function createCartesianOptions({
     scales: {
       x: {
         stacked,
+        title: createScaleTitleOptions({
+          display: showXAxisTitle,
+          text: xAxisTitle,
+          color: axisLabelColor,
+        }),
         grid: {
           display: showGrid,
           color: gridColor,
@@ -121,6 +144,11 @@ export function createCartesianOptions({
       y: {
         stacked,
         beginAtZero,
+        title: createScaleTitleOptions({
+          display: showYAxisTitle,
+          text: yAxisTitle,
+          color: axisLabelColor,
+        }),
         grid: {
           display: showGrid,
           color: gridColor,

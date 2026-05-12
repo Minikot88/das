@@ -36,6 +36,7 @@ export default function DashboardGrid({
   isEditable = true,
   isSelectable = true,
   themeMode,
+  showCardHeader = true,
   className = "",
 }) {
   const normalizedLayout = normalizeLayoutItems(layout, widgets);
@@ -57,7 +58,7 @@ export default function DashboardGrid({
       containerPadding={DASHBOARD_GRID_PADDING}
       isResizable={isEditable}
       isDraggable={isEditable}
-      draggableHandle=".card-drag-handle"
+      draggableHandle={showCardHeader ? ".card-drag-handle" : ".dashboard-widget-slot"}
       draggableCancel=".chart-card-controls, .card-actions-wrap, .card-actions-menu, button, input, textarea, select, a, [data-grid-drag-cancel='true']"
       resizeHandles={isEditable ? ["se"] : []}
       compactType={DASHBOARD_COMPACT_TYPE}
@@ -114,6 +115,7 @@ export default function DashboardGrid({
                 isFullscreen={fullscreenChartId === widget.id}
                 onToggleFullscreen={isEditable ? () => onToggleFullscreen?.(widget.id) : undefined}
                 themeMode={themeMode}
+                showCardHeader={showCardHeader}
               />
             </div>
           </div>

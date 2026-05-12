@@ -25,6 +25,10 @@ const BASE_SETTINGS = {
   aggregation: "sum",
   legendPosition: "bottom",
   showLegend: true,
+  showXAxisTitle: true,
+  xAxisTitle: "",
+  showYAxisTitle: true,
+  yAxisTitle: "",
   stacked: false,
   horizontal: false,
   beginAtZero: true,
@@ -40,6 +44,7 @@ const BASE_SETTINGS = {
 };
 
 const LEGEND_POSITIONS = new Set(["top", "bottom", "left", "right"]);
+const CARTESIAN_FAMILIES = new Set(["bar", "line", "area", "scatter", "bubble", "mixed"]);
 
 function getDefaultTitleForTemplate(template) {
   if (!template) return "Chart";
@@ -106,7 +111,60 @@ function resolveUnifiedBackground(settings = {}) {
   return trimmed || fallback;
 }
 
-function createPersistedSettings(template, settings = {}) {
+function isCartesianTemplate(template) {
+  return CARTESIAN_FAMILIES.has(template?.family) && template?.variant !== "floating";
+}
+
+function firstMappingValue(mapping = {}, roles = []) {
+  for (const role of roles) {
+    const value = mapping?.[role];
+    if (Array.isArray(value)) {
+      const first = value.find(Boolean);
+      if (first) return first;
+      continue;
+    }
+    if (value) return value;
+  }
+  return "";
+}
+
+function getAxisTitleFallbacks(template, mapping = {}) {
+  if (!isCartesianTemplate(template)) return { xAxisTitle: "", yAxisTitle: "" };
+
+  const horizontal = template?.family === "bar" && (template?.variant === "horizontal" || template?.defaultSettings?.horizontal);
+  const categoryField = firstMappingValue(mapping, ["x"]);
+  const valueField = firstMappingValue(mapping, ["y", "value", "bar", "line", "measures", "size"]);
+
+  return horizontal
+    ? { xAxisTitle: valueField, yAxisTitle: categoryField }
+    : { xAxisTitle: categoryField, yAxisTitle: valueField };
+}
+
+function resolveAxisTitleSettings(template, settings = {}, mapping = {}) {
+  if (!isCartesianTemplate(template)) {
+    return {
+      showXAxisTitle: false,
+      xAxisTitle: "",
+      showYAxisTitle: false,
+      yAxisTitle: "",
+    };
+  }
+
+  const fallbacks = getAxisTitleFallbacks(template, mapping);
+  const rawXAxisTitle = typeof settings.xAxisTitle === "string" ? settings.xAxisTitle.trim() : "";
+  const rawYAxisTitle = typeof settings.yAxisTitle === "string" ? settings.yAxisTitle.trim() : "";
+  const xAxisTitle = rawXAxisTitle || fallbacks.xAxisTitle;
+  const yAxisTitle = rawYAxisTitle || fallbacks.yAxisTitle;
+
+  return {
+    showXAxisTitle: settings.showXAxisTitle ?? Boolean(fallbacks.xAxisTitle),
+    xAxisTitle,
+    showYAxisTitle: settings.showYAxisTitle ?? Boolean(fallbacks.yAxisTitle),
+    yAxisTitle,
+  };
+}
+
+function createPersistedSettings(template, settings = {}, mapping = {}) {
   const {
     cardBackground,
     chartCardBackground,
@@ -115,8 +173,10 @@ function createPersistedSettings(template, settings = {}) {
   } = settings ?? {};
   const trimmedTitle = typeof settings.title === "string" ? settings.title.trim() : "";
   const trimmedSubtitle = typeof settings.subtitle === "string" ? settings.subtitle.trim() : "";
+  const axisTitleSettings = resolveAxisTitleSettings(template, settings, mapping);
   return {
     ...rest,
+    ...axisTitleSettings,
     title: trimmedTitle || getDefaultTitleForTemplate(template),
     subtitle: trimmedSubtitle,
     legendPosition: sanitizeLegendPosition(settings.legendPosition, template?.defaultSettings?.legendPosition || "bottom"),
@@ -154,22 +214,38 @@ function createEmptyState() {
   };
 }
 
+function createStateSettings(template, savedState = {}) {
+  const settings = savedState.settings ?? {};
+  const trimmedTitle = typeof settings.title === "string" ? settings.title.trim() : "";
+  const trimmedSubtitle = typeof settings.subtitle === "string" ? settings.subtitle.trim() : "";
+  const fallbacks = getAxisTitleFallbacks(template, savedState.mapping ?? {});
+
+  return {
+    ...BASE_SETTINGS,
+    ...template.defaultSettings,
+    ...settings,
+    title: trimmedTitle || getDefaultTitleForTemplate(template),
+    subtitle: trimmedSubtitle,
+    legendPosition: sanitizeLegendPosition(settings.legendPosition, template?.defaultSettings?.legendPosition || "bottom"),
+    backgroundColor: resolveUnifiedBackground(settings),
+    showXAxisTitle: settings.showXAxisTitle ?? Boolean(fallbacks.xAxisTitle),
+    xAxisTitle: typeof settings.xAxisTitle === "string" ? settings.xAxisTitle.trim() : "",
+    showYAxisTitle: settings.showYAxisTitle ?? Boolean(fallbacks.yAxisTitle),
+    yAxisTitle: typeof settings.yAxisTitle === "string" ? settings.yAxisTitle.trim() : "",
+  };
+}
+
 function getRoleConfig(template, roleKey) {
   return template?.roles?.find((role) => role.key === roleKey) ?? null;
 }
 
 function normalizeTemplateState(template, savedState = {}) {
-  const normalizedSettings = createPersistedSettings(template, savedState.settings ?? {});
   return {
     mapping: {
       ...template.defaultMapping,
       ...savedState.mapping,
     },
-    settings: {
-      ...BASE_SETTINGS,
-      ...template.defaultSettings,
-      ...normalizedSettings,
-    },
+    settings: createStateSettings(template, savedState),
   };
 }
 
@@ -276,6 +352,20 @@ function createEditingState(chart, templates, dataset, schema) {
     chart.config?.options?.plugins?.legend?.position ??
     template?.defaultSettings?.legendPosition ??
     "bottom";
+  const rawShowXAxisTitle =
+    chart.settings?.showXAxisTitle ??
+    chart.config?.options?.scales?.x?.title?.display;
+  const rawXAxisTitle =
+    chart.settings?.xAxisTitle ??
+    chart.config?.options?.scales?.x?.title?.text ??
+    "";
+  const rawShowYAxisTitle =
+    chart.settings?.showYAxisTitle ??
+    chart.config?.options?.scales?.y?.title?.display;
+  const rawYAxisTitle =
+    chart.settings?.yAxisTitle ??
+    chart.config?.options?.scales?.y?.title?.text ??
+    "";
   const resolvedTitle = typeof rawTitle === "string"
     ? rawTitle.trim()
     : "";
@@ -287,6 +377,10 @@ function createEditingState(chart, templates, dataset, schema) {
       showTitle: chart.settings?.showTitle ?? true,
       subtitle: typeof rawSubtitle === "string" ? rawSubtitle.trim() : "",
       legendPosition: sanitizeLegendPosition(rawLegendPosition, "bottom"),
+      showXAxisTitle: rawShowXAxisTitle,
+      xAxisTitle: typeof rawXAxisTitle === "string" ? rawXAxisTitle.trim() : "",
+      showYAxisTitle: rawShowYAxisTitle,
+      yAxisTitle: typeof rawYAxisTitle === "string" ? rawYAxisTitle.trim() : "",
     },
   });
 
@@ -328,7 +422,7 @@ function createChartPayload({
   effectiveRows,
   effectiveSchema,
 }) {
-  const persistedSettings = createPersistedSettings(selectedTemplate, state.settings);
+  const persistedSettings = createPersistedSettings(selectedTemplate, state.settings, state.mapping);
   const resolvedTitle = persistedSettings.title;
   return {
     projectId,
@@ -507,12 +601,13 @@ export default function useChartBuilder(builderContext, editingChartId = "") {
       }
 
       try {
+        const previewSettings = createPersistedSettings(selectedTemplate, state.settings, state.mapping);
         const previewConfig = await createChartConfig({
           templateId: selectedTemplate.id,
           rows: effectiveRows,
           schema: effectiveSchema,
           mapping: state.mapping,
-          settings: state.settings,
+          settings: previewSettings,
         });
 
         if (!isActive) return;

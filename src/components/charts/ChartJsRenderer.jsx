@@ -63,6 +63,9 @@ function applyBuilderPreviewDarkTheme(config) {
   }
 
   Object.values(nextConfig.options.scales ?? {}).forEach((scale) => {
+    if (scale?.title && isDefaultAxisColor(scale.title.color)) {
+      scale.title.color = "#cbd5e1";
+    }
     if (scale?.ticks && isDefaultAxisColor(scale.ticks.color)) {
       scale.ticks.color = "#cbd5e1";
     }
