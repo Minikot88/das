@@ -1,69 +1,106 @@
 import React, { useMemo, useState } from "react";
 
 const TYPE_META = {
-  category: { badge: "TXT", tone: "is-category" },
-  string: { badge: "TXT", tone: "is-category" },
-  number: { badge: "123", tone: "is-number" },
-  date: { badge: "DATE", tone: "is-date" },
-  boolean: { badge: "BOOL", tone: "is-boolean" },
+  category: { label: "Dimension", badge: "Dimension", tone: "is-category", group: "dimensions" },
+  string: { label: "Dimension", badge: "Dimension", tone: "is-category", group: "dimensions" },
+  number: { label: "Measure", badge: "Measure", tone: "is-number", group: "measures" },
+  date: { label: "Date", badge: "Date", tone: "is-date", group: "dimensions" },
+  boolean: { label: "Dimension", badge: "Dimension", tone: "is-boolean", group: "dimensions" },
 };
 
-function ExplorerNode({
-  label,
-  meta = "",
-  icon = "DB",
-  defaultOpen = true,
-  depth = 0,
-  isFirst = true,
-  isLast = true,
-  children,
-}) {
+function formatDatasetName(value = "") {
+  return String(value || "Dataset")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function formatType(value = "") {
+  return String(value || "field").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function FieldGroup({ title, count, children, defaultOpen = true }) {
   const [open, setOpen] = useState(defaultOpen);
-  const hasChildren = Boolean(children);
 
   return (
-    <div
-      className={[
-        "builder-v3-explorer-node",
-        "tree-node",
-        `tree-node-depth-${depth}`,
-        `depth-${depth}`,
-        open ? "tree-node-expanded is-expanded" : "tree-node-collapsed",
-        isFirst ? "tree-node-first is-first" : "",
-        isLast ? "tree-node-last is-last" : "tree-node-has-next",
-      ].join(" ")}
-    >
+    <section className="builder-v3-field-group">
       <button
         type="button"
-        className={`builder-v3-explorer-toggle tree-node-row${open ? " is-open" : ""}`}
+        className="builder-v3-field-group-toggle"
         onClick={() => setOpen((current) => !current)}
         aria-expanded={open}
       >
-        <span className="builder-v3-explorer-chevron" aria-hidden="true">
-          {open ? "v" : ">"}
-        </span>
-        <span className="builder-v3-explorer-icon" aria-hidden="true">
-          {icon}
-        </span>
-        <span className="builder-v3-explorer-copy">
-          <strong>{label}</strong>
-          {meta ? <small>{meta}</small> : null}
-        </span>
+        <span>{title}</span>
+        <small>{count}</small>
       </button>
-      {open && hasChildren ? <div className="builder-v3-explorer-children tree-children">{children}</div> : null}
-    </div>
+      {open ? <div className="builder-v3-explorer-fields">{children}</div> : null}
+    </section>
+  );
+}
+
+function FieldRow({ field, onDragStart }) {
+  const fieldMeta = TYPE_META[field.type] ?? TYPE_META.string;
+  const label = field.label ?? field.name;
+  const showOriginalName = field.name && field.name !== label;
+
+  return (
+    <button
+      type="button"
+      className="builder-v3-explorer-field"
+      draggable
+      onDragStart={(event) => onDragStart(event, field)}
+      title={showOriginalName ? `${label} (${field.name})` : label}
+    >
+      <span className={`builder-v3-field-type-badge ${fieldMeta.tone}`}>{fieldMeta.badge}</span>
+      <span className="builder-v3-explorer-field-copy">
+        <strong>{label}</strong>
+        <small>{showOriginalName ? field.name : formatType(field.type)}</small>
+      </span>
+    </button>
   );
 }
 
 export default function FieldList({ dataset, schema, onDragStart, queryMode = "visual" }) {
-  const explorerMeta = useMemo(() => ({
-    connectionName: dataset?.connectionName ?? "Mock Connection",
-    namespace: dataset?.namespace ?? "analytics",
-    tableName: dataset?.tableName ?? dataset?.id ?? "dataset",
-    sourceLabel: dataset?.sourceLabel ?? (queryMode === "sql" ? "SQL result" : "Base dataset"),
-  }), [dataset, queryMode]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const explorerMeta = useMemo(() => {
+    const tableName = dataset?.tableName ?? dataset?.id ?? "dataset";
+    return {
+      connectionName: dataset?.connectionName ?? "Mock Connection",
+      namespace: dataset?.namespace ?? "analytics",
+      tableName,
+      datasetName: dataset?.name ?? formatDatasetName(tableName),
+      sourceLabel: dataset?.sourceLabel ?? (queryMode === "sql" ? "SQL result" : "Base dataset"),
+    };
+  }, [dataset, queryMode]);
 
-  const fields = schema?.fields ?? [];
+  const fields = useMemo(() => schema?.fields ?? [], [schema]);
+  const normalizedSearchTerm = searchTerm.trim().toLowerCase();
+  const filteredFields = useMemo(() => {
+    if (!normalizedSearchTerm) return fields;
+    return fields.filter((field) => {
+      const label = field.label ?? field.name;
+      return [label, field.name, field.type]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(normalizedSearchTerm));
+    });
+  }, [fields, normalizedSearchTerm]);
+
+  const groupedFields = useMemo(
+    () =>
+      filteredFields.reduce(
+        (groups, field) => {
+          const fieldMeta = TYPE_META[field.type] ?? TYPE_META.string;
+          groups[fieldMeta.group].push(field);
+          return groups;
+        },
+        { dimensions: [], measures: [] }
+      ),
+    [filteredFields]
+  );
+
+  const emptySearch = normalizedSearchTerm && !filteredFields.length;
+  const rowsCount = dataset?.rows?.length ?? 0;
 
   return (
     <section className="builder-v3-panel builder-v3-panel-stretch builder-v3-explorer-panel">
@@ -72,65 +109,70 @@ export default function FieldList({ dataset, schema, onDragStart, queryMode = "v
           <span className="builder-v3-kicker">Data Source</span>
           <h2 className="builder-v3-title">Explorer</h2>
         </div>
-        <span className="builder-v3-pill">{fields.length} columns</span>
+        <span className="builder-v3-pill">{fields.length} fields</span>
       </div>
 
       <div className="builder-v3-dataset-card builder-v3-dataset-card-compact builder-v3-explorer-summary">
-        <strong>{dataset?.name ?? "Dataset"}</strong>
-        <span>{explorerMeta.sourceLabel}</span>
-        <div className="builder-v3-dataset-stats">
-          <span>{dataset?.rows?.length ?? 0} rows</span>
-          <span>{fields.length} fields</span>
-        </div>
+        <strong>{explorerMeta.datasetName}</strong>
+        <span>{rowsCount} rows · {fields.length} fields</span>
       </div>
 
+      <label className="builder-v3-field-search">
+        <span className="sr-only">Search fields</span>
+        <input
+          type="search"
+          value={searchTerm}
+          onChange={(event) => setSearchTerm(event.target.value)}
+          placeholder="Search fields..."
+          aria-label="Search fields"
+        />
+      </label>
+
       <div className="builder-v3-explorer">
-        <ExplorerNode label="Data Source" meta="Builder connection" icon="DB" depth={0} isFirst isLast>
-          <ExplorerNode label={explorerMeta.connectionName} meta="Connection" icon="CN" depth={1} isFirst isLast>
-            <ExplorerNode label={explorerMeta.namespace} meta="Schema" icon="SC" depth={2} isFirst isLast>
-              <ExplorerNode
-                label={explorerMeta.tableName}
-                meta={`${dataset?.rows?.length ?? 0} rows`}
-                icon="TB"
-                depth={3}
-                isFirst
-                isLast
-              >
-                <div className="builder-v3-explorer-fields tree-children">
-                  {fields.map((field, index) => {
-                    const fieldMeta = TYPE_META[field.type] ?? TYPE_META.string;
-                    const isFirstField = index === 0;
-                    const isLastField = index === fields.length - 1;
-                    return (
-                      <button
-                        key={field.name}
-                        type="button"
-                        className={[
-                          "builder-v3-explorer-field",
-                          "tree-node-row",
-                          "tree-field-row",
-                          isFirstField ? "tree-node-first is-first" : "",
-                          isLastField ? "tree-node-last is-last" : "tree-node-has-next",
-                        ].join(" ")}
-                        draggable
-                        onDragStart={(event) => onDragStart(event, field)}
-                        title={field.label ?? field.name}
-                      >
-                        <span className={`builder-v3-field-type-badge ${fieldMeta.tone}`}>{fieldMeta.badge}</span>
-                        <span className="builder-v3-explorer-field-copy">
-                          <strong>{field.label ?? field.name}</strong>
-                          <small>{field.name}</small>
-                        </span>
-                        <span className="builder-v3-explorer-field-kind">{field.type}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </ExplorerNode>
-            </ExplorerNode>
-          </ExplorerNode>
-        </ExplorerNode>
+        {emptySearch ? (
+          <div className="builder-v3-field-empty">No fields found</div>
+        ) : (
+          <>
+            {(!normalizedSearchTerm || groupedFields.dimensions.length > 0) ? (
+              <FieldGroup title="Dimensions" count={groupedFields.dimensions.length}>
+                {groupedFields.dimensions.map((field) => (
+                  <FieldRow key={field.name} field={field} onDragStart={onDragStart} />
+                ))}
+              </FieldGroup>
+            ) : null}
+
+            {(!normalizedSearchTerm || groupedFields.measures.length > 0) ? (
+              <FieldGroup title="Measures" count={groupedFields.measures.length}>
+                {groupedFields.measures.map((field) => (
+                  <FieldRow key={field.name} field={field} onDragStart={onDragStart} />
+                ))}
+              </FieldGroup>
+            ) : null}
+          </>
+        )}
       </div>
+
+      <details className="builder-v3-connection-details">
+        <summary>Connection details</summary>
+        <dl>
+          <div>
+            <dt>Connection</dt>
+            <dd>{explorerMeta.connectionName}</dd>
+          </div>
+          <div>
+            <dt>Schema</dt>
+            <dd>{explorerMeta.namespace}</dd>
+          </div>
+          <div>
+            <dt>Table</dt>
+            <dd>{explorerMeta.tableName}</dd>
+          </div>
+          <div>
+            <dt>Source</dt>
+            <dd>{explorerMeta.sourceLabel}</dd>
+          </div>
+        </dl>
+      </details>
     </section>
   );
 }

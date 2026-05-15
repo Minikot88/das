@@ -122,7 +122,6 @@ const ChartCard = memo(function ChartCard({
         ...(shouldRenderHeader ? {} : { gridTemplateRows: "minmax(0, 1fr)" }),
         "--card-accent": accent,
         ...(circularSize ? { "--chart-circular-size": `${circularSize}px` } : {}),
-        ...(cardBackground ? { "--chart-card-surface": cardBackground } : {}),
       }}
       role="article"
       aria-label={safeTitle ? `Chart: ${safeTitle}` : "Chart card"}

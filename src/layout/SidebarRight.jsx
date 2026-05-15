@@ -58,7 +58,10 @@ function WidgetListItem({ widget, isActive, onSelectWidget, onRemoveWidget }) {
       </button>
       <button
         type="button"
-        onClick={() => onRemoveWidget(widget.id)}
+        onClick={(event) => {
+          event.stopPropagation();
+          onRemoveWidget(widget.id);
+        }}
         className="dashboard-sidebar-delete-btn"
         aria-label={`Remove ${widget.name}`}
       >

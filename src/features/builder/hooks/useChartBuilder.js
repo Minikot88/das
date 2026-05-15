@@ -165,12 +165,10 @@ function resolveAxisTitleSettings(template, settings = {}, mapping = {}) {
 }
 
 function createPersistedSettings(template, settings = {}, mapping = {}) {
-  const {
-    cardBackground,
-    chartCardBackground,
-    chartBackground,
-    ...rest
-  } = settings ?? {};
+  const rest = { ...(settings ?? {}) };
+  delete rest.cardBackground;
+  delete rest.chartCardBackground;
+  delete rest.chartBackground;
   const trimmedTitle = typeof settings.title === "string" ? settings.title.trim() : "";
   const trimmedSubtitle = typeof settings.subtitle === "string" ? settings.subtitle.trim() : "";
   const axisTitleSettings = resolveAxisTitleSettings(template, settings, mapping);

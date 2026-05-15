@@ -308,6 +308,7 @@ export default function DashboardPage() {
   const actionsMenuRef = useRef(null);
   const dashboardCaptureRef = useRef(null);
   const previousWidgetCountRef = useRef(0);
+  const removingWidgetIdsRef = useRef(new Set());
 
   function notify(message, tone = "info") {
     setNotice({ message, tone, id: Date.now() });
@@ -455,6 +456,17 @@ export default function DashboardPage() {
   }, [dashboardWidgets, fullscreenWidgetId]);
 
   useEffect(() => {
+    if (!removingWidgetIdsRef.current.size) return;
+
+    const liveWidgetIds = new Set(dashboardWidgets.map((widget) => widget.id));
+    removingWidgetIdsRef.current.forEach((widgetId) => {
+      if (!liveWidgetIds.has(widgetId)) {
+        removingWidgetIdsRef.current.delete(widgetId);
+      }
+    });
+  }, [dashboardWidgets]);
+
+  useEffect(() => {
     if (!currentProjectId || !activeSheet?.id || !activeDashboard?.id) {
       setDashboardShareId("");
       return;
@@ -543,12 +555,14 @@ export default function DashboardPage() {
 
   function removeWidget(widgetId) {
     if (!activeSheet?.id || !activeDashboard?.id) return;
-    console.log("[Dashboard Remove]", widgetId);
+    const widget = dashboardWidgets.find((item) => item.id === widgetId);
+    const layoutWidgetId = widget?.layout?.i ?? widgetId;
+    removingWidgetIdsRef.current.add(layoutWidgetId);
     if (activeDashboardId !== activeDashboard.id) {
       setActiveDashboard(activeDashboard.id);
     }
-    removeChart(activeSheet.id, widgetId, activeDashboard.id);
-    if (widgetId === selectedWidgetId) {
+    removeChart(activeSheet.id, layoutWidgetId, activeDashboard.id);
+    if (layoutWidgetId === selectedWidgetId || widgetId === selectedWidgetId) {
       setSelectedWidget(activeDashboard?.id, null);
     }
     setContextMenuState(null);
@@ -556,7 +570,11 @@ export default function DashboardPage() {
 
   function handleLayoutChange(nextLayout) {
     if (!activeSheet?.id) return;
-    updateLayout(activeSheet.id, nextLayout);
+    const removingWidgetIds = removingWidgetIdsRef.current;
+    const nextSafeLayout = removingWidgetIds.size
+      ? nextLayout.filter((item) => !removingWidgetIds.has(item.i))
+      : nextLayout;
+    updateLayout(activeSheet.id, nextSafeLayout);
   }
 
   function openContextMenu(type, target, event) {
