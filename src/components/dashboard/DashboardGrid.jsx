@@ -63,6 +63,8 @@ export default function DashboardGrid({
       resizeHandles={isEditable ? ["se"] : []}
       compactType={DASHBOARD_COMPACT_TYPE}
       preventCollision={false}
+      preventOverlap={false}
+      isBounded
       useCSSTransforms
       onLayoutChange={isEditable ? handleLayoutChange : undefined}
     >

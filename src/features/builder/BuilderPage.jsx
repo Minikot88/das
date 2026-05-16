@@ -48,6 +48,17 @@ export default function BuilderPage() {
   );
 
   const builder = useChartBuilder(builderContext, editingChartId);
+  const mappedFieldNames = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          Object.values(builder.mapping ?? {}).flatMap((value) =>
+            Array.isArray(value) ? value.filter(Boolean) : value ? [value] : []
+          )
+        )
+      ),
+    [builder.mapping]
+  );
 
   async function handleSave() {
     try {
@@ -97,6 +108,7 @@ export default function BuilderPage() {
             dataset={builder.explorerDataset}
             schema={builder.effectiveSchema}
             queryMode={builder.queryMode}
+            mappedFieldNames={mappedFieldNames}
             onDragStart={(event, field) => {
               event.dataTransfer.setData("application/json", JSON.stringify(field));
               event.dataTransfer.effectAllowed = "copy";

@@ -2315,3 +2315,162 @@ body.dark .dashboard-workspace-page .dashboard-workspace-canvas-frame {
     height: clamp(300px, 76vw, 390px) !important;
   }
 }
+/* 2026-05 Power BI-style UX polish */
+:root {
+  --pbi-blue: #2f75ff;
+  --pbi-blue-soft: rgba(47, 117, 255, 0.12);
+  --pbi-panel-border: #d4deea;
+  --pbi-canvas-bg: #f2f6fb;
+}
+
+.appbar {
+  border-bottom: 1px solid var(--pbi-panel-border);
+  background: #f8fbff;
+}
+
+.appbar-nav-link.active {
+  background: var(--pbi-blue-soft);
+  color: #1a4fc4;
+  border-color: color-mix(in srgb, var(--pbi-blue) 35%, transparent);
+}
+
+.sidebar-left {
+  border-right: 1px solid var(--pbi-panel-border);
+  background: #f7f9fc;
+}
+
+.sidebar-left .nav-link.active {
+  background: #ffffff;
+  border-color: color-mix(in srgb, var(--pbi-blue) 35%, transparent);
+  box-shadow: inset 3px 0 0 var(--pbi-blue);
+}
+
+.dashboard-workspace-page .dashboard-workspace-canvas-frame {
+  background:
+    linear-gradient(90deg, rgba(207, 218, 233, 0.58) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(207, 218, 233, 0.58) 1px, transparent 1px),
+    var(--pbi-canvas-bg);
+  background-size: 28px 28px, 28px 28px, auto;
+}
+
+.dashboard-workspace-page .dashboard-widget-slot.is-selected > .chart-card {
+  border-color: color-mix(in srgb, var(--pbi-blue) 48%, var(--border));
+  box-shadow: 0 0 0 2px var(--pbi-blue-soft), 0 16px 34px rgba(15, 23, 42, 0.11);
+}
+
+.dashboard-workspace-page .chart-card {
+  border-radius: 8px !important;
+  border-color: var(--pbi-panel-border);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
+}
+
+.dashboard-workspace-page .chart-card-header {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+
+.dashboard-workspace-page .chart-card-controls {
+  opacity: 0;
+  transition: opacity 0.14s ease;
+}
+
+.dashboard-workspace-page .chart-card:hover .chart-card-controls,
+.dashboard-workspace-page .dashboard-widget-slot.is-selected .chart-card-controls,
+.dashboard-workspace-page .chart-card:focus-within .chart-card-controls {
+  opacity: 1;
+}
+
+.card-actions-wrap .card-export-btn,
+.card-actions-wrap .card-menu-btn,
+.card-actions-wrap .card-action-item,
+.card-actions-wrap .card-action-confirm,
+.card-actions-wrap .card-action-ghost,
+.card-actions-wrap .card-rename-input {
+  border-radius: 6px;
+}
+
+.dashboard-sidebar {
+  border-left: 1px solid var(--pbi-panel-border);
+}
+
+.dashboard-sidebar-chart-item.is-active {
+  border-color: color-mix(in srgb, var(--pbi-blue) 35%, transparent);
+  background: #f3f8ff;
+}
+
+.dashboard-sidebar-delete-btn {
+  border-color: color-mix(in srgb, var(--danger) 35%, var(--border));
+}
+
+.builder-v3-panel,
+.builder-v3-header,
+.builder-v3-dropzone,
+.builder-v3-preview-frame,
+.builder-v3-explorer-panel .builder-v3-explorer-field {
+  border-color: var(--pbi-panel-border);
+  border-radius: 8px;
+}
+
+.builder-v3-template-card.is-active,
+.builder-v3-family-tab.is-active,
+.builder-v3-mode-tab.is-active {
+  border-color: color-mix(in srgb, var(--pbi-blue) 38%, transparent);
+  background: #edf4ff;
+  color: #1f57d2;
+}
+
+.builder-v3-explorer-panel .builder-v3-explorer-field:hover {
+  border-color: color-mix(in srgb, var(--pbi-blue) 28%, var(--border));
+  background: #f7faff;
+}
+
+.builder-v3-dropzone {
+  background: #f8fbff;
+  border-style: dashed;
+}
+
+.dashboard-share-modal {
+  width: min(920px, calc(100vw - 32px));
+  max-width: 920px;
+  border-radius: 14px;
+  padding: 22px;
+  border: 1px solid var(--pbi-panel-border);
+  box-shadow: 0 30px 80px rgba(15, 23, 42, 0.25);
+}
+
+.dashboard-share-panel,
+.dashboard-share-field,
+.dashboard-share-toggle,
+.dashboard-share-input,
+.dashboard-share-textarea {
+  border-radius: 8px;
+}
+
+.dashboard-share-panel {
+  padding: 16px;
+  border: 1px solid var(--pbi-panel-border);
+  background: #fbfdff;
+}
+
+.dashboard-share-action-row,
+.dashboard-share-toggle-grid {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.dashboard-share-field {
+  display: grid;
+  gap: 8px;
+}
+
+.dashboard-share-form-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 980px) {
+  .dashboard-share-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
