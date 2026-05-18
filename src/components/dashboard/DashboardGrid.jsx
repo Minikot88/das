@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React, { useMemo } from "react";
 import { Responsive, WidthProvider } from "react-grid-layout";
 import ChartCard from "./ChartCard";
 import {
@@ -27,6 +27,7 @@ export default function DashboardGrid({
   onSelectWidget,
   onOpenWidgetMenu,
   onLayoutChange,
+  onLayoutPreviewChange,
   onExportCSV,
   onExportPNG,
   onEditChart,
@@ -39,12 +40,23 @@ export default function DashboardGrid({
   showCardHeader = true,
   className = "",
 }) {
-  const normalizedLayout = normalizeLayoutItems(layout, widgets);
-  const responsiveLayouts = buildResponsiveLayouts(normalizedLayout);
+  const normalizedLayout = useMemo(
+    () => normalizeLayoutItems(layout, widgets),
+    [layout, widgets]
+  );
+  const responsiveLayouts = useMemo(
+    () => buildResponsiveLayouts(normalizedLayout),
+    [normalizedLayout]
+  );
 
   function handleLayoutChange(currentLayout) {
     const nextLayout = normalizeLayoutItems(currentLayout, widgets);
     onLayoutChange?.(nextLayout);
+  }
+
+  function handleLayoutPreviewChange(currentLayout) {
+    const nextLayout = normalizeLayoutItems(currentLayout, widgets);
+    onLayoutPreviewChange?.(nextLayout);
   }
 
   return (
@@ -62,11 +74,15 @@ export default function DashboardGrid({
       draggableCancel=".chart-card-controls, .card-actions-wrap, .card-actions-menu, button, input, textarea, select, a, [data-grid-drag-cancel='true']"
       resizeHandles={isEditable ? ["se"] : []}
       compactType={DASHBOARD_COMPACT_TYPE}
+      verticalCompact={false}
       preventCollision={false}
       preventOverlap={false}
-      isBounded
+      isBounded={false}
       useCSSTransforms
-      onLayoutChange={isEditable ? handleLayoutChange : undefined}
+      onDragStop={isEditable ? handleLayoutChange : undefined}
+      onResizeStop={isEditable ? handleLayoutChange : undefined}
+      onDrag={isEditable ? handleLayoutPreviewChange : undefined}
+      onResize={isEditable ? handleLayoutPreviewChange : undefined}
     >
       {widgets.map((widget) => {
         const chart = toDashboardChartModel(widget);

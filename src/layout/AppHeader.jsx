@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useState } from "react";
+﻿import React, { useMemo } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useStore } from "../store/useStore";
 
@@ -7,15 +7,6 @@ const NAV_ITEMS = [
   { to: "/dashboard", label: "Dashboard", meta: "Canvas" },
   { to: "/builder", label: "Builder", meta: "Editor" },
 ];
-
-function SearchIcon() {
-  return (
-    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
-      <circle cx="8.5" cy="8.5" r="4.75" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M12 12L16 16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" />
-    </svg>
-  );
-}
 
 function ThemeIcon({ theme }) {
   if (theme === "dark") {
@@ -55,7 +46,6 @@ export default function AppHeader() {
   const activeDashboardId = useStore((s) => s.activeDashboardId);
   const setActiveProject = useStore((s) => s.setActiveProject);
 
-  const [search, setSearch] = useState("");
   const navigate = useNavigate();
 
   const activeProject = useMemo(
@@ -135,18 +125,6 @@ export default function AppHeader() {
       </div>
 
       <div className="appbar-right">
-        <label className="appbar-search-wrap" aria-label="Search">
-          <span className="appbar-search-icon" aria-hidden="true">
-            <SearchIcon />
-          </span>
-          <input
-            className="appbar-search"
-            placeholder="Search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
-        </label>
-
         <label className="appbar-project-switcher">
           <span className="appbar-control-label">Project</span>
           <select

@@ -3,10 +3,10 @@ import { createInstanceId } from "./id";
 export const GRID_BREAKPOINTS = { lg: 1280, md: 980, sm: 720, xs: 0 };
 export const GRID_COLUMNS = { lg: 12, md: 10, sm: 6, xs: 1 };
 export const DASHBOARD_GRID_COLS = 12;
-export const DASHBOARD_GRID_MARGIN = [10, 10];
+export const DASHBOARD_GRID_MARGIN = [8, 8];
 export const DASHBOARD_GRID_PADDING = [0, 0];
-export const DASHBOARD_ROW_HEIGHT = 72;
-export const DASHBOARD_COMPACT_TYPE = "vertical";
+export const DASHBOARD_ROW_HEIGHT = 56;
+export const DASHBOARD_COMPACT_TYPE = null;
 export const MIN_WIDGET_SIZE_PX = 220;
 
 const REFERENCE_CANVAS_WIDTH = 960;

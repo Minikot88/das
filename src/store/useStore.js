@@ -23,6 +23,12 @@ const defaultDashboard = (id = "dash-1", name = "Dashboard 1") => ({
   name,
   charts: [],
   layout: [],
+  canvasSize: {
+    mode: "auto",
+    preset: "auto",
+    width: null,
+    height: null,
+  },
 });
 
 const defaultSheet = (id = "sheet-1", name = "Sheet 1", dashboardId = "dash-1", dashboardName = "Dashboard 1") => ({
@@ -125,6 +131,12 @@ function migrateState(saved) {
         name:   "Dashboard 1",
         charts: sh.charts ?? [],
         layout: sh.layout ?? [],
+        canvasSize: {
+          mode: "auto",
+          preset: "auto",
+          width: null,
+          height: null,
+        },
       }],
     }));
 
@@ -173,9 +185,17 @@ function ensureUniqueWorkspaceStructure(saved) {
         }
         seenDashboardIds.add(nextDashboardId);
         if (nextDashboardId !== dashboard.id) dashboardIdMap.set(dashboard.id, nextDashboardId);
+        const normalizedCanvasSize = {
+          mode: dashboard?.canvasSize?.mode ?? "auto",
+          preset: dashboard?.canvasSize?.preset ?? "auto",
+          width: Number.isFinite(Number(dashboard?.canvasSize?.width)) ? Number(dashboard.canvasSize.width) : null,
+          height: Number.isFinite(Number(dashboard?.canvasSize?.height)) ? Number(dashboard.canvasSize.height) : null,
+        };
+        if (!dashboard?.canvasSize) mutated = true;
         return {
           ...dashboard,
           id: nextDashboardId,
+          canvasSize: normalizedCanvasSize,
         };
       });
 
@@ -707,7 +727,13 @@ export const useStore = create((set, get) => ({
     const sheet = {
       id, name,
       activeDashboardId: dashId,
-      dashboards: [{ id: dashId, name: "Dashboard 1", charts: [], layout: [] }],
+      dashboards: [{
+        id: dashId,
+        name: "Dashboard 1",
+        charts: [],
+        layout: [],
+        canvasSize: { mode: "auto", preset: "auto", width: null, height: null },
+      }],
     };
     const projects = s.projects.map((p) =>
       p.id === s.activeProjectId
@@ -855,7 +881,13 @@ export const useStore = create((set, get) => ({
 
   createDashboard: (name) => set((s) => {
     const id   = createEntityId("dash");
-    const dash = { id, name, charts: [], layout: [] };
+    const dash = {
+      id,
+      name,
+      charts: [],
+      layout: [],
+      canvasSize: { mode: "auto", preset: "auto", width: null, height: null },
+    };
     const projects = s.projects.map((p) =>
       p.id !== s.activeProjectId ? p : {
         ...p,
@@ -870,6 +902,10 @@ export const useStore = create((set, get) => ({
     );
     const ui = {
       ...s.ui,
+      selectedWidgetIdByDashboard: {
+        ...s.ui.selectedWidgetIdByDashboard,
+        [id]: null,
+      },
       lastOpenedContextByProject: {
         ...s.ui.lastOpenedContextByProject,
         [s.activeProjectId]: buildProjectContextSnapshot(s.activeSheetId, id),
@@ -1386,6 +1422,29 @@ export const useStore = create((set, get) => ({
         ),
       }
     );
+    saveState({ ...s, projects });
+    return { projects };
+  }),
+
+  updateDashboardCanvasSize: (dashboardId, canvasSize) => set((s) => {
+    if (!dashboardId || !canvasSize) return {};
+    const normalizedCanvasSize = {
+      mode: canvasSize.mode ?? "auto",
+      preset: canvasSize.preset ?? "auto",
+      width: Number.isFinite(Number(canvasSize.width)) ? Number(canvasSize.width) : null,
+      height: Number.isFinite(Number(canvasSize.height)) ? Number(canvasSize.height) : null,
+    };
+    const projects = s.projects.map((project) => ({
+      ...project,
+      sheets: (project.sheets ?? []).map((sheet) => ({
+        ...sheet,
+        dashboards: (sheet.dashboards ?? []).map((dashboard) =>
+          dashboard.id !== dashboardId
+            ? dashboard
+            : { ...dashboard, canvasSize: normalizedCanvasSize }
+        ),
+      })),
+    }));
     saveState({ ...s, projects });
     return { projects };
   }),

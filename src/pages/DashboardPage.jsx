@@ -2,7 +2,7 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { useStore } from "../store/useStore";
 import { PageContainer, WorkspaceLayout } from "../components/layout/Layout";
-import { autoArrangeDashboardLayout } from "../utils/layoutUtils";
+import { autoArrangeDashboardLayout, DASHBOARD_GRID_MARGIN, DASHBOARD_ROW_HEIGHT } from "../utils/layoutUtils";
 import ChartPicker from "../components/dashboard/ChartPicker";
 import DashboardGrid from "../components/dashboard/DashboardGrid";
 import DashboardFullscreenModal from "../components/dashboard/DashboardFullscreenModal";
@@ -255,6 +255,17 @@ function EmptyCanvasState({ onBuildChart, onOpenSavedCharts }) {
 }
 
 export default function DashboardPage() {
+  const MIN_CANVAS_HEIGHT = 420;
+  const CANVAS_BOTTOM_PADDING = 96;
+  const CANVAS_SIZE_PRESETS = {
+    auto: { label: "Auto / Responsive", width: null, height: null, mode: "auto" },
+    "16:9": { label: "16:9 Presentation", width: 1280, height: 720, mode: "preset" },
+    "4:3": { label: "4:3 Presentation", width: 1024, height: 768, mode: "preset" },
+    square: { label: "Square", width: 1080, height: 1080, mode: "preset" },
+    "a4-portrait": { label: "A4 Portrait", width: 794, height: 1123, mode: "preset" },
+    "a4-landscape": { label: "A4 Landscape", width: 1123, height: 794, mode: "preset" },
+    custom: { label: "Custom", width: 1280, height: 720, mode: "custom" },
+  };
   const navigate = useNavigate();
   const location = useLocation();
   const projects = useStore((state) => state.projects);
@@ -264,11 +275,6 @@ export default function DashboardPage() {
   const chartsPool = useStore((state) => state.charts);
   const ui = useStore((state) => state.ui);
   const addChartToDashboard = useStore((state) => state.addChartToDashboard);
-  const createSheet = useStore((state) => state.createSheet);
-  const duplicateSheetAction = useStore((state) => state.duplicateSheet);
-  const renameSheet = useStore((state) => state.renameSheet);
-  const removeSheet = useStore((state) => state.removeSheet);
-  const setActiveSheet = useStore((state) => state.setActiveSheet);
   const createDashboard = useStore((state) => state.createDashboard);
   const duplicateDashboardAction = useStore((state) => state.duplicateDashboard);
   const renameDashboard = useStore((state) => state.renameDashboard);
@@ -281,6 +287,7 @@ export default function DashboardPage() {
   const setBuilderNavigationContext = useStore((state) => state.setBuilderNavigationContext);
   const setSelectedWidget = useStore((state) => state.setSelectedWidget);
   const getOrCreateDashboardShareLink = useStore((state) => state.getOrCreateDashboardShareLink);
+  const updateDashboardCanvasSize = useStore((state) => state.updateDashboardCanvasSize);
 
   const [pickingChart, setPickingChart] = useState(false);
   const [editingTab, setEditingTab] = useState(null);
@@ -296,6 +303,7 @@ export default function DashboardPage() {
   const [renameWidgetTarget, setRenameWidgetTarget] = useState(null);
   const [renameWidgetValue, setRenameWidgetValue] = useState("");
   const [dashboardExporting, setDashboardExporting] = useState(false);
+  const [previewLayout, setPreviewLayout] = useState(null);
   const [shareOptions, setShareOptions] = useState({
     width: 1200,
     height: 720,
@@ -340,9 +348,34 @@ export default function DashboardPage() {
     charts: chartsPool,
   });
   const workspaceStats = useMemo(() => getDashboardWorkspaceStats(dashboardWidgets), [dashboardWidgets]);
+  const canvasLayout = useMemo(
+    () => previewLayout ?? activeDashboard?.layout ?? [],
+    [previewLayout, activeDashboard?.layout]
+  );
+  const canvasMinHeight = useMemo(() => {
+    const maxBottom = (canvasLayout ?? []).reduce((max, item) => {
+      const y = item?.y ?? 0;
+      const h = item?.h ?? 0;
+      return Math.max(max, y + h);
+    }, 0);
+    const contentHeight = maxBottom > 0
+      ? (maxBottom * DASHBOARD_ROW_HEIGHT) + (Math.max(0, maxBottom - 1) * DASHBOARD_GRID_MARGIN[1]) + CANVAS_BOTTOM_PADDING
+      : MIN_CANVAS_HEIGHT;
+    return Math.max(MIN_CANVAS_HEIGHT, contentHeight);
+  }, [canvasLayout, CANVAS_BOTTOM_PADDING, MIN_CANVAS_HEIGHT]);
   const hasWidgets = dashboardWidgets.length > 0;
   const selectedWidgetId = ui.selectedWidgetIdByDashboard?.[activeDashboard?.id] ?? null;
   const selectedWidget = dashboardWidgets.find((widget) => widget.id === selectedWidgetId) ?? null;
+  const canvasSize = activeDashboard?.canvasSize ?? CANVAS_SIZE_PRESETS.auto;
+  const canvasPresetKey = canvasSize?.preset ?? "auto";
+  const isAutoCanvas = canvasPresetKey === "auto";
+  const selectedCanvasWidth = canvasSize?.width ?? CANVAS_SIZE_PRESETS[canvasPresetKey]?.width ?? null;
+  const selectedCanvasHeight = canvasSize?.height ?? CANVAS_SIZE_PRESETS[canvasPresetKey]?.height ?? null;
+  const canvasFrameWidth = isAutoCanvas ? null : Math.max(320, selectedCanvasWidth ?? 1280);
+  const canvasFrameHeight = Math.max(
+    isAutoCanvas ? MIN_CANVAS_HEIGHT : (selectedCanvasHeight ?? MIN_CANVAS_HEIGHT),
+    canvasMinHeight
+  );
   const fullscreenWidget = dashboardWidgets.find((widget) => widget.id === fullscreenWidgetId) ?? null;
   const activeSelectionLabel = selectedWidget?.name ?? "No selection";
   const publicViewUrl = useMemo(
@@ -480,6 +513,10 @@ export default function DashboardPage() {
     setDashboardShareId(shareId);
   }, [activeDashboard?.id, activeSheet?.id, currentProjectId, getOrCreateDashboardShareLink]);
 
+  useEffect(() => {
+    setPreviewLayout(null);
+  }, [activeDashboard?.id]);
+
   if (!activeProject || !activeSheet || !activeDashboard) {
     return (
       <PageContainer className="dashboard-workspace-page">
@@ -514,22 +551,12 @@ export default function DashboardPage() {
       return;
     }
 
-    if (editingTab.type === "sheet") renameSheet(editingTab.id, nextName);
     if (editingTab.type === "dashboard") renameDashboard(editingTab.id, nextName);
     cancelEdit();
   }
 
-  function addSheet() {
-    createSheet(getNextName("Sheet", activeProject?.sheets ?? []));
-  }
-
   function addDashboard() {
     createDashboard(getNextName("Dashboard", activeSheet?.dashboards ?? []));
-  }
-
-  function duplicateSheet(sheetId) {
-    duplicateSheetAction(sheetId);
-    setContextMenuState(null);
   }
 
   function duplicateDashboard(dashboardId) {
@@ -540,11 +567,6 @@ export default function DashboardPage() {
   function duplicateWidget(widgetId) {
     if (!activeSheet?.id || !widgetId) return;
     duplicateChart(activeSheet.id, widgetId);
-    setContextMenuState(null);
-  }
-
-  function deleteSheet(sheetId) {
-    removeSheet(sheetId);
     setContextMenuState(null);
   }
 
@@ -570,6 +592,7 @@ export default function DashboardPage() {
 
   function handleLayoutChange(nextLayout) {
     if (!activeSheet?.id) return;
+    setPreviewLayout(null);
     const removingWidgetIds = removingWidgetIdsRef.current;
     const nextSafeLayout = removingWidgetIds.size
       ? nextLayout.filter((item) => !removingWidgetIds.has(item.i))
@@ -577,9 +600,12 @@ export default function DashboardPage() {
     updateLayout(activeSheet.id, nextSafeLayout);
   }
 
+  function handleLayoutPreviewChange(nextLayout) {
+    setPreviewLayout(nextLayout);
+  }
+
   function openContextMenu(type, target, event) {
     event.preventDefault();
-    if (type === "sheet") setActiveSheet(target.id);
     if (type === "dashboard") setActiveDashboard(target.id);
     if (type === "widget") setSelectedWidget(activeDashboard?.id, target.id);
 
@@ -589,7 +615,6 @@ export default function DashboardPage() {
       x: event.clientX,
       y: event.clientY,
       onDuplicate: () => {
-        if (type === "sheet") duplicateSheet(target.id);
         if (type === "dashboard") duplicateDashboard(target.id);
         if (type === "widget") duplicateWidget(target.id);
       },
@@ -658,6 +683,29 @@ export default function DashboardPage() {
     }));
   }
 
+  function handleCanvasPresetChange(nextPreset) {
+    if (!activeDashboard?.id || !CANVAS_SIZE_PRESETS[nextPreset]) return;
+    const preset = CANVAS_SIZE_PRESETS[nextPreset];
+    updateDashboardCanvasSize(activeDashboard.id, {
+      mode: preset.mode,
+      preset: nextPreset,
+      width: preset.width,
+      height: preset.height,
+    });
+  }
+
+  function handleCanvasCustomSizeChange(field, value) {
+    if (!activeDashboard?.id) return;
+    const nextNumber = Number(value);
+    const safeValue = Number.isFinite(nextNumber) && nextNumber > 0 ? Math.round(nextNumber) : null;
+    updateDashboardCanvasSize(activeDashboard.id, {
+      mode: "custom",
+      preset: "custom",
+      width: field === "width" ? safeValue : (canvasSize?.width ?? CANVAS_SIZE_PRESETS.custom.width),
+      height: field === "height" ? safeValue : (canvasSize?.height ?? CANVAS_SIZE_PRESETS.custom.height),
+    });
+  }
+
   function handleContextRename() {
     if (!contextMenuState) return;
     startEdit(contextMenuState.type, contextMenuState.target);
@@ -672,7 +720,6 @@ export default function DashboardPage() {
 
   function handleContextDelete() {
     if (!contextMenuState) return;
-    if (contextMenuState.type === "sheet") return deleteSheet(contextMenuState.target.id);
     if (contextMenuState.type === "dashboard") return deleteDashboard(contextMenuState.target.id);
     return removeWidget(contextMenuState.target.id);
   }
@@ -865,31 +912,6 @@ export default function DashboardPage() {
 
           <section className="dashboard-workspace-tabs-section">
             <div className="dashboard-workspace-tabs-head">
-              <span className="dashboard-workspace-tabs-label">Sheets</span>
-            </div>
-            <div className="dashboard-workspace-tabs-row is-sheet-row">
-              {(activeProject.sheets ?? []).map((sheet) => (
-                <WorkspaceTab
-                  key={sheet.id}
-                  item={sheet}
-                  isActive={sheet.id === activeSheet.id}
-                  isEditing={editingTab?.type === "sheet" && editingTab.id === sheet.id}
-                  editingValue={editingValue}
-                  tone="sheet"
-                  onSelect={setActiveSheet}
-                  onStartEdit={(item) => startEdit("sheet", item)}
-                  onChangeEdit={setEditingValue}
-                  onCommitEdit={commitEdit}
-                  onCancelEdit={cancelEdit}
-                  onOpenMenu={(event, item) => openContextMenu("sheet", item, event)}
-                />
-              ))}
-              <button type="button" onClick={addSheet} className="dashboard-workspace-tab-add" aria-label="Add sheet">
-                + Sheet
-              </button>
-            </div>
-
-            <div className="dashboard-workspace-tabs-subhead">
               <span className="dashboard-workspace-tabs-label">Dashboards</span>
             </div>
             <div className="dashboard-workspace-tabs-row is-dashboard-row">
@@ -923,9 +945,52 @@ export default function DashboardPage() {
               <div className="dashboard-workspace-canvas-meta">
                 <span>{hasWidgets ? `${workspaceStats.chartCount} widgets` : "Empty"}</span>
               </div>
+              <div className="dashboard-canvas-size-controls">
+                <label className="dashboard-canvas-size-label" htmlFor="dashboard-canvas-size-select">Canvas size</label>
+                <select
+                  id="dashboard-canvas-size-select"
+                  className="dashboard-canvas-size-select"
+                  value={canvasPresetKey}
+                  onChange={(event) => handleCanvasPresetChange(event.target.value)}
+                >
+                  {Object.entries(CANVAS_SIZE_PRESETS).map(([key, preset]) => (
+                    <option key={key} value={key}>{preset.label}</option>
+                  ))}
+                </select>
+                {canvasPresetKey === "custom" ? (
+                  <div className="dashboard-canvas-size-custom">
+                    <input
+                      type="number"
+                      min="320"
+                      step="1"
+                      value={canvasSize?.width ?? CANVAS_SIZE_PRESETS.custom.width}
+                      onChange={(event) => handleCanvasCustomSizeChange("width", event.target.value)}
+                      aria-label="Canvas width"
+                    />
+                    <span>x</span>
+                    <input
+                      type="number"
+                      min="240"
+                      step="1"
+                      value={canvasSize?.height ?? CANVAS_SIZE_PRESETS.custom.height}
+                      onChange={(event) => handleCanvasCustomSizeChange("height", event.target.value)}
+                      aria-label="Canvas height"
+                    />
+                  </div>
+                ) : null}
+              </div>
             </div>
 
-            <div className={`dashboard-workspace-canvas-frame${hasWidgets ? " is-populated" : " is-empty"}`}>
+            <div className="dashboard-workspace-canvas-stage">
+              <div
+                className={`dashboard-workspace-canvas-frame${hasWidgets ? " is-populated" : " is-empty"}${isAutoCanvas ? " is-auto-canvas" : " is-fixed-canvas"}`}
+                style={{
+                  minHeight: `${canvasFrameHeight}px`,
+                  height: `${canvasFrameHeight}px`,
+                  width: canvasFrameWidth ? `${canvasFrameWidth}px` : "100%",
+                  minWidth: canvasFrameWidth ? `${canvasFrameWidth}px` : "100%",
+                }}
+              >
               {hasWidgets ? (
                 <DashboardGrid
                   widgets={dashboardWidgets}
@@ -934,6 +999,7 @@ export default function DashboardPage() {
                   onSelectWidget={selectWidget}
                   onOpenWidgetMenu={(widget, event) => openContextMenu("widget", widget, event)}
                   onLayoutChange={handleLayoutChange}
+                  onLayoutPreviewChange={handleLayoutPreviewChange}
                   onExportCSV={handleExportCsv}
                   onExportPNG={handleExportPng}
                   onEditChart={openBuilderForSavedChart}
@@ -947,6 +1013,7 @@ export default function DashboardPage() {
                   onOpenSavedCharts={() => setPickingChart(true)}
                 />
               )}
+              </div>
             </div>
           </section>
         </div>
