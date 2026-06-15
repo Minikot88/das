@@ -3,6 +3,26 @@ const BUILDER_DRAFT_STORAGE_KEY = "mini-bi-v8-builder-draft";
 const AUTOSAVE_DELAY_MS = 400;
 
 let workspaceSaveTimer = null;
+let storageHealth = { ok: true, message: "" };
+const storageHealthListeners = new Set();
+
+function setStorageHealth(nextHealth) {
+  storageHealth = {
+    ok: Boolean(nextHealth?.ok),
+    message: nextHealth?.message || "",
+  };
+  storageHealthListeners.forEach((listener) => listener(storageHealth));
+}
+
+export function getStorageHealth() {
+  return storageHealth;
+}
+
+export function subscribeStorageHealth(listener) {
+  storageHealthListeners.add(listener);
+  listener(storageHealth);
+  return () => storageHealthListeners.delete(listener);
+}
 
 function canUseStorage() {
   return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
@@ -11,7 +31,7 @@ function canUseStorage() {
 function repairMojibakeString(value) {
   if (typeof value !== "string") return value;
 
-  if (/[àâÃ]/.test(value)) {
+  if (/[\u00C3\u00C2\u00E0\u00E2]/.test(value)) {
     try {
       const bytes = Uint8Array.from(value, (char) => char.charCodeAt(0) & 0xff);
       const decoded = new TextDecoder("utf-8").decode(bytes);
@@ -41,21 +61,36 @@ function normalizeStoredText(value) {
 }
 
 function readJson(key) {
-  if (!canUseStorage()) return null;
+  if (!canUseStorage()) {
+    setStorageHealth({ ok: false, message: "Local storage is unavailable. Changes may not persist after refresh." });
+    return null;
+  }
   try {
     const raw = window.localStorage.getItem(key);
+    setStorageHealth({ ok: true, message: "" });
     return raw ? normalizeStoredText(JSON.parse(raw)) : null;
-  } catch {
+  } catch (error) {
+    setStorageHealth({
+      ok: false,
+      message: `Saved workspace data could not be read${error?.message ? `: ${error.message}` : "."}`,
+    });
     return null;
   }
 }
 
 function writeJson(key, value) {
-  if (!canUseStorage()) return;
+  if (!canUseStorage()) {
+    setStorageHealth({ ok: false, message: "Local storage is unavailable. Changes may not persist after refresh." });
+    return;
+  }
   try {
     window.localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    // ignore storage failures for now
+    setStorageHealth({ ok: true, message: "" });
+  } catch (error) {
+    setStorageHealth({
+      ok: false,
+      message: `Workspace changes could not be saved${error?.message ? `: ${error.message}` : "."}`,
+    });
   }
 }
 
@@ -71,7 +106,12 @@ export function createWorkspaceSnapshot(state) {
     user: state.user,
     isAuthenticated: state.isAuthenticated,
     filters: state.filters,
+    dashboardFilters: state.dashboardFilters,
+    dashboardInteractions: state.dashboardInteractions,
+    savedViews: state.savedViews,
     filterPresets: state.filterPresets,
+    appSettings: state.appSettings,
+    importedDatasets: state.importedDatasets,
     sidebarCollapsed: state.sidebarCollapsed,
     kpiBarVisible: state.kpiBarVisible,
     charts: state.charts,
@@ -120,10 +160,17 @@ export function saveBuilderDraft(draft) {
 }
 
 export function clearBuilderDraft() {
-  if (!canUseStorage()) return;
+  if (!canUseStorage()) {
+    setStorageHealth({ ok: false, message: "Local storage is unavailable. Changes may not persist after refresh." });
+    return;
+  }
   try {
     window.localStorage.removeItem(BUILDER_DRAFT_STORAGE_KEY);
-  } catch {
-    // ignore storage failures for now
+    setStorageHealth({ ok: true, message: "" });
+  } catch (error) {
+    setStorageHealth({
+      ok: false,
+      message: `Builder draft could not be cleared${error?.message ? `: ${error.message}` : "."}`,
+    });
   }
 }

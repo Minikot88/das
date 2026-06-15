@@ -1,8 +1,22 @@
 import React from "react";
 
+const ROLE_LABELS = {
+  category: "แกน X",
+  x: "แกน X",
+  value: "แกน Y",
+  y: "แกน Y",
+  series: "กลุ่มข้อมูล",
+  legend: "กลุ่มข้อมูล",
+};
+
 function normalizeMappedValues(value) {
   if (Array.isArray(value)) return value.filter(Boolean);
   return value ? [value] : [];
+}
+
+function getRoleLabel(role) {
+  const key = String(role?.key ?? "").toLowerCase();
+  return ROLE_LABELS[key] || role.label;
 }
 
 export default function DropZone({
@@ -14,6 +28,7 @@ export default function DropZone({
   canAssignField,
 }) {
   const mappedFields = normalizeMappedValues(mappedValue);
+  const displayLabel = getRoleLabel(role);
   const hasError = validation.errors.some((message) => message.toLowerCase().includes(role.label.toLowerCase()) || message.toLowerCase().includes(role.key.toLowerCase()));
 
   function handleDrop(event) {
@@ -34,10 +49,10 @@ export default function DropZone({
     >
       <div className="builder-v3-dropzone-head">
         <div>
-          <strong>{role.label}</strong>
-          <span>{role.accepts.join(" or ")}</span>
+          <strong>{displayLabel}</strong>
+          <span>{role.accepts.join(" หรือ ")}</span>
         </div>
-        {role.multiple ? <span className="builder-v3-pill">Multi</span> : null}
+        {role.multiple ? <span className="builder-v3-pill">หลายค่า</span> : null}
       </div>
 
       {mappedFields.length ? (
@@ -50,14 +65,13 @@ export default function DropZone({
               onClick={() => onRemoveField(role.key, fieldName)}
             >
               <span>{fieldName}</span>
-              <small>Remove</small>
+              <small>ลบ</small>
             </button>
           ))}
         </div>
       ) : (
-        <div className="builder-v3-dropzone-empty">Drop a field here</div>
+        <div className="builder-v3-dropzone-empty">วางฟิลด์ที่นี่</div>
       )}
     </div>
   );
 }
-

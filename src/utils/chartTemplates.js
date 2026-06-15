@@ -84,6 +84,18 @@ const roleSets = {
     role("line", "Line Value", ["number"]),
     role("series", "Series", ["category"]),
   ],
+  table: [
+    role("columns", "คอลัมน์", ["category", "date", "number"], true),
+  ],
+  kpi: [
+    role("value", "ค่า", ["number"]),
+    role("label", "ป้ายกำกับ", ["category", "date"]),
+  ],
+  heatmap: [
+    role("row", "แถว", ["category", "date"]),
+    role("column", "คอลัมน์", ["category", "date"]),
+    role("value", "ค่า", ["number"]),
+  ],
 };
 
 export const chartJsTemplates = [
@@ -423,6 +435,42 @@ export const chartJsTemplates = [
     defaultMapping: { x: "month", bar: "sales", line: "profit", series: null },
     defaultSettings: { aggregation: "sum", legendPosition: "bottom", showLegend: true, beginAtZero: true, useSecondaryAxis: true, stacked: false },
   }),
+  createTemplate({
+    id: "table-basic",
+    family: "table",
+    variant: "basic",
+    type: "table",
+    name: "Table",
+    description: "Show row-level records in a compact table.",
+    requiredRoles: ["columns"],
+    roles: roleSets.table,
+    defaultMapping: { columns: ["month", "region", "category", "sales", "profit"] },
+    defaultSettings: { aggregation: "sum", pageSize: 12, legendPosition: "bottom", showLegend: false },
+  }),
+  createTemplate({
+    id: "kpi-basic",
+    family: "kpi",
+    variant: "basic",
+    type: "kpi",
+    name: "KPI",
+    description: "Show one executive metric with comparison context.",
+    requiredRoles: ["value"],
+    roles: roleSets.kpi,
+    defaultMapping: { value: "sales", label: "month" },
+    defaultSettings: { aggregation: "sum", legendPosition: "bottom", showLegend: false },
+  }),
+  createTemplate({
+    id: "heatmap-basic",
+    family: "heatmap",
+    variant: "basic",
+    type: "heatmap",
+    name: "Heatmap",
+    description: "Compare intensity across row and column dimensions.",
+    requiredRoles: ["row", "column", "value"],
+    roles: roleSets.heatmap,
+    defaultMapping: { row: "region", column: "category", value: "sales" },
+    defaultSettings: { aggregation: "sum", legendPosition: "bottom", showLegend: false },
+  }),
 ];
 
 export function getChartJsTemplateById(id) {
@@ -447,4 +495,3 @@ export function getChartTypes() {
     description,
   }));
 }
-

@@ -14,12 +14,12 @@ export default function ChartPreviewPanel({ previewConfig, settings, validation 
     <section className="builder-v3-panel builder-v3-preview-panel">
       <div className="builder-v3-section-head">
         <div>
-          <span className="builder-v3-kicker">Preview</span>
-          <h2 className="builder-v3-title">{previewTitle || "Preview"}</h2>
+          <span className="builder-v3-kicker">ตัวอย่าง</span>
+          <h2 className="builder-v3-title">{previewTitle || "ตัวอย่าง"}</h2>
           {previewSubtitle ? <p className="builder-v3-preview-subtitle">{previewSubtitle}</p> : null}
         </div>
         <span className={`builder-v3-pill${validation.valid ? " is-success" : " is-warning"}`}>
-          {validation.valid ? "Ready" : "Needs mapping"}
+          {validation.valid ? "พร้อมใช้" : "ต้องแมปฟิลด์"}
         </span>
       </div>
 
@@ -54,7 +54,7 @@ export default function ChartPreviewPanel({ previewConfig, settings, validation 
             config: previewConfig,
           }}
           className="is-builder-preview"
-          height="clamp(260px, 34vh, 420px)"
+          height="clamp(240px, 32vh, 360px)"
         />
       </div>
     </section>

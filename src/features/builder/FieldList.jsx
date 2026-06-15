@@ -15,6 +15,17 @@ function getTypeBadge(field = {}) {
   return "TXT";
 }
 
+function formatFieldType(type) {
+  const labels = {
+    string: "ข้อความ",
+    number: "ตัวเลข",
+    date: "วันที่",
+    boolean: "บูลีน",
+    category: "หมวดหมู่",
+  };
+  return labels[type] ?? type;
+}
+
 function normalizeStructure(dataset, schema) {
   const baseFields = Array.isArray(schema?.fields)
     ? schema.fields
@@ -364,36 +375,36 @@ export default function FieldList({ dataset, schema, onDragStart, mappedFieldNam
     <section className="builder-v3-panel builder-v3-explorer-panel">
       <div className="builder-v3-section-head">
         <div>
-          <span className="builder-v3-kicker">Data Source</span>
-          <h2 className="builder-v3-title">Explorer</h2>
+          <span className="builder-v3-kicker">ข้อมูล</span>
+          <h2 className="builder-v3-title">ชุดข้อมูล ตาราง และฟิลด์</h2>
           <p className="builder-tree-meta-line">
-            {structure.database} | {structure.readOnly ? "Read-only" : "Read/write"} | {structure.stats.schemaCount} schema{structure.stats.schemaCount === 1 ? "" : "s"} | {structure.stats.tableCount} table{structure.stats.tableCount === 1 ? "" : "s"} | {structure.stats.fieldCount} fields
+            {structure.database} | {structure.readOnly ? "อ่านอย่างเดียว" : "อ่าน/เขียน"} | {structure.stats.schemaCount} สคีมา | {structure.stats.tableCount} ตาราง | {structure.stats.fieldCount} ฟิลด์
           </p>
         </div>
       </div>
 
       <label className="builder-v3-field-search" htmlFor="datasource-search-input">
-        <span className="sr-only">Search schemas, tables, fields</span>
+        <span className="sr-only">ค้นหาสคีมา ตาราง และฟิลด์</span>
         <input
           id="datasource-search-input"
           type="search"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search fields, tables..."
-          aria-label="Search schemas, tables, fields"
+          placeholder="ค้นหาฟิลด์ ตาราง..."
+          aria-label="ค้นหาสคีมา ตาราง และฟิลด์"
         />
       </label>
 
-      <div className="builder-tree-wrap" role="tree" aria-label="Database explorer tree">
+      <div className="builder-tree-wrap" role="tree" aria-label="โครงสร้างตัวสำรวจฐานข้อมูล">
         <TreeRow
           depth={0}
           icon="DB"
           label={structure.database}
-          meta={structure.readOnly ? "Read-only" : "Read/write"}
+          meta={structure.readOnly ? "อ่านอย่างเดียว" : "อ่าน/เขียน"}
           collapsible
           expanded={dbExpanded}
           onClick={() => toggle(dbNodeId)}
-          ariaLabel={`Toggle database ${structure.database}`}
+          ariaLabel={`เปิดหรือปิดฐานข้อมูล ${structure.database}`}
         />
 
         {dbExpanded ? (
@@ -401,11 +412,11 @@ export default function FieldList({ dataset, schema, onDragStart, mappedFieldNam
             <TreeRow
               depth={1}
               icon="SC"
-              label="Schemas"
+              label="สคีมา"
               collapsible
               expanded={schemasExpanded}
               onClick={() => toggle(schemasNodeId)}
-              ariaLabel="Toggle Schemas folder"
+              ariaLabel="เปิดหรือปิดโฟลเดอร์สคีมา"
             />
 
             {schemasExpanded ? (
@@ -422,11 +433,11 @@ export default function FieldList({ dataset, schema, onDragStart, mappedFieldNam
                         depth={2}
                         icon="SC"
                         label={schemaItem.name}
-                        meta={`${schemaItem.tables.length} tables`}
+                        meta={`${schemaItem.tables.length} ตาราง`}
                         collapsible
                         expanded={schemaExpanded}
                         onClick={() => toggle(schemaNodeId)}
-                        ariaLabel={`Toggle schema ${schemaItem.name}`}
+                        ariaLabel={`เปิดหรือปิดสคีมา ${schemaItem.name}`}
                       />
 
                       {schemaExpanded ? (
@@ -434,11 +445,11 @@ export default function FieldList({ dataset, schema, onDragStart, mappedFieldNam
                           <TreeRow
                             depth={3}
                             icon="TB"
-                            label="Tables"
+                            label="ตาราง"
                             collapsible
                             expanded={tablesExpanded}
                             onClick={() => toggle(tablesNodeId)}
-                            ariaLabel={`Toggle tables in schema ${schemaItem.name}`}
+                            ariaLabel={`เปิดหรือปิดตารางในสคีมา ${schemaItem.name}`}
                           />
 
                           {tablesExpanded ? (
@@ -447,7 +458,7 @@ export default function FieldList({ dataset, schema, onDragStart, mappedFieldNam
                                 const tableNodeId = getNodeId("table", getTableNodeKey(table));
                                 const tableExpanded = isExpanded(tableNodeId);
                                 const isSelected = selectedTable?.id === table.id;
-                                const tableMeta = `${table.fields?.length ?? 0} fields${Number.isFinite(table.rowCount) ? ` | ${table.rowCount} rows` : ""}`;
+                                const tableMeta = `${table.fields?.length ?? 0} ฟิลด์${Number.isFinite(table.rowCount) ? ` | ${table.rowCount} แถว` : ""}`;
 
                                 return (
                                   <div key={table.id}>
@@ -460,14 +471,14 @@ export default function FieldList({ dataset, schema, onDragStart, mappedFieldNam
                                       collapsible
                                       expanded={tableExpanded}
                                       onClick={() => onTableClick(table, tableExpanded)}
-                                      ariaLabel={`Select and toggle table ${table.name}`}
+                                      ariaLabel={`เลือกและเปิดหรือปิดตาราง ${table.name}`}
                                     />
 
                                     {tableExpanded ? (
                                       table.fields?.length ? (
                                         table.fields.map((field) => {
                                           const typeBadge = getTypeBadge(field);
-                                          const fieldMeta = `${field.type || field.semanticType || field.sourceType || "string"}`;
+                                          const fieldMeta = formatFieldType(field.type || field.semanticType || field.sourceType || "string");
                                           return (
                                             <TreeRow
                                               key={`${table.id}:${field.name}`}
@@ -476,7 +487,7 @@ export default function FieldList({ dataset, schema, onDragStart, mappedFieldNam
                                               label={field.label || field.name}
                                               meta={fieldMeta}
                                               active={mappedSet.has(field.name)}
-                                              ariaLabel={`Field ${field.name}`}
+                                              ariaLabel={`ฟิลด์ ${field.name}`}
                                               draggable
                                               onClick={() => setSelectedTableId(table.id)}
                                               onDragStart={(event) => {
@@ -489,7 +500,7 @@ export default function FieldList({ dataset, schema, onDragStart, mappedFieldNam
                                         })
                                       ) : (
                                         <div className="builder-tree-empty" style={{ "--depth": 5 }}>
-                                          No fields
+                                          ไม่มีฟิลด์
                                         </div>
                                       )
                                     ) : null}
@@ -498,7 +509,7 @@ export default function FieldList({ dataset, schema, onDragStart, mappedFieldNam
                               })
                             ) : (
                               <div className="builder-tree-empty" style={{ "--depth": 4 }}>
-                                No tables
+                                ไม่มีตาราง
                               </div>
                             )
                           ) : null}
@@ -509,7 +520,7 @@ export default function FieldList({ dataset, schema, onDragStart, mappedFieldNam
                 })
               ) : (
                 <div className="builder-tree-empty" style={{ "--depth": 2 }}>
-                  No matching schemas, tables, or fields
+                  ไม่พบสคีมา ตาราง หรือฟิลด์ที่ตรงกัน
                 </div>
               )
             ) : null}

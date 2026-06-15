@@ -61,8 +61,8 @@ export default function SharePage() {
       return {
         chartCount: 0,
         chartTypes: 0,
-        primaryDataset: "No dataset",
-        updatedLabel: "Ready",
+        primaryDataset: "ไม่มีชุดข้อมูล",
+        updatedLabel: "พร้อมใช้",
       };
     }
 
@@ -76,26 +76,26 @@ export default function SharePage() {
       }
     }
 
-    const primaryDataset = [...datasetCounts.entries()].sort((left, right) => right[1] - left[1])[0]?.[0] ?? "No dataset";
+    const primaryDataset = [...datasetCounts.entries()].sort((left, right) => right[1] - left[1])[0]?.[0] ?? "ไม่มีชุดข้อมูล";
 
     return {
       chartCount: dashboardCharts.length,
       chartTypes: typeSet.size,
       primaryDataset,
-      updatedLabel: activeDashboard?.name ? "Published" : "Ready",
+      updatedLabel: activeDashboard?.name ? "เผยแพร่แล้ว" : "พร้อมใช้",
     };
   }, [activeDashboard?.name, dashboardCharts]);
 
-  const dashboardTitle = activeDashboard?.name ?? "Shared dashboard";
+  const dashboardTitle = activeDashboard?.name ?? "แดชบอร์ดที่แชร์";
 
   if (loading) {
     return (
       <div className="share-page share-page-shell">
         <ReadOnlyStateCard
           loading
-          kicker="Preparing shared view"
-          title="Loading dashboard"
-          description="Please wait a moment."
+          kicker="กำลังเตรียมมุมมองที่แชร์"
+          title="กำลังโหลดแดชบอร์ด"
+          description="โปรดรอสักครู่"
         />
       </div>
     );
@@ -105,11 +105,11 @@ export default function SharePage() {
     return (
       <div className="share-page share-page-shell">
         <ReadOnlyStateCard
-          kicker="Link unavailable"
-          title="Dashboard not found"
-          description="This shared link may have expired or been removed."
+          kicker="ลิงก์ไม่พร้อมใช้งาน"
+          title="ไม่พบแดชบอร์ด"
+          description="ลิงก์ที่แชร์นี้อาจหมดอายุหรือถูกลบแล้ว"
           linkTo="/login"
-          linkLabel="Go to sign in"
+          linkLabel="ไปหน้าเข้าสู่ระบบ"
         />
       </div>
     );
@@ -118,7 +118,7 @@ export default function SharePage() {
   return (
     <div className="share-page share-page-shell">
       <ReadOnlyDashboardHeader
-        title={sheet?.name ?? "Shared sheet"}
+        title={sheet?.name ?? "ชีตที่แชร์"}
         dashboardName={dashboardTitle}
         chartCount={dashboardCharts.length}
         chartTypes={shareSummary.chartTypes}
@@ -129,28 +129,28 @@ export default function SharePage() {
       <section className="share-content-shell">
         {dashboardCharts.length ? (
           <div className="readonly-overview-grid">
-            <div className="readonly-summary-strip" role="region" aria-label="Shared dashboard summary">
+            <div className="readonly-summary-strip" role="region" aria-label="สรุปแดชบอร์ดที่แชร์">
               <div className="readonly-summary-card accent">
-                <span className="readonly-summary-label">Charts</span>
+                <span className="readonly-summary-label">กราฟ</span>
                 <strong className="readonly-summary-value">{shareSummary.chartCount}</strong>
               </div>
               <div className="readonly-summary-card">
-                <span className="readonly-summary-label">Types</span>
+                <span className="readonly-summary-label">ประเภท</span>
                 <strong className="readonly-summary-value">{shareSummary.chartTypes}</strong>
               </div>
               <div className="readonly-summary-card">
-                <span className="readonly-summary-label">Dataset</span>
+                <span className="readonly-summary-label">ชุดข้อมูล</span>
                 <strong className="readonly-summary-value">{shareSummary.primaryDataset}</strong>
               </div>
             </div>
 
-            <aside className="readonly-viewer-note" aria-label="Read only details">
-              <span className="readonly-viewer-note-kicker">Read only</span>
+            <aside className="readonly-viewer-note" aria-label="รายละเอียดโหมดอ่านอย่างเดียว">
+              <span className="readonly-viewer-note-kicker">อ่านอย่างเดียว</span>
               <h2 className="readonly-viewer-note-title">{dashboardTitle}</h2>
               <div className="readonly-viewer-note-list">
-                <span>Editing disabled</span>
-                <span>Layout preserved</span>
-                <span>No sign in required</span>
+                <span>ปิดการแก้ไข</span>
+                <span>คงรูปแบบเดิม</span>
+                <span>ไม่ต้องเข้าสู่ระบบ</span>
               </div>
             </aside>
           </div>
@@ -158,14 +158,14 @@ export default function SharePage() {
 
         {!dashboardCharts.length ? (
           <ReadOnlyStateCard
-            kicker="No charts yet"
-            title="This dashboard does not have any charts"
-            description="Try again later after new charts have been saved."
+            kicker="ยังไม่มีกราฟ"
+            title="แดชบอร์ดนี้ยังไม่มีกราฟ"
+            description="กลับมาตรวจอีกครั้งหลังจากบันทึกกราฟใหม่แล้ว"
             linkTo="/login"
-            linkLabel="Sign in"
+            linkLabel="เข้าสู่ระบบ"
           />
         ) : (
-          <div className="share-grid" role="list" aria-label="Shared charts">
+          <div className="share-grid" role="list" aria-label="กราฟที่แชร์">
             {dashboardCharts.map((chart) => (
               <ReadOnlyChartFrame key={chart.id} chart={chart} />
             ))}

@@ -14,6 +14,7 @@ const ChartCard = memo(function ChartCard({
   onExportPNG,
   onEditChart,
   onInsightData,
+  onDataPointClick,
   isFullscreen = false,
   onToggleFullscreen,
   themeMode,
@@ -87,6 +88,12 @@ const ChartCard = memo(function ChartCard({
   const shouldShowTitle = safeTitle.length > 0 && showTitleSetting !== false;
   const hasCardActions = Boolean(onExportCSV || onExportPNG || onEditChart || onToggleFullscreen);
   const shouldRenderHeader = showCardHeader && (shouldShowTitle || (isFullscreen && hasCardActions));
+  const chartTypeLabel = chart.type ? String(chart.type).toUpperCase() : "CHART";
+  const dataSource = chart.dataset || chart.dataSource || chart.config?.dataset || "Unknown source";
+  const chartStatusText = Array.isArray(rows) && rows.length
+    ? `${rows.length} row${rows.length === 1 ? "" : "s"}`
+    : "No data";
+  const chartSummary = `${safeTitle || "Untitled chart"}. ${chartTypeLabel} visualization from ${dataSource}. ${chartStatusText}.`;
   const cardWidth = bodySize.width || 0;
   const cardHeight = Math.max(pixelHeight || 0, bodySize.height || 0);
   const isTiny = cardWidth > 0 && cardHeight > 0 && (cardWidth < 260 || cardHeight < 240);
@@ -115,7 +122,7 @@ const ChartCard = memo(function ChartCard({
 
   return (
     <div
-      className={`chart-card is-${chartKind}-chart ${sizeClass}${isFullscreen ? " is-fullscreen" : ""}${shouldRenderHeader ? "" : " has-no-card-header"}`}
+      className={`chart-card is-${chartKind}-chart bi-widget-shell bi-chart-widget ${sizeClass}${isFullscreen ? " is-fullscreen" : ""}${shouldRenderHeader ? "" : " has-no-card-header"}`}
       ref={cardRef}
       style={{
         height: pixelHeight,
@@ -125,19 +132,27 @@ const ChartCard = memo(function ChartCard({
       }}
       role="article"
       aria-label={safeTitle ? `Chart: ${safeTitle}` : "Chart card"}
+      aria-describedby={`chart-summary-${chart.id}`}
+      tabIndex={0}
     >
+      <p id={`chart-summary-${chart.id}`} className="sr-only">{chartSummary}</p>
       <div className="chart-card-accent-bar" style={{ background: accent }} />
 
       {shouldRenderHeader ? (
         <div
-          className={`chart-card-header${isFullscreen ? "" : " card-drag-handle"}`}
+          className={`chart-card-header bi-widget-header${isFullscreen ? "" : " card-drag-handle"}`}
           onDoubleClick={onToggleFullscreen}
         >
-          <div className="chart-card-title">
-            {shouldShowTitle ? <span className="chart-title-text">{safeTitle}</span> : null}
+          <div className="chart-card-title-block">
+            {shouldShowTitle ? <span className="chart-card-title chart-title-text">{safeTitle}</span> : null}
+            <div className="chart-card-meta-row">
+              <span>{chartTypeLabel}</span>
+              <span>{chartStatusText}</span>
+              <span>{dataSource}</span>
+            </div>
           </div>
           {hasCardActions ? (
-            <div className="chart-card-controls" data-export-ignore="true">
+            <div className="chart-card-controls bi-widget-actions" data-export-ignore="true">
               <CardActions
                 chart={chart}
                 sheetId={sheetId}
@@ -155,7 +170,7 @@ const ChartCard = memo(function ChartCard({
 
       <div
         ref={bodyRef}
-        className="chart-card-body"
+        className="chart-card-body bi-widget-body"
         style={cardBackground ? { background: cardBackground } : undefined}
       >
         {!loaded ? (
@@ -167,8 +182,14 @@ const ChartCard = memo(function ChartCard({
             filters={filters}
             className={`${isCompact ? "is-compact-card" : ""} ${isTiny ? "is-tiny-card" : ""}`.trim()}
             themeMode={themeMode}
+            onDataPointClick={(point) => onDataPointClick?.(chart, point)}
           />
         )}
+      </div>
+      <div className="chart-card-footer bi-widget-footer">
+        <span>Type: {chartKind}</span>
+        <span>Source: {dataSource}</span>
+        <span>{chartStatusText}</span>
       </div>
     </div>
   );

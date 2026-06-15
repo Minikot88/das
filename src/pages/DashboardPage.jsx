@@ -7,6 +7,8 @@ import ChartPicker from "../components/dashboard/ChartPicker";
 import DashboardGrid from "../components/dashboard/DashboardGrid";
 import DashboardFullscreenModal from "../components/dashboard/DashboardFullscreenModal";
 import DashboardShareModal from "../components/dashboard/DashboardShareModal";
+import CommandPaletteModal from "../components/bi/CommandPaletteModal";
+import DatasetExplorerModal from "../components/bi/DatasetExplorerModal";
 import SidebarRight from "../layout/SidebarRight";
 import useDashboard from "../features/dashboard/hooks/useDashboard";
 import {
@@ -19,10 +21,134 @@ import {
   buildDashboardEmbedCode,
   buildDashboardViewUrl,
   exportNodeAsImage,
+  exportNodeAsPdf,
   sanitizeFileName,
 } from "../utils/dashboardShareUtils";
+import {
+  applyDashboardFiltersToWidget,
+  getActiveDashboardFilterChips,
+  getInteractionChips,
+  getNextDrilldownStep,
+  resolveInteractionPoint,
+} from "../utils/dashboardFilters";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
+
+const GLOBAL_FILTER_PRESETS = [
+  {
+    id: "executive",
+    name: "มุมมองผู้บริหาร",
+    filters: {
+      dateRange: "Last 30 days",
+      department: "All departments",
+      region: "North",
+      year: "2025",
+    },
+  },
+  {
+    id: "finance",
+    name: "มุมมองการเงิน",
+    filters: {
+      dateRange: "Current quarter",
+      department: "Technology",
+      region: "East",
+      year: "2025",
+    },
+  },
+  {
+    id: "marketing",
+    name: "มุมมองการตลาด",
+    filters: {
+      dateRange: "Last 90 days",
+      department: "Office Supplies",
+      region: "South",
+      year: "2025",
+    },
+  },
+  {
+    id: "research",
+    name: "มุมมองงานวิจัย",
+    filters: {
+      dateRange: "Year to date",
+      department: "Enterprise",
+      region: "West",
+      year: "2025",
+    },
+  },
+];
+
+const DATE_RANGE_OPTIONS = [
+  "All dates",
+  "Last 7 days",
+  "Last 14 days",
+  "Last 30 days",
+  "Current quarter",
+  "Year to date",
+  "Last year",
+];
+
+const DEPARTMENT_OPTIONS = [
+  "All departments",
+  "Technology",
+  "Furniture",
+  "Office Supplies",
+  "Enterprise",
+  "SMB",
+  "Online",
+  "Retail",
+];
+
+const REGION_OPTIONS = [
+  "All regions",
+  "North",
+  "South",
+  "East",
+  "West",
+];
+
+const YEAR_OPTIONS = ["All years", "2024", "2025", "2026", "2027"];
+
+const FILTER_DISPLAY_LABELS = {
+  "All dates": "ทุกช่วงวันที่",
+  "Last 7 days": "7 วันที่ผ่านมา",
+  "Last 14 days": "14 วันที่ผ่านมา",
+  "Last 30 days": "30 วันที่ผ่านมา",
+  "Current quarter": "ไตรมาสปัจจุบัน",
+  "Year to date": "ตั้งแต่ต้นปี",
+  "Last year": "ปีที่ผ่านมา",
+  "All departments": "ทุกแผนก",
+  Technology: "เทคโนโลยี",
+  Furniture: "เฟอร์นิเจอร์",
+  "Office Supplies": "อุปกรณ์สำนักงาน",
+  Enterprise: "องค์กร",
+  SMB: "ธุรกิจขนาดกลางและเล็ก",
+  Online: "ออนไลน์",
+  Retail: "ค้าปลีก",
+  "All regions": "ทุกภูมิภาค",
+  North: "เหนือ",
+  South: "ใต้",
+  East: "ตะวันออก",
+  West: "ตะวันตก",
+  "All years": "ทุกปี",
+};
+
+function getFilterDisplayLabel(value) {
+  return FILTER_DISPLAY_LABELS[value] ?? value;
+}
+
+const COMMAND_WIDGET_LIBRARY_ITEMS = [
+  "KPI",
+  "Bar",
+  "Line",
+  "Area",
+  "Pie",
+  "Table",
+  "Pivot",
+  "Text",
+  "Image",
+  "Filter",
+  "Divider",
+];
 
 function getNextName(prefix, items = []) {
   return `${prefix} ${items.length + 1}`;
@@ -103,7 +229,7 @@ function DashboardNotice({ notice, onClose }) {
   return (
     <div className={`dashboard-notice is-${notice.tone ?? "info"}`} role="status">
       <span>{notice.message}</span>
-      <button type="button" onClick={onClose} aria-label="Dismiss notification">
+      <button type="button" onClick={onClose} aria-label="ปิดการแจ้งเตือน">
         x
       </button>
     </div>
@@ -120,7 +246,7 @@ function RenameWidgetModal({ widget, value, onChange, onCancel, onSave }) {
           <div className="modal-header-copy">
             <h2 className="modal-title">Rename chart</h2>
           </div>
-          <button type="button" className="modal-close-btn" onClick={onCancel} aria-label="Close rename dialog">x</button>
+          <button type="button" className="modal-close-btn" onClick={onCancel} aria-label="ปิดหน้าต่างเปลี่ยนชื่อ">x</button>
         </div>
         <form className="modal-body" onSubmit={onSave}>
           <label className="input-label" htmlFor="rename-widget-input">Chart name</label>
@@ -221,10 +347,10 @@ function ContextMenu({ menu, onEdit, onRename, onDelete }) {
         Rename
       </button>
       <button type="button" className="dashboard-context-menu-item" onClick={menu.onDuplicate}>
-        Duplicate
+        ทำสำเนา
       </button>
       <button type="button" className="dashboard-context-menu-item is-danger" onClick={onDelete}>
-        Delete
+        ลบ
       </button>
     </div>
   );
@@ -239,14 +365,19 @@ function EmptyCanvasState({ onBuildChart, onOpenSavedCharts }) {
           <span className="is-mid" />
           <span className="is-card" />
         </div>
-        <div className="dashboard-empty-state-title">Start the canvas</div>
-        <div className="dashboard-empty-state-copy">Create a chart or place one from the library.</div>
+        <div className="dashboard-empty-state-title">เริ่มพื้นที่วิเคราะห์</div>
+        <div className="dashboard-empty-state-copy">สร้างกราฟ จัดวางภาพข้อมูล และประกอบหน้าแดชบอร์ดที่พร้อมสำหรับผู้บริหาร</div>
+        <div className="dashboard-empty-state-notes">
+          <span>ตัวชี้วัด</span>
+          <span>แนวโน้ม</span>
+          <span>เปรียบเทียบ</span>
+        </div>
         <div className="dashboard-empty-state-actions">
           <button type="button" onClick={onBuildChart} className="dashboard-toolbar-btn is-primary">
-            New Chart
+            สร้างกราฟ
           </button>
           <button type="button" onClick={onOpenSavedCharts} className="dashboard-toolbar-btn">
-            Saved Charts
+            เลือกกราฟ
           </button>
         </div>
       </div>
@@ -258,13 +389,13 @@ export default function DashboardPage() {
   const MIN_CANVAS_HEIGHT = 420;
   const CANVAS_BOTTOM_PADDING = 96;
   const CANVAS_SIZE_PRESETS = {
-    auto: { label: "Auto / Responsive", width: null, height: null, mode: "auto" },
-    "16:9": { label: "16:9 Presentation", width: 1280, height: 720, mode: "preset" },
-    "4:3": { label: "4:3 Presentation", width: 1024, height: 768, mode: "preset" },
-    square: { label: "Square", width: 1080, height: 1080, mode: "preset" },
-    "a4-portrait": { label: "A4 Portrait", width: 794, height: 1123, mode: "preset" },
-    "a4-landscape": { label: "A4 Landscape", width: 1123, height: 794, mode: "preset" },
-    custom: { label: "Custom", width: 1280, height: 720, mode: "custom" },
+    auto: { label: "อัตโนมัติ / ตอบสนอง", width: null, height: null, mode: "auto" },
+    "16:9": { label: "16:9 สำหรับนำเสนอ", width: 1280, height: 720, mode: "preset" },
+    "4:3": { label: "4:3 สำหรับนำเสนอ", width: 1024, height: 768, mode: "preset" },
+    square: { label: "สี่เหลี่ยมจัตุรัส", width: 1080, height: 1080, mode: "preset" },
+    "a4-portrait": { label: "A4 แนวตั้ง", width: 794, height: 1123, mode: "preset" },
+    "a4-landscape": { label: "A4 แนวนอน", width: 1123, height: 794, mode: "preset" },
+    custom: { label: "กำหนดเอง", width: 1280, height: 720, mode: "custom" },
   };
   const navigate = useNavigate();
   const location = useLocation();
@@ -287,7 +418,23 @@ export default function DashboardPage() {
   const setBuilderNavigationContext = useStore((state) => state.setBuilderNavigationContext);
   const setSelectedWidget = useStore((state) => state.setSelectedWidget);
   const getOrCreateDashboardShareLink = useStore((state) => state.getOrCreateDashboardShareLink);
+  const updateDashboardShareSnapshot = useStore((state) => state.updateDashboardShareSnapshot);
   const updateDashboardCanvasSize = useStore((state) => state.updateDashboardCanvasSize);
+  const dashboardFilters = useStore((state) => state.dashboardFilters);
+  const filterPresets = useStore((state) => state.filterPresets);
+  const setDashboardFilters = useStore((state) => state.setDashboardFilters);
+  const resetDashboardFilters = useStore((state) => state.resetDashboardFilters);
+  const saveDashboardFilterPreset = useStore((state) => state.saveDashboardFilterPreset);
+  const dashboardInteractions = useStore((state) => state.dashboardInteractions);
+  const savedViews = useStore((state) => state.savedViews);
+  const setCrossFilter = useStore((state) => state.setCrossFilter);
+  const clearDashboardInteractions = useStore((state) => state.clearDashboardInteractions);
+  const pushDrilldownStep = useStore((state) => state.pushDrilldownStep);
+  const trimDrilldownPath = useStore((state) => state.trimDrilldownPath);
+  const createSavedView = useStore((state) => state.createSavedView);
+  const renameSavedView = useStore((state) => state.renameSavedView);
+  const deleteSavedView = useStore((state) => state.deleteSavedView);
+  const loadSavedView = useStore((state) => state.loadSavedView);
 
   const [pickingChart, setPickingChart] = useState(false);
   const [editingTab, setEditingTab] = useState(null);
@@ -299,10 +446,12 @@ export default function DashboardPage() {
   const [shareModalTab, setShareModalTab] = useState("share");
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [dashboardShareId, setDashboardShareId] = useState("");
+  const [inspectorCollapsed, setInspectorCollapsed] = useState(false);
   const [notice, setNotice] = useState(null);
   const [renameWidgetTarget, setRenameWidgetTarget] = useState(null);
   const [renameWidgetValue, setRenameWidgetValue] = useState("");
   const [dashboardExporting, setDashboardExporting] = useState(false);
+  const [presentationMode, setPresentationMode] = useState(false);
   const [previewLayout, setPreviewLayout] = useState(null);
   const [shareOptions, setShareOptions] = useState({
     width: 1200,
@@ -311,6 +460,14 @@ export default function DashboardPage() {
     theme: "auto",
     showHeader: false,
   });
+  const [activeFilterPreset, setActiveFilterPreset] = useState("custom");
+  const [favoriteDashboards, setFavoriteDashboards] = useState([]);
+  const [recentDashboards, setRecentDashboards] = useState([]);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [datasetExplorerOpen, setDatasetExplorerOpen] = useState(false);
+  const [savedViewName, setSavedViewName] = useState("");
+  const [renamingViewId, setRenamingViewId] = useState("");
+  const [renamingViewName, setRenamingViewName] = useState("");
 
   const contextMenuRef = useRef(null);
   const actionsMenuRef = useRef(null);
@@ -347,7 +504,37 @@ export default function DashboardPage() {
     layout: activeDashboard?.layout ?? [],
     charts: chartsPool,
   });
-  const workspaceStats = useMemo(() => getDashboardWorkspaceStats(dashboardWidgets), [dashboardWidgets]);
+  const filteredDashboardWidgets = useMemo(
+    () => dashboardWidgets.map((widget) => applyDashboardFiltersToWidget(widget, dashboardFilters, dashboardInteractions)),
+    [dashboardFilters, dashboardInteractions, dashboardWidgets]
+  );
+  const activeFilterChips = useMemo(
+    () => getActiveDashboardFilterChips(dashboardFilters),
+    [dashboardFilters]
+  );
+  const interactionChips = useMemo(
+    () => getInteractionChips(dashboardInteractions),
+    [dashboardInteractions]
+  );
+  const globalSavedPresets = useMemo(
+    () => [
+      ...GLOBAL_FILTER_PRESETS,
+      ...filterPresets.filter((preset) => preset.dashboardId === activeDashboard?.id && preset.scope === "dashboard-global"),
+    ],
+    [activeDashboard?.id, filterPresets]
+  );
+  const dashboardSavedViews = useMemo(
+    () => savedViews.filter((view) => view.dashboardId === activeDashboard?.id),
+    [activeDashboard?.id, savedViews]
+  );
+  const reportContextItems = useMemo(
+    () => [
+      ...activeFilterChips.map((chip) => `${chip.label}: ${chip.value}`),
+      ...interactionChips.map((chip) => `${chip.label}: ${chip.value}`),
+    ],
+    [activeFilterChips, interactionChips]
+  );
+  const workspaceStats = useMemo(() => getDashboardWorkspaceStats(filteredDashboardWidgets), [filteredDashboardWidgets]);
   const canvasLayout = useMemo(
     () => previewLayout ?? activeDashboard?.layout ?? [],
     [previewLayout, activeDashboard?.layout]
@@ -365,7 +552,7 @@ export default function DashboardPage() {
   }, [canvasLayout, CANVAS_BOTTOM_PADDING, MIN_CANVAS_HEIGHT]);
   const hasWidgets = dashboardWidgets.length > 0;
   const selectedWidgetId = ui.selectedWidgetIdByDashboard?.[activeDashboard?.id] ?? null;
-  const selectedWidget = dashboardWidgets.find((widget) => widget.id === selectedWidgetId) ?? null;
+  const selectedWidget = filteredDashboardWidgets.find((widget) => widget.id === selectedWidgetId) ?? null;
   const canvasSize = activeDashboard?.canvasSize ?? CANVAS_SIZE_PRESETS.auto;
   const canvasPresetKey = canvasSize?.preset ?? "auto";
   const isAutoCanvas = canvasPresetKey === "auto";
@@ -376,8 +563,8 @@ export default function DashboardPage() {
     isAutoCanvas ? MIN_CANVAS_HEIGHT : (selectedCanvasHeight ?? MIN_CANVAS_HEIGHT),
     canvasMinHeight
   );
-  const fullscreenWidget = dashboardWidgets.find((widget) => widget.id === fullscreenWidgetId) ?? null;
-  const activeSelectionLabel = selectedWidget?.name ?? "No selection";
+  const fullscreenWidget = filteredDashboardWidgets.find((widget) => widget.id === fullscreenWidgetId) ?? null;
+  const activeSelectionLabel = selectedWidget?.name ?? "ยังไม่ได้เลือก";
   const publicViewUrl = useMemo(
     () => activeDashboard?.id
       ? buildDashboardViewUrl({
@@ -443,6 +630,18 @@ export default function DashboardPage() {
     const timer = window.setTimeout(() => setNotice(null), 3200);
     return () => window.clearTimeout(timer);
   }, [notice]);
+
+  useEffect(() => {
+    function handleCommandShortcut(event) {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setCommandPaletteOpen((isOpen) => !isOpen);
+      }
+    }
+
+    window.addEventListener("keydown", handleCommandShortcut);
+    return () => window.removeEventListener("keydown", handleCommandShortcut);
+  }, []);
 
   useEffect(() => {
     const previousCount = previousWidgetCountRef.current;
@@ -514,8 +713,134 @@ export default function DashboardPage() {
   }, [activeDashboard?.id, activeSheet?.id, currentProjectId, getOrCreateDashboardShareLink]);
 
   useEffect(() => {
+    if (!dashboardShareId || !activeDashboard?.id) return;
+    updateDashboardShareSnapshot(dashboardShareId, {
+      projectName: activeProject?.name ?? "Workspace",
+      sheetName: activeSheet?.name ?? "Sheet",
+      dashboardName: activeDashboard.name,
+      dashboardId: activeDashboard.id,
+      layout: activeDashboard.layout ?? [],
+      widgets: filteredDashboardWidgets,
+      filters: dashboardFilters,
+      interactions: dashboardInteractions,
+      contextItems: reportContextItems,
+      updatedAt: new Date().toISOString(),
+    });
+  }, [
+    activeDashboard?.id,
+    activeDashboard?.layout,
+    activeDashboard?.name,
+    activeProject?.name,
+    activeSheet?.name,
+    dashboardFilters,
+    dashboardInteractions,
+    dashboardShareId,
+    filteredDashboardWidgets,
+    reportContextItems,
+    updateDashboardShareSnapshot,
+  ]);
+
+  useEffect(() => {
+    if (!presentationMode) return undefined;
+    function handlePresentationKeyDown(event) {
+      if (event.key === "Escape") {
+        setPresentationMode(false);
+      }
+    }
+    document.body.classList.add("dashboard-presentation-active");
+    window.addEventListener("keydown", handlePresentationKeyDown);
+    return () => {
+      document.body.classList.remove("dashboard-presentation-active");
+      window.removeEventListener("keydown", handlePresentationKeyDown);
+    };
+  }, [presentationMode]);
+
+  useEffect(() => {
     setPreviewLayout(null);
   }, [activeDashboard?.id]);
+
+  useEffect(() => {
+    if (!activeDashboard?.id) return;
+    setRecentDashboards((previous) => {
+      const next = previous.filter((item) => item !== activeDashboard.id);
+      return [activeDashboard.id, ...next].slice(0, 6);
+    });
+  }, [activeDashboard?.id]);
+
+  const commandPaletteDashboardActions = (activeSheet?.dashboards ?? []).map((dashboard) => ({
+    id: `dashboard-${dashboard.id}`,
+    label: dashboard.name,
+    detail: `Open dashboard in ${activeSheet?.name ?? "current sheet"}`,
+      group: "แดชบอร์ด",
+    onActivate: () => setActiveDashboard(dashboard.id),
+  }));
+  const commandPaletteWidgetActions = dashboardWidgets.map((widget) => ({
+    id: `widget-${widget.id}`,
+    label: widget.name,
+    detail: widget.metaLabel ?? widget.typeLabel ?? "Dashboard widget",
+    group: "Widgets",
+    onActivate: () => selectWidget(widget.id),
+  }));
+  const commandPaletteLibraryWidgetActions = COMMAND_WIDGET_LIBRARY_ITEMS.map((widgetName) => ({
+    id: `library-widget-${widgetName.toLowerCase()}`,
+      label: `วิดเจ็ต ${widgetName}`,
+    detail: "Available in the widget library",
+    group: "Widgets",
+    onActivate: () => notify(`${widgetName} widget is available in the Widget Library.`, "info"),
+  }));
+  const commandPaletteActions = [
+    {
+      id: "add-chart",
+      label: "เพิ่มกราฟ",
+      detail: "Open saved chart library",
+      group: "Actions",
+      shortcut: "A",
+      onActivate: () => setPickingChart(true),
+    },
+    {
+      id: "new-chart",
+      label: "กราฟใหม่",
+      detail: "Open builder for this dashboard",
+      group: "Actions",
+      shortcut: "N",
+      onActivate: openBuilderForCurrentContext,
+    },
+    {
+      id: "refresh-dashboard",
+      label: "รีเฟรชแดชบอร์ด",
+      detail: "รีเฟรชหน้าดูแดชบอร์ด",
+      group: "Actions",
+      shortcut: "R",
+      onActivate: handleRefreshDashboard,
+    },
+    {
+      id: "share-dashboard",
+      label: "แชร์แดชบอร์ด",
+      detail: "Open sharing tools",
+      group: "Actions",
+      shortcut: "S",
+      onActivate: () => openShareModal("share"),
+    },
+    {
+      id: "export-dashboard",
+      label: "ส่งออกแดชบอร์ด",
+      detail: "Open export options",
+      group: "Actions",
+      shortcut: "E",
+      disabled: !hasWidgets,
+      onActivate: () => openShareModal("export"),
+    },
+    {
+      id: "open-dataset-explorer",
+      label: "เปิดตัวสำรวจชุดข้อมูล",
+      detail: "Browse dataset cards, schema, and sample rows",
+      group: "Actions",
+      shortcut: "D",
+    },
+    ...commandPaletteDashboardActions,
+    ...commandPaletteWidgetActions,
+    ...commandPaletteLibraryWidgetActions,
+  ];
 
   if (!activeProject || !activeSheet || !activeDashboard) {
     return (
@@ -756,11 +1081,19 @@ export default function DashboardPage() {
 
     try {
       await new Promise((resolve) => window.setTimeout(resolve, 180));
-      await exportNodeAsImage(dashboardCaptureRef.current, {
-        filename: activeDashboard?.name ?? "dashboard",
-        format,
-        backgroundColor: getComputedStyle(document.documentElement).getPropertyValue("--surface")?.trim() || "#ffffff",
-      });
+      const backgroundColor = getComputedStyle(document.documentElement).getPropertyValue("--surface")?.trim() || "#ffffff";
+      if (format === "pdf") {
+        await exportNodeAsPdf(dashboardCaptureRef.current, {
+          filename: activeDashboard?.name ?? "dashboard",
+          backgroundColor,
+        });
+      } else {
+        await exportNodeAsImage(dashboardCaptureRef.current, {
+          filename: activeDashboard?.name ?? "dashboard",
+          format,
+          backgroundColor,
+        });
+      }
     } catch (error) {
       notify(error?.message || "Unable to export this dashboard right now.", "warning");
     } finally {
@@ -768,21 +1101,147 @@ export default function DashboardPage() {
     }
   }
 
+  function openFullscreenSelection() {
+    if (!hasWidgets || !selectedWidgetId) {
+      notify("Select a widget to open fullscreen mode.", "warning");
+      return;
+    }
+    setFullscreenWidgetId((current) => (current === selectedWidgetId ? null : selectedWidgetId));
+  }
+
+  function applyGlobalFilterPreset(presetId) {
+    if (presetId === "custom") {
+      setActiveFilterPreset("custom");
+      return;
+    }
+
+    const selected = globalSavedPresets.find((preset) => preset.id === presetId);
+    if (!selected) return;
+
+    setDashboardFilters({ ...selected.filters });
+    setActiveFilterPreset(selected.id);
+  }
+
+  function handleGlobalFilterChange(key, value) {
+    setDashboardFilters({ [key]: value });
+    setActiveFilterPreset("custom");
+  }
+
+  function clearGlobalFilters() {
+    resetDashboardFilters();
+    setActiveFilterPreset("custom");
+  }
+
+  function handleSaveFilterPreset() {
+    const presetName = `Saved ${globalSavedPresets.length + 1}`;
+    saveDashboardFilterPreset(activeDashboard?.id, presetName, dashboardFilters);
+    notify(`Saved filter preset "${presetName}".`, "info");
+  }
+
+  function handleWidgetDataPointClick(chart, point) {
+    const interactionPoint = resolveInteractionPoint(chart, point);
+    if (!interactionPoint) {
+      notify("This data point cannot be used for filtering yet.", "warning");
+      return;
+    }
+
+    setCrossFilter({
+      sourceWidgetId: chart?.id ?? chart?.chartId ?? null,
+      ...interactionPoint,
+    });
+
+    const drillStep = getNextDrilldownStep(dashboardInteractions?.drilldown?.path ?? [], interactionPoint);
+    if (drillStep) {
+      pushDrilldownStep({
+        sourceWidgetId: chart?.id ?? chart?.chartId ?? null,
+        ...drillStep,
+      });
+    }
+
+    notify(`Filtered dashboard by ${interactionPoint.field}: ${interactionPoint.value}.`, "info");
+  }
+
+  function handleClearInteractions() {
+    clearDashboardInteractions();
+    notify("Cross-filter and drilldown state cleared.", "info");
+  }
+
+  function handleCreateSavedView() {
+    const name = savedViewName.trim() || `View ${dashboardSavedViews.length + 1}`;
+    createSavedView({
+      name,
+      dashboardId: activeDashboard?.id,
+      filters: dashboardFilters,
+      interactions: dashboardInteractions,
+      layout: activeDashboard?.layout ?? [],
+    });
+    setSavedViewName("");
+    notify(`Saved view "${name}".`, "info");
+  }
+
+  function handleRenameSavedView(viewId) {
+    const nextName = renamingViewName.trim();
+    if (!nextName) return;
+    renameSavedView(viewId, nextName);
+    setRenamingViewId("");
+    setRenamingViewName("");
+    notify(`Renamed saved view to "${nextName}".`, "info");
+  }
+
+  function handleLoadSavedView(viewId) {
+    loadSavedView(viewId);
+    notify("Saved view loaded.", "info");
+  }
+
+  function handleRefreshDashboard() {
+    const activeCount = activeFilterChips.length + interactionChips.length;
+      notify(`รีเฟรชแดชบอร์ดด้วยตัวกรองที่ใช้งาน ${activeCount} รายการแล้ว`, "info");
+  }
+
+  function handleDuplicateCurrentDashboard() {
+    if (!activeDashboard?.id) return;
+    duplicateDashboard(activeDashboard?.id);
+    notify("เริ่มทำสำเนาแดชบอร์ดแล้ว", "info");
+  }
+
+  function handleClearFilters() {
+    clearGlobalFilters();
+    clearDashboardInteractions();
+    notify("Filter panel reset to defaults.", "info");
+  }
+
+  function openPresentationMode() {
+    if (!hasWidgets) {
+      notify("Add widgets before starting presentation mode.", "warning");
+      return;
+    }
+    setPresentationMode(true);
+  }
+
+  function handleToggleFavoriteDashboard(dashboardId) {
+    setFavoriteDashboards((previous) => {
+      const set = new Set(previous);
+      if (set.has(dashboardId)) set.delete(dashboardId);
+      else set.add(dashboardId);
+      return [...set];
+    });
+  }
+
   const toolbarItems = [
     {
       key: "saved",
-      label: "Add Chart",
+      label: "เพิ่มกราฟ",
       onClick: () => setPickingChart(true),
     },
     {
       key: "new",
-      label: "New Chart",
+      label: "กราฟใหม่",
       onClick: openBuilderForCurrentContext,
       primary: true,
     },
     {
       key: "arrange",
-      label: "Auto Layout",
+      label: "จัดวางอัตโนมัติ",
       onClick: autoArrangeDashboard,
       disabled: !dashboardWidgets.length,
     },
@@ -794,11 +1253,15 @@ export default function DashboardPage() {
 
       <WorkspaceLayout
         columns="two"
-        className="dashboard-workspace-shell is-inspector-open"
+        className={`dashboard-workspace-shell is-inspector-open${inspectorCollapsed ? " is-inspector-collapsed" : ""}`}
       >
         <div className="dashboard-workspace-main">
-          <header className="dashboard-workspace-header">
+          <header className="dashboard-workspace-header dashboard-bi-header">
             <div className="dashboard-workspace-header-copy">
+              <div className="dashboard-bi-brandbar">
+                <span className="dashboard-bi-brand">Dashboard Mini BI</span>
+                <div className="dashboard-bi-brand-meta">ประสบการณ์พื้นที่ทำงาน</div>
+              </div>
               <div className="dashboard-workspace-breadcrumb">
                 <span>{activeProject.name}</span>
                 <span className="dashboard-workspace-breadcrumb-separator">/</span>
@@ -811,40 +1274,53 @@ export default function DashboardPage() {
                 <div className="dashboard-workspace-title-copy">
                   <div className="dashboard-workspace-title-topline">
                     <span className={`dashboard-workspace-status${hasWidgets ? " is-live" : ""}`}>
-                      {hasWidgets ? "Live" : "Draft"}
+                      {hasWidgets ? "ใช้งาน" : "ร่าง"}
                     </span>
                   </div>
                   <h1 className="dashboard-workspace-title">{activeDashboard.name}</h1>
-                  <div className="dashboard-workspace-meta">
-                    <span>{workspaceStats.chartCount} charts</span>
-                    <span>{workspaceStats.readyChartsCount} ready</span>
-                    <span>{selectedWidget ? "1 selected" : "No selection"}</span>
+                  <div className="dashboard-workspace-meta dashboard-bi-meta">
+                    <span>{workspaceStats.chartCount} กราฟ</span>
+                    <span>{workspaceStats.readyChartsCount} พร้อมใช้</span>
+                    <span>{selectedWidget ? "เลือก 1 รายการ" : "ยังไม่ได้เลือก"}</span>
                   </div>
+                  <p className="dashboard-workspace-summary">พื้นที่แดชบอร์ดสำหรับผู้บริหาร พร้อมเครื่องมือจัดองค์ประกอบ BI ที่ทันสมัย</p>
                 </div>
               </div>
             </div>
 
-            <div className="dashboard-workspace-header-actions">
-              <div className="dashboard-workspace-stat-row">
-                <div className="dashboard-workspace-stat">
-                  <span>Charts</span>
-                  <strong>{workspaceStats.chartCount}</strong>
+            <div className="dashboard-workspace-header-actions dashboard-bi-header-actions">
+              <div className="dashboard-workspace-header-panel">
+                <div className="dashboard-workspace-header-panel-label">พื้นที่ทำงานปัจจุบัน</div>
+                <strong className="dashboard-workspace-header-panel-value">{activeProject.name}</strong>
+                <div className="dashboard-workspace-header-panel-copy">ชีต: {activeSheet.name}</div>
+                <div className="dashboard-workspace-search-wrap">
+                  <input
+                    type="text"
+                    className="dashboard-bi-search"
+                    placeholder="ค้นหาแดชบอร์ด กราฟ แท็ก..."
+                    aria-label="ค้นหาในพื้นที่แดชบอร์ด"
+                    readOnly
+                  />
                 </div>
-                <div className="dashboard-workspace-stat">
-                  <span>Ready</span>
-                  <strong>{workspaceStats.readyChartsCount}</strong>
-                </div>
-                <div className="dashboard-workspace-stat">
-                  <span>Selection</span>
-                  <strong>{selectedWidget ? "1" : "0"}</strong>
+                <div className="dashboard-bi-header-microline">
+                  <span className="dashboard-bi-control-chip">ธีม: อัตโนมัติ</span>
+                  <span className="dashboard-bi-control-chip">ผู้ใช้: {activeProject.ownerName ?? "เจ้าของพื้นที่ทำงาน"}</span>
                 </div>
               </div>
             </div>
           </header>
 
-          <section className="dashboard-workspace-toolbar dashboard-command-strip">
+          <section className="dashboard-workspace-toolbar dashboard-command-strip dashboard-bi-toolbar">
             <div className="dashboard-workspace-toolbar-group dashboard-workspace-toolbar-group-main">
-              <div className="dashboard-workspace-action-strip">
+                <div className="dashboard-workspace-action-strip dashboard-command-bar">
+                <button
+                  type="button"
+                  onClick={() => setCommandPaletteOpen(true)}
+                  className="dashboard-toolbar-btn"
+                  title="เปิดแผงคำสั่ง"
+                >
+                  Ctrl + K
+                </button>
                 {toolbarItems.map((item) => (
                   <button
                     key={item.key}
@@ -856,6 +1332,68 @@ export default function DashboardPage() {
                     {item.label}
                   </button>
                 ))}
+              </div>
+              <div className="dashboard-workspace-action-strip dashboard-bi-quick-actions" aria-label="คำสั่งด่วนแดชบอร์ด">
+                <button
+                  type="button"
+                  onClick={handleRefreshDashboard}
+                  className="dashboard-toolbar-btn"
+                  title="รีเฟรชแดชบอร์ด"
+                >
+                  รีเฟรช
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDuplicateCurrentDashboard}
+                  className="dashboard-toolbar-btn"
+                  title="ทำสำเนาแดชบอร์ด"
+                >
+                  ทำสำเนาแดชบอร์ด
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openShareModal("share")}
+                  className="dashboard-toolbar-btn"
+                  title="แชร์แดชบอร์ด"
+                >
+                  แชร์
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openShareModal("export")}
+                  className="dashboard-toolbar-btn"
+                  disabled={!dashboardWidgets.length}
+                  title="ส่งออกแดชบอร์ด"
+                >
+                  ส่งออก
+                </button>
+                <button
+                  type="button"
+                  onClick={openPresentationMode}
+                  className="dashboard-toolbar-btn"
+                  disabled={!dashboardWidgets.length}
+                  title="เริ่มโหมดนำเสนอ"
+                >
+                  นำเสนอ
+                </button>
+                <button
+                  type="button"
+                  onClick={openFullscreenSelection}
+                  className="dashboard-toolbar-btn"
+                  disabled={!selectedWidgetId || !dashboardWidgets.length}
+                  title="สลับโหมดเต็มหน้าจอสำหรับวิดเจ็ตที่เลือก"
+                >
+                  {fullscreenWidgetId ? "มุมมองโฟกัส" : "โฟกัสวิดเจ็ต"}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleClearFilters}
+                  className="dashboard-toolbar-btn"
+                  disabled={!activeProject}
+                  title="ล้างตัวกรองรวม"
+                >
+                  ล้างตัวกรอง
+                </button>
                 <div className="dashboard-actions-menu" ref={actionsMenuRef}>
                   <button
                     type="button"
@@ -864,7 +1402,7 @@ export default function DashboardPage() {
                     aria-haspopup="menu"
                     aria-expanded={actionsMenuOpen}
                   >
-                    Actions
+                    การทำงาน
                   </button>
                   {actionsMenuOpen ? (
                     <div className="dashboard-actions-menu-list" role="menu">
@@ -875,7 +1413,7 @@ export default function DashboardPage() {
                         onClick={() => openShareModal("export")}
                         disabled={!dashboardWidgets.length}
                       >
-                        Export
+                        ส่งออก
                       </button>
                       <button
                         type="button"
@@ -883,7 +1421,7 @@ export default function DashboardPage() {
                         role="menuitem"
                         onClick={() => openShareModal("share")}
                       >
-                        Share
+                        แชร์
                       </button>
                       <button
                         type="button"
@@ -891,7 +1429,7 @@ export default function DashboardPage() {
                         role="menuitem"
                         onClick={() => openShareModal("embed")}
                       >
-                        Embed
+                        ฝัง
                       </button>
                     </div>
                   ) : null}
@@ -900,19 +1438,194 @@ export default function DashboardPage() {
             </div>
             <div className="dashboard-workspace-toolbar-summary">
               <div className="dashboard-workspace-toolbar-meta">
-                <span>Project</span>
+                <span>โปรเจกต์</span>
                 <strong>{activeProject.name}</strong>
               </div>
               <div className="dashboard-workspace-toolbar-meta">
-                <span>Selection</span>
+                <span>รายการที่เลือก</span>
                 <strong>{activeSelectionLabel}</strong>
+              </div>
+              <div className="dashboard-workspace-toolbar-meta">
+                <span>โหมดพื้นที่</span>
+                <strong>{isAutoCanvas ? "อัตโนมัติ" : canvasPresetKey.toUpperCase()}</strong>
+              </div>
+            </div>
+          </section>
+
+          <section className="dashboard-global-filters">
+            <div className="dashboard-global-filters-head">
+              <div className="dashboard-workspace-tabs-label">ตัวกรองรวม</div>
+              <div className="dashboard-global-filter-preset-wrap">
+                <label className="dashboard-global-filter-label" htmlFor="dashboard-filter-preset-select">
+                  เลือกพรีเซ็ต
+                </label>
+                <select
+                  id="dashboard-filter-preset-select"
+                  className="dashboard-global-filter-select"
+                  value={activeFilterPreset}
+                  onChange={(event) => applyGlobalFilterPreset(event.target.value)}
+                >
+                  <option value="custom">กำหนดเอง</option>
+                  {globalSavedPresets.map((preset) => (
+                    <option key={preset.id} value={preset.id}>{preset.name}</option>
+                  ))}
+                </select>
+              </div>
+              <button type="button" onClick={handleSaveFilterPreset} className="dashboard-toolbar-btn dashboard-toolbar-btn-sm">บันทึกพรีเซ็ต</button>
+            </div>
+            <div className="dashboard-global-filters-grid">
+              <div className="dashboard-global-filter-control">
+                <label htmlFor="dashboard-filter-date-range" className="dashboard-global-filter-label">ช่วงวันที่</label>
+                <select
+                  id="dashboard-filter-date-range"
+                  className="dashboard-global-filter-select"
+                  value={dashboardFilters.dateRange}
+                  onChange={(event) => handleGlobalFilterChange("dateRange", event.target.value)}
+                >
+                  {DATE_RANGE_OPTIONS.map((item) => <option key={item} value={item}>{getFilterDisplayLabel(item)}</option>)}
+                </select>
+              </div>
+              <div className="dashboard-global-filter-control">
+                <label htmlFor="dashboard-filter-department" className="dashboard-global-filter-label">แผนก</label>
+                <select
+                  id="dashboard-filter-department"
+                  className="dashboard-global-filter-select"
+                  value={dashboardFilters.department}
+                  onChange={(event) => handleGlobalFilterChange("department", event.target.value)}
+                >
+                  {DEPARTMENT_OPTIONS.map((item) => <option key={item} value={item}>{getFilterDisplayLabel(item)}</option>)}
+                </select>
+              </div>
+              <div className="dashboard-global-filter-control">
+                <label htmlFor="dashboard-filter-region" className="dashboard-global-filter-label">ภูมิภาค</label>
+                <select
+                  id="dashboard-filter-region"
+                  className="dashboard-global-filter-select"
+                  value={dashboardFilters.region}
+                  onChange={(event) => handleGlobalFilterChange("region", event.target.value)}
+                >
+                  {REGION_OPTIONS.map((item) => <option key={item} value={item}>{getFilterDisplayLabel(item)}</option>)}
+                </select>
+              </div>
+              <div className="dashboard-global-filter-control">
+                <label htmlFor="dashboard-filter-year" className="dashboard-global-filter-label">ปี</label>
+                <select
+                  id="dashboard-filter-year"
+                  className="dashboard-global-filter-select"
+                  value={dashboardFilters.year}
+                  onChange={(event) => handleGlobalFilterChange("year", event.target.value)}
+                >
+                  {YEAR_OPTIONS.map((item) => <option key={item} value={item}>{getFilterDisplayLabel(item)}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="dashboard-global-filter-chips" role="list" aria-label="ตัวกรองที่ใช้งาน">
+              {activeFilterChips.length ? activeFilterChips.map((chip) => (
+                <span className="dashboard-filter-chip" key={chip.key}>{chip.label}: {getFilterDisplayLabel(chip.value)}</span>
+              )) : (
+                <span className="dashboard-filter-chip">ไม่มีตัวกรองที่ใช้งาน</span>
+              )}
+            </div>
+            <div className="dashboard-global-filter-actions">
+              <button type="button" onClick={clearGlobalFilters} className="dashboard-toolbar-btn">ล้างตัวกรองรวม</button>
+              <button type="button" onClick={handleClearInteractions} className="dashboard-toolbar-btn" disabled={!interactionChips.length}>
+                ล้างการโต้ตอบ
+              </button>
+            </div>
+          </section>
+
+          <section className="dashboard-interactions-panel">
+            <div className="dashboard-interactions-head">
+              <div>
+                <span className="dashboard-workspace-tabs-label">การวิเคราะห์แบบโต้ตอบ</span>
+                <h2>กรองข้ามวิดเจ็ต เจาะดูข้อมูล และมุมมองที่บันทึกไว้</h2>
+              </div>
+              <button type="button" className="dashboard-toolbar-btn" onClick={handleClearInteractions} disabled={!interactionChips.length}>
+                ล้างสถานะ
+              </button>
+            </div>
+            <div className="dashboard-interaction-chip-row">
+              {interactionChips.length ? interactionChips.map((chip) => (
+                <span className="dashboard-filter-chip" key={chip.key}>{chip.label}: {getFilterDisplayLabel(chip.value)}</span>
+              )) : (
+                <span className="dashboard-filter-chip">คลิกจุดบนกราฟเพื่อกรองข้ามวิดเจ็ตและเจาะดูข้อมูล</span>
+              )}
+            </div>
+            <div className="dashboard-drilldown-breadcrumbs" aria-label="เส้นทางการเจาะดูข้อมูล">
+              <button type="button" onClick={() => trimDrilldownPath(-1)} className="dashboard-toolbar-btn dashboard-toolbar-btn-sm">
+                จุดเริ่มต้น
+              </button>
+              {(dashboardInteractions?.drilldown?.path ?? []).map((step, index) => (
+                <button
+                  key={`${step.field}-${step.value}-${index}`}
+                  type="button"
+                  className="dashboard-toolbar-btn dashboard-toolbar-btn-sm"
+                  onClick={() => trimDrilldownPath(index)}
+                >
+                  {step.field}: {getFilterDisplayLabel(step.value)}
+                </button>
+              ))}
+            </div>
+            <div className="dashboard-saved-views">
+              <div className="dashboard-saved-view-create">
+                <input
+                  value={savedViewName}
+                  onChange={(event) => setSavedViewName(event.target.value)}
+                  placeholder="ชื่อมุมมองที่บันทึก"
+                  aria-label="ชื่อมุมมองที่บันทึก"
+                />
+                <button type="button" className="dashboard-toolbar-btn is-primary" onClick={handleCreateSavedView}>
+                  สร้างมุมมอง
+                </button>
+              </div>
+              <div className="dashboard-saved-view-list">
+                {dashboardSavedViews.length ? dashboardSavedViews.map((view) => (
+                  <div className="dashboard-saved-view-item" key={view.id}>
+                    {renamingViewId === view.id ? (
+                      <input
+                        value={renamingViewName}
+                        onChange={(event) => setRenamingViewName(event.target.value)}
+                        aria-label="เปลี่ยนชื่อมุมมองที่บันทึก"
+                      />
+                    ) : (
+                      <strong>{view.name}</strong>
+                    )}
+                    <span>{new Date(view.updatedAt).toLocaleDateString()}</span>
+                    <div>
+                      <button type="button" className="dashboard-toolbar-btn dashboard-toolbar-btn-sm" onClick={() => handleLoadSavedView(view.id)}>
+                        โหลด
+                      </button>
+                      {renamingViewId === view.id ? (
+                        <button type="button" className="dashboard-toolbar-btn dashboard-toolbar-btn-sm" onClick={() => handleRenameSavedView(view.id)}>
+                          บันทึก
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="dashboard-toolbar-btn dashboard-toolbar-btn-sm"
+                          onClick={() => {
+                            setRenamingViewId(view.id);
+                            setRenamingViewName(view.name);
+                          }}
+                        >
+                          เปลี่ยนชื่อ
+                        </button>
+                      )}
+                      <button type="button" className="dashboard-toolbar-btn dashboard-toolbar-btn-sm" onClick={() => deleteSavedView(view.id)}>
+                        ลบ
+                      </button>
+                    </div>
+                  </div>
+                )) : (
+                  <div className="dashboard-saved-view-empty">ยังไม่มีมุมมองที่บันทึกสำหรับแดชบอร์ดนี้</div>
+                )}
               </div>
             </div>
           </section>
 
           <section className="dashboard-workspace-tabs-section">
             <div className="dashboard-workspace-tabs-head">
-              <span className="dashboard-workspace-tabs-label">Dashboards</span>
+              <span className="dashboard-workspace-tabs-label">แดชบอร์ด</span>
             </div>
             <div className="dashboard-workspace-tabs-row is-dashboard-row">
               {(activeSheet.dashboards ?? []).map((dashboard) => (
@@ -931,22 +1644,24 @@ export default function DashboardPage() {
                   onOpenMenu={(event, item) => openContextMenu("dashboard", item, event)}
                 />
               ))}
-              <button type="button" onClick={addDashboard} className="dashboard-workspace-tab-add is-secondary" aria-label="Add dashboard">
-                + Dashboard
+              <button type="button" onClick={addDashboard} className="dashboard-workspace-tab-add is-secondary" aria-label="เพิ่มแดชบอร์ด">
+                + แดชบอร์ด
               </button>
             </div>
           </section>
 
-          <section className="dashboard-workspace-canvas">
+          <section className="dashboard-workspace-canvas dashboard-bi-canvas">
             <div className="dashboard-workspace-canvas-head">
               <div className="dashboard-workspace-canvas-heading">
-                <div className="dashboard-workspace-canvas-title">Canvas</div>
+                <span className="dashboard-workspace-canvas-kicker">พื้นที่วิเคราะห์</span>
+                <h2 className="dashboard-workspace-canvas-title">เลย์เอาต์แดชบอร์ด</h2>
+                <p className="dashboard-workspace-canvas-description">จัดวางภาพข้อมูลให้เล่าเรื่องชัดเจนและรักษาระยะห่างระหว่างวิดเจ็ตให้สม่ำเสมอ</p>
               </div>
               <div className="dashboard-workspace-canvas-meta">
-                <span>{hasWidgets ? `${workspaceStats.chartCount} widgets` : "Empty"}</span>
+                <span>{hasWidgets ? `${workspaceStats.chartCount} วิดเจ็ต` : "ยังไม่มีวิดเจ็ต"}</span>
               </div>
               <div className="dashboard-canvas-size-controls">
-                <label className="dashboard-canvas-size-label" htmlFor="dashboard-canvas-size-select">Canvas size</label>
+                <label className="dashboard-canvas-size-label" htmlFor="dashboard-canvas-size-select">ขนาดพื้นที่</label>
                 <select
                   id="dashboard-canvas-size-select"
                   className="dashboard-canvas-size-select"
@@ -965,7 +1680,7 @@ export default function DashboardPage() {
                       step="1"
                       value={canvasSize?.width ?? CANVAS_SIZE_PRESETS.custom.width}
                       onChange={(event) => handleCanvasCustomSizeChange("width", event.target.value)}
-                      aria-label="Canvas width"
+                      aria-label="ความกว้างพื้นที่"
                     />
                     <span>x</span>
                     <input
@@ -974,7 +1689,7 @@ export default function DashboardPage() {
                       step="1"
                       value={canvasSize?.height ?? CANVAS_SIZE_PRESETS.custom.height}
                       onChange={(event) => handleCanvasCustomSizeChange("height", event.target.value)}
-                      aria-label="Canvas height"
+                      aria-label="ความสูงพื้นที่"
                     />
                   </div>
                 ) : null}
@@ -993,7 +1708,7 @@ export default function DashboardPage() {
               >
               {hasWidgets ? (
                 <DashboardGrid
-                  widgets={dashboardWidgets}
+                  widgets={filteredDashboardWidgets}
                   layout={activeDashboard.layout ?? []}
                   selectedWidgetId={selectedWidgetId}
                   onSelectWidget={selectWidget}
@@ -1003,6 +1718,7 @@ export default function DashboardPage() {
                   onExportCSV={handleExportCsv}
                   onExportPNG={handleExportPng}
                   onEditChart={openBuilderForSavedChart}
+                  onWidgetDataPointClick={handleWidgetDataPointClick}
                   fullscreenChartId={fullscreenWidgetId}
                   onToggleFullscreen={(widgetId) => setFullscreenWidgetId((current) => current === widgetId ? null : widgetId)}
                   showCardHeader={false}
@@ -1019,12 +1735,17 @@ export default function DashboardPage() {
         </div>
 
         <SidebarRight
-          widgets={dashboardWidgets}
+          isCollapsed={inspectorCollapsed}
+          onToggleCollapsed={() => setInspectorCollapsed((current) => !current)}
+          widgets={filteredDashboardWidgets}
           selectedWidgetId={selectedWidget?.id ?? null}
           projectName={activeProject.name}
           dashboardName={activeDashboard.name}
           onSelectWidget={selectWidget}
           onRemoveWidget={removeWidget}
+          favoriteDashboardIds={favoriteDashboards}
+          recentDashboardIds={recentDashboards}
+          onToggleFavoriteDashboard={handleToggleFavoriteDashboard}
         />
       </WorkspaceLayout>
 
@@ -1035,15 +1756,26 @@ export default function DashboardPage() {
               <div className="dashboard-export-surface-copy">
                 <span className="dashboard-export-surface-kicker">{activeProject.name} / {activeSheet.name}</span>
                 <strong>{activeDashboard.name}</strong>
+                <small>{new Date().toLocaleString()}</small>
               </div>
               <div className="dashboard-export-surface-badges">
-                <span>{workspaceStats.chartCount} charts</span>
-                <span>{workspaceStats.readyChartsCount} ready</span>
+                <span>{workspaceStats.chartCount} กราฟ</span>
+                <span>{workspaceStats.readyChartsCount} พร้อมใช้</span>
+              </div>
+            </div>
+            <div className="dashboard-export-context">
+              <strong>สถานะปัจจุบัน</strong>
+              <div>
+                {reportContextItems.length ? reportContextItems.map((item) => (
+                  <span key={item}>{item}</span>
+                )) : (
+                  <span>ไม่มีตัวกรองหรือการโต้ตอบที่ใช้งาน</span>
+                )}
               </div>
             </div>
             <div className="dashboard-export-surface-body">
               <DashboardGrid
-                widgets={dashboardWidgets}
+                widgets={filteredDashboardWidgets}
                 layout={activeDashboard.layout ?? []}
                 isEditable={false}
                 isSelectable={false}
@@ -1074,6 +1806,7 @@ export default function DashboardPage() {
           sheetId={activeSheet.id}
           onExportCSV={handleExportCsv}
           onExportPNG={handleExportPng}
+          onDataPointClick={handleWidgetDataPointClick}
           onClose={() => setFullscreenWidgetId(null)}
         />
       ) : null}
@@ -1095,6 +1828,7 @@ export default function DashboardPage() {
           exportBusy={dashboardExporting}
           onDownloadPng={() => handleDownloadDashboardImage("png")}
           onDownloadJpg={() => handleDownloadDashboardImage("jpg")}
+          onDownloadPdf={() => handleDownloadDashboardImage("pdf")}
           publicUrl={publicViewUrl}
           embedUrl={embedViewUrl}
           embedCode={embedCode}
@@ -1102,6 +1836,48 @@ export default function DashboardPage() {
           onChangeOptions={updateShareOptions}
           onClose={closeShareModal}
         />
+      ) : null}
+
+      <CommandPaletteModal
+        isOpen={commandPaletteOpen}
+        actions={commandPaletteActions}
+        onClose={() => setCommandPaletteOpen(false)}
+        onOpenDatasetExplorer={() => {
+          setCommandPaletteOpen(false);
+          setDatasetExplorerOpen(true);
+        }}
+      />
+
+      <DatasetExplorerModal
+        isOpen={datasetExplorerOpen}
+        onClose={() => setDatasetExplorerOpen(false)}
+      />
+
+      {presentationMode ? (
+        <div className="dashboard-presentation-overlay" role="dialog" aria-modal="true" aria-label="โหมดนำเสนอแดชบอร์ด">
+          <div className="dashboard-presentation-topbar" data-export-ignore="true">
+            <div>
+              <span>{activeProject.name} / {activeSheet.name}</span>
+              <strong>{activeDashboard.name}</strong>
+            </div>
+            <div className="dashboard-presentation-context">
+              {reportContextItems.length ? reportContextItems.slice(0, 4).map((item) => <span key={item}>{item}</span>) : <span>มุมมองแดชบอร์ดสด</span>}
+            </div>
+            <button type="button" className="dashboard-toolbar-btn" onClick={() => setPresentationMode(false)}>
+              ออก
+            </button>
+          </div>
+          <div className="dashboard-presentation-canvas">
+            <DashboardGrid
+              widgets={filteredDashboardWidgets}
+              layout={activeDashboard.layout ?? []}
+              isEditable={false}
+              isSelectable={false}
+              showCardHeader={false}
+              className="is-presentation-mode"
+            />
+          </div>
+        </div>
       ) : null}
     </PageContainer>
   );

@@ -37,6 +37,7 @@ export function createBuilderContextForDashboard({
   dashboardId,
   returnTo = "/dashboard",
   source = "dashboard",
+  prefillTemplateId,
 } = {}) {
   if (!projectId || !sheetId || !dashboardId) return null;
 
@@ -46,6 +47,7 @@ export function createBuilderContextForDashboard({
     dashboardId,
     returnTo,
     source,
+    prefillTemplateId,
   };
 }
 

@@ -41,56 +41,59 @@ const BASE_SETTINGS = {
   axisLabelColor: "#475569",
   lineWidth: 2,
   barBorderRadius: 8,
+  showTooltip: true,
+  folder: "",
+  tags: "",
 };
 
 const LEGEND_POSITIONS = new Set(["top", "bottom", "left", "right"]);
 const CARTESIAN_FAMILIES = new Set(["bar", "line", "area", "scatter", "bubble", "mixed"]);
 
 function getDefaultTitleForTemplate(template) {
-  if (!template) return "Chart";
+  if (!template) return "กราฟ";
   const key = `${template.family}:${template.variant}`;
   const lookup = {
-    "bar:vertical": "Bar Chart",
-    "bar:horizontal": "Horizontal Bar Chart",
-    "bar:grouped": "Grouped Bar Chart",
-    "bar:stacked": "Stacked Bar Chart",
-    "bar:floating": "Floating Bar Chart",
-    "pie:pie": "Pie Chart",
-    "doughnut:basic": "Doughnut Chart",
-    "doughnut:semi": "Doughnut Chart",
-    "doughnut:multi-ring": "Doughnut Chart",
-    "line:basic": "Line Chart",
-    "line:multi": "Line Chart",
-    "line:stepped": "Line Chart",
-    "line:curved": "Line Chart",
-    "line:multi-axis": "Line Chart",
-    "area:basic": "Area Chart",
-    "area:stacked": "Area Chart",
-    "area:filled-line": "Area Chart",
-    "polar-area:polar-area": "Polar Area Chart",
-    "radar:basic": "Radar Chart",
-    "radar:filled": "Radar Chart",
-    "radar:multi-dataset": "Radar Chart",
-    "scatter:scatter": "Scatter Chart",
-    "scatter:multi-series": "Scatter Chart",
-    "bubble:bubble": "Bubble Chart",
-    "bubble:size-comparison": "Bubble Chart",
-    "mixed:bar-line": "Mixed Chart",
-    "mixed:stacked-bar-line": "Mixed Chart",
-    "mixed:multi-axis": "Mixed Chart",
+    "bar:vertical": "กราฟแท่ง",
+    "bar:horizontal": "กราฟแท่งแนวนอน",
+    "bar:grouped": "กราฟแท่งแบบกลุ่ม",
+    "bar:stacked": "กราฟแท่งซ้อน",
+    "bar:floating": "กราฟแท่งช่วงค่า",
+    "pie:pie": "กราฟวงกลม",
+    "doughnut:basic": "กราฟโดนัท",
+    "doughnut:semi": "กราฟโดนัท",
+    "doughnut:multi-ring": "กราฟโดนัท",
+    "line:basic": "กราฟเส้น",
+    "line:multi": "กราฟเส้น",
+    "line:stepped": "กราฟเส้นขั้นบันได",
+    "line:curved": "กราฟเส้นโค้ง",
+    "line:multi-axis": "กราฟเส้นหลายแกน",
+    "area:basic": "กราฟพื้นที่",
+    "area:stacked": "กราฟพื้นที่ซ้อน",
+    "area:filled-line": "กราฟพื้นที่พร้อมเส้น",
+    "polar-area:polar-area": "กราฟโพลา",
+    "radar:basic": "กราฟเรดาร์",
+    "radar:filled": "กราฟเรดาร์",
+    "radar:multi-dataset": "กราฟเรดาร์หลายชุด",
+    "scatter:scatter": "กราฟกระจาย",
+    "scatter:multi-series": "กราฟกระจายหลายชุด",
+    "bubble:bubble": "กราฟบับเบิล",
+    "bubble:size-comparison": "กราฟบับเบิล",
+    "mixed:bar-line": "กราฟผสม",
+    "mixed:stacked-bar-line": "กราฟผสม",
+    "mixed:multi-axis": "กราฟผสมหลายแกน",
   };
   return lookup[key] || ({
-    bar: "Bar Chart",
-    line: "Line Chart",
-    area: "Area Chart",
-    pie: "Pie Chart",
-    doughnut: "Doughnut Chart",
-    "polar-area": "Polar Area Chart",
-    radar: "Radar Chart",
-    scatter: "Scatter Chart",
-    bubble: "Bubble Chart",
-    mixed: "Mixed Chart",
-  }[template.family]) || template.name || "Chart";
+    bar: "กราฟแท่ง",
+    line: "กราฟเส้น",
+    area: "กราฟพื้นที่",
+    pie: "กราฟวงกลม",
+    doughnut: "กราฟโดนัท",
+    "polar-area": "กราฟโพลา",
+    radar: "กราฟเรดาร์",
+    scatter: "กราฟกระจาย",
+    bubble: "กราฟบับเบิล",
+    mixed: "กราฟผสม",
+  }[template.family]) || template.name || "กราฟ";
 }
 
 function sanitizeLegendPosition(position, fallback = "bottom") {
@@ -235,6 +238,44 @@ function createStateSettings(template, savedState = {}) {
 
 function getRoleConfig(template, roleKey) {
   return template?.roles?.find((role) => role.key === roleKey) ?? null;
+}
+
+function normalizeSchemaFieldType(type) {
+  if (!type) return "unknown";
+  if (type === "string") return "category";
+  return type;
+}
+
+function isFieldCompatibleWithRole(schema, roleConfig, fieldName) {
+  const field = schema?.fields?.find((item) => item.name === fieldName);
+  if (!field || !roleConfig) return false;
+  return roleConfig.accepts.includes(normalizeSchemaFieldType(field.type));
+}
+
+function createCompatibleMappingForTemplate(template, currentMapping = {}, schema = null) {
+  return Object.fromEntries(
+    template.roles.map((roleConfig) => {
+      const defaultValue = template.defaultMapping?.[roleConfig.key] ?? (roleConfig.multiple ? [] : null);
+      const currentValue = currentMapping[roleConfig.key];
+      const currentValues = Array.isArray(currentValue)
+        ? currentValue.filter(Boolean)
+        : currentValue
+          ? [currentValue]
+          : [];
+      const compatibleValues = currentValues.filter((fieldName) =>
+        isFieldCompatibleWithRole(schema, roleConfig, fieldName)
+      );
+
+      if (roleConfig.multiple) {
+        return [
+          roleConfig.key,
+          compatibleValues.length ? compatibleValues : Array.isArray(defaultValue) ? defaultValue : defaultValue ? [defaultValue] : [],
+        ];
+      }
+
+      return [roleConfig.key, compatibleValues[0] ?? defaultValue ?? null];
+    })
+  );
 }
 
 function normalizeTemplateState(template, savedState = {}) {
@@ -482,14 +523,22 @@ export default function useChartBuilder(builderContext, editingChartId = "") {
 
         const draft = loadBuilderDraft();
         const defaultTemplate = templates.find((template) => template.id === "bar-vertical") ?? templates[0];
+        const prefillTemplate =
+          templates.find((template) => template.id === builderContext?.prefillTemplateId) ?? null;
         const shouldUseDraft =
+          !prefillTemplate &&
           draft?.projectId === builderContext?.projectId &&
           draft?.sheetId === builderContext?.sheetId &&
           draft?.dashboardId === builderContext?.dashboardId;
-        const template = shouldUseDraft
-          ? templates.find((item) => item.id === draft.draft?.selectedTemplateId) ?? defaultTemplate
-          : defaultTemplate;
-        const normalizedDefaults = normalizeTemplateState(template, shouldUseDraft ? draft.draft : {});
+        const template = prefillTemplate
+          ? prefillTemplate
+          : shouldUseDraft
+            ? templates.find((item) => item.id === draft.draft?.selectedTemplateId) ?? defaultTemplate
+            : defaultTemplate;
+        const normalizedDefaults = normalizeTemplateState(template, prefillTemplate ? {} : shouldUseDraft ? draft.draft : {});
+        const startingCustomSql = prefillTemplate ? normalizedDefaults?.settings?.generatedSql ?? "" : shouldUseDraft ? draft.draft?.customSql ?? "" : "";
+        const lastExecutedSql = prefillTemplate ? "" : shouldUseDraft ? draft.draft?.lastExecutedSql ?? "" : "";
+        const queryMode = prefillTemplate ? "visual" : shouldUseDraft ? draft.draft?.queryMode ?? "visual" : "visual";
 
         setState((current) => ({
           ...current,
@@ -500,9 +549,13 @@ export default function useChartBuilder(builderContext, editingChartId = "") {
           selectedTemplateId: template.id,
           mapping: normalizedDefaults.mapping,
           settings: normalizedDefaults.settings,
-          queryMode: shouldUseDraft ? draft.draft?.queryMode ?? "visual" : "visual",
-          customSql: shouldUseDraft ? draft.draft?.customSql ?? "" : "",
-          lastExecutedSql: shouldUseDraft ? draft.draft?.lastExecutedSql ?? "" : "",
+          queryMode,
+          customSql: startingCustomSql,
+          lastExecutedSql,
+          queryError: "",
+          queryStatus: "idle",
+          queryResult: prefillTemplate ? null : current.queryResult,
+          querySchema: prefillTemplate ? null : current.querySchema,
         }));
       } catch (error) {
         if (!isActive) return;
@@ -518,7 +571,7 @@ export default function useChartBuilder(builderContext, editingChartId = "") {
     return () => {
       isActive = false;
     };
-  }, [builderContext?.dashboardId, builderContext?.projectId, builderContext?.sheetId, editingChartId]);
+  }, [builderContext?.dashboardId, builderContext?.projectId, builderContext?.prefillTemplateId, builderContext?.sheetId, editingChartId]);
 
   const selectedTemplate = useMemo(
     () => state.templates.find((template) => template.id === state.selectedTemplateId) ?? null,
@@ -668,9 +721,7 @@ export default function useChartBuilder(builderContext, editingChartId = "") {
     if (!template) return;
 
     const defaults = normalizeTemplateState(template, {
-      mapping: Object.fromEntries(
-        Object.entries(state.mapping).filter(([roleKey]) => template.roles.some((role) => role.key === roleKey))
-      ),
+      mapping: createCompatibleMappingForTemplate(template, state.mapping, state.schema),
       settings: {
         ...state.settings,
         title: state.settings.title,
@@ -684,6 +735,12 @@ export default function useChartBuilder(builderContext, editingChartId = "") {
       selectedTemplateId: templateId,
       mapping: defaults.mapping,
       settings: defaults.settings,
+      customSql: "",
+      lastExecutedSql: "",
+      queryResult: null,
+      querySchema: null,
+      queryStatus: "idle",
+      queryError: "",
     }));
   }
 

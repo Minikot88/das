@@ -1,0 +1,885 @@
+[
+  {
+    "viewport": "320",
+    "route": "dashboard",
+    "screenshot": "docs/visual-bugfix-screenshots/320-dashboard.png",
+    "horizontalOverflow": false,
+    "scrollWidth": 320,
+    "clientWidth": 320,
+    "overflowEls": [
+      {
+        "text": "MB Mini BI โครงการวิเคราะห์ พื้นที่ทำงาน < หน้าหลัก โปรเจกต์ แดชบอร์ด พื้นที่วิเ",
+        "className": "sidebar-left",
+        "left": -208,
+        "right": 0
+      },
+      {
+        "text": "MB Mini BI โครงการวิเคราะห์",
+        "className": "sidebar-brand",
+        "left": -200,
+        "right": -9
+      },
+      {
+        "text": "MB",
+        "className": "sidebar-brand-mark",
+        "left": -192,
+        "right": -158
+      },
+      {
+        "text": "Mini BI โครงการวิเคราะห์",
+        "className": "sidebar-brand-copy",
+        "left": -150,
+        "right": -73
+      },
+      {
+        "text": "Mini BI",
+        "className": "STRONG",
+        "left": -150,
+        "right": -73
+      },
+      {
+        "text": "โครงการวิเคราะห์",
+        "className": "SPAN",
+        "left": -150,
+        "right": -73
+      },
+      {
+        "text": "พื้นที่ทำงาน <",
+        "className": "sidebar-top",
+        "left": -200,
+        "right": -9
+      },
+      {
+        "text": "พื้นที่ทำงาน",
+        "className": "sidebar-label",
+        "left": -200,
+        "right": -137
+      },
+      {
+        "text": "พื้นที่ทำงาน",
+        "className": "STRONG",
+        "left": -200,
+        "right": -137
+      },
+      {
+        "text": "<",
+        "className": "sidebar-collapse-btn",
+        "left": -41,
+        "right": -9
+      },
+      {
+        "text": "หน้าหลัก โปรเจกต์ แดชบอร์ด พื้นที่วิเคราะห์ ตัวสร้างกราฟ แก้ไขกราฟ เทมเพลต เร็วๆ",
+        "className": "sidebar-nav",
+        "left": -200,
+        "right": -9
+      },
+      {
+        "text": "หน้าหลัก โปรเจกต์",
+        "className": "sidebar-nav-section",
+        "left": -200,
+        "right": -9
+      }
+    ],
+    "tabChecks": [
+      {
+        "text": "DASHBOARD แดชบอร์ดผู้บริหาร",
+        "tabWidth": 239.6875,
+        "afterWidth": 213.688,
+        "constrained": true,
+        "position": "relative",
+        "overflow": "hidden"
+      }
+    ],
+    "recommendationQueryOverlap": 0,
+    "workspaceColumns": "none"
+  },
+  {
+    "viewport": "320",
+    "route": "builder",
+    "screenshot": "docs/visual-bugfix-screenshots/320-builder.png",
+    "horizontalOverflow": false,
+    "scrollWidth": 320,
+    "clientWidth": 320,
+    "overflowEls": [
+      {
+        "text": "MB Mini BI โครงการวิเคราะห์ พื้นที่ทำงาน < หน้าหลัก โปรเจกต์ แดชบอร์ด พื้นที่วิเ",
+        "className": "sidebar-left",
+        "left": -208,
+        "right": 0
+      },
+      {
+        "text": "MB Mini BI โครงการวิเคราะห์",
+        "className": "sidebar-brand",
+        "left": -200,
+        "right": -9
+      },
+      {
+        "text": "MB",
+        "className": "sidebar-brand-mark",
+        "left": -192,
+        "right": -158
+      },
+      {
+        "text": "Mini BI โครงการวิเคราะห์",
+        "className": "sidebar-brand-copy",
+        "left": -150,
+        "right": -73
+      },
+      {
+        "text": "Mini BI",
+        "className": "STRONG",
+        "left": -150,
+        "right": -73
+      },
+      {
+        "text": "โครงการวิเคราะห์",
+        "className": "SPAN",
+        "left": -150,
+        "right": -73
+      },
+      {
+        "text": "พื้นที่ทำงาน <",
+        "className": "sidebar-top",
+        "left": -200,
+        "right": -9
+      },
+      {
+        "text": "พื้นที่ทำงาน",
+        "className": "sidebar-label",
+        "left": -200,
+        "right": -137
+      },
+      {
+        "text": "พื้นที่ทำงาน",
+        "className": "STRONG",
+        "left": -200,
+        "right": -137
+      },
+      {
+        "text": "<",
+        "className": "sidebar-collapse-btn",
+        "left": -41,
+        "right": -9
+      },
+      {
+        "text": "หน้าหลัก โปรเจกต์ แดชบอร์ด พื้นที่วิเคราะห์ ตัวสร้างกราฟ แก้ไขกราฟ เทมเพลต เร็วๆ",
+        "className": "sidebar-nav",
+        "left": -200,
+        "right": -9
+      },
+      {
+        "text": "หน้าหลัก โปรเจกต์",
+        "className": "sidebar-nav-section",
+        "left": -200,
+        "right": -9
+      }
+    ],
+    "tabChecks": [],
+    "recommendationQueryOverlap": 0,
+    "workspaceColumns": "296px"
+  },
+  {
+    "viewport": "375",
+    "route": "dashboard",
+    "screenshot": "docs/visual-bugfix-screenshots/375-dashboard.png",
+    "horizontalOverflow": false,
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "overflowEls": [
+      {
+        "text": "MB Mini BI โครงการวิเคราะห์ พื้นที่ทำงาน < หน้าหลัก โปรเจกต์ แดชบอร์ด พื้นที่วิเ",
+        "className": "sidebar-left",
+        "left": -208,
+        "right": 0
+      },
+      {
+        "text": "MB Mini BI โครงการวิเคราะห์",
+        "className": "sidebar-brand",
+        "left": -200,
+        "right": -9
+      },
+      {
+        "text": "MB",
+        "className": "sidebar-brand-mark",
+        "left": -192,
+        "right": -158
+      },
+      {
+        "text": "Mini BI โครงการวิเคราะห์",
+        "className": "sidebar-brand-copy",
+        "left": -150,
+        "right": -73
+      },
+      {
+        "text": "Mini BI",
+        "className": "STRONG",
+        "left": -150,
+        "right": -73
+      },
+      {
+        "text": "โครงการวิเคราะห์",
+        "className": "SPAN",
+        "left": -150,
+        "right": -73
+      },
+      {
+        "text": "พื้นที่ทำงาน <",
+        "className": "sidebar-top",
+        "left": -200,
+        "right": -9
+      },
+      {
+        "text": "พื้นที่ทำงาน",
+        "className": "sidebar-label",
+        "left": -200,
+        "right": -137
+      },
+      {
+        "text": "พื้นที่ทำงาน",
+        "className": "STRONG",
+        "left": -200,
+        "right": -137
+      },
+      {
+        "text": "<",
+        "className": "sidebar-collapse-btn",
+        "left": -41,
+        "right": -9
+      },
+      {
+        "text": "หน้าหลัก โปรเจกต์ แดชบอร์ด พื้นที่วิเคราะห์ ตัวสร้างกราฟ แก้ไขกราฟ เทมเพลต เร็วๆ",
+        "className": "sidebar-nav",
+        "left": -200,
+        "right": -9
+      },
+      {
+        "text": "หน้าหลัก โปรเจกต์",
+        "className": "sidebar-nav-section",
+        "left": -200,
+        "right": -9
+      }
+    ],
+    "tabChecks": [
+      {
+        "text": "DASHBOARD แดชบอร์ดผู้บริหาร",
+        "tabWidth": 239.6875,
+        "afterWidth": 213.688,
+        "constrained": true,
+        "position": "relative",
+        "overflow": "hidden"
+      }
+    ],
+    "recommendationQueryOverlap": 0,
+    "workspaceColumns": "none"
+  },
+  {
+    "viewport": "375",
+    "route": "builder",
+    "screenshot": "docs/visual-bugfix-screenshots/375-builder.png",
+    "horizontalOverflow": false,
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "overflowEls": [
+      {
+        "text": "MB Mini BI โครงการวิเคราะห์ พื้นที่ทำงาน < หน้าหลัก โปรเจกต์ แดชบอร์ด พื้นที่วิเ",
+        "className": "sidebar-left",
+        "left": -208,
+        "right": 0
+      },
+      {
+        "text": "MB Mini BI โครงการวิเคราะห์",
+        "className": "sidebar-brand",
+        "left": -200,
+        "right": -9
+      },
+      {
+        "text": "MB",
+        "className": "sidebar-brand-mark",
+        "left": -192,
+        "right": -158
+      },
+      {
+        "text": "Mini BI โครงการวิเคราะห์",
+        "className": "sidebar-brand-copy",
+        "left": -150,
+        "right": -73
+      },
+      {
+        "text": "Mini BI",
+        "className": "STRONG",
+        "left": -150,
+        "right": -73
+      },
+      {
+        "text": "โครงการวิเคราะห์",
+        "className": "SPAN",
+        "left": -150,
+        "right": -73
+      },
+      {
+        "text": "พื้นที่ทำงาน <",
+        "className": "sidebar-top",
+        "left": -200,
+        "right": -9
+      },
+      {
+        "text": "พื้นที่ทำงาน",
+        "className": "sidebar-label",
+        "left": -200,
+        "right": -137
+      },
+      {
+        "text": "พื้นที่ทำงาน",
+        "className": "STRONG",
+        "left": -200,
+        "right": -137
+      },
+      {
+        "text": "<",
+        "className": "sidebar-collapse-btn",
+        "left": -41,
+        "right": -9
+      },
+      {
+        "text": "หน้าหลัก โปรเจกต์ แดชบอร์ด พื้นที่วิเคราะห์ ตัวสร้างกราฟ แก้ไขกราฟ เทมเพลต เร็วๆ",
+        "className": "sidebar-nav",
+        "left": -200,
+        "right": -9
+      },
+      {
+        "text": "หน้าหลัก โปรเจกต์",
+        "className": "sidebar-nav-section",
+        "left": -200,
+        "right": -9
+      }
+    ],
+    "tabChecks": [],
+    "recommendationQueryOverlap": 0,
+    "workspaceColumns": "351px"
+  },
+  {
+    "viewport": "768",
+    "route": "dashboard",
+    "screenshot": "docs/visual-bugfix-screenshots/768-dashboard.png",
+    "horizontalOverflow": false,
+    "scrollWidth": 758,
+    "clientWidth": 758,
+    "overflowEls": [
+      {
+        "text": "MB Mini BI โครงการวิเคราะห์ เมนู พื้นที่ทำงาน < พื้นที่ทำงานปัจจุบัน โครงการวิเค",
+        "className": "sidebar-left",
+        "left": -208,
+        "right": 0
+      },
+      {
+        "text": "MB Mini BI โครงการวิเคราะห์",
+        "className": "sidebar-brand",
+        "left": -200,
+        "right": -9
+      },
+      {
+        "text": "MB",
+        "className": "sidebar-brand-mark",
+        "left": -192,
+        "right": -158
+      },
+      {
+        "text": "Mini BI โครงการวิเคราะห์",
+        "className": "sidebar-brand-copy",
+        "left": -150,
+        "right": -73
+      },
+      {
+        "text": "Mini BI",
+        "className": "STRONG",
+        "left": -150,
+        "right": -73
+      },
+      {
+        "text": "โครงการวิเคราะห์",
+        "className": "SPAN",
+        "left": -150,
+        "right": -73
+      },
+      {
+        "text": "เมนู พื้นที่ทำงาน <",
+        "className": "sidebar-top",
+        "left": -200,
+        "right": -9
+      },
+      {
+        "text": "เมนู พื้นที่ทำงาน",
+        "className": "sidebar-label",
+        "left": -200,
+        "right": -137
+      },
+      {
+        "text": "เมนู",
+        "className": "SPAN",
+        "left": -200,
+        "right": -137
+      },
+      {
+        "text": "พื้นที่ทำงาน",
+        "className": "STRONG",
+        "left": -200,
+        "right": -137
+      },
+      {
+        "text": "<",
+        "className": "sidebar-collapse-btn",
+        "left": -41,
+        "right": -9
+      },
+      {
+        "text": "พื้นที่ทำงานปัจจุบัน โครงการวิเคราะห์ ชีตหลัก / แดชบอร์ดผู้บริหาร",
+        "className": "sidebar-workspace-card",
+        "left": -200,
+        "right": -9
+      }
+    ],
+    "tabChecks": [
+      {
+        "text": "DASHBOARD แดชบอร์ดผู้บริหาร",
+        "tabWidth": 239.6875,
+        "afterWidth": 213.688,
+        "constrained": true,
+        "position": "relative",
+        "overflow": "hidden"
+      }
+    ],
+    "recommendationQueryOverlap": 0,
+    "workspaceColumns": "none"
+  },
+  {
+    "viewport": "768",
+    "route": "builder",
+    "screenshot": "docs/visual-bugfix-screenshots/768-builder.png",
+    "horizontalOverflow": false,
+    "scrollWidth": 758,
+    "clientWidth": 758,
+    "overflowEls": [
+      {
+        "text": "MB Mini BI โครงการวิเคราะห์ เมนู พื้นที่ทำงาน < พื้นที่ทำงานปัจจุบัน โครงการวิเค",
+        "className": "sidebar-left",
+        "left": -208,
+        "right": 0
+      },
+      {
+        "text": "MB Mini BI โครงการวิเคราะห์",
+        "className": "sidebar-brand",
+        "left": -200,
+        "right": -9
+      },
+      {
+        "text": "MB",
+        "className": "sidebar-brand-mark",
+        "left": -192,
+        "right": -158
+      },
+      {
+        "text": "Mini BI โครงการวิเคราะห์",
+        "className": "sidebar-brand-copy",
+        "left": -150,
+        "right": -73
+      },
+      {
+        "text": "Mini BI",
+        "className": "STRONG",
+        "left": -150,
+        "right": -73
+      },
+      {
+        "text": "โครงการวิเคราะห์",
+        "className": "SPAN",
+        "left": -150,
+        "right": -73
+      },
+      {
+        "text": "เมนู พื้นที่ทำงาน <",
+        "className": "sidebar-top",
+        "left": -200,
+        "right": -9
+      },
+      {
+        "text": "เมนู พื้นที่ทำงาน",
+        "className": "sidebar-label",
+        "left": -200,
+        "right": -137
+      },
+      {
+        "text": "เมนู",
+        "className": "SPAN",
+        "left": -200,
+        "right": -137
+      },
+      {
+        "text": "พื้นที่ทำงาน",
+        "className": "STRONG",
+        "left": -200,
+        "right": -137
+      },
+      {
+        "text": "<",
+        "className": "sidebar-collapse-btn",
+        "left": -41,
+        "right": -9
+      },
+      {
+        "text": "พื้นที่ทำงานปัจจุบัน โครงการวิเคราะห์ ชีตหลัก / แดชบอร์ดผู้บริหาร",
+        "className": "sidebar-workspace-card",
+        "left": -200,
+        "right": -9
+      }
+    ],
+    "tabChecks": [],
+    "recommendationQueryOverlap": 0,
+    "workspaceColumns": "304px 412px"
+  },
+  {
+    "viewport": "1024",
+    "route": "dashboard",
+    "screenshot": "docs/visual-bugfix-screenshots/1024-dashboard.png",
+    "horizontalOverflow": false,
+    "scrollWidth": 1014,
+    "clientWidth": 1014,
+    "overflowEls": [
+      {
+        "text": "MB Mini BI โครงการวิเคราะห์ เมนู พื้นที่ทำงาน < พื้นที่ทำงานปัจจุบัน โครงการวิเค",
+        "className": "sidebar-left",
+        "left": -208,
+        "right": 0
+      },
+      {
+        "text": "MB Mini BI โครงการวิเคราะห์",
+        "className": "sidebar-brand",
+        "left": -200,
+        "right": -9
+      },
+      {
+        "text": "MB",
+        "className": "sidebar-brand-mark",
+        "left": -192,
+        "right": -158
+      },
+      {
+        "text": "Mini BI โครงการวิเคราะห์",
+        "className": "sidebar-brand-copy",
+        "left": -150,
+        "right": -73
+      },
+      {
+        "text": "Mini BI",
+        "className": "STRONG",
+        "left": -150,
+        "right": -73
+      },
+      {
+        "text": "โครงการวิเคราะห์",
+        "className": "SPAN",
+        "left": -150,
+        "right": -73
+      },
+      {
+        "text": "เมนู พื้นที่ทำงาน <",
+        "className": "sidebar-top",
+        "left": -200,
+        "right": -9
+      },
+      {
+        "text": "เมนู พื้นที่ทำงาน",
+        "className": "sidebar-label",
+        "left": -200,
+        "right": -137
+      },
+      {
+        "text": "เมนู",
+        "className": "SPAN",
+        "left": -200,
+        "right": -137
+      },
+      {
+        "text": "พื้นที่ทำงาน",
+        "className": "STRONG",
+        "left": -200,
+        "right": -137
+      },
+      {
+        "text": "<",
+        "className": "sidebar-collapse-btn",
+        "left": -41,
+        "right": -9
+      },
+      {
+        "text": "พื้นที่ทำงานปัจจุบัน โครงการวิเคราะห์ ชีตหลัก / แดชบอร์ดผู้บริหาร",
+        "className": "sidebar-workspace-card",
+        "left": -200,
+        "right": -9
+      }
+    ],
+    "tabChecks": [
+      {
+        "text": "DASHBOARD แดชบอร์ดผู้บริหาร",
+        "tabWidth": 239.6875,
+        "afterWidth": 213.688,
+        "constrained": true,
+        "position": "relative",
+        "overflow": "hidden"
+      }
+    ],
+    "recommendationQueryOverlap": 0,
+    "workspaceColumns": "none"
+  },
+  {
+    "viewport": "1024",
+    "route": "builder",
+    "screenshot": "docs/visual-bugfix-screenshots/1024-builder.png",
+    "horizontalOverflow": false,
+    "scrollWidth": 1014,
+    "clientWidth": 1014,
+    "overflowEls": [
+      {
+        "text": "MB Mini BI โครงการวิเคราะห์ เมนู พื้นที่ทำงาน < พื้นที่ทำงานปัจจุบัน โครงการวิเค",
+        "className": "sidebar-left",
+        "left": -208,
+        "right": 0
+      },
+      {
+        "text": "MB Mini BI โครงการวิเคราะห์",
+        "className": "sidebar-brand",
+        "left": -200,
+        "right": -9
+      },
+      {
+        "text": "MB",
+        "className": "sidebar-brand-mark",
+        "left": -192,
+        "right": -158
+      },
+      {
+        "text": "Mini BI โครงการวิเคราะห์",
+        "className": "sidebar-brand-copy",
+        "left": -150,
+        "right": -73
+      },
+      {
+        "text": "Mini BI",
+        "className": "STRONG",
+        "left": -150,
+        "right": -73
+      },
+      {
+        "text": "โครงการวิเคราะห์",
+        "className": "SPAN",
+        "left": -150,
+        "right": -73
+      },
+      {
+        "text": "เมนู พื้นที่ทำงาน <",
+        "className": "sidebar-top",
+        "left": -200,
+        "right": -9
+      },
+      {
+        "text": "เมนู พื้นที่ทำงาน",
+        "className": "sidebar-label",
+        "left": -200,
+        "right": -137
+      },
+      {
+        "text": "เมนู",
+        "className": "SPAN",
+        "left": -200,
+        "right": -137
+      },
+      {
+        "text": "พื้นที่ทำงาน",
+        "className": "STRONG",
+        "left": -200,
+        "right": -137
+      },
+      {
+        "text": "<",
+        "className": "sidebar-collapse-btn",
+        "left": -41,
+        "right": -9
+      },
+      {
+        "text": "พื้นที่ทำงานปัจจุบัน โครงการวิเคราะห์ ชีตหลัก / แดชบอร์ดผู้บริหาร",
+        "className": "sidebar-workspace-card",
+        "left": -200,
+        "right": -9
+      }
+    ],
+    "tabChecks": [],
+    "recommendationQueryOverlap": 0,
+    "workspaceColumns": "304px 668px"
+  },
+  {
+    "viewport": "1280",
+    "route": "dashboard",
+    "screenshot": "docs/visual-bugfix-screenshots/1280-dashboard.png",
+    "horizontalOverflow": false,
+    "scrollWidth": 1270,
+    "clientWidth": 1270,
+    "overflowEls": [],
+    "tabChecks": [
+      {
+        "text": "DASHBOARD แดชบอร์ดผู้บริหาร",
+        "tabWidth": 239.6875,
+        "afterWidth": 213.688,
+        "constrained": true,
+        "position": "relative",
+        "overflow": "hidden"
+      }
+    ],
+    "recommendationQueryOverlap": 0,
+    "workspaceColumns": "none"
+  },
+  {
+    "viewport": "1280",
+    "route": "builder",
+    "screenshot": "docs/visual-bugfix-screenshots/1280-builder.png",
+    "horizontalOverflow": false,
+    "scrollWidth": 1270,
+    "clientWidth": 1270,
+    "overflowEls": [],
+    "tabChecks": [],
+    "recommendationQueryOverlap": 0,
+    "workspaceColumns": "250px 472px 280px"
+  },
+  {
+    "viewport": "1440",
+    "route": "dashboard",
+    "screenshot": "docs/visual-bugfix-screenshots/1440-dashboard.png",
+    "horizontalOverflow": false,
+    "scrollWidth": 1430,
+    "clientWidth": 1430,
+    "overflowEls": [],
+    "tabChecks": [
+      {
+        "text": "DASHBOARD แดชบอร์ดผู้บริหาร",
+        "tabWidth": 239.6875,
+        "afterWidth": 213.688,
+        "constrained": true,
+        "position": "relative",
+        "overflow": "hidden"
+      }
+    ],
+    "recommendationQueryOverlap": 0,
+    "workspaceColumns": "none"
+  },
+  {
+    "viewport": "1440",
+    "route": "builder",
+    "screenshot": "docs/visual-bugfix-screenshots/1440-builder.png",
+    "horizontalOverflow": false,
+    "scrollWidth": 1430,
+    "clientWidth": 1430,
+    "overflowEls": [
+      {
+        "text": "โดนัท",
+        "className": "builder-v3-family-tab",
+        "left": 1394,
+        "right": 1453
+      },
+      {
+        "text": "โพลา",
+        "className": "builder-v3-family-tab",
+        "left": 1459,
+        "right": 1516
+      },
+      {
+        "text": "เรดาร์",
+        "className": "builder-v3-family-tab",
+        "left": 1522,
+        "right": 1580
+      },
+      {
+        "text": "กระจาย",
+        "className": "builder-v3-family-tab",
+        "left": 1586,
+        "right": 1655
+      },
+      {
+        "text": "บับเบิล",
+        "className": "builder-v3-family-tab",
+        "left": 1661,
+        "right": 1724
+      },
+      {
+        "text": "ผสม",
+        "className": "builder-v3-family-tab",
+        "left": 1730,
+        "right": 1783
+      }
+    ],
+    "tabChecks": [],
+    "recommendationQueryOverlap": 0,
+    "workspaceColumns": "250px 600px 280px"
+  },
+  {
+    "viewport": "1920",
+    "route": "dashboard",
+    "screenshot": "docs/visual-bugfix-screenshots/1920-dashboard.png",
+    "horizontalOverflow": false,
+    "scrollWidth": 1910,
+    "clientWidth": 1910,
+    "overflowEls": [],
+    "tabChecks": [
+      {
+        "text": "DASHBOARD แดชบอร์ดผู้บริหาร",
+        "tabWidth": 239.6875,
+        "afterWidth": 213.688,
+        "constrained": true,
+        "position": "relative",
+        "overflow": "hidden"
+      }
+    ],
+    "recommendationQueryOverlap": 0,
+    "workspaceColumns": "none"
+  },
+  {
+    "viewport": "1920",
+    "route": "builder",
+    "screenshot": "docs/visual-bugfix-screenshots/1920-builder.png",
+    "horizontalOverflow": false,
+    "scrollWidth": 1920,
+    "clientWidth": 1920,
+    "overflowEls": [
+      {
+        "text": "โพลา",
+        "className": "builder-v3-family-tab",
+        "left": 1919,
+        "right": 1976
+      },
+      {
+        "text": "เรดาร์",
+        "className": "builder-v3-family-tab",
+        "left": 1982,
+        "right": 2040
+      },
+      {
+        "text": "กระจาย",
+        "className": "builder-v3-family-tab",
+        "left": 2046,
+        "right": 2115
+      },
+      {
+        "text": "บับเบิล",
+        "className": "builder-v3-family-tab",
+        "left": 2121,
+        "right": 2184
+      },
+      {
+        "text": "ผสม",
+        "className": "builder-v3-family-tab",
+        "left": 2190,
+        "right": 2243
+      }
+    ],
+    "tabChecks": [],
+    "recommendationQueryOverlap": 0,
+    "workspaceColumns": "260px 1040px 300px"
+  }
+]

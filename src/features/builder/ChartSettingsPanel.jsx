@@ -2,11 +2,13 @@ import React from "react";
 
 const PALETTE_OPTIONS = [
   { value: "chartjs", label: "Chart.js" },
-  { value: "ocean", label: "Ocean" },
-  { value: "sunset", label: "Sunset" },
-  { value: "earth", label: "Earth" },
-  { value: "neutral", label: "Neutral" },
+  { value: "ocean", label: "มหาสมุทร" },
+  { value: "sunset", label: "พระอาทิตย์ตก" },
+  { value: "earth", label: "โลก" },
+  { value: "neutral", label: "กลาง" },
 ];
+
+const CARTESIAN_FAMILIES = new Set(["bar", "line", "area", "scatter", "bubble", "mixed"]);
 
 function Toggle({ label, checked, onChange }) {
   return (
@@ -17,7 +19,14 @@ function Toggle({ label, checked, onChange }) {
   );
 }
 
-const CARTESIAN_FAMILIES = new Set(["bar", "line", "area", "scatter", "bubble", "mixed"]);
+function Field({ label, children }) {
+  return (
+    <label className="builder-v3-field">
+      <span>{label}</span>
+      {children}
+    </label>
+  );
+}
 
 function firstMappingValue(mapping = {}, roles = []) {
   for (const role of roles) {
@@ -46,185 +55,158 @@ function getAxisTitleFallbacks(template, mapping = {}) {
     : { xAxisTitle: categoryField, yAxisTitle: valueField };
 }
 
+function SettingsAccordion({ title, description, open = false, children }) {
+  return (
+    <details className="builder-v3-subsection builder-v3-format-accordion" open={open}>
+      <summary className="builder-v3-inline-meta">
+        <strong>{title}</strong>
+        <span>{description}</span>
+      </summary>
+      {children}
+    </details>
+  );
+}
+
 export default function ChartSettingsPanel({ template, mapping = {}, settings, onSettingChange }) {
   const allowStacked = ["bar", "area", "mixed"].includes(template?.family);
   const allowHorizontal = template?.family === "bar" && template?.variant !== "floating";
   const allowLineWidth = ["line", "area", "mixed", "scatter", "bubble", "radar"].includes(template?.family);
   const allowBarRadius = ["bar", "mixed"].includes(template?.family);
-  const showAxisTitleControls = CARTESIAN_FAMILIES.has(template?.family) && template?.variant !== "floating";
+  const showAxisControls = CARTESIAN_FAMILIES.has(template?.family) && template?.variant !== "floating";
   const axisTitleFallbacks = getAxisTitleFallbacks(template, mapping);
   const xAxisTitleValue = settings.xAxisTitle || axisTitleFallbacks.xAxisTitle;
   const yAxisTitleValue = settings.yAxisTitle || axisTitleFallbacks.yAxisTitle;
 
   return (
-    <section className="builder-v3-panel builder-v3-settings-panel">
-      <div className="builder-v3-section-head">
-        <div>
-          <span className="builder-v3-kicker">Settings</span>
-          <h2 className="builder-v3-title">Display and appearance</h2>
-        </div>
-      </div>
-
-      <div className="builder-v3-subsection">
-        <div className="builder-v3-inline-meta">
-          <strong>Display</strong>
-          <span>Core chart behavior and layout.</span>
-        </div>
-
+    <>
+      <SettingsAccordion title="รูปแบบ" description="ชื่อกราฟ คำอธิบาย และการแสดงผลหลัก" open>
         <div className="builder-v3-form-grid">
-          <label className="builder-v3-field">
-            <span>Chart title</span>
+          <Field label="ชื่อกราฟ">
             <input
               value={settings.title}
-              placeholder="Leave blank to use chart type default when saving"
+              placeholder="เว้นว่างเพื่อใช้ชื่อเริ่มต้น"
               onChange={(event) => onSettingChange("title", event.target.value)}
             />
-          </label>
-
-          <label className="builder-v3-field">
-            <span>Subtitle</span>
+          </Field>
+          <Field label="คำอธิบาย">
             <input value={settings.subtitle} onChange={(event) => onSettingChange("subtitle", event.target.value)} />
-          </label>
-
-          <label className="builder-v3-field">
-            <span>Legend position</span>
-            <select value={settings.legendPosition} onChange={(event) => onSettingChange("legendPosition", event.target.value)}>
-              <option value="bottom">Bottom</option>
-              <option value="right">Right</option>
-              <option value="top">Top</option>
-              <option value="left">Left</option>
-            </select>
-          </label>
-
-          <label className="builder-v3-field">
-            <span>Aggregation</span>
-            <select value={settings.aggregation} onChange={(event) => onSettingChange("aggregation", event.target.value)}>
-              <option value="sum">Sum</option>
-              <option value="avg">Average</option>
-              <option value="count">Count</option>
-            </select>
-          </label>
-
-          {showAxisTitleControls ? (
-            <>
-              <label className="builder-v3-field">
-                <span>X-axis title</span>
-                <input
-                  value={xAxisTitleValue}
-                  placeholder={axisTitleFallbacks.xAxisTitle || "Mapped X field"}
-                  onChange={(event) => onSettingChange("xAxisTitle", event.target.value)}
-                />
-              </label>
-
-              <label className="builder-v3-field">
-                <span>Y-axis title</span>
-                <input
-                  value={yAxisTitleValue}
-                  placeholder={axisTitleFallbacks.yAxisTitle || "Mapped Y field"}
-                  onChange={(event) => onSettingChange("yAxisTitle", event.target.value)}
-                />
-              </label>
-            </>
-          ) : null}
+          </Field>
         </div>
-
         <div className="builder-v3-toggle-grid">
-          <Toggle
-            label="Show title on canvas"
-            checked={settings.showTitle !== false}
-            onChange={(value) => onSettingChange("showTitle", value)}
-          />
-          <Toggle label="Show legend" checked={settings.showLegend} onChange={(value) => onSettingChange("showLegend", value)} />
-          {showAxisTitleControls ? (
-            <>
-              <Toggle
-                label="Show X-axis title"
-                checked={settings.showXAxisTitle ?? Boolean(axisTitleFallbacks.xAxisTitle)}
-                onChange={(value) => onSettingChange("showXAxisTitle", value)}
-              />
-              <Toggle
-                label="Show Y-axis title"
-                checked={settings.showYAxisTitle ?? Boolean(axisTitleFallbacks.yAxisTitle)}
-                onChange={(value) => onSettingChange("showYAxisTitle", value)}
-              />
-            </>
-          ) : null}
-          <Toggle label="Show grid" checked={settings.showGrid} onChange={(value) => onSettingChange("showGrid", value)} />
-          <Toggle label="Begin at zero" checked={settings.beginAtZero} onChange={(value) => onSettingChange("beginAtZero", value)} />
-          {allowStacked ? (
-            <Toggle label="Stacked" checked={settings.stacked} onChange={(value) => onSettingChange("stacked", value)} />
-          ) : null}
-          {allowHorizontal ? (
-            <Toggle label="Horizontal" checked={settings.horizontal} onChange={(value) => onSettingChange("horizontal", value)} />
-          ) : null}
+          <Toggle label="แสดงชื่อบนกราฟ" checked={settings.showTitle !== false} onChange={(value) => onSettingChange("showTitle", value)} />
+          <Toggle label="เริ่มจากศูนย์" checked={settings.beginAtZero} onChange={(value) => onSettingChange("beginAtZero", value)} />
+          {allowStacked ? <Toggle label="ซ้อนกัน" checked={settings.stacked} onChange={(value) => onSettingChange("stacked", value)} /> : null}
+          {allowHorizontal ? <Toggle label="แนวนอน" checked={settings.horizontal} onChange={(value) => onSettingChange("horizontal", value)} /> : null}
         </div>
-      </div>
+      </SettingsAccordion>
 
-      <div className="builder-v3-subsection">
-        <div className="builder-v3-inline-meta">
-          <strong>Appearance</strong>
-          <span>Useful styling only, applied to preview and saved charts.</span>
-        </div>
-
+      <SettingsAccordion title="สี" description="ชุดสี พื้นหลัง และสีข้อความ">
         <div className="builder-v3-form-grid">
-          <label className="builder-v3-field">
-            <span>Color palette</span>
+          <Field label="ชุดสี">
             <select value={settings.palette} onChange={(event) => onSettingChange("palette", event.target.value)}>
               {PALETTE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
               ))}
             </select>
-          </label>
-
-          <label className="builder-v3-field">
-            <span>Chart background</span>
+          </Field>
+          <Field label="พื้นหลังกราฟ">
             <input type="color" value={settings.backgroundColor} onChange={(event) => onSettingChange("backgroundColor", event.target.value)} />
-          </label>
-
-          <label className="builder-v3-field">
-            <span>Border color</span>
-            <input type="color" value={settings.borderColor || "#1f2937"} onChange={(event) => onSettingChange("borderColor", event.target.value)} />
-          </label>
-
-          <label className="builder-v3-field">
-            <span>Title color</span>
+          </Field>
+          <Field label="สีชื่อกราฟ">
             <input type="color" value={settings.titleColor} onChange={(event) => onSettingChange("titleColor", event.target.value)} />
-          </label>
-
-          <label className="builder-v3-field">
-            <span>Axis label color</span>
-            <input type="color" value={settings.axisLabelColor} onChange={(event) => onSettingChange("axisLabelColor", event.target.value)} />
-          </label>
-
-          {allowLineWidth ? (
-            <label className="builder-v3-field">
-              <span>Line width</span>
-              <input
-                type="range"
-                min="1"
-                max="6"
-                step="1"
-                value={settings.lineWidth}
-                onChange={(event) => onSettingChange("lineWidth", Number(event.target.value))}
-              />
-            </label>
-          ) : null}
-
-          {allowBarRadius ? (
-            <label className="builder-v3-field">
-              <span>Bar radius</span>
-              <input
-                type="range"
-                min="0"
-                max="20"
-                step="1"
-                value={settings.barBorderRadius}
-                onChange={(event) => onSettingChange("barBorderRadius", Number(event.target.value))}
-              />
-            </label>
-          ) : null}
+          </Field>
+          <Field label="สีเส้นขอบ">
+            <input type="color" value={settings.borderColor || "#1f2937"} onChange={(event) => onSettingChange("borderColor", event.target.value)} />
+          </Field>
         </div>
-      </div>
-    </section>
+      </SettingsAccordion>
+
+      {showAxisControls ? (
+        <SettingsAccordion title="แกน" description="ชื่อแกน สีป้ายแกน กริด และน้ำหนักเส้น">
+          <div className="builder-v3-form-grid">
+            <Field label="ชื่อแกน X">
+              <input
+                value={xAxisTitleValue}
+                placeholder={axisTitleFallbacks.xAxisTitle || "ฟิลด์ X ที่แมปไว้"}
+                onChange={(event) => onSettingChange("xAxisTitle", event.target.value)}
+              />
+            </Field>
+            <Field label="ชื่อแกน Y">
+              <input
+                value={yAxisTitleValue}
+                placeholder={axisTitleFallbacks.yAxisTitle || "ฟิลด์ Y ที่แมปไว้"}
+                onChange={(event) => onSettingChange("yAxisTitle", event.target.value)}
+              />
+            </Field>
+            <Field label="สีป้ายแกน">
+              <input type="color" value={settings.axisLabelColor} onChange={(event) => onSettingChange("axisLabelColor", event.target.value)} />
+            </Field>
+          </div>
+          <div className="builder-v3-toggle-grid">
+            <Toggle
+              label="แสดงชื่อแกน X"
+              checked={settings.showXAxisTitle ?? Boolean(axisTitleFallbacks.xAxisTitle)}
+              onChange={(value) => onSettingChange("showXAxisTitle", value)}
+            />
+            <Toggle
+              label="แสดงชื่อแกน Y"
+              checked={settings.showYAxisTitle ?? Boolean(axisTitleFallbacks.yAxisTitle)}
+              onChange={(value) => onSettingChange("showYAxisTitle", value)}
+            />
+            <Toggle label="แสดงกริด" checked={settings.showGrid} onChange={(value) => onSettingChange("showGrid", value)} />
+          </div>
+          <div className="builder-v3-form-grid">
+            {allowLineWidth ? (
+              <Field label="ความหนาเส้น">
+                <input
+                  type="range"
+                  min="1"
+                  max="6"
+                  step="1"
+                  value={settings.lineWidth}
+                  onChange={(event) => onSettingChange("lineWidth", Number(event.target.value))}
+                />
+              </Field>
+            ) : null}
+            {allowBarRadius ? (
+              <Field label="รัศมีแท่งกราฟ">
+                <input
+                  type="range"
+                  min="0"
+                  max="20"
+                  step="1"
+                  value={settings.barBorderRadius}
+                  onChange={(event) => onSettingChange("barBorderRadius", Number(event.target.value))}
+                />
+              </Field>
+            ) : null}
+          </div>
+        </SettingsAccordion>
+      ) : null}
+
+      <SettingsAccordion title="Tooltip" description="ข้อมูลที่แสดงเมื่อชี้บนกราฟ">
+        <div className="builder-v3-toggle-grid">
+          <Toggle label="แสดง Tooltip" checked={settings.showTooltip !== false} onChange={(value) => onSettingChange("showTooltip", value)} />
+        </div>
+      </SettingsAccordion>
+
+      <SettingsAccordion title="Legend" description="ตำแหน่งและการแสดงคำอธิบายสี">
+        <div className="builder-v3-form-grid">
+          <Field label="ตำแหน่ง">
+            <select value={settings.legendPosition} onChange={(event) => onSettingChange("legendPosition", event.target.value)}>
+              <option value="bottom">ล่าง</option>
+              <option value="right">ขวา</option>
+              <option value="top">บน</option>
+              <option value="left">ซ้าย</option>
+            </select>
+          </Field>
+        </div>
+        <div className="builder-v3-toggle-grid">
+          <Toggle label="แสดง Legend" checked={settings.showLegend} onChange={(value) => onSettingChange("showLegend", value)} />
+        </div>
+      </SettingsAccordion>
+    </>
   );
 }

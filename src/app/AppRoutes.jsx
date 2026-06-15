@@ -1,14 +1,17 @@
 import React, { Suspense, lazy } from "react";
 import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { MainLayout } from "@/components/layout/Layout";
+import RouteErrorBoundary from "@/components/common/RouteErrorBoundary";
 import { useStore } from "@/store/useStore";
 
 const BuilderPage = lazy(() => import("@/pages/Builder.jsx"));
 const DashboardPage = lazy(() => import("@/pages/DashboardPage.jsx"));
 const DashboardPublicPage = lazy(() => import("@/pages/DashboardPublicPage.jsx"));
+const DatasetsPage = lazy(() => import("@/pages/DatasetsPage.jsx"));
 const HomePage = lazy(() => import("@/pages/HomePage.jsx"));
 const LoginPage = lazy(() => import("@/pages/LoginPage"));
 const RegisterPage = lazy(() => import("@/pages/RegisterPage"));
+const SettingsPage = lazy(() => import("@/pages/SettingsPage.jsx"));
 const SharePage = lazy(() => import("@/pages/SharePage"));
 
 function RouteFallback() {
@@ -40,22 +43,28 @@ function ProtectedRoute() {
   return <Outlet />;
 }
 
+function withRouteBoundary(element) {
+  return <RouteErrorBoundary>{element}</RouteErrorBoundary>;
+}
+
 export default function AppRoutes() {
   return (
     <Suspense fallback={<RouteFallback />}>
       <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/share/:sheetId" element={<SharePage />} />
-        <Route path="/dashboard/:dashboardId/view" element={<DashboardPublicPage />} />
-        <Route path="/dashboard/:dashboardId/embed" element={<DashboardPublicPage />} />
+        <Route path="/login" element={withRouteBoundary(<LoginPage />)} />
+        <Route path="/register" element={withRouteBoundary(<RegisterPage />)} />
+        <Route path="/share/:sheetId" element={withRouteBoundary(<SharePage />)} />
+        <Route path="/dashboard/:dashboardId/view" element={withRouteBoundary(<DashboardPublicPage />)} />
+        <Route path="/dashboard/:dashboardId/embed" element={withRouteBoundary(<DashboardPublicPage />)} />
 
         <Route element={<ProtectedRoute />}>
           <Route element={<MainLayout />}>
-            <Route index element={<HomePage />} />
-            <Route path="/home" element={<HomePage />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/builder" element={<BuilderPage />} />
+            <Route index element={withRouteBoundary(<HomePage />)} />
+            <Route path="/home" element={withRouteBoundary(<HomePage />)} />
+            <Route path="/dashboard" element={withRouteBoundary(<DashboardPage />)} />
+            <Route path="/builder" element={withRouteBoundary(<BuilderPage />)} />
+            <Route path="/datasets" element={withRouteBoundary(<DatasetsPage />)} />
+            <Route path="/settings" element={withRouteBoundary(<SettingsPage />)} />
           </Route>
         </Route>
 

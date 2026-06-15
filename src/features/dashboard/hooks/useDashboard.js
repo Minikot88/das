@@ -24,9 +24,15 @@ export default function useDashboard({ projectId, sheetId, dashboardId, layout =
         return;
       }
 
-      const nextWidgets = await getDashboardCharts(dashboardId, { projectId, sheetId });
-      if (isActive) {
-        setWidgets(nextWidgets);
+      try {
+        const nextWidgets = await getDashboardCharts(dashboardId, { projectId, sheetId });
+        if (isActive) {
+          setWidgets(Array.isArray(nextWidgets) ? nextWidgets : []);
+        }
+      } catch {
+        if (isActive) {
+          setWidgets([]);
+        }
       }
     }
 

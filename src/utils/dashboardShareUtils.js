@@ -219,6 +219,72 @@ function triggerDownload(dataUrl, filename) {
   link.click();
 }
 
+function dataUrlToBytes(dataUrl) {
+  const base64 = String(dataUrl).split(",")[1] ?? "";
+  const binary = window.atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return bytes;
+}
+
+function textBytes(value) {
+  return new TextEncoder().encode(value);
+}
+
+function concatBytes(parts) {
+  const totalLength = parts.reduce((sum, part) => sum + part.length, 0);
+  const output = new Uint8Array(totalLength);
+  let offset = 0;
+  parts.forEach((part) => {
+    output.set(part, offset);
+    offset += part.length;
+  });
+  return output;
+}
+
+function createSingleImagePdf({ imageBytes, width, height }) {
+  const pageWidth = Math.max(320, Math.round(width));
+  const pageHeight = Math.max(240, Math.round(height));
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>`,
+    `<< /Type /XObject /Subtype /Image /Width ${pageWidth} /Height ${pageHeight} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${imageBytes.length} >>\nstream\n`,
+    `<< /Length ${`q\n${pageWidth} 0 0 ${pageHeight} 0 0 cm\n/Im0 Do\nQ\n`.length} >>\nstream\nq\n${pageWidth} 0 0 ${pageHeight} 0 0 cm\n/Im0 Do\nQ\nendstream`,
+  ];
+  const parts = [textBytes("%PDF-1.4\n")];
+  const offsets = [0];
+
+  objects.forEach((object, index) => {
+    offsets.push(parts.reduce((sum, part) => sum + part.length, 0));
+    parts.push(textBytes(`${index + 1} 0 obj\n`));
+    if (index === 3) {
+      parts.push(textBytes(object));
+      parts.push(imageBytes);
+      parts.push(textBytes("\nendstream\nendobj\n"));
+      return;
+    }
+    parts.push(textBytes(`${object}\nendobj\n`));
+  });
+
+  const xrefOffset = parts.reduce((sum, part) => sum + part.length, 0);
+  const xrefLines = [
+    "xref",
+    `0 ${objects.length + 1}`,
+    "0000000000 65535 f ",
+    ...offsets.slice(1).map((offset) => `${String(offset).padStart(10, "0")} 00000 n `),
+    "trailer",
+    `<< /Size ${objects.length + 1} /Root 1 0 R >>`,
+    "startxref",
+    String(xrefOffset),
+    "%%EOF",
+  ].join("\n");
+  parts.push(textBytes(xrefLines));
+  return concatBytes(parts);
+}
+
 export async function exportNodeAsImage(node, {
   filename = "dashboard",
   format = "png",
@@ -234,4 +300,26 @@ export async function exportNodeAsImage(node, {
   const mimeType = normalizedFormat === "jpeg" ? "image/jpeg" : "image/png";
   const dataUrl = canvas.toDataURL(mimeType, quality);
   triggerDownload(dataUrl, `${sanitizeFileName(filename)}.${normalizedFormat === "jpeg" ? "jpg" : "png"}`);
+}
+
+export async function exportNodeAsPdf(node, {
+  filename = "dashboard",
+  backgroundColor = "#ffffff",
+  pixelRatio = 1.4,
+} = {}) {
+  const canvas = await nodeToCanvas(node, { backgroundColor, pixelRatio });
+  const imageDataUrl = canvas.toDataURL("image/jpeg", 0.92);
+  const imageBytes = dataUrlToBytes(imageDataUrl);
+  const pdfBytes = createSingleImagePdf({
+    imageBytes,
+    width: canvas.width,
+    height: canvas.height,
+  });
+  const blob = new Blob([pdfBytes], { type: "application/pdf" });
+  const url = URL.createObjectURL(blob);
+  try {
+    triggerDownload(url, `${sanitizeFileName(filename)}.pdf`);
+  } finally {
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
 }

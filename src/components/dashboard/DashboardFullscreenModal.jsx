@@ -12,6 +12,7 @@ export default function DashboardFullscreenModal({
   filters,
   onExportCSV,
   onExportPNG,
+  onDataPointClick,
   drilldown,
   onDrilldown,
   onResetDrilldown,
@@ -43,9 +44,9 @@ export default function DashboardFullscreenModal({
     };
   }, [onClose]);
 
-  const modalTitle = useMemo(() => chart?.title ?? "Widget", [chart?.title]);
+  const modalTitle = useMemo(() => chart?.title ?? "วิดเจ็ต", [chart?.title]);
   const chartType = chart?.chartType ?? chart?.type ?? "chart";
-  const chartDataset = chart?.dataset ?? chart?.table ?? "Not selected";
+  const chartDataset = chart?.dataset ?? chart?.table ?? "ยังไม่ได้เลือก";
 
   if (!chart) return null;
 
@@ -63,7 +64,7 @@ export default function DashboardFullscreenModal({
       >
         <div className="dashboard-fullscreen-topbar">
           <div className="dashboard-fullscreen-heading">
-            <span className="dashboard-fullscreen-kicker">Fullscreen Widget</span>
+            <span className="dashboard-fullscreen-kicker">วิดเจ็ตเต็มหน้าจอ</span>
             <h2 id="dashboard-fullscreen-title" className="dashboard-fullscreen-title">
               {modalTitle}
             </h2>
@@ -76,9 +77,9 @@ export default function DashboardFullscreenModal({
             type="button"
             className="dashboard-fullscreen-close"
             onClick={onClose}
-            aria-label="Close fullscreen widget"
+            aria-label="ปิดวิดเจ็ตเต็มหน้าจอ"
           >
-            Close
+            ปิด
           </button>
         </div>
 
@@ -90,6 +91,7 @@ export default function DashboardFullscreenModal({
             filters={filters}
             onExportCSV={onExportCSV}
             onExportPNG={onExportPNG}
+            onDataPointClick={onDataPointClick}
             drilldown={drilldown}
             onDrilldown={onDrilldown}
             onResetDrilldown={onResetDrilldown}

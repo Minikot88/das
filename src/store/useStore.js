@@ -93,6 +93,33 @@ const defaultUiState = {
   lastOpenedContextByProject: {},
 };
 
+const defaultAppSettings = {
+  theme: "light",
+  density: "comfortable",
+  dateFormat: "MMM d, yyyy",
+  numberFormat: "compact",
+  dashboardPreferences: {
+    showWidgetHeaders: true,
+    showWidgetFooters: true,
+    autoRefresh: false,
+    defaultCanvasPreset: "auto",
+  },
+};
+
+const defaultDashboardFilters = {
+  dateRange: "All dates",
+  department: "All departments",
+  region: "All regions",
+  year: "All years",
+};
+
+const defaultDashboardInteractions = {
+  crossFilter: null,
+  drilldown: {
+    path: [],
+  },
+};
+
 function normalizeFilters(filters = {}) {
   return {
     aggregateType: filters.aggregateType || "sum",
@@ -107,6 +134,95 @@ function normalizeFilters(filters = {}) {
 }
 
 const defaultFilters = normalizeFilters();
+
+function normalizeAppSettings(settings = {}) {
+  const dashboardPreferences = settings.dashboardPreferences ?? {};
+  return {
+    theme: ["light", "dark"].includes(settings.theme) ? settings.theme : defaultAppSettings.theme,
+    density: ["compact", "comfortable", "spacious"].includes(settings.density)
+      ? settings.density
+      : defaultAppSettings.density,
+    dateFormat: settings.dateFormat || defaultAppSettings.dateFormat,
+    numberFormat: settings.numberFormat || defaultAppSettings.numberFormat,
+    dashboardPreferences: {
+      ...defaultAppSettings.dashboardPreferences,
+      ...dashboardPreferences,
+    },
+  };
+}
+
+function normalizeDashboardFilters(filters = {}) {
+  return {
+    dateRange: filters.dateRange || defaultDashboardFilters.dateRange,
+    department: filters.department || defaultDashboardFilters.department,
+    region: filters.region || defaultDashboardFilters.region,
+    year: filters.year || defaultDashboardFilters.year,
+  };
+}
+
+function normalizeDashboardInteractions(interactions = {}) {
+  return {
+    crossFilter: interactions.crossFilter?.field
+      ? {
+          sourceWidgetId: interactions.crossFilter.sourceWidgetId ?? null,
+          field: interactions.crossFilter.field,
+          value: interactions.crossFilter.value,
+        }
+      : null,
+    drilldown: {
+      path: Array.isArray(interactions.drilldown?.path)
+        ? interactions.drilldown.path
+            .filter((step) => step?.field)
+            .map((step) => ({
+              sourceWidgetId: step.sourceWidgetId ?? null,
+              field: step.field,
+              value: step.value,
+            }))
+        : [],
+    },
+  };
+}
+
+function normalizeImportedDataset(dataset = {}) {
+  const rows = Array.isArray(dataset.rows) ? dataset.rows : [];
+  const fields = Array.isArray(dataset.fields)
+    ? dataset.fields
+    : Object.keys(rows[0] ?? {}).map((name) => ({
+        name,
+        label: name,
+        type: "text",
+      }));
+  const validFields = fields
+    .filter((field) => field?.name)
+    .map((field) => ({
+      name: String(field.name),
+      label: field.label || field.name,
+      type: field.type || "text",
+    }));
+  const recovered = !Array.isArray(dataset.rows) || !Array.isArray(dataset.fields) || validFields.length !== fields.length;
+  return {
+    id: dataset.id ?? createEntityId("dataset"),
+    name: dataset.name || "Imported dataset",
+    source: dataset.source || "CSV upload",
+    createdAt: dataset.createdAt ?? new Date().toISOString(),
+    updatedAt: dataset.updatedAt ?? dataset.createdAt ?? new Date().toISOString(),
+    fields: validFields,
+    rows,
+    rowCount: dataset.rowCount ?? rows.length,
+    columnCount: dataset.columnCount ?? validFields.length,
+    validation: recovered
+      ? {
+          valid: rows.length > 0 || validFields.length > 0,
+          errors: [],
+          warnings: ["Dataset metadata was repaired from local storage."],
+        }
+      : dataset.validation ?? {
+      valid: true,
+      errors: [],
+      warnings: [],
+    },
+  };
+}
 
 function loadState() {
   return loadWorkspaceState();
@@ -543,11 +659,16 @@ export const useStore = create((set, get) => ({
   charts: (saved?.charts ?? []).map(normalizeStoredChart),
   shareLinks: saved?.shareLinks ?? {},
 
-  theme: saved?.theme ?? "light",
+  appSettings: normalizeAppSettings(saved?.appSettings ?? { theme: saved?.theme ?? "light" }),
+  theme: normalizeAppSettings(saved?.appSettings ?? { theme: saved?.theme ?? "light" }).theme,
   locale: saved?.locale ?? "th",
 
   filters: normalizeFilters(saved?.filters),
+  dashboardFilters: normalizeDashboardFilters(saved?.dashboardFilters),
+  dashboardInteractions: normalizeDashboardInteractions(saved?.dashboardInteractions),
   filterPresets: saved?.filterPresets ?? [],
+  savedViews: saved?.savedViews ?? [],
+  importedDatasets: (saved?.importedDatasets ?? []).map(normalizeImportedDataset),
   ui: {
     ...defaultUiState,
     ...(saved?.ui ?? {}),
@@ -1514,6 +1635,217 @@ export const useStore = create((set, get) => ({
     return { filterPresets };
   }),
 
+  setDashboardFilters: (updates) => set((s) => {
+    const dashboardFilters = normalizeDashboardFilters({ ...s.dashboardFilters, ...updates });
+    saveState({ ...s, dashboardFilters });
+    return { dashboardFilters };
+  }),
+
+  resetDashboardFilters: () => set((s) => {
+    const dashboardFilters = normalizeDashboardFilters(defaultDashboardFilters);
+    saveState({ ...s, dashboardFilters });
+    return { dashboardFilters };
+  }),
+
+  saveDashboardFilterPreset: (dashboardId, name, filters) => set((s) => {
+    const trimmedName = String(name ?? "").trim();
+    if (!dashboardId || !trimmedName) return {};
+
+    const nextFilters = normalizeDashboardFilters(filters);
+    const now = new Date().toISOString();
+    const existingPreset = s.filterPresets.find(
+      (preset) =>
+        preset.dashboardId === dashboardId &&
+        preset.scope === "dashboard-global" &&
+        preset.name.trim().toLowerCase() === trimmedName.toLowerCase()
+    );
+    const filterPresets = existingPreset
+      ? s.filterPresets.map((preset) =>
+          preset.id === existingPreset.id
+            ? { ...preset, name: trimmedName, filters: nextFilters, updatedAt: now }
+            : preset
+        )
+      : [
+          {
+            id: `dashboard-preset-${Date.now()}`,
+            dashboardId,
+            scope: "dashboard-global",
+            name: trimmedName,
+            filters: nextFilters,
+            createdAt: now,
+            updatedAt: now,
+          },
+          ...s.filterPresets,
+        ];
+
+    saveState({ ...s, filterPresets });
+    return { filterPresets };
+  }),
+
+  applyDashboardFilterPreset: (presetId) => set((s) => {
+    const preset = s.filterPresets.find((item) => item.id === presetId);
+    if (!preset) return {};
+    const dashboardFilters = normalizeDashboardFilters(preset.filters);
+    saveState({ ...s, dashboardFilters });
+    return { dashboardFilters };
+  }),
+
+  setCrossFilter: (interaction) => set((s) => {
+    const dashboardInteractions = normalizeDashboardInteractions({
+      ...s.dashboardInteractions,
+      crossFilter: interaction,
+    });
+    saveState({ ...s, dashboardInteractions });
+    return { dashboardInteractions };
+  }),
+
+  clearCrossFilter: () => set((s) => {
+    const dashboardInteractions = normalizeDashboardInteractions({
+      ...s.dashboardInteractions,
+      crossFilter: null,
+    });
+    saveState({ ...s, dashboardInteractions });
+    return { dashboardInteractions };
+  }),
+
+  pushDrilldownStep: (step) => set((s) => {
+    if (!step?.field) return {};
+    const currentPath = s.dashboardInteractions?.drilldown?.path ?? [];
+    const dashboardInteractions = normalizeDashboardInteractions({
+      ...s.dashboardInteractions,
+      drilldown: {
+        path: [...currentPath, step],
+      },
+    });
+    saveState({ ...s, dashboardInteractions });
+    return { dashboardInteractions };
+  }),
+
+  trimDrilldownPath: (index) => set((s) => {
+    const currentPath = s.dashboardInteractions?.drilldown?.path ?? [];
+    const nextPath = Number.isFinite(Number(index))
+      ? currentPath.slice(0, Math.max(0, Number(index) + 1))
+      : [];
+    const dashboardInteractions = normalizeDashboardInteractions({
+      ...s.dashboardInteractions,
+      drilldown: { path: nextPath },
+    });
+    saveState({ ...s, dashboardInteractions });
+    return { dashboardInteractions };
+  }),
+
+  clearDashboardInteractions: () => set((s) => {
+    const dashboardInteractions = normalizeDashboardInteractions(defaultDashboardInteractions);
+    saveState({ ...s, dashboardInteractions });
+    return { dashboardInteractions };
+  }),
+
+  createSavedView: ({ name, dashboardId, filters, interactions, layout } = {}) => set((s) => {
+    const trimmedName = String(name ?? "").trim();
+    if (!trimmedName || !dashboardId) return {};
+    const now = new Date().toISOString();
+    const savedView = {
+      id: `view-${Date.now()}`,
+      name: trimmedName,
+      projectId: s.activeProjectId,
+      sheetId: s.activeSheetId,
+      dashboardId,
+      filters: normalizeDashboardFilters(filters ?? s.dashboardFilters),
+      interactions: normalizeDashboardInteractions(interactions ?? s.dashboardInteractions),
+      layout: Array.isArray(layout) ? cloneSerializable(layout) : [],
+      createdAt: now,
+      updatedAt: now,
+    };
+    const savedViews = [savedView, ...s.savedViews];
+    saveState({ ...s, savedViews });
+    return { savedViews };
+  }),
+
+  renameSavedView: (viewId, name) => set((s) => {
+    const trimmedName = String(name ?? "").trim();
+    if (!viewId || !trimmedName) return {};
+    const savedViews = s.savedViews.map((view) =>
+      view.id === viewId ? { ...view, name: trimmedName, updatedAt: new Date().toISOString() } : view
+    );
+    saveState({ ...s, savedViews });
+    return { savedViews };
+  }),
+
+  deleteSavedView: (viewId) => set((s) => {
+    const savedViews = s.savedViews.filter((view) => view.id !== viewId);
+    saveState({ ...s, savedViews });
+    return { savedViews };
+  }),
+
+  loadSavedView: (viewId) => set((s) => {
+    const view = s.savedViews.find((item) => item.id === viewId);
+    if (!view) return {};
+    const dashboardFilters = normalizeDashboardFilters(view.filters);
+    const dashboardInteractions = normalizeDashboardInteractions(view.interactions);
+    const projects = s.projects.map((project) =>
+      project.id !== view.projectId ? project : {
+        ...project,
+        sheets: project.sheets.map((sheet) =>
+          sheet.id !== view.sheetId ? sheet : {
+            ...sheet,
+            dashboards: sheet.dashboards.map((dashboard) =>
+              dashboard.id !== view.dashboardId || !Array.isArray(view.layout)
+                ? dashboard
+                : { ...dashboard, layout: sanitizeLayout(view.layout, dashboard.layout ?? []) }
+            ),
+          }
+        ),
+      }
+    );
+    saveState({
+      ...s,
+      projects,
+      activeProjectId: view.projectId,
+      activeSheetId: view.sheetId,
+      activeDashboardId: view.dashboardId,
+      dashboardFilters,
+      dashboardInteractions,
+    });
+    return {
+      projects,
+      activeProjectId: view.projectId,
+      activeSheetId: view.sheetId,
+      activeDashboardId: view.dashboardId,
+      dashboardFilters,
+      dashboardInteractions,
+    };
+  }),
+
+  updateAppSettings: (updates) => set((s) => {
+    const appSettings = normalizeAppSettings({
+      ...s.appSettings,
+      ...updates,
+      dashboardPreferences: {
+        ...s.appSettings.dashboardPreferences,
+        ...(updates?.dashboardPreferences ?? {}),
+      },
+    });
+    const theme = appSettings.theme;
+    saveState({ ...s, appSettings, theme });
+    return { appSettings, theme };
+  }),
+
+  importDataset: (dataset) => set((s) => {
+    const importedDataset = normalizeImportedDataset(dataset);
+    const importedDatasets = [
+      importedDataset,
+      ...s.importedDatasets.filter((item) => item.id !== importedDataset.id),
+    ];
+    saveState({ ...s, importedDatasets });
+    return { importedDatasets };
+  }),
+
+  deleteImportedDataset: (datasetId) => set((s) => {
+    const importedDatasets = s.importedDatasets.filter((dataset) => dataset.id !== datasetId);
+    saveState({ ...s, importedDatasets });
+    return { importedDatasets };
+  }),
+
   setAiInsights:      (insights) => set({ aiInsights: insights, isLoadingInsights: false }),
   setLoadingInsights: (v)        => set({ isLoadingInsights: v }),
   // Share records are local mock records only. A production app must validate
@@ -1565,6 +1897,19 @@ export const useStore = create((set, get) => ({
     });
     return shareId;
   },
+  updateDashboardShareSnapshot: (shareId, snapshot) => set((s) => {
+    if (!shareId || !s.shareLinks?.[shareId]) return {};
+    const shareLinks = {
+      ...s.shareLinks,
+      [shareId]: {
+        ...s.shareLinks[shareId],
+        snapshot: cloneSerializable(snapshot ?? {}),
+        updatedAt: new Date().toISOString(),
+      },
+    };
+    saveState({ ...s, shareLinks });
+    return { shareLinks };
+  }),
   resolveShareLink: (shareId) => {
     const state = get();
     return state.shareLinks?.[shareId] ?? null;
@@ -1704,8 +2049,9 @@ export const useStore = create((set, get) => ({
 
   toggleTheme: () => set((s) => {
     const theme = s.theme === "light" ? "dark" : "light";
-    saveState({ ...s, theme });
-    return { theme };
+    const appSettings = normalizeAppSettings({ ...s.appSettings, theme });
+    saveState({ ...s, theme, appSettings });
+    return { theme, appSettings };
   }),
 
   setLanguage: (locale) => set((s) => {

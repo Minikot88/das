@@ -550,6 +550,32 @@ export function generateVisualSql({
   const bar = ensureArray(mapping.bar)[0];
   const line = ensureArray(mapping.line)[0];
   const size = ensureArray(mapping.size)[0];
+  const columns = ensureArray(mapping.columns);
+  const row = ensureArray(mapping.row)[0];
+  const column = ensureArray(mapping.column)[0];
+
+  if (template.family === "table") {
+    const selectItems = columns.length ? columns.join(", ") : "*";
+    return `SELECT ${selectItems} FROM ${tableName} LIMIT 100`;
+  }
+
+  if (template.family === "kpi" && value) {
+    return buildGroupQuery({
+      tableName,
+      dimensions: label ? [label] : [],
+      measures: [buildAggregateSelect(value, aggregation, value)],
+      orderBy: label ? [label] : [],
+    });
+  }
+
+  if (template.family === "heatmap" && row && column && value) {
+    return buildGroupQuery({
+      tableName,
+      dimensions: [row, column],
+      measures: [buildAggregateSelect(value, aggregation, value)],
+      orderBy: [row, column],
+    });
+  }
 
   if (template.family === "bar" || template.family === "line" || template.family === "area") {
     if (template.family === "bar" && template.variant === "floating" && x && min && max) {

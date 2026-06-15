@@ -21,8 +21,6 @@ function hasObjectValues(value) {
 }
 
 function getRenderableChartJsConfig(chart = {}, config = null) {
-  if (isRenderableChartJsConfig(config)) return config;
-
   const templateId = chart.templateId ?? config?.meta?.templateId ?? config?.templateId;
   const rows = Array.isArray(chart.rows) && chart.rows.length
     ? chart.rows
@@ -36,8 +34,8 @@ function getRenderableChartJsConfig(chart = {}, config = null) {
   const mapping = hasObjectValues(chart.mapping) ? chart.mapping : config?.mapping ?? {};
   const settings = hasObjectValues(chart.settings) ? chart.settings : config?.settings ?? {};
 
-  if (!rows.length) return config;
-  if (!templateId) return createFallbackChartJsConfig(chart, config, rows, settings);
+  if (!rows.length) return chart.filterMeta?.active ? null : config;
+  if (!templateId) return isRenderableChartJsConfig(config) ? config : createFallbackChartJsConfig(chart, config, rows, settings);
 
   try {
     const generatedConfig = createChartConfig({
@@ -51,7 +49,7 @@ function getRenderableChartJsConfig(chart = {}, config = null) {
       ? generatedConfig
       : createFallbackChartJsConfig(chart, config, rows, settings);
   } catch {
-    return createFallbackChartJsConfig(chart, config, rows, settings);
+    return isRenderableChartJsConfig(config) ? config : createFallbackChartJsConfig(chart, config, rows, settings);
   }
 }
 
@@ -122,7 +120,102 @@ function createFallbackChartJsConfig(chart = {}, config = null, rows = [], setti
   });
 }
 
-export default function ChartRenderer({ chart = {}, config, containerHeight, height, className = "", onChartReady }) {
+function formatCellValue(value) {
+  if (value === null || value === undefined || value === "") return "-";
+  if (typeof value === "number") {
+    return new Intl.NumberFormat("th-TH", { maximumFractionDigits: 2 }).format(value);
+  }
+  return String(value);
+}
+
+function TableChart({ config = {}, height = 320, className = "" }) {
+  const columns = Array.isArray(config.columns) ? config.columns : [];
+  const rows = Array.isArray(config.rows) ? config.rows : [];
+
+  return (
+    <div className={`chart-table-wrap chart-table-renderer${className ? ` ${className}` : ""}`} style={{ height }}>
+      <table className="chart-table">
+        <thead>
+          <tr>
+            {columns.map((column) => (
+              <th key={column.key} scope="col">{column.label}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.length ? rows.map((row, rowIndex) => (
+            <tr key={`${rowIndex}-${columns.map((column) => row?.[column.key]).join("|")}`}>
+              {columns.map((column) => (
+                <td key={column.key}>{formatCellValue(row?.[column.key])}</td>
+              ))}
+            </tr>
+          )) : (
+            <tr>
+              <td colSpan={Math.max(1, columns.length)}>ไม่มีข้อมูล</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function HeatmapChart({ config = {}, height = 320, className = "" }) {
+  const rows = Array.isArray(config.rows) ? config.rows : [];
+  const columns = Array.isArray(config.columns) ? config.columns : [];
+  const cells = Array.isArray(config.cells) ? config.cells : [];
+  const min = Number(config.min ?? 0);
+  const max = Number(config.max ?? 0);
+  const range = Math.max(1, max - min);
+  const cellMap = new Map(cells.map((cell) => [`${cell.row}::${cell.column}`, cell]));
+
+  function getIntensity(value) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return 0;
+    return Math.max(0.08, Math.min(1, (numeric - min) / range));
+  }
+
+  return (
+    <div className={`chart-heatmap-renderer${className ? ` ${className}` : ""}`} style={{ minHeight: height }}>
+      <div
+        className="chart-heatmap-grid"
+        style={{
+          gridTemplateColumns: `minmax(96px, 0.8fr) repeat(${Math.max(1, columns.length)}, minmax(64px, 1fr))`,
+        }}
+      >
+        <div className="chart-heatmap-axis-cell" />
+        {columns.map((column) => (
+          <div key={column} className="chart-heatmap-axis-cell">{column}</div>
+        ))}
+        {rows.map((rowLabel) => (
+          <React.Fragment key={rowLabel}>
+            <div className="chart-heatmap-axis-cell is-row">{rowLabel}</div>
+            {columns.map((columnLabel) => {
+              const cell = cellMap.get(`${rowLabel}::${columnLabel}`);
+              const value = cell?.value ?? 0;
+              const intensity = getIntensity(value);
+              return (
+                <div
+                  key={`${rowLabel}-${columnLabel}`}
+                  className="chart-heatmap-cell"
+                  style={{
+                    backgroundColor: `color-mix(in srgb, var(--primary) ${Math.round(intensity * 82)}%, var(--surface) 18%)`,
+                    color: intensity > 0.56 ? "#ffffff" : "var(--text-primary)",
+                  }}
+                  title={`${rowLabel} / ${columnLabel}: ${formatCellValue(value)}`}
+                >
+                  {formatCellValue(value)}
+                </div>
+              );
+            })}
+          </React.Fragment>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default function ChartRenderer({ chart = {}, config, containerHeight, height, className = "", onChartReady, onDataPointClick }) {
   const resolvedHeight = containerHeight ?? height ?? 320;
   const resolvedConfig = config ?? chart.config ?? null;
   const renderableConfig = getRenderableChartJsConfig(chart, resolvedConfig);
@@ -131,6 +224,22 @@ export default function ChartRenderer({ chart = {}, config, containerHeight, hei
     return (
       <ChartErrorBoundary>
         <KPIWidget chart={chart} className={className} />
+      </ChartErrorBoundary>
+    );
+  }
+
+  if (resolvedConfig?.type === "table" || chart.type === "table") {
+    return (
+      <ChartErrorBoundary>
+        <TableChart config={resolvedConfig} height={resolvedHeight} className={className} />
+      </ChartErrorBoundary>
+    );
+  }
+
+  if (resolvedConfig?.type === "heatmap" || chart.type === "heatmap") {
+    return (
+      <ChartErrorBoundary>
+        <HeatmapChart config={resolvedConfig} height={resolvedHeight} className={className} />
       </ChartErrorBoundary>
     );
   }
@@ -144,6 +253,7 @@ export default function ChartRenderer({ chart = {}, config, containerHeight, hei
           height={resolvedHeight}
           className={className}
           onChartReady={onChartReady}
+          onDataPointClick={onDataPointClick}
         />
       </ChartErrorBoundary>
     );

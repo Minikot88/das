@@ -15,12 +15,12 @@ export default function LoginPage() {
   const isThai = locale === "th";
   const heroSubtitle = t("auth.heroSubtitle") || (
     isThai
-      ? "รวมแดชบอร์ด ตัวสร้างกราฟ และมุมมองสำหรับแชร์ไว้ใน workflow เดียวที่อ่านง่ายและทำงานต่อได้ทันที"
+      ? "รวมแดชบอร์ด ตัวสร้างกราฟ และมุมมองสำหรับแชร์ไว้ในขั้นตอนการทำงานเดียวที่อ่านง่ายและทำงานต่อได้ทันที"
       : "Bring dashboards, chart building, and share-ready views together in one cleaner workflow."
   );
   const loginSubtitle = t("auth.loginSubtitle") || (
     isThai
-      ? "เข้าสู่ระบบเพื่อกลับไปจัดการ dashboard, builder และมุมมองสำหรับทีมของคุณ"
+      ? "เข้าสู่ระบบเพื่อกลับไปจัดการแดชบอร์ด ตัวสร้างกราฟ และมุมมองสำหรับทีมของคุณ"
       : "Sign in to return to your dashboards, builder workspace, and shared views."
   );
   const heroBadge = isThai ? "พื้นที่วิเคราะห์ข้อมูล" : "Analytics Workspace";
@@ -47,7 +47,7 @@ export default function LoginPage() {
   const formKicker = isThai ? "กลับเข้าสู่พื้นที่วิเคราะห์" : "Welcome back";
   const formStatus = isThai ? "พร้อมใช้งาน" : "Ready";
   const formFootnote = isThai
-    ? "เข้าสู่ระบบเดิมได้ทันที หรือใช้ข้อมูลตัวอย่างเพื่อสำรวจ workflow แบบเต็ม"
+    ? "เข้าสู่ระบบเดิมได้ทันที หรือใช้ข้อมูลตัวอย่างเพื่อสำรวจขั้นตอนการทำงานแบบเต็ม"
     : "Jump back into your workspace or explore the full flow with the demo credentials.";
   const passwordPlaceholder = isThai ? "กรอกรหัสผ่าน" : "Enter your password";
 
@@ -65,7 +65,7 @@ export default function LoginPage() {
       const target = location.state?.from?.pathname || "/dashboard";
       navigate(target, { replace: true });
     } catch (submitError) {
-      setError(submitError?.message || "Unable to sign in. Please try again.");
+      setError(submitError?.message || (isThai ? "ไม่สามารถเข้าสู่ระบบได้ โปรดลองอีกครั้ง" : "Unable to sign in. Please try again."));
     } finally {
       setLoading(false);
     }

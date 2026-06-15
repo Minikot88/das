@@ -69,6 +69,7 @@ export function WorkspaceLayout({ columns = "two", className = "", children, ...
 
 export function MainLayout() {
   const theme = useStore((state) => state.theme);
+  const density = useStore((state) => state.appSettings.density);
   const sidebarCollapsed = useStore((state) => state.sidebarCollapsed);
   const setMobileMenuOpen = useStore((state) => state.setMobileMenuOpen);
   const location = useLocation();
@@ -76,6 +77,11 @@ export function MainLayout() {
   useEffect(() => {
     document.body.classList.toggle("dark", theme === "dark");
   }, [theme]);
+
+  useEffect(() => {
+    document.body.classList.remove("density-compact", "density-comfortable", "density-spacious");
+    document.body.classList.add(`density-${density}`);
+  }, [density]);
 
   useEffect(() => {
     const isBuilderRoute = location.pathname === "/builder";

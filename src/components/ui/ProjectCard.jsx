@@ -36,8 +36,14 @@ export default function ProjectCard({
       className={`project-card${isActive ? " active" : ""}`}
       onClick={() => onOpen(project.id)}
       role="button"
+      aria-label={`เปิดโปรเจกต์ ${project.name}`}
       tabIndex={0}
-      onKeyDown={(event) => event.key === "Enter" && onOpen(project.id)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpen(project.id);
+        }
+      }}
     >
       <div className="project-card-accent" />
       <div className="project-card-body">
@@ -48,27 +54,6 @@ export default function ProjectCard({
               <div className="project-card-type">{t("home.projectLabel")}</div>
             </div>
             <div className={`project-card-status ${statusTone}`}>{statusLabel}</div>
-          </div>
-          <div className="project-card-actions" onClick={(event) => event.stopPropagation()}>
-            <button
-              type="button"
-              className="project-card-manage-btn"
-              onClick={() => setRenamingOpen(true)}
-              title={t("home.manageProject")}
-            >
-              {t("home.manageProject")}
-            </button>
-            {canDelete ? (
-              <button
-                type="button"
-                className="project-card-delete-btn"
-                onClick={(e) => { e.stopPropagation(); onDelete(project.id); }}
-                title={t("home.deleteProject")}
-                aria-label={t("home.deleteProject")}
-              >
-                {t("home.deleteProject")}
-              </button>
-            ) : null}
           </div>
         </div>
 
@@ -108,6 +93,31 @@ export default function ProjectCard({
           <div className="project-card-meta">
             <span>{activeSheetName}</span>
             <span>{activeDashboardName}</span>
+          </div>
+          <div className="project-card-actions" onClick={(event) => event.stopPropagation()}>
+            <button
+              type="button"
+              className="project-card-manage-btn"
+              onClick={() => setRenamingOpen(true)}
+              title={t("home.manageProject")}
+              aria-label={t("home.manageProject")}
+            >
+              {t("home.manageProject")}
+            </button>
+            {canDelete ? (
+              <button
+                type="button"
+                className="project-card-delete-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(project.id);
+                }}
+                title={t("home.deleteProject")}
+                aria-label={t("home.deleteProject")}
+              >
+                {t("home.deleteProject")}
+              </button>
+            ) : null}
           </div>
         </div>
       </div>

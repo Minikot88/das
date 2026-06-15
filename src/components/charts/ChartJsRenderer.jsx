@@ -14,6 +14,73 @@ const canvasSurfacePlugin = {
   },
 };
 
+const builderAnalyticsPlugin = {
+  id: "builderAnalytics",
+  beforeDatasetsDraw(chart, _args, options = {}) {
+    const bands = Array.isArray(options.bands) ? options.bands : [];
+    if (!bands.length) return;
+    const horizontal = chart.options?.indexAxis === "y";
+    const valueScale = horizontal ? chart.scales?.x : chart.scales?.y;
+    const chartArea = chart.chartArea;
+    if (!valueScale || !chartArea) return;
+
+    const topValue = valueScale.max;
+    chart.ctx.save();
+    bands.forEach((band) => {
+      const from = Number(band.from);
+      const to = band.to == null ? topValue : Number(band.to);
+      if (!Number.isFinite(from) || !Number.isFinite(to)) return;
+      chart.ctx.fillStyle = band.color || "rgba(148, 163, 184, 0.12)";
+      if (horizontal) {
+        const xLeft = valueScale.getPixelForValue(Math.min(from, to));
+        const xRight = valueScale.getPixelForValue(Math.max(from, to));
+        chart.ctx.fillRect(xLeft, chartArea.top, Math.max(1, xRight - xLeft), chartArea.bottom - chartArea.top);
+      } else {
+        const yTop = valueScale.getPixelForValue(Math.max(from, to));
+        const yBottom = valueScale.getPixelForValue(Math.min(from, to));
+        chart.ctx.fillRect(chartArea.left, yTop, chartArea.right - chartArea.left, Math.max(1, yBottom - yTop));
+      }
+    });
+    chart.ctx.restore();
+  },
+  afterDatasetsDraw(chart, _args, options = {}) {
+    const lines = Array.isArray(options.lines) ? options.lines : [];
+    if (!lines.length) return;
+    const horizontal = chart.options?.indexAxis === "y";
+    const valueScale = horizontal ? chart.scales?.x : chart.scales?.y;
+    const chartArea = chart.chartArea;
+    if (!valueScale || !chartArea) return;
+
+    chart.ctx.save();
+    lines.forEach((line) => {
+      const value = Number(line.value);
+      if (!Number.isFinite(value)) return;
+      const pixel = valueScale.getPixelForValue(value);
+      if (!Number.isFinite(pixel)) return;
+      chart.ctx.beginPath();
+      chart.ctx.setLineDash(Array.isArray(line.dash) ? line.dash : []);
+      chart.ctx.strokeStyle = line.color || "#64748b";
+      chart.ctx.lineWidth = 2;
+      if (horizontal) {
+        chart.ctx.moveTo(pixel, chartArea.top);
+        chart.ctx.lineTo(pixel, chartArea.bottom);
+      } else {
+        chart.ctx.moveTo(chartArea.left, pixel);
+        chart.ctx.lineTo(chartArea.right, pixel);
+      }
+      chart.ctx.stroke();
+      chart.ctx.setLineDash([]);
+      if (line.label) {
+        chart.ctx.font = "600 11px system-ui, sans-serif";
+        chart.ctx.fillStyle = line.color || "#64748b";
+        chart.ctx.textBaseline = horizontal ? "top" : "bottom";
+        chart.ctx.fillText(String(line.label), horizontal ? pixel + 6 : chartArea.left + 8, horizontal ? chartArea.top + 4 : pixel - 4);
+      }
+    });
+    chart.ctx.restore();
+  },
+};
+
 function cloneConfig(config) {
   if (typeof structuredClone === "function") {
     return structuredClone(config);
@@ -360,6 +427,7 @@ export default function ChartJsRenderer({
   height = 320,
   className = "",
   onChartReady,
+  onDataPointClick,
 }) {
   const canvasRef = useRef(null);
   const chartRef = useRef(null);
@@ -413,7 +481,20 @@ export default function ChartJsRenderer({
       if (isBuilderPreview && darkBuilderPreview) {
         applyBuilderPreviewDarkTheme(nextConfig);
       }
-      nextConfig.plugins = [...(nextConfig.plugins ?? []), canvasSurfacePlugin];
+      nextConfig.options.onClick = (event, elements, activeChart) => {
+        if (!elements?.length) return;
+        const element = elements[0];
+        const label = activeChart?.data?.labels?.[element.index];
+        const dataset = activeChart?.data?.datasets?.[element.datasetIndex];
+        onDataPointClick?.({
+          label,
+          value: Array.isArray(dataset?.data) ? dataset.data[element.index] : undefined,
+          datasetLabel: dataset?.label,
+          datasetIndex: element.datasetIndex,
+          index: element.index,
+        });
+      };
+      nextConfig.plugins = [...(nextConfig.plugins ?? []), builderAnalyticsPlugin, canvasSurfacePlugin];
       chartRef.current = new Chart(context, nextConfig);
       onChartReady?.(chartRef.current);
     } catch (error) {
@@ -426,7 +507,7 @@ export default function ChartJsRenderer({
         chartRef.current = null;
       }
     };
-  }, [chart, chartKind, darkBuilderPreview, density, isBuilderPreview, onChartReady, resolvedConfig]);
+  }, [chart, chartKind, darkBuilderPreview, density, isBuilderPreview, onChartReady, onDataPointClick, resolvedConfig]);
 
   useEffect(() => {
     if (!chartRef.current || !canUseCanvas(canvasRef.current)) return undefined;

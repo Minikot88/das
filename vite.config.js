@@ -35,5 +35,11 @@ export default defineConfig(({ mode }) => {
     ssr: {
       noExternal: ["react-grid-layout"],
     },
+    test: {
+      environment: "jsdom",
+      setupFiles: "./src/test/setup.js",
+      globals: true,
+      css: true,
+    },
   };
 });

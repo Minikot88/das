@@ -1,4 +1,4 @@
-const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTH_NAMES = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
 const REGIONS = ["North", "South", "East", "West"];
 const CATEGORIES = ["Technology", "Furniture", "Office Supplies"];
 const PRODUCTS = {
@@ -86,30 +86,30 @@ export const mockRows = Array.from({ length: 12 }).flatMap((_, monthIndex) =>
 );
 
 export const mockFields = [
-  createField("date", "Date", "date", "date"),
-  createField("month", "Month", "string", "category"),
-  createField("quarter", "Quarter", "string", "category"),
-  createField("year", "Year", "number", "number"),
-  createField("region", "Region", "string", "category"),
-  createField("category", "Category", "string", "category"),
-  createField("product", "Product", "string", "category"),
-  createField("channel", "Channel", "string", "category"),
-  createField("segment", "Segment", "string", "category"),
-  createField("sales", "Sales", "number", "number"),
-  createField("profit", "Profit", "number", "number"),
-  createField("orders", "Orders", "number", "number"),
-  createField("quantity", "Quantity", "number", "number"),
-  createField("discount", "Discount", "number", "number"),
-  createField("target", "Target", "number", "number"),
-  createField("cost", "Cost", "number", "number"),
-  createField("rating", "Rating", "number", "number"),
-  createField("minRange", "Min Range", "number", "number"),
-  createField("maxRange", "Max Range", "number", "number"),
+  createField("date", "วันที่", "date", "date"),
+  createField("month", "เดือน", "string", "category"),
+  createField("quarter", "ไตรมาส", "string", "category"),
+  createField("year", "ปี", "number", "number"),
+  createField("region", "ภูมิภาค", "string", "category"),
+  createField("category", "หมวดหมู่", "string", "category"),
+  createField("product", "สินค้า", "string", "category"),
+  createField("channel", "ช่องทาง", "string", "category"),
+  createField("segment", "กลุ่มลูกค้า", "string", "category"),
+  createField("sales", "ยอดขาย", "number", "number"),
+  createField("profit", "กำไร", "number", "number"),
+  createField("orders", "คำสั่งซื้อ", "number", "number"),
+  createField("quantity", "จำนวน", "number", "number"),
+  createField("discount", "ส่วนลด", "number", "number"),
+  createField("target", "เป้าหมาย", "number", "number"),
+  createField("cost", "ต้นทุน", "number", "number"),
+  createField("rating", "คะแนน", "number", "number"),
+  createField("minRange", "ช่วงต่ำสุด", "number", "number"),
+  createField("maxRange", "ช่วงสูงสุด", "number", "number"),
 ];
 
 export const mockDataset = {
   id: "sales_performance",
-  name: "Sales Performance",
+  name: "ประสิทธิภาพการขาย",
   fields: mockFields,
   rows: mockRows,
 };
@@ -135,4 +135,3 @@ export const datasetSummaries = {
 };
 
 export const mockData = mockDataset;
-

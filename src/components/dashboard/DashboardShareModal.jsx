@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import useFocusTrap from "../../hooks/useFocusTrap";
 
 function copyWithFallback(text) {
   if (navigator.clipboard?.writeText) {
@@ -53,6 +54,7 @@ export default function DashboardShareModal({
   exportBusy = false,
   onDownloadPng,
   onDownloadJpg,
+  onDownloadPdf,
   publicUrl,
   embedUrl,
   embedCode,
@@ -61,6 +63,7 @@ export default function DashboardShareModal({
   onClose,
 }) {
   const [copyState, setCopyState] = useState("");
+  const dialogRef = useFocusTrap(true, onClose);
 
   useEffect(() => {
     if (!copyState) return undefined;
@@ -83,39 +86,47 @@ export default function DashboardShareModal({
   }, [onClose]);
 
   const exportHint = useMemo(() => {
-    if (canExport) return "Export the current dashboard canvas as a clean image.";
-    return "Add at least one widget before exporting dashboard images.";
+    if (canExport) return "ส่งออกพื้นที่แดชบอร์ดปัจจุบันเป็นรูปภาพคุณภาพสูง";
+    return "เพิ่มวิดเจ็ตอย่างน้อยหนึ่งรายการก่อนส่งออกรูปภาพแดชบอร์ด";
   }, [canExport]);
 
   async function handleCopy(label, value) {
     try {
       await copyWithFallback(value);
-      setCopyState(`${label} copied`);
+      setCopyState(`คัดลอก${label}แล้ว`);
     } catch {
-      setCopyState(`Unable to copy ${label}`);
+      setCopyState(`ไม่สามารถคัดลอก${label}`);
     }
   }
 
   return (
-    <div className="dashboard-share-modal-backdrop" role="dialog" aria-modal="true" onClick={onClose}>
-      <div className="dashboard-share-modal" onClick={(event) => event.stopPropagation()}>
+    <div className="dashboard-share-modal-backdrop" role="presentation" onClick={onClose}>
+      <div
+        ref={dialogRef}
+        className="dashboard-share-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="dashboard-share-title"
+        tabIndex={-1}
+        onClick={(event) => event.stopPropagation()}
+      >
         <div className="dashboard-share-modal-head">
           <div className="dashboard-share-modal-copy">
-            <span className="dashboard-share-kicker">Share Dashboard</span>
-            <h2 className="dashboard-share-title">{dashboardName}</h2>
+            <span className="dashboard-share-kicker">แชร์แดชบอร์ด</span>
+            <h2 className="dashboard-share-title" id="dashboard-share-title">{dashboardName}</h2>
             <p className="dashboard-share-description">
-              Export as image, copy public links, or generate iframe embed code.
+              ส่งออกเป็นรูปภาพ คัดลอกลิงก์สาธารณะ หรือสร้างโค้ดฝัง iframe
             </p>
           </div>
-          <button type="button" className="dashboard-share-close" onClick={onClose} aria-label="Close share dialog">
-            Close
+          <button type="button" className="dashboard-share-close" onClick={onClose} aria-label="ปิดหน้าต่างแชร์">
+            ปิด
           </button>
         </div>
 
-        <div className="dashboard-share-tabs" role="tablist" aria-label="Dashboard sharing options">
-          <TabButton id="export" label="Export Image" isActive={activeTab === "export"} onSelect={onChangeTab} />
-          <TabButton id="share" label="Share Link" isActive={activeTab === "share"} onSelect={onChangeTab} />
-          <TabButton id="embed" label="Embed" isActive={activeTab === "embed"} onSelect={onChangeTab} />
+        <div className="dashboard-share-tabs" role="tablist" aria-label="ตัวเลือกการแชร์แดชบอร์ด">
+          <TabButton id="export" label="ส่งออกรูปภาพ" isActive={activeTab === "export"} onSelect={onChangeTab} />
+          <TabButton id="share" label="แชร์ลิงก์" isActive={activeTab === "share"} onSelect={onChangeTab} />
+          <TabButton id="embed" label="ฝัง" isActive={activeTab === "embed"} onSelect={onChangeTab} />
         </div>
 
         {copyState ? (
@@ -128,7 +139,7 @@ export default function DashboardShareModal({
           {activeTab === "export" ? (
             <section className="dashboard-share-panel">
               <div className="dashboard-share-panel-copy">
-                <strong>Export Image</strong>
+                <strong>ส่งออกรูปภาพ</strong>
                 <p>{exportHint}</p>
               </div>
               <div className="dashboard-share-action-row">
@@ -138,7 +149,7 @@ export default function DashboardShareModal({
                   onClick={onDownloadPng}
                   disabled={!canExport || exportBusy}
                 >
-                  {exportBusy ? "Preparing file..." : "Download PNG"}
+                  {exportBusy ? "กำลังเตรียมไฟล์..." : "ดาวน์โหลด PNG"}
                 </button>
                 <button
                   type="button"
@@ -146,7 +157,15 @@ export default function DashboardShareModal({
                   onClick={onDownloadJpg}
                   disabled={!canExport || exportBusy}
                 >
-                  Download JPG
+                  ดาวน์โหลด JPG
+                </button>
+                <button
+                  type="button"
+                  className="dashboard-toolbar-btn"
+                  onClick={onDownloadPdf}
+                  disabled={!canExport || exportBusy}
+                >
+                  ดาวน์โหลด PDF
                 </button>
               </div>
             </section>
@@ -155,19 +174,19 @@ export default function DashboardShareModal({
           {activeTab === "share" ? (
             <section className="dashboard-share-panel">
               <div className="dashboard-share-panel-copy">
-                <strong>Public Link</strong>
-                <p>Open a view-only dashboard URL with editor controls hidden.</p>
+                <strong>ลิงก์สาธารณะ</strong>
+                <p>เปิดแดชบอร์ดแบบอ่านอย่างเดียวโดยซ่อนเครื่องมือแก้ไข</p>
               </div>
               <label className="dashboard-share-field">
-                <span>Public URL</span>
+                <span>URL สาธารณะ</span>
                 <textarea readOnly value={publicUrl} className="dashboard-share-textarea" />
               </label>
               <div className="dashboard-share-action-row">
-                <button type="button" className="dashboard-toolbar-btn is-primary" onClick={() => handleCopy("Link", publicUrl)}>
-                  Copy Link
+                <button type="button" className="dashboard-toolbar-btn is-primary" onClick={() => handleCopy("ลิงก์", publicUrl)}>
+                  คัดลอกลิงก์
                 </button>
                 <a className="dashboard-toolbar-btn" href={publicUrl} target="_blank" rel="noreferrer">
-                  Open
+                  เปิด
                 </a>
               </div>
             </section>
@@ -176,13 +195,13 @@ export default function DashboardShareModal({
           {activeTab === "embed" ? (
             <section className="dashboard-share-panel">
               <div className="dashboard-share-panel-copy">
-                <strong>Embed with iframe</strong>
-                <p>Embed in external pages with a clean viewer mode.</p>
+                <strong>ฝังด้วย iframe</strong>
+                <p>ฝังในหน้าภายนอกด้วยโหมดดูข้อมูลที่สะอาดตา</p>
               </div>
 
               <div className="dashboard-share-form-grid">
                 <label className="dashboard-share-field">
-                  <span>Width</span>
+                  <span>ความกว้าง</span>
                   <input
                     className="dashboard-share-input"
                     type="number"
@@ -193,7 +212,7 @@ export default function DashboardShareModal({
                   />
                 </label>
                 <label className="dashboard-share-field">
-                  <span>Height</span>
+                  <span>ความสูง</span>
                   <input
                     className="dashboard-share-input"
                     type="number"
@@ -204,48 +223,48 @@ export default function DashboardShareModal({
                   />
                 </label>
                 <label className="dashboard-share-field">
-                  <span>Theme</span>
+                  <span>ธีม</span>
                   <select
                     className="dashboard-share-input"
                     value={options.theme}
                     onChange={(event) => onChangeOptions({ theme: event.target.value })}
                   >
-                    <option value="auto">Auto</option>
-                    <option value="light">Light</option>
-                    <option value="dark">Dark</option>
+                    <option value="auto">อัตโนมัติ</option>
+                    <option value="light">สว่าง</option>
+                    <option value="dark">มืด</option>
                   </select>
                 </label>
               </div>
 
               <div className="dashboard-share-toggle-grid">
                 <ToggleField
-                  label="Responsive Width"
+                  label="ปรับความกว้างอัตโนมัติ"
                   checked={options.responsive}
-                  hint="Use 100% width and keep max-width constraints."
+                  hint="ใช้ความกว้าง 100% พร้อมจำกัดขนาดสูงสุด"
                   onChange={(nextValue) => onChangeOptions({ responsive: nextValue })}
                 />
                 <ToggleField
-                  label="Show Header"
+                  label="แสดงส่วนหัว"
                   checked={options.showHeader}
-                  hint="Turn off for tighter embedded output."
+                  hint="ปิดเพื่อให้พื้นที่ฝังกระชับขึ้น"
                   onChange={(nextValue) => onChangeOptions({ showHeader: nextValue })}
                 />
               </div>
 
               <label className="dashboard-share-field">
-                <span>Embed URL</span>
+                <span>URL สำหรับฝัง</span>
                 <textarea readOnly value={embedUrl} className="dashboard-share-textarea" />
               </label>
               <label className="dashboard-share-field">
-                <span>iframe Code</span>
+                <span>โค้ด iframe</span>
                 <textarea readOnly value={embedCode} className="dashboard-share-textarea is-code" />
               </label>
               <div className="dashboard-share-action-row">
-                <button type="button" className="dashboard-toolbar-btn is-primary" onClick={() => handleCopy("iframe code", embedCode)}>
-                  Copy iframe Code
+                <button type="button" className="dashboard-toolbar-btn is-primary" onClick={() => handleCopy("โค้ด iframe", embedCode)}>
+                  คัดลอกโค้ด iframe
                 </button>
                 <a className="dashboard-toolbar-btn" href={embedUrl} target="_blank" rel="noreferrer">
-                  Open
+                  เปิด
                 </a>
               </div>
             </section>

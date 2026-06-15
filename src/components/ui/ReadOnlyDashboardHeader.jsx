@@ -28,7 +28,7 @@ export default function ReadOnlyDashboardHeader({
         </div>
 
         <div className="readonly-copy">
-          <div className="readonly-kicker">Dashboard ที่แชร์</div>
+          <div className="readonly-kicker">แดชบอร์ดที่แชร์</div>
           <h1 className="readonly-title">{title}</h1>
         </div>
 
@@ -39,7 +39,7 @@ export default function ReadOnlyDashboardHeader({
           </div>
           <div className="readonly-hero-panel-badges" aria-label="สถานะหน้าที่แชร์">
             <span className="readonly-inline-badge">{statusLabel}</span>
-            <span className="readonly-inline-badge muted">{chartCount} Charts</span>
+            <span className="readonly-inline-badge muted">{chartCount} กราฟ</span>
             <span className="readonly-inline-badge muted">{chartTypes ?? 0} ประเภท</span>
           </div>
         </div>
@@ -48,10 +48,10 @@ export default function ReadOnlyDashboardHeader({
       <div className="readonly-hero-side">
         <div className="readonly-meta-grid">
           <Stat label="ชีต" value={title} />
-          <Stat label="Dashboard" value={dashboardName} />
-          <Stat label="Charts" value={chartCount} />
+          <Stat label="แดชบอร์ด" value={dashboardName} />
+          <Stat label="กราฟ" value={chartCount} />
           <Stat label="ประเภท" value={chartTypes ?? 0} />
-          <Stat label="Dataset" value={primaryDataset ?? "ไม่พบข้อมูล"} />
+          <Stat label="ชุดข้อมูล" value={primaryDataset ?? "ไม่พบข้อมูล"} />
           <Stat label="สิทธิ์" value="อ่านอย่างเดียว" />
         </div>
         <Link to="/login" className="share-signin-link readonly-signin-link">

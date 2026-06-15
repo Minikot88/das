@@ -1,0 +1,68 @@
+[
+  {
+    "id": "login-desktop",
+    "route": "/login",
+    "file": "C:\\git\\DashboardMiniBi\\dashboard-mini-bi\\docs\\screenshots-inventory\\01-login-desktop.png",
+    "note": "Unauthenticated login route, desktop viewport."
+  },
+  {
+    "id": "register-desktop",
+    "route": "/register",
+    "file": "C:\\git\\DashboardMiniBi\\dashboard-mini-bi\\docs\\screenshots-inventory\\02-register-desktop.png",
+    "note": "Unauthenticated registration route, desktop viewport."
+  },
+  {
+    "id": "dashboard-after-login",
+    "route": "/dashboard",
+    "file": "C:\\git\\DashboardMiniBi\\dashboard-mini-bi\\docs\\screenshots-inventory\\03-dashboard-after-login.png",
+    "note": "Default post-login protected dashboard route."
+  },
+  {
+    "id": "home-desktop",
+    "route": "/home",
+    "file": "C:\\git\\DashboardMiniBi\\dashboard-mini-bi\\docs\\screenshots-inventory\\04-home-desktop.png",
+    "note": "Executive workspace hub surface."
+  },
+  {
+    "id": "builder-desktop",
+    "route": "/builder",
+    "file": "C:\\git\\DashboardMiniBi\\dashboard-mini-bi\\docs\\screenshots-inventory\\05-builder-desktop.png",
+    "note": "Chart builder protected route."
+  },
+  {
+    "id": "dashboard-desktop",
+    "route": "/dashboard",
+    "file": "C:\\git\\DashboardMiniBi\\dashboard-mini-bi\\docs\\screenshots-inventory\\06-dashboard-desktop.png",
+    "note": "Dashboard canvas protected route."
+  },
+  {
+    "id": "share-missing",
+    "route": "/share/missing-share-id",
+    "file": "C:\\git\\DashboardMiniBi\\dashboard-mini-bi\\docs\\screenshots-inventory\\09-share-missing.png",
+    "note": "Public share route empty/error state."
+  },
+  {
+    "id": "dashboard-public-view",
+    "route": "/dashboard/dash-1/view",
+    "file": "C:\\git\\DashboardMiniBi\\dashboard-mini-bi\\docs\\screenshots-inventory\\10-dashboard-public-view.png",
+    "note": "Public dashboard view route."
+  },
+  {
+    "id": "dashboard-public-embed",
+    "route": "/dashboard/dash-1/embed",
+    "file": "C:\\git\\DashboardMiniBi\\dashboard-mini-bi\\docs\\screenshots-inventory\\11-dashboard-public-embed.png",
+    "note": "Public dashboard embed route."
+  },
+  {
+    "id": "home-mobile",
+    "route": "/home",
+    "file": "C:\\git\\DashboardMiniBi\\dashboard-mini-bi\\docs\\screenshots-inventory\\12-home-mobile.png",
+    "note": "Home route mobile viewport 390x844."
+  },
+  {
+    "id": "dashboard-mobile",
+    "route": "/dashboard",
+    "file": "C:\\git\\DashboardMiniBi\\dashboard-mini-bi\\docs\\screenshots-inventory\\13-dashboard-mobile.png",
+    "note": "Dashboard route mobile viewport 390x844."
+  }
+]

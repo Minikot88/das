@@ -157,6 +157,20 @@ function validateMixed(template, mapping, errors) {
   }
 }
 
+function validateTable(mapping, errors) {
+  if (!normalizeRoleFields(mapping, "columns").length) errors.push("Table requires at least one column.");
+}
+
+function validateKpi(mapping, errors) {
+  if (!normalizeRoleFields(mapping, "value").length) errors.push("KPI requires a numeric value field.");
+}
+
+function validateHeatmap(mapping, errors) {
+  if (!normalizeRoleFields(mapping, "row").length) errors.push("Heatmap requires a row field.");
+  if (!normalizeRoleFields(mapping, "column").length) errors.push("Heatmap requires a column field.");
+  if (!normalizeRoleFields(mapping, "value").length) errors.push("Heatmap requires a numeric value field.");
+}
+
 export function getRequiredMappingRoles(templateId) {
   return getChartJsTemplateById(templateId).requiredRoles;
 }
@@ -177,6 +191,9 @@ export function validateChartMapping({ templateId, mapping = {}, schema, rows = 
   if (template.family === "scatter") validateScatter(template, mapping, errors);
   if (template.family === "bubble") validateBubble(mapping, errors);
   if (template.family === "mixed") validateMixed(template, mapping, errors);
+  if (template.family === "table") validateTable(mapping, errors);
+  if (template.family === "kpi") validateKpi(mapping, errors);
+  if (template.family === "heatmap") validateHeatmap(mapping, errors);
 
   const labelField = normalizeRoleFields(mapping, "label")[0];
   if (labelField && ["pie", "doughnut"].includes(template.family)) {

@@ -1,0 +1,1234 @@
+{
+  "results": [
+    {
+      "viewport": "desktop",
+      "screenshot": "docs/builder-audit-screenshots/desktop-initial.png",
+      "url": "http://127.0.0.1:5188/builder",
+      "horizontalOverflow": false,
+      "scrollWidth": 1430,
+      "clientWidth": 1430,
+      "workspaceColumns": "250px 600px 280px",
+      "familyTabs": [
+        "แท่ง",
+        "เส้น",
+        "พื้นที่",
+        "วงกลม",
+        "โดนัท",
+        "โพลา",
+        "เรดาร์",
+        "กระจาย",
+        "บับเบิล",
+        "ผสม",
+        "ตาราง",
+        "ตัวชี้วัด",
+        "ฮีตแมป"
+      ],
+      "templateCards": [
+        "BARกราฟแท่งแนวตั้งเปรียบเทียบค่าตัวเลขตามหมวดหมู่",
+        "BARกราฟแท่งแนวนอนจัดอันดับหมวดหมู่ด้วยแท่งแนวนอน",
+        "BARกราฟแท่งซ้อนดูสัดส่วนย่อยภายในแต่ละหมวดหมู่",
+        "BARกราฟแท่งแบบกลุ่มเปรียบเทียบหลายชุดข้อมูลในหมวดหมู่เดียวกัน",
+        "BARกราฟแท่งช่วงค่าแสดงช่วงเริ่มต้นและสิ้นสุดของค่า"
+      ],
+      "builderTabs": [
+        {
+          "text": "ภาพ",
+          "selected": "true"
+        },
+        {
+          "text": "ฟิลด์",
+          "selected": "false"
+        },
+        {
+          "text": "รูปแบบ",
+          "selected": "false"
+        },
+        {
+          "text": "วิเคราะห์",
+          "selected": "false"
+        }
+      ],
+      "previewHasCanvas": true,
+      "previewHasTable": false,
+      "previewHasKpi": false,
+      "previewHasHeatmap": false,
+      "validationErrors": [],
+      "saveDisabled": false,
+      "recommendationQueryOverlap": 0
+    },
+    {
+      "viewport": "tablet",
+      "screenshot": "docs/builder-audit-screenshots/tablet-initial.png",
+      "url": "http://127.0.0.1:5188/builder",
+      "horizontalOverflow": false,
+      "scrollWidth": 758,
+      "clientWidth": 758,
+      "workspaceColumns": "304px 412px",
+      "familyTabs": [
+        "แท่ง",
+        "เส้น",
+        "พื้นที่",
+        "วงกลม",
+        "โดนัท",
+        "โพลา",
+        "เรดาร์",
+        "กระจาย",
+        "บับเบิล",
+        "ผสม",
+        "ตาราง",
+        "ตัวชี้วัด",
+        "ฮีตแมป"
+      ],
+      "templateCards": [
+        "BARกราฟแท่งแนวตั้งเปรียบเทียบค่าตัวเลขตามหมวดหมู่",
+        "BARกราฟแท่งแนวนอนจัดอันดับหมวดหมู่ด้วยแท่งแนวนอน",
+        "BARกราฟแท่งซ้อนดูสัดส่วนย่อยภายในแต่ละหมวดหมู่",
+        "BARกราฟแท่งแบบกลุ่มเปรียบเทียบหลายชุดข้อมูลในหมวดหมู่เดียวกัน",
+        "BARกราฟแท่งช่วงค่าแสดงช่วงเริ่มต้นและสิ้นสุดของค่า"
+      ],
+      "builderTabs": [
+        {
+          "text": "ภาพ",
+          "selected": "true"
+        },
+        {
+          "text": "ฟิลด์",
+          "selected": "false"
+        },
+        {
+          "text": "รูปแบบ",
+          "selected": "false"
+        },
+        {
+          "text": "วิเคราะห์",
+          "selected": "false"
+        }
+      ],
+      "previewHasCanvas": true,
+      "previewHasTable": false,
+      "previewHasKpi": false,
+      "previewHasHeatmap": false,
+      "validationErrors": [],
+      "saveDisabled": false,
+      "recommendationQueryOverlap": 0
+    },
+    {
+      "viewport": "mobile",
+      "screenshot": "docs/builder-audit-screenshots/mobile-initial.png",
+      "url": "http://127.0.0.1:5188/builder",
+      "horizontalOverflow": false,
+      "scrollWidth": 375,
+      "clientWidth": 375,
+      "workspaceColumns": "351px",
+      "familyTabs": [
+        "แท่ง",
+        "เส้น",
+        "พื้นที่",
+        "วงกลม",
+        "โดนัท",
+        "โพลา",
+        "เรดาร์",
+        "กระจาย",
+        "บับเบิล",
+        "ผสม",
+        "ตาราง",
+        "ตัวชี้วัด",
+        "ฮีตแมป"
+      ],
+      "templateCards": [
+        "BARกราฟแท่งแนวตั้งเปรียบเทียบค่าตัวเลขตามหมวดหมู่",
+        "BARกราฟแท่งแนวนอนจัดอันดับหมวดหมู่ด้วยแท่งแนวนอน",
+        "BARกราฟแท่งซ้อนดูสัดส่วนย่อยภายในแต่ละหมวดหมู่",
+        "BARกราฟแท่งแบบกลุ่มเปรียบเทียบหลายชุดข้อมูลในหมวดหมู่เดียวกัน",
+        "BARกราฟแท่งช่วงค่าแสดงช่วงเริ่มต้นและสิ้นสุดของค่า"
+      ],
+      "builderTabs": [
+        {
+          "text": "ภาพ",
+          "selected": "true"
+        },
+        {
+          "text": "ฟิลด์",
+          "selected": "false"
+        },
+        {
+          "text": "รูปแบบ",
+          "selected": "false"
+        },
+        {
+          "text": "วิเคราะห์",
+          "selected": "false"
+        }
+      ],
+      "previewHasCanvas": true,
+      "previewHasTable": false,
+      "previewHasKpi": false,
+      "previewHasHeatmap": false,
+      "validationErrors": [],
+      "saveDisabled": false,
+      "recommendationQueryOverlap": 0
+    }
+  ],
+  "interaction": {
+    "initial": {
+      "url": "http://127.0.0.1:5188/builder",
+      "horizontalOverflow": false,
+      "scrollWidth": 1430,
+      "clientWidth": 1430,
+      "workspaceColumns": "250px 600px 280px",
+      "familyTabs": [
+        "แท่ง",
+        "เส้น",
+        "พื้นที่",
+        "วงกลม",
+        "โดนัท",
+        "โพลา",
+        "เรดาร์",
+        "กระจาย",
+        "บับเบิล",
+        "ผสม",
+        "ตาราง",
+        "ตัวชี้วัด",
+        "ฮีตแมป"
+      ],
+      "templateCards": [
+        "BARกราฟแท่งแนวตั้งเปรียบเทียบค่าตัวเลขตามหมวดหมู่",
+        "BARกราฟแท่งแนวนอนจัดอันดับหมวดหมู่ด้วยแท่งแนวนอน",
+        "BARกราฟแท่งซ้อนดูสัดส่วนย่อยภายในแต่ละหมวดหมู่",
+        "BARกราฟแท่งแบบกลุ่มเปรียบเทียบหลายชุดข้อมูลในหมวดหมู่เดียวกัน",
+        "BARกราฟแท่งช่วงค่าแสดงช่วงเริ่มต้นและสิ้นสุดของค่า"
+      ],
+      "builderTabs": [
+        {
+          "text": "ภาพ",
+          "selected": "true"
+        },
+        {
+          "text": "ฟิลด์",
+          "selected": "false"
+        },
+        {
+          "text": "รูปแบบ",
+          "selected": "false"
+        },
+        {
+          "text": "วิเคราะห์",
+          "selected": "false"
+        }
+      ],
+      "previewHasCanvas": true,
+      "previewHasTable": false,
+      "previewHasKpi": false,
+      "previewHasHeatmap": false,
+      "validationErrors": [],
+      "saveDisabled": false,
+      "recommendationQueryOverlap": 0
+    },
+    "fieldSearch": true,
+    "familyOutcomes": [
+      {
+        "family": "แท่ง",
+        "cardClicked": true,
+        "url": "http://127.0.0.1:5188/builder",
+        "horizontalOverflow": false,
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "workspaceColumns": "250px 600px 280px",
+        "familyTabs": [
+          "แท่ง",
+          "เส้น",
+          "พื้นที่",
+          "วงกลม",
+          "โดนัท",
+          "โพลา",
+          "เรดาร์",
+          "กระจาย",
+          "บับเบิล",
+          "ผสม",
+          "ตาราง",
+          "ตัวชี้วัด",
+          "ฮีตแมป"
+        ],
+        "templateCards": [
+          "BARกราฟแท่งแนวตั้งเปรียบเทียบค่าตัวเลขตามหมวดหมู่",
+          "BARกราฟแท่งแนวนอนจัดอันดับหมวดหมู่ด้วยแท่งแนวนอน",
+          "BARกราฟแท่งซ้อนดูสัดส่วนย่อยภายในแต่ละหมวดหมู่",
+          "BARกราฟแท่งแบบกลุ่มเปรียบเทียบหลายชุดข้อมูลในหมวดหมู่เดียวกัน",
+          "BARกราฟแท่งช่วงค่าแสดงช่วงเริ่มต้นและสิ้นสุดของค่า"
+        ],
+        "builderTabs": [
+          {
+            "text": "ภาพ",
+            "selected": "true"
+          },
+          {
+            "text": "ฟิลด์",
+            "selected": "false"
+          },
+          {
+            "text": "รูปแบบ",
+            "selected": "false"
+          },
+          {
+            "text": "วิเคราะห์",
+            "selected": "false"
+          }
+        ],
+        "previewHasCanvas": true,
+        "previewHasTable": false,
+        "previewHasKpi": false,
+        "previewHasHeatmap": false,
+        "validationErrors": [],
+        "saveDisabled": false,
+        "recommendationQueryOverlap": 0
+      },
+      {
+        "family": "เส้น",
+        "cardClicked": true,
+        "url": "http://127.0.0.1:5188/builder",
+        "horizontalOverflow": false,
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "workspaceColumns": "250px 600px 280px",
+        "familyTabs": [
+          "แท่ง",
+          "เส้น",
+          "พื้นที่",
+          "วงกลม",
+          "โดนัท",
+          "โพลา",
+          "เรดาร์",
+          "กระจาย",
+          "บับเบิล",
+          "ผสม",
+          "ตาราง",
+          "ตัวชี้วัด",
+          "ฮีตแมป"
+        ],
+        "templateCards": [
+          "LINกราฟเส้นติดตามแนวโน้มตามเวลา",
+          "LINกราฟเส้นหลายชุดเปรียบเทียบแนวโน้มหลายชุดข้อมูล",
+          "LINกราฟเส้นขั้นบันไดแสดงการเปลี่ยนแปลงเป็นช่วงระดับ",
+          "LINกราฟเส้นโค้งนำเสนอแนวโน้มด้วยเส้นที่นุ่มขึ้น",
+          "LINกราฟเส้นหลายแกนเทียบค่าหลายมาตรวัดในมุมมองเดียว"
+        ],
+        "builderTabs": [
+          {
+            "text": "ภาพ",
+            "selected": "true"
+          },
+          {
+            "text": "ฟิลด์",
+            "selected": "false"
+          },
+          {
+            "text": "รูปแบบ",
+            "selected": "false"
+          },
+          {
+            "text": "วิเคราะห์",
+            "selected": "false"
+          }
+        ],
+        "previewHasCanvas": true,
+        "previewHasTable": false,
+        "previewHasKpi": false,
+        "previewHasHeatmap": false,
+        "validationErrors": [],
+        "saveDisabled": false,
+        "recommendationQueryOverlap": 0
+      },
+      {
+        "family": "พื้นที่",
+        "cardClicked": true,
+        "url": "http://127.0.0.1:5188/builder",
+        "horizontalOverflow": false,
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "workspaceColumns": "250px 600px 280px",
+        "familyTabs": [
+          "แท่ง",
+          "เส้น",
+          "พื้นที่",
+          "วงกลม",
+          "โดนัท",
+          "โพลา",
+          "เรดาร์",
+          "กระจาย",
+          "บับเบิล",
+          "ผสม",
+          "ตาราง",
+          "ตัวชี้วัด",
+          "ฮีตแมป"
+        ],
+        "templateCards": [
+          "AREกราฟพื้นที่เน้นปริมาณสะสมตามช่วงเวลา",
+          "AREกราฟพื้นที่ซ้อนแสดงองค์ประกอบที่รวมกันเป็นผลรวม",
+          "LINกราฟเส้นพร้อมพื้นที่เน้นแนวโน้มพร้อมพื้นหลังเชิงปริมาณ"
+        ],
+        "builderTabs": [
+          {
+            "text": "ภาพ",
+            "selected": "true"
+          },
+          {
+            "text": "ฟิลด์",
+            "selected": "false"
+          },
+          {
+            "text": "รูปแบบ",
+            "selected": "false"
+          },
+          {
+            "text": "วิเคราะห์",
+            "selected": "false"
+          }
+        ],
+        "previewHasCanvas": true,
+        "previewHasTable": false,
+        "previewHasKpi": false,
+        "previewHasHeatmap": false,
+        "validationErrors": [],
+        "saveDisabled": false,
+        "recommendationQueryOverlap": 0
+      },
+      {
+        "family": "วงกลม",
+        "cardClicked": true,
+        "url": "http://127.0.0.1:5188/builder",
+        "horizontalOverflow": false,
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "workspaceColumns": "250px 600px 280px",
+        "familyTabs": [
+          "แท่ง",
+          "เส้น",
+          "พื้นที่",
+          "วงกลม",
+          "โดนัท",
+          "โพลา",
+          "เรดาร์",
+          "กระจาย",
+          "บับเบิล",
+          "ผสม",
+          "ตาราง",
+          "ตัวชี้วัด",
+          "ฮีตแมป"
+        ],
+        "templateCards": [
+          "PIEกราฟวงกลมแสดงสัดส่วนของหมวดหมู่"
+        ],
+        "builderTabs": [
+          {
+            "text": "ภาพ",
+            "selected": "true"
+          },
+          {
+            "text": "ฟิลด์",
+            "selected": "false"
+          },
+          {
+            "text": "รูปแบบ",
+            "selected": "false"
+          },
+          {
+            "text": "วิเคราะห์",
+            "selected": "false"
+          }
+        ],
+        "previewHasCanvas": true,
+        "previewHasTable": false,
+        "previewHasKpi": false,
+        "previewHasHeatmap": false,
+        "validationErrors": [],
+        "saveDisabled": false,
+        "recommendationQueryOverlap": 0
+      },
+      {
+        "family": "โดนัท",
+        "cardClicked": true,
+        "url": "http://127.0.0.1:5188/builder",
+        "horizontalOverflow": false,
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "workspaceColumns": "250px 600px 280px",
+        "familyTabs": [
+          "แท่ง",
+          "เส้น",
+          "พื้นที่",
+          "วงกลม",
+          "โดนัท",
+          "โพลา",
+          "เรดาร์",
+          "กระจาย",
+          "บับเบิล",
+          "ผสม",
+          "ตาราง",
+          "ตัวชี้วัด",
+          "ฮีตแมป"
+        ],
+        "templateCards": [
+          "DONกราฟโดนัทแสดงสัดส่วนพร้อมพื้นที่กลางกราฟ",
+          "DONกราฟโดนัทครึ่งวงนำเสนอสัดส่วนแบบประหยัดพื้นที่",
+          "DONกราฟโดนัทหลายวงเปรียบเทียบสัดส่วนหลายระดับ"
+        ],
+        "builderTabs": [
+          {
+            "text": "ภาพ",
+            "selected": "true"
+          },
+          {
+            "text": "ฟิลด์",
+            "selected": "false"
+          },
+          {
+            "text": "รูปแบบ",
+            "selected": "false"
+          },
+          {
+            "text": "วิเคราะห์",
+            "selected": "false"
+          }
+        ],
+        "previewHasCanvas": true,
+        "previewHasTable": false,
+        "previewHasKpi": false,
+        "previewHasHeatmap": false,
+        "validationErrors": [],
+        "saveDisabled": false,
+        "recommendationQueryOverlap": 0
+      },
+      {
+        "family": "โพลา",
+        "cardClicked": true,
+        "url": "http://127.0.0.1:5188/builder",
+        "horizontalOverflow": false,
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "workspaceColumns": "250px 600px 280px",
+        "familyTabs": [
+          "แท่ง",
+          "เส้น",
+          "พื้นที่",
+          "วงกลม",
+          "โดนัท",
+          "โพลา",
+          "เรดาร์",
+          "กระจาย",
+          "บับเบิล",
+          "ผสม",
+          "ตาราง",
+          "ตัวชี้วัด",
+          "ฮีตแมป"
+        ],
+        "templateCards": [
+          "AREกราฟโพลาเทียบหมวดหมู่ด้วยพื้นที่รัศมี"
+        ],
+        "builderTabs": [
+          {
+            "text": "ภาพ",
+            "selected": "true"
+          },
+          {
+            "text": "ฟิลด์",
+            "selected": "false"
+          },
+          {
+            "text": "รูปแบบ",
+            "selected": "false"
+          },
+          {
+            "text": "วิเคราะห์",
+            "selected": "false"
+          }
+        ],
+        "previewHasCanvas": true,
+        "previewHasTable": false,
+        "previewHasKpi": false,
+        "previewHasHeatmap": false,
+        "validationErrors": [],
+        "saveDisabled": false,
+        "recommendationQueryOverlap": 0
+      },
+      {
+        "family": "เรดาร์",
+        "cardClicked": true,
+        "url": "http://127.0.0.1:5188/builder",
+        "horizontalOverflow": false,
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "workspaceColumns": "250px 600px 280px",
+        "familyTabs": [
+          "แท่ง",
+          "เส้น",
+          "พื้นที่",
+          "วงกลม",
+          "โดนัท",
+          "โพลา",
+          "เรดาร์",
+          "กระจาย",
+          "บับเบิล",
+          "ผสม",
+          "ตาราง",
+          "ตัวชี้วัด",
+          "ฮีตแมป"
+        ],
+        "templateCards": [
+          "RADกราฟเรดาร์เปรียบเทียบหลายมิติในภาพเดียว",
+          "RADกราฟเรดาร์เติมสีเน้นพื้นที่รวมของหลายมิติ",
+          "RADกราฟเรดาร์หลายชุดเทียบหลายชุดข้อมูลบนแกนเดียวกัน"
+        ],
+        "builderTabs": [
+          {
+            "text": "ภาพ",
+            "selected": "true"
+          },
+          {
+            "text": "ฟิลด์",
+            "selected": "false"
+          },
+          {
+            "text": "รูปแบบ",
+            "selected": "false"
+          },
+          {
+            "text": "วิเคราะห์",
+            "selected": "false"
+          }
+        ],
+        "previewHasCanvas": true,
+        "previewHasTable": false,
+        "previewHasKpi": false,
+        "previewHasHeatmap": false,
+        "validationErrors": [],
+        "saveDisabled": false,
+        "recommendationQueryOverlap": 0
+      },
+      {
+        "family": "กระจาย",
+        "cardClicked": true,
+        "url": "http://127.0.0.1:5188/builder",
+        "horizontalOverflow": false,
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "workspaceColumns": "250px 600px 280px",
+        "familyTabs": [
+          "แท่ง",
+          "เส้น",
+          "พื้นที่",
+          "วงกลม",
+          "โดนัท",
+          "โพลา",
+          "เรดาร์",
+          "กระจาย",
+          "บับเบิล",
+          "ผสม",
+          "ตาราง",
+          "ตัวชี้วัด",
+          "ฮีตแมป"
+        ],
+        "templateCards": [
+          "SCTกราฟกระจายดูความสัมพันธ์ระหว่างสองตัวแปร",
+          "SCTกราฟกระจายหลายชุดเปรียบเทียบกลุ่มข้อมูลหลายชุด"
+        ],
+        "builderTabs": [
+          {
+            "text": "ภาพ",
+            "selected": "true"
+          },
+          {
+            "text": "ฟิลด์",
+            "selected": "false"
+          },
+          {
+            "text": "รูปแบบ",
+            "selected": "false"
+          },
+          {
+            "text": "วิเคราะห์",
+            "selected": "false"
+          }
+        ],
+        "previewHasCanvas": true,
+        "previewHasTable": false,
+        "previewHasKpi": false,
+        "previewHasHeatmap": false,
+        "validationErrors": [],
+        "saveDisabled": false,
+        "recommendationQueryOverlap": 0
+      },
+      {
+        "family": "บับเบิล",
+        "cardClicked": true,
+        "url": "http://127.0.0.1:5188/builder",
+        "horizontalOverflow": false,
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "workspaceColumns": "250px 600px 280px",
+        "familyTabs": [
+          "แท่ง",
+          "เส้น",
+          "พื้นที่",
+          "วงกลม",
+          "โดนัท",
+          "โพลา",
+          "เรดาร์",
+          "กระจาย",
+          "บับเบิล",
+          "ผสม",
+          "ตาราง",
+          "ตัวชี้วัด",
+          "ฮีตแมป"
+        ],
+        "templateCards": [
+          "BUBกราฟบับเบิลเพิ่มขนาดจุดเพื่อสื่อค่าที่สาม",
+          "BUBกราฟบับเบิลเปรียบเทียบเปรียบเทียบความสัมพันธ์และขนาดพร้อมกัน"
+        ],
+        "builderTabs": [
+          {
+            "text": "ภาพ",
+            "selected": "true"
+          },
+          {
+            "text": "ฟิลด์",
+            "selected": "false"
+          },
+          {
+            "text": "รูปแบบ",
+            "selected": "false"
+          },
+          {
+            "text": "วิเคราะห์",
+            "selected": "false"
+          }
+        ],
+        "previewHasCanvas": true,
+        "previewHasTable": false,
+        "previewHasKpi": false,
+        "previewHasHeatmap": false,
+        "validationErrors": [],
+        "saveDisabled": false,
+        "recommendationQueryOverlap": 0
+      },
+      {
+        "family": "ผสม",
+        "cardClicked": true,
+        "url": "http://127.0.0.1:5188/builder",
+        "horizontalOverflow": false,
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "workspaceColumns": "250px 600px 280px",
+        "familyTabs": [
+          "แท่ง",
+          "เส้น",
+          "พื้นที่",
+          "วงกลม",
+          "โดนัท",
+          "โพลา",
+          "เรดาร์",
+          "กระจาย",
+          "บับเบิล",
+          "ผสม",
+          "ตาราง",
+          "ตัวชี้วัด",
+          "ฮีตแมป"
+        ],
+        "templateCards": [
+          "BARกราฟแท่งและเส้นผสมปริมาณกับแนวโน้มในมุมมองเดียว",
+          "BARกราฟแท่งซ้อนและเส้นผสมองค์ประกอบย่อยกับแนวโน้มหลัก",
+          "MIXกราฟผสมหลายแกนวิเคราะห์หลายมาตรวัดในพื้นที่เดียว"
+        ],
+        "builderTabs": [
+          {
+            "text": "ภาพ",
+            "selected": "true"
+          },
+          {
+            "text": "ฟิลด์",
+            "selected": "false"
+          },
+          {
+            "text": "รูปแบบ",
+            "selected": "false"
+          },
+          {
+            "text": "วิเคราะห์",
+            "selected": "false"
+          }
+        ],
+        "previewHasCanvas": true,
+        "previewHasTable": false,
+        "previewHasKpi": false,
+        "previewHasHeatmap": false,
+        "validationErrors": [],
+        "saveDisabled": false,
+        "recommendationQueryOverlap": 0
+      },
+      {
+        "family": "ตาราง",
+        "cardClicked": true,
+        "url": "http://127.0.0.1:5188/builder",
+        "horizontalOverflow": false,
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "workspaceColumns": "250px 600px 280px",
+        "familyTabs": [
+          "แท่ง",
+          "เส้น",
+          "พื้นที่",
+          "วงกลม",
+          "โดนัท",
+          "โพลา",
+          "เรดาร์",
+          "กระจาย",
+          "บับเบิล",
+          "ผสม",
+          "ตาราง",
+          "ตัวชี้วัด",
+          "ฮีตแมป"
+        ],
+        "templateCards": [
+          "TBLตารางข้อมูลแสดงระเบียนและคอลัมน์สำคัญแบบอ่านง่าย"
+        ],
+        "builderTabs": [
+          {
+            "text": "ภาพ",
+            "selected": "true"
+          },
+          {
+            "text": "ฟิลด์",
+            "selected": "false"
+          },
+          {
+            "text": "รูปแบบ",
+            "selected": "false"
+          },
+          {
+            "text": "วิเคราะห์",
+            "selected": "false"
+          }
+        ],
+        "previewHasCanvas": false,
+        "previewHasTable": true,
+        "previewHasKpi": false,
+        "previewHasHeatmap": false,
+        "validationErrors": [],
+        "saveDisabled": false,
+        "recommendationQueryOverlap": 0
+      },
+      {
+        "family": "ตัวชี้วัด",
+        "cardClicked": true,
+        "url": "http://127.0.0.1:5188/builder",
+        "horizontalOverflow": false,
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "workspaceColumns": "250px 600px 280px",
+        "familyTabs": [
+          "แท่ง",
+          "เส้น",
+          "พื้นที่",
+          "วงกลม",
+          "โดนัท",
+          "โพลา",
+          "เรดาร์",
+          "กระจาย",
+          "บับเบิล",
+          "ผสม",
+          "ตาราง",
+          "ตัวชี้วัด",
+          "ฮีตแมป"
+        ],
+        "templateCards": [
+          "KPIตัวชี้วัดสรุปตัวเลขหลักสำหรับผู้บริหารพร้อมบริบทเปรียบเทียบ"
+        ],
+        "builderTabs": [
+          {
+            "text": "ภาพ",
+            "selected": "true"
+          },
+          {
+            "text": "ฟิลด์",
+            "selected": "false"
+          },
+          {
+            "text": "รูปแบบ",
+            "selected": "false"
+          },
+          {
+            "text": "วิเคราะห์",
+            "selected": "false"
+          }
+        ],
+        "previewHasCanvas": false,
+        "previewHasTable": false,
+        "previewHasKpi": true,
+        "previewHasHeatmap": false,
+        "validationErrors": [],
+        "saveDisabled": false,
+        "recommendationQueryOverlap": 0
+      },
+      {
+        "family": "ฮีตแมป",
+        "cardClicked": true,
+        "url": "http://127.0.0.1:5188/builder",
+        "horizontalOverflow": false,
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "workspaceColumns": "250px 600px 280px",
+        "familyTabs": [
+          "แท่ง",
+          "เส้น",
+          "พื้นที่",
+          "วงกลม",
+          "โดนัท",
+          "โพลา",
+          "เรดาร์",
+          "กระจาย",
+          "บับเบิล",
+          "ผสม",
+          "ตาราง",
+          "ตัวชี้วัด",
+          "ฮีตแมป"
+        ],
+        "templateCards": [
+          "HEAฮีตแมปเปรียบเทียบความเข้มข้นของค่าข้ามแถวและคอลัมน์"
+        ],
+        "builderTabs": [
+          {
+            "text": "ภาพ",
+            "selected": "true"
+          },
+          {
+            "text": "ฟิลด์",
+            "selected": "false"
+          },
+          {
+            "text": "รูปแบบ",
+            "selected": "false"
+          },
+          {
+            "text": "วิเคราะห์",
+            "selected": "false"
+          }
+        ],
+        "previewHasCanvas": false,
+        "previewHasTable": false,
+        "previewHasKpi": false,
+        "previewHasHeatmap": true,
+        "validationErrors": [],
+        "saveDisabled": false,
+        "recommendationQueryOverlap": 0
+      }
+    ],
+    "tabOutcomes": [
+      {
+        "url": "http://127.0.0.1:5188/builder",
+        "horizontalOverflow": false,
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "workspaceColumns": "250px 600px 280px",
+        "familyTabs": [
+          "แท่ง",
+          "เส้น",
+          "พื้นที่",
+          "วงกลม",
+          "โดนัท",
+          "โพลา",
+          "เรดาร์",
+          "กระจาย",
+          "บับเบิล",
+          "ผสม",
+          "ตาราง",
+          "ตัวชี้วัด",
+          "ฮีตแมป"
+        ],
+        "templateCards": [
+          "HEAฮีตแมปเปรียบเทียบความเข้มข้นของค่าข้ามแถวและคอลัมน์"
+        ],
+        "builderTabs": [
+          {
+            "text": "ภาพ",
+            "selected": "true"
+          },
+          {
+            "text": "ฟิลด์",
+            "selected": "false"
+          },
+          {
+            "text": "รูปแบบ",
+            "selected": "false"
+          },
+          {
+            "text": "วิเคราะห์",
+            "selected": "false"
+          }
+        ],
+        "previewHasCanvas": false,
+        "previewHasTable": false,
+        "previewHasKpi": false,
+        "previewHasHeatmap": true,
+        "validationErrors": [],
+        "saveDisabled": false,
+        "recommendationQueryOverlap": 0
+      },
+      {
+        "url": "http://127.0.0.1:5188/builder",
+        "horizontalOverflow": false,
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "workspaceColumns": "250px 600px 280px",
+        "familyTabs": [],
+        "templateCards": [],
+        "builderTabs": [
+          {
+            "text": "ภาพ",
+            "selected": "false"
+          },
+          {
+            "text": "ฟิลด์",
+            "selected": "true"
+          },
+          {
+            "text": "รูปแบบ",
+            "selected": "false"
+          },
+          {
+            "text": "วิเคราะห์",
+            "selected": "false"
+          }
+        ],
+        "previewHasCanvas": false,
+        "previewHasTable": false,
+        "previewHasKpi": false,
+        "previewHasHeatmap": true,
+        "validationErrors": [],
+        "saveDisabled": false,
+        "recommendationQueryOverlap": 0
+      },
+      {
+        "url": "http://127.0.0.1:5188/builder",
+        "horizontalOverflow": false,
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "workspaceColumns": "250px 600px 280px",
+        "familyTabs": [],
+        "templateCards": [],
+        "builderTabs": [
+          {
+            "text": "ภาพ",
+            "selected": "false"
+          },
+          {
+            "text": "ฟิลด์",
+            "selected": "false"
+          },
+          {
+            "text": "รูปแบบ",
+            "selected": "true"
+          },
+          {
+            "text": "วิเคราะห์",
+            "selected": "false"
+          }
+        ],
+        "previewHasCanvas": false,
+        "previewHasTable": false,
+        "previewHasKpi": false,
+        "previewHasHeatmap": true,
+        "validationErrors": [],
+        "saveDisabled": false,
+        "recommendationQueryOverlap": 0
+      },
+      {
+        "url": "http://127.0.0.1:5188/builder",
+        "horizontalOverflow": false,
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "workspaceColumns": "250px 600px 280px",
+        "familyTabs": [],
+        "templateCards": [],
+        "builderTabs": [
+          {
+            "text": "ภาพ",
+            "selected": "false"
+          },
+          {
+            "text": "ฟิลด์",
+            "selected": "false"
+          },
+          {
+            "text": "รูปแบบ",
+            "selected": "false"
+          },
+          {
+            "text": "วิเคราะห์",
+            "selected": "true"
+          }
+        ],
+        "previewHasCanvas": false,
+        "previewHasTable": false,
+        "previewHasKpi": false,
+        "previewHasHeatmap": true,
+        "validationErrors": [],
+        "saveDisabled": false,
+        "recommendationQueryOverlap": 0
+      }
+    ],
+    "sql": {
+      "sqlModeVisible": true,
+      "runClicked": true,
+      "url": "http://127.0.0.1:5188/builder",
+      "horizontalOverflow": false,
+      "scrollWidth": 1430,
+      "clientWidth": 1430,
+      "workspaceColumns": "250px 600px 280px",
+      "familyTabs": [],
+      "templateCards": [],
+      "builderTabs": [
+        {
+          "text": "ภาพ",
+          "selected": "false"
+        },
+        {
+          "text": "ฟิลด์",
+          "selected": "false"
+        },
+        {
+          "text": "รูปแบบ",
+          "selected": "false"
+        },
+        {
+          "text": "วิเคราะห์",
+          "selected": "true"
+        }
+      ],
+      "previewHasCanvas": false,
+      "previewHasTable": false,
+      "previewHasKpi": false,
+      "previewHasHeatmap": true,
+      "validationErrors": [],
+      "saveDisabled": false,
+      "recommendationQueryOverlap": 0
+    },
+    "save": {
+      "saveClicked": true,
+      "saveReadyBefore": {
+        "url": "http://127.0.0.1:5188/builder",
+        "horizontalOverflow": false,
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "workspaceColumns": "250px 600px 280px",
+        "familyTabs": [
+          "แท่ง",
+          "เส้น",
+          "พื้นที่",
+          "วงกลม",
+          "โดนัท",
+          "โพลา",
+          "เรดาร์",
+          "กระจาย",
+          "บับเบิล",
+          "ผสม",
+          "ตาราง",
+          "ตัวชี้วัด",
+          "ฮีตแมป"
+        ],
+        "templateCards": [
+          "BARกราฟแท่งแนวตั้งเปรียบเทียบค่าตัวเลขตามหมวดหมู่",
+          "BARกราฟแท่งแนวนอนจัดอันดับหมวดหมู่ด้วยแท่งแนวนอน",
+          "BARกราฟแท่งซ้อนดูสัดส่วนย่อยภายในแต่ละหมวดหมู่",
+          "BARกราฟแท่งแบบกลุ่มเปรียบเทียบหลายชุดข้อมูลในหมวดหมู่เดียวกัน",
+          "BARกราฟแท่งช่วงค่าแสดงช่วงเริ่มต้นและสิ้นสุดของค่า"
+        ],
+        "builderTabs": [
+          {
+            "text": "ภาพ",
+            "selected": "true"
+          },
+          {
+            "text": "ฟิลด์",
+            "selected": "false"
+          },
+          {
+            "text": "รูปแบบ",
+            "selected": "false"
+          },
+          {
+            "text": "วิเคราะห์",
+            "selected": "false"
+          }
+        ],
+        "previewHasCanvas": true,
+        "previewHasTable": false,
+        "previewHasKpi": false,
+        "previewHasHeatmap": false,
+        "validationErrors": [],
+        "saveDisabled": false,
+        "recommendationQueryOverlap": 0
+      },
+      "chartCountAfterSave": 1,
+      "urlAfterSave": "http://127.0.0.1:5188/dashboard"
+    },
+    "restoreUpdate": {
+      "firstChartId": "chart-b14a36e1-69a6-42c4-a3a5-474e81366429",
+      "restore": {
+        "url": "http://127.0.0.1:5188/builder?chartId=chart-b14a36e1-69a6-42c4-a3a5-474e81366429",
+        "horizontalOverflow": false,
+        "scrollWidth": 1430,
+        "clientWidth": 1430,
+        "workspaceColumns": "250px 600px 280px",
+        "familyTabs": [
+          "แท่ง",
+          "เส้น",
+          "พื้นที่",
+          "วงกลม",
+          "โดนัท",
+          "โพลา",
+          "เรดาร์",
+          "กระจาย",
+          "บับเบิล",
+          "ผสม",
+          "ตาราง",
+          "ตัวชี้วัด",
+          "ฮีตแมป"
+        ],
+        "templateCards": [
+          "BARกราฟแท่งแนวตั้งเปรียบเทียบค่าตัวเลขตามหมวดหมู่",
+          "BARกราฟแท่งแนวนอนจัดอันดับหมวดหมู่ด้วยแท่งแนวนอน",
+          "BARกราฟแท่งซ้อนดูสัดส่วนย่อยภายในแต่ละหมวดหมู่",
+          "BARกราฟแท่งแบบกลุ่มเปรียบเทียบหลายชุดข้อมูลในหมวดหมู่เดียวกัน",
+          "BARกราฟแท่งช่วงค่าแสดงช่วงเริ่มต้นและสิ้นสุดของค่า"
+        ],
+        "builderTabs": [
+          {
+            "text": "ภาพ",
+            "selected": "true"
+          },
+          {
+            "text": "ฟิลด์",
+            "selected": "false"
+          },
+          {
+            "text": "รูปแบบ",
+            "selected": "false"
+          },
+          {
+            "text": "วิเคราะห์",
+            "selected": "false"
+          }
+        ],
+        "previewHasCanvas": true,
+        "previewHasTable": false,
+        "previewHasKpi": false,
+        "previewHasHeatmap": false,
+        "validationErrors": [],
+        "saveDisabled": false,
+        "recommendationQueryOverlap": 0
+      },
+      "updateClicked": true,
+      "urlAfterUpdate": "http://127.0.0.1:5188/dashboard"
+    }
+  },
+  "finalScreenshot": "docs/builder-audit-screenshots/desktop-final.png"
+}

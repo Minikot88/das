@@ -31,6 +31,7 @@ export default function DashboardGrid({
   onExportCSV,
   onExportPNG,
   onEditChart,
+  onWidgetDataPointClick,
   fullscreenChartId,
   onToggleFullscreen,
   onInsightData,
@@ -130,6 +131,7 @@ export default function DashboardGrid({
                 onExportPNG={onExportPNG}
                 onEditChart={isEditable ? onEditChart : undefined}
                 onInsightData={onInsightData}
+                onDataPointClick={onWidgetDataPointClick}
                 isFullscreen={fullscreenChartId === widget.id}
                 onToggleFullscreen={isEditable ? () => onToggleFullscreen?.(widget.id) : undefined}
                 themeMode={themeMode}

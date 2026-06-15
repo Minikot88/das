@@ -2,14 +2,14 @@
 import { useStore } from "../../store/useStore";
 
 const QUICK_ACTIONS = [
-  { key: "edit", label: "Edit chart", icon: "ED" },
-  { key: "fullscreen", label: "Fullscreen", icon: "FS" },
-  { key: "duplicate", label: "Duplicate", icon: "CP" },
+  { key: "edit", label: "แก้ไขกราฟ", icon: "ED" },
+  { key: "fullscreen", label: "เต็มหน้าจอ", icon: "FS" },
+  { key: "duplicate", label: "ทำสำเนา", icon: "CP" },
 ];
 
 const EXPORT_ACTIONS = [
-  { key: "csv", label: "Export CSV", icon: "CSV", description: "Download widget rows" },
-  { key: "png", label: "Export PNG", icon: "PNG", description: "Download chart image" },
+  { key: "csv", label: "ส่งออก CSV", icon: "CSV", description: "ดาวน์โหลดแถวข้อมูลของวิดเจ็ต" },
+  { key: "png", label: "ส่งออก PNG", icon: "PNG", description: "ดาวน์โหลดรูปภาพกราฟ" },
 ];
 
 export default function CardActions({
@@ -131,38 +131,38 @@ export default function CardActions({
         type="button"
         className={`card-export-btn${openPanel === "export" ? " is-active" : ""}`}
         onClick={(event) => togglePanel("export", event)}
-        aria-label="Export widget"
+        aria-label="ส่งออกวิดเจ็ต"
         aria-haspopup="true"
         aria-expanded={openPanel === "export"}
-        title="Export widget"
+        title="ส่งออกวิดเจ็ต"
       >
         <span className="card-export-btn-icon" aria-hidden="true">EX</span>
-        <span className="card-export-btn-label">Export</span>
+        <span className="card-export-btn-label">ส่งออก</span>
       </button>
 
       <button
         type="button"
         className={`card-menu-btn${openPanel === "menu" ? " is-active" : ""}`}
         onClick={(event) => togglePanel("menu", event)}
-        aria-label="Widget menu"
+        aria-label="เมนูวิดเจ็ต"
         aria-haspopup="true"
         aria-expanded={openPanel === "menu"}
-        title="Widget menu"
+        title="เมนูวิดเจ็ต"
       >
         ME
       </button>
 
       {openPanel === "export" ? (
-        <div className="card-actions-menu card-actions-menu-export" role="menu" aria-label={`Export ${chart.title}`}>
+        <div className="card-actions-menu card-actions-menu-export" role="menu" aria-label={`ส่งออก ${chart.title}`}>
           <div className="card-actions-header">
-            <span className="card-actions-label">Export</span>
+            <span className="card-actions-label">ส่งออก</span>
             <strong className="card-actions-title" title={chart.title}>
               {chart.title}
             </strong>
           </div>
 
           <div className="card-actions-section-copy">
-            Export as data or image
+            ส่งออกเป็นข้อมูลหรือรูปภาพ
           </div>
 
           {EXPORT_ACTIONS.map((action) => (
@@ -184,9 +184,9 @@ export default function CardActions({
       ) : null}
 
       {openPanel === "menu" ? (
-        <div className="card-actions-menu" role="menu" aria-label={`Manage ${chart.title}`}>
+        <div className="card-actions-menu" role="menu" aria-label={`จัดการ ${chart.title}`}>
           <div className="card-actions-header">
-            <span className="card-actions-label">Widget tools</span>
+            <span className="card-actions-label">เครื่องมือวิดเจ็ต</span>
             <strong className="card-actions-title" title={chart.title}>
               {chart.title}
             </strong>
@@ -195,7 +195,7 @@ export default function CardActions({
           {isRenaming ? (
             <form className="card-rename-form" onSubmit={submitRename}>
               <label className="card-rename-label" htmlFor={`widget-title-${chart.id}`}>
-                Rename widget
+                เปลี่ยนชื่อวิดเจ็ต
               </label>
               <input
                 id={`widget-title-${chart.id}`}
@@ -208,10 +208,10 @@ export default function CardActions({
               />
               <div className="card-rename-actions">
                 <button type="button" className="card-action-ghost" onClick={cancelRename}>
-                  Cancel
+                  ยกเลิก
                 </button>
                 <button type="submit" className="card-action-confirm" disabled={!draftTitle.trim()}>
-                  Save
+                  บันทึก
                 </button>
               </div>
             </form>
@@ -219,7 +219,7 @@ export default function CardActions({
             <>
               <button className="card-action-item" onClick={beginRename} role="menuitem" type="button">
                 <span className="card-action-icon">RN</span>
-                <span>Rename</span>
+                <span>เปลี่ยนชื่อ</span>
               </button>
 
               {QUICK_ACTIONS.map((action) => (
@@ -232,7 +232,7 @@ export default function CardActions({
                 >
                   <span className="card-action-icon">{action.icon}</span>
                   <span>
-                    {action.key === "fullscreen" && isFullscreen ? "Exit fullscreen" : action.label}
+                    {action.key === "fullscreen" && isFullscreen ? "ออกจากเต็มหน้าจอ" : action.label}
                   </span>
                 </button>
               ))}
@@ -250,7 +250,7 @@ export default function CardActions({
                 }}
               >
                 <span className="card-action-icon">RM</span>
-                <span>Delete widget</span>
+                <span>ลบวิดเจ็ต</span>
               </button>
             </>
           )}

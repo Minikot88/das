@@ -331,6 +331,8 @@
 
 .dashboard-empty-state-actions {
   gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 .dashboard-sidebar {
@@ -1285,10 +1287,6 @@ body.dark .schema-item-meta {
   border-color: color-mix(in srgb, var(--accent) 72%, var(--border-strong));
   background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 84%, white 16%) 0%, color-mix(in srgb, var(--accent) 94%, black 6%) 100%);
   color: white;
-}
-
-.builder-shell {
-  gap: 12px;
 }
 
 .builder-top-action-bar {
@@ -2472,5 +2470,140 @@ body.dark .dashboard-workspace-page .dashboard-workspace-canvas-frame {
 @media (max-width: 980px) {
   .dashboard-share-form-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Release polish: Thai-first responsive dashboard and inspector */
+.dashboard-workspace-page .dashboard-workspace-header,
+.dashboard-workspace-page .dashboard-workspace-toolbar,
+.dashboard-workspace-page .dashboard-global-filters,
+.dashboard-workspace-page .dashboard-interactions-panel,
+.dashboard-workspace-page .dashboard-workspace-tabs-section,
+.dashboard-workspace-page .dashboard-workspace-canvas,
+.dashboard-workspace-page .dashboard-sidebar {
+  border-color: color-mix(in srgb, var(--pbi-panel-border) 72%, transparent);
+  box-shadow: 0 16px 38px rgba(15, 23, 42, 0.06);
+}
+
+.dashboard-workspace-page .dashboard-workspace-toolbar,
+.dashboard-workspace-page .dashboard-global-filters,
+.dashboard-workspace-page .dashboard-interactions-panel {
+  gap: 16px;
+}
+
+.dashboard-workspace-page .dashboard-workspace-shell,
+.dashboard-workspace-page .dashboard-workspace-shell.is-rail-collapsed {
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 320px);
+}
+
+.dashboard-workspace-page .dashboard-sidebar {
+  width: 320px;
+  min-width: 300px;
+  max-width: 320px;
+}
+
+@media (max-width: 1024px) {
+  .dashboard-workspace-page .dashboard-workspace-shell,
+  .dashboard-workspace-page .dashboard-workspace-shell.is-rail-collapsed {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dashboard-workspace-page .dashboard-sidebar,
+  .dashboard-workspace-page .dashboard-sidebar.is-collapsed {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    max-height: 520px;
+    overflow: auto;
+  }
+
+  .dashboard-workspace-page .dashboard-sidebar.is-collapsed .dashboard-sidebar-body {
+    display: none;
+  }
+
+  .dashboard-workspace-page .dashboard-sidebar.is-collapsed {
+    max-height: 88px;
+  }
+
+  .dashboard-workspace-page .dashboard-workspace-header,
+  .dashboard-workspace-page .dashboard-workspace-toolbar-group-main,
+  .dashboard-workspace-page .dashboard-global-filters-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .dashboard-workspace-page {
+    overflow-x: hidden;
+  }
+
+  .dashboard-workspace-page .dashboard-workspace-main,
+  .dashboard-workspace-page .dashboard-workspace-shell {
+    min-width: 0;
+  }
+
+  .dashboard-workspace-page .dashboard-sidebar {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    z-index: var(--z-modal, 1000);
+    width: auto;
+    max-width: none;
+    max-height: min(74vh, 620px);
+    border-radius: 16px;
+    overflow: auto;
+  }
+
+  .dashboard-workspace-page .dashboard-sidebar.is-collapsed {
+    max-height: 76px;
+  }
+
+  .dashboard-workspace-page .dashboard-workspace-header,
+  .dashboard-workspace-page .dashboard-workspace-toolbar,
+  .dashboard-workspace-page .dashboard-global-filters,
+  .dashboard-workspace-page .dashboard-interactions-panel,
+  .dashboard-workspace-page .dashboard-workspace-tabs-section,
+  .dashboard-workspace-page .dashboard-workspace-canvas {
+    padding: 16px;
+    border-radius: 14px;
+  }
+
+  .dashboard-workspace-page .dashboard-workspace-header,
+  .dashboard-workspace-page .dashboard-workspace-toolbar-group-main,
+  .dashboard-workspace-page .dashboard-global-filters-grid,
+  .dashboard-workspace-page .dashboard-workspace-toolbar-summary,
+  .dashboard-workspace-page .dashboard-saved-view-create {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dashboard-workspace-page .dashboard-workspace-action-strip,
+  .dashboard-workspace-page .dashboard-global-filter-actions,
+  .dashboard-workspace-page .dashboard-saved-view-item > div {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .dashboard-workspace-page .dashboard-toolbar-btn {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .dashboard-workspace-page .dashboard-workspace-title {
+    font-size: 28px;
+    line-height: 1.15;
+  }
+}
+
+@media (max-width: 375px) {
+  .dashboard-workspace-page .dashboard-workspace-action-strip,
+  .dashboard-workspace-page .dashboard-global-filter-actions,
+  .dashboard-workspace-page .dashboard-saved-view-item > div {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dashboard-workspace-page .dashboard-workspace-title {
+    font-size: 24px;
   }
 }

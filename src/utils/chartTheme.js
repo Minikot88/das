@@ -115,6 +115,7 @@ export function createChartJsBaseOptions({
   backgroundColor = "#ffffff",
   titleColor = "#0f172a",
   axisLabelColor = "#475569",
+  showTooltip = true,
 } = {}) {
   const safeLegendPosition = normalizeLegendPosition(legendPosition);
   const readable = resolveReadableColors({ backgroundColor, titleColor, axisLabelColor });
@@ -154,6 +155,7 @@ export function createChartJsBaseOptions({
       title: createPluginTitleOptions(title, true, 14, readable.titleColor),
       subtitle: createPluginTitleOptions(subtitle, true, 11, readable.titleColor),
       tooltip: {
+        enabled: showTooltip,
         backgroundColor: "rgba(15, 23, 42, 0.94)",
         titleColor: "#f8fafc",
         bodyColor: "#e2e8f0",
@@ -186,6 +188,7 @@ export function createCartesianOptions({
   titleColor = "#0f172a",
   axisLabelColor = "#475569",
   gridColor = "rgba(148, 163, 184, 0.14)",
+  showTooltip = true,
 } = {}) {
   const readable = resolveReadableColors({ backgroundColor, titleColor, axisLabelColor, gridColor });
   return {
@@ -197,6 +200,7 @@ export function createCartesianOptions({
       backgroundColor,
       titleColor,
       axisLabelColor,
+      showTooltip,
     }),
     indexAxis: horizontal ? "y" : "x",
     scales: {
@@ -267,6 +271,7 @@ export function createRadialOptions({
   titleColor = "#0f172a",
   axisLabelColor = "#475569",
   gridColor = "rgba(148, 163, 184, 0.18)",
+  showTooltip = true,
 } = {}) {
   const readable = resolveReadableColors({ backgroundColor, titleColor, axisLabelColor, gridColor });
   return {
@@ -278,6 +283,7 @@ export function createRadialOptions({
       backgroundColor,
       titleColor,
       axisLabelColor,
+      showTooltip,
     }),
     scales: {
       r: {
@@ -318,6 +324,7 @@ export function createPieOptions({
   backgroundColor = "#ffffff",
   titleColor = "#0f172a",
   axisLabelColor = "#475569",
+  showTooltip = true,
 } = {}) {
   return {
     ...createChartJsBaseOptions({
@@ -328,6 +335,7 @@ export function createPieOptions({
       backgroundColor,
       titleColor,
       axisLabelColor,
+      showTooltip,
     }),
     rotation: semi ? -90 : 0,
     circumference: semi ? 180 : 360,

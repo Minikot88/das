@@ -1,75 +1,116 @@
-# Dashboard Mini BI
+# DashboardMiniBi
 
-Dashboard Mini BI is a frontend-only React/Vite analytics workspace for building charts, arranging dashboards, exporting dashboard images, and opening read-only public or embedded dashboard views.
+DashboardMiniBi is a frontend-only React/Vite enterprise analytics workspace for building charts, arranging dashboards, importing local CSV datasets, applying dashboard filters, saving views, exporting dashboard snapshots, and opening read-only local share/embed views.
 
-The current app runs in explicit mock mode by default. Mock mode uses local demo data, localStorage persistence, and mock authentication for local evaluation. It is not real production authentication.
+Version: v1.0 release candidate.
 
-## Requirements
+## What Is Included
 
-- Node.js 20 or newer
-- npm
-- Docker, optional
+- Executive workspace Home.
+- Dashboard canvas with widgets, tabs, filters, saved views, sharing, export, and presentation mode.
+- Professional chart Builder.
+- Local CSV Datasets page.
+- Settings for local preferences.
+- Local read-only public/embed dashboard views.
+- Vitest and React Testing Library baseline tests.
+- Local storage reliability handling and route error recovery.
 
-## Install
+## Default Mode
+
+The app runs in explicit mock/local mode by default.
+
+Mock/local mode uses:
+- demo data
+- mock authentication
+- browser localStorage persistence
+- local-only share records
+
+Mock login is not production authentication. Local share links are not server-backed access-control.
+
+## Quick Start
 
 ```bash
 npm ci
-```
-
-## Run Locally
-
-```bash
 npm run dev
 ```
 
-Open the URL printed by Vite. The default `.env.example` keeps `VITE_USE_MOCK=true`, so no backend is required.
+Open the URL printed by Vite.
 
-## Build
+Mock login:
+- Email: `demo@dataviz.bi`
+- Password: `demo1234`
+
+Any non-empty mock credentials may also work in local mode.
+
+## Quality Commands
 
 ```bash
+npm run lint
+npm test
 npm run build
+npm audit
 ```
 
-Preview the built app:
+## Documentation
 
-```bash
-npm run preview
-```
+User and admin docs:
+- [USER_GUIDE.md](USER_GUIDE.md)
+- [ADMIN_GUIDE.md](ADMIN_GUIDE.md)
+- [DATASET_GUIDE.md](DATASET_GUIDE.md)
+- [DASHBOARD_GUIDE.md](DASHBOARD_GUIDE.md)
+- [RELEASE_NOTES_v1.0.md](RELEASE_NOTES_v1.0.md)
+
+Architecture docs:
+- [ARCHITECTURE.md](ARCHITECTURE.md)
+- [COMPONENT_ARCHITECTURE.md](COMPONENT_ARCHITECTURE.md)
+- [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md)
+- [FILTER_ENGINE.md](FILTER_ENGINE.md)
+- [EXPORT_SYSTEM.md](EXPORT_SYSTEM.md)
+
+Developer docs:
+- [INSTALLATION.md](INSTALLATION.md)
+- [CONTRIBUTING.md](CONTRIBUTING.md)
+- [TESTING_NOTES.md](TESTING_NOTES.md)
+
+Release docs:
+- [CLEANUP_REPORT.md](CLEANUP_REPORT.md)
+- [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md)
+
+Historical design, audit, sprint, and screenshot reports are in [docs/](docs/).
+
+## Requirements
+
+- Node.js 20 or newer.
+- npm.
+- Docker optional.
+
+## Environment Variables
+
+- `VITE_USE_MOCK`: `true` for local demo mode, `false` to call API endpoints.
+- `VITE_API_BASE_URL`: API origin used when mock mode is disabled.
+- `VITE_API_PROXY_TARGET`: Vite dev proxy target for `/api`.
+- `VITE_API_TIMEOUT_MS`: frontend request timeout in milliseconds.
+- `FRONTEND_PORT`: Docker host port.
+
+Vite reads `VITE_*` values at build time. Rebuild after changing them.
 
 ## Docker
-
-The Docker setup is frontend-only and serves the built SPA with nginx.
 
 ```bash
 cp .env.example .env
 docker compose up --build
 ```
 
-The default host port is `8080`, configurable with `FRONTEND_PORT`.
+Default port: `8080`, configurable with `FRONTEND_PORT`.
 
-Vite reads `VITE_*` values at build time. When changing `VITE_USE_MOCK`, `VITE_API_BASE_URL`, or `VITE_API_TIMEOUT_MS` for Docker, rebuild the image with `docker compose up --build`. Runtime container environment changes alone will not update an already-built SPA.
+## Production Boundary
 
-## Environment Variables
+DashboardMiniBi v1.0 is production-hardened for local/frontend release candidate evaluation, not for secure multi-user server deployment.
 
-- `VITE_USE_MOCK`: `true` for local demo mode, `false` to call a real API.
-- `VITE_API_BASE_URL`: API origin used when mock mode is disabled.
-- `VITE_API_PROXY_TARGET`: Vite dev proxy target for `/api` when no API base URL is set.
-- `VITE_API_TIMEOUT_MS`: frontend request timeout in milliseconds.
-- `FRONTEND_PORT`: Docker host port for the nginx frontend container.
-
-## Mock Auth Limitation
-
-Mock authentication only gates routes inside this browser session and localStorage workspace. It does not provide server-side security, shared-user isolation, password verification, or durable public share authorization.
-
-Public/share links in mock mode are also local browser records. They are useful for previewing the read-only UI, but they are not a production access-control mechanism and cannot protect data across users or devices.
-
-Before production, connect a real backend with session/token validation, server-side authorization, durable share-link records, and server-side checks before returning any dashboard, chart, project, or user data.
-
-## Production Checklist
-
-- Implement a real backend for auth, projects, charts, dashboards, and share links.
-- Store secrets outside source control and deployment defaults.
-- Add server-side authorization checks for every dashboard/chart route.
-- Use HTTPS and secure cookie/session settings.
-- Run `npm run lint`, `npm run build`, and `npm audit` in CI.
-- Add automated tests for auth guards, chart lifecycle, dashboard layout, and share/embed views.
+Before server-backed production use, provide:
+- real authentication and sessions
+- server-side authorization
+- durable project/chart/dashboard persistence
+- durable share-link records
+- backend dataset/query execution
+- server-side checks before returning any user data

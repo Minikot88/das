@@ -32,6 +32,19 @@ export default function DashboardPublicPage() {
   const dashboardContext = useMemo(
     () => {
       if (!shareRecord || shareRecord.dashboardId !== dashboardId) return null;
+      if (shareRecord.snapshot?.dashboardId === dashboardId) {
+        return {
+          project: { name: shareRecord.snapshot.projectName ?? "พื้นที่ทำงานที่แชร์" },
+          sheet: { name: shareRecord.snapshot.sheetName ?? "ชีตที่แชร์" },
+          dashboard: {
+            id: dashboardId,
+            name: shareRecord.snapshot.dashboardName ?? "แดชบอร์ดที่แชร์",
+            layout: shareRecord.snapshot.layout ?? [],
+          },
+          widgets: shareRecord.snapshot.widgets ?? [],
+          snapshot: shareRecord.snapshot,
+        };
+      }
       const context = findDashboardContextById(projects, charts, dashboardId);
       if (shareRecord.projectId && context?.project?.id !== shareRecord.projectId) return null;
       if (shareRecord.sheetId && context?.sheet?.id !== shareRecord.sheetId) return null;
@@ -70,7 +83,7 @@ export default function DashboardPublicPage() {
     );
   }
 
-  const { project, sheet, dashboard, widgets } = dashboardContext;
+  const { project, sheet, dashboard, widgets, snapshot } = dashboardContext;
   const chartCount = widgets.length;
   const chartTypes = countChartTypes(widgets);
   const showHeader = viewOptions.showHeader;
@@ -116,6 +129,11 @@ export default function DashboardPublicPage() {
               <span>/</span>
               <span>{isEmbedMode ? "ดูอย่างเดียว" : "มุมมองสาธารณะ"}</span>
             </div>
+            {snapshot?.contextItems?.length ? (
+              <div className="dashboard-public-breadcrumb">
+                {snapshot.contextItems.slice(0, 4).map((item) => <span key={item}>{item}</span>)}
+              </div>
+            ) : null}
           </div>
           <div className="dashboard-public-stats">
             <div className="dashboard-public-stat">

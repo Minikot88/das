@@ -15,10 +15,10 @@ export default function ChartMappingPanel({
     <section className="builder-v3-panel builder-v3-mapping-panel">
       <div className="builder-v3-section-head">
         <div>
-          <span className="builder-v3-kicker">Mapping</span>
-          <h2 className="builder-v3-title">Assign fields</h2>
+          <span className="builder-v3-kicker">การแมป</span>
+          <h2 className="builder-v3-title">กำหนดฟิลด์</h2>
         </div>
-        <span className="builder-v3-pill">{template.roles.length} roles</span>
+        <span className="builder-v3-pill">{template.roles.length} บทบาท</span>
       </div>
 
       <div className="builder-v3-mapping-grid">
