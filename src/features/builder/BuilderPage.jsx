@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { Resizable } from "react-resizable";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { PageContainer, WorkspaceLayout } from "../../components/layout/Layout";
 import { useStore } from "../../store/useStore";
@@ -21,25 +22,17 @@ function getBuilderContextFromRoute(locationState, fallbackContext) {
   return locationState?.builderContext ?? fallbackContext ?? null;
 }
 
-function getFirstMappingValue(mapping = {}, keys = []) {
-  for (const key of keys) {
-    const value = mapping[key];
-    if (Array.isArray(value)) {
-      const first = value.find(Boolean);
-      if (first) return first;
-      continue;
-    }
-    if (value) return value;
-  }
-  return "";
+const SQL_PANEL_DEFAULT_HEIGHT = 180;
+const SQL_PANEL_MIN_HEIGHT = 120;
+const SQL_PANEL_COLLAPSED_HEIGHT = 42;
+
+function getSqlPanelMaxHeight() {
+  if (typeof window === "undefined") return 360;
+  return Math.max(SQL_PANEL_MIN_HEIGHT, Math.floor(window.innerHeight * 0.5));
 }
 
-function getFieldLabel(schema, fieldName) {
-  if (!fieldName) return "ยังไม่ได้เลือก";
-  const field = Array.isArray(schema?.fields)
-    ? schema.fields.find((item) => item.name === fieldName)
-    : null;
-  return field?.label || fieldName;
+function clampSqlPanelHeight(height) {
+  return Math.min(Math.max(height, SQL_PANEL_MIN_HEIGHT), getSqlPanelMaxHeight());
 }
 
 export default function BuilderPage() {
@@ -53,6 +46,8 @@ export default function BuilderPage() {
   const clearBuilderNavigationContext = useStore((state) => state.clearBuilderNavigationContext);
   const editingChartId = searchParams.get("chartId") ?? "";
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+  const [sqlPanelHeight, setSqlPanelHeight] = useState(SQL_PANEL_DEFAULT_HEIGHT);
+  const [isSqlPanelCollapsed, setIsSqlPanelCollapsed] = useState(false);
 
   const fallbackContext = useMemo(
     () =>
@@ -71,19 +66,6 @@ export default function BuilderPage() {
   );
 
   const builder = useChartBuilder(builderContext, editingChartId);
-  const summaryFields = useMemo(() => {
-    const mapping = builder.mapping ?? {};
-    const xField = getFirstMappingValue(mapping, ["x", "category", "row"]);
-    const yField = getFirstMappingValue(mapping, ["y", "value", "column"]);
-    const seriesField = getFirstMappingValue(mapping, ["series", "legend", "label"]);
-    return [
-      { label: "ประเภทกราฟ", value: builder.selectedTemplate?.name || builder.selectedTemplate?.id || "ยังไม่ได้เลือก" },
-      { label: "ชุดข้อมูล", value: builder.explorerDataset?.name || builder.explorerDataset?.id || "ยังไม่ได้เลือก" },
-      { label: "X Axis", value: getFieldLabel(builder.effectiveSchema, xField) },
-      { label: "Y Axis", value: getFieldLabel(builder.effectiveSchema, yField) },
-      { label: "Series", value: getFieldLabel(builder.effectiveSchema, seriesField) },
-    ];
-  }, [builder.effectiveSchema, builder.explorerDataset, builder.mapping, builder.selectedTemplate]);
   const mappedFieldNames = useMemo(
     () =>
       Array.from(
@@ -126,22 +108,87 @@ export default function BuilderPage() {
     });
   }
 
-  return (
-    <PageContainer className="builder-shell builder-v3-shell">
-      <section className="builder-v3-summary-bar" aria-label="สรุปกราฟ">
-        <div className="builder-v3-summary-grid">
-          {summaryFields.map((item) => (
-            <div key={item.label} className="builder-v3-summary-item">
-              <span>{item.label}</span>
-              <strong>{item.value}</strong>
-            </div>
-          ))}
-        </div>
-        <button type="button" className="builder-v3-button is-primary builder-v3-top-save" onClick={() => setIsSaveModalOpen(true)}>
-          บันทึกกราฟ
-        </button>
-      </section>
+  useEffect(() => {
+    function handleViewportResize() {
+      setSqlPanelHeight((height) => clampSqlPanelHeight(height));
+    }
 
+    window.addEventListener("resize", handleViewportResize);
+    return () => window.removeEventListener("resize", handleViewportResize);
+  }, []);
+
+  function handleSqlResize(_event, data) {
+    setSqlPanelHeight(clampSqlPanelHeight(data.size.height));
+  }
+
+  function handleSqlKeyboardResize(event) {
+    const step = event.shiftKey ? 40 : 10;
+    let nextHeight = sqlPanelHeight;
+
+    if (event.key === "ArrowUp") nextHeight += step;
+    if (event.key === "ArrowDown") nextHeight -= step;
+    if (event.key === "PageUp") nextHeight += 40;
+    if (event.key === "PageDown") nextHeight -= 40;
+    if (event.key === "Home") nextHeight = SQL_PANEL_MIN_HEIGHT;
+    if (event.key === "End") nextHeight = getSqlPanelMaxHeight();
+    if (nextHeight === sqlPanelHeight) return;
+
+    event.preventDefault();
+    setSqlPanelHeight(clampSqlPanelHeight(nextHeight));
+  }
+
+  const sqlPanel = (
+    <section
+      id="builder-sql-panel"
+      className={`builder-v3-bottom-sql-panel${isSqlPanelCollapsed ? " is-collapsed" : ""}`}
+      aria-labelledby="builder-sql-panel-title"
+      style={{
+        "--builder-sql-panel-current-height": `${isSqlPanelCollapsed ? SQL_PANEL_COLLAPSED_HEIGHT : sqlPanelHeight}px`,
+      }}
+    >
+      {!isSqlPanelCollapsed ? <div className="builder-v3-sql-resize-handle" aria-hidden="true" /> : null}
+      <div className="builder-v3-sql-ide-toolbar">
+        <div>
+          <strong id="builder-sql-panel-title">SQL Preview</strong>
+          <span>{isSqlPanelCollapsed ? "ย่ออยู่" : "ปรับความสูงได้เหมือน IDE"}</span>
+        </div>
+        <button
+          type="button"
+          className="builder-v3-button builder-v3-sql-toggle"
+          onClick={() => setIsSqlPanelCollapsed((value) => !value)}
+          aria-expanded={!isSqlPanelCollapsed}
+          aria-controls="builder-sql-panel-body"
+        >
+          {isSqlPanelCollapsed ? "Expand" : "Collapse"}
+        </button>
+      </div>
+
+      {!isSqlPanelCollapsed ? (
+        <div id="builder-sql-panel-body">
+          <QueryModePanel
+            queryMode={builder.queryMode}
+            generatedSql={builder.generatedSql}
+            customSql={builder.customSql}
+            queryStatus={builder.queryStatus}
+            queryError={builder.queryError}
+            queryResult={builder.queryResult}
+            onChangeMode={builder.setQueryMode}
+            onChangeSql={builder.updateCustomSql}
+            onRunSql={builder.applySql}
+            onResetSql={builder.resetSqlToGenerated}
+          />
+        </div>
+      ) : null}
+    </section>
+  );
+
+  return (
+    <PageContainer
+      className={`builder-shell builder-v3-shell${isSqlPanelCollapsed ? " is-sql-panel-collapsed" : ""}`}
+      style={{
+        "--builder-sql-panel-height": `${isSqlPanelCollapsed ? SQL_PANEL_COLLAPSED_HEIGHT : sqlPanelHeight}px`,
+      }}
+    >
       <WorkspaceLayout columns="three" className="builder-v3-workspace">
         <div className="builder-v3-column builder-v3-column-left">
           <FieldList
@@ -158,27 +205,26 @@ export default function BuilderPage() {
 
         <div className="builder-v3-column builder-v3-column-main">
           <div className="builder-v3-center-scroll">
-            <ChartTypePicker
-              templates={builder.templates}
-              selectedTemplateId={builder.selectedTemplateId}
-              onChange={builder.setSelectedTemplate}
-            />
+            <div className="builder-v3-chart-builder-stack">
+              <ChartTypePicker
+                templates={builder.templates}
+                selectedTemplateId={builder.selectedTemplateId}
+                onChange={builder.setSelectedTemplate}
+              />
+              <ChartMappingPanel
+                template={builder.selectedTemplate}
+                mapping={builder.mapping}
+                validation={builder.validation}
+                availableFields={builder.effectiveSchema?.fields ?? []}
+                onDropField={builder.assignField}
+                onRemoveField={builder.removeField}
+                canAssignField={builder.canAssignField}
+              />
+            </div>
             <ChartPreviewPanel
               previewConfig={builder.previewConfig}
               settings={builder.settings}
               validation={builder.validation}
-            />
-            <QueryModePanel
-              queryMode={builder.queryMode}
-              generatedSql={builder.generatedSql}
-              customSql={builder.customSql}
-              queryStatus={builder.queryStatus}
-              queryError={builder.queryError}
-              queryResult={builder.queryResult}
-              onChangeMode={builder.setQueryMode}
-              onChangeSql={builder.updateCustomSql}
-              onRunSql={builder.applySql}
-              onResetSql={builder.resetSqlToGenerated}
             />
           </div>
         </div>
@@ -190,29 +236,18 @@ export default function BuilderPage() {
                 <span className="builder-v3-kicker">ตั้งค่า</span>
                 <h2 className="builder-v3-title">การตั้งค่ากราฟ</h2>
               </div>
+              <button type="button" className="builder-v3-button is-primary builder-v3-top-save" onClick={() => setIsSaveModalOpen(true)}>
+                บันทึกกราฟ
+              </button>
             </div>
             <div className="builder-v3-settings-accordion-stack">
-              <details className="builder-v3-subsection builder-v3-format-accordion" open>
-                <summary className="builder-v3-inline-meta">
-                  <strong>ฟิลด์</strong>
-                  <span>แมปฟิลด์ข้อมูลเข้ากับบทบาทของกราฟ</span>
-                </summary>
-                <ChartMappingPanel
-                  template={builder.selectedTemplate}
-                  mapping={builder.mapping}
-                  validation={builder.validation}
-                  onDropField={builder.assignField}
-                  onRemoveField={builder.removeField}
-                  canAssignField={builder.canAssignField}
-                />
-              </details>
               <ChartSettingsPanel
                 template={builder.selectedTemplate}
                 mapping={builder.mapping}
                 settings={builder.settings}
                 onSettingChange={builder.updateSetting}
               />
-              <details className="builder-v3-subsection builder-v3-format-accordion">
+              <details className="builder-v3-subsection builder-v3-format-accordion" name="builder-config-accordion">
                 <summary className="builder-v3-inline-meta">
                   <strong>วิเคราะห์</strong>
                   <span>เพิ่มแนวโน้ม เป้าหมาย เกณฑ์ คาดการณ์ และเส้นอ้างอิง</span>
@@ -227,6 +262,38 @@ export default function BuilderPage() {
           </section>
         </div>
       </WorkspaceLayout>
+
+      {isSqlPanelCollapsed ? (
+        sqlPanel
+      ) : (
+        <Resizable
+          axis="y"
+          height={sqlPanelHeight}
+          width={0}
+          minConstraints={[0, SQL_PANEL_MIN_HEIGHT]}
+          maxConstraints={[0, getSqlPanelMaxHeight()]}
+          resizeHandles={["n"]}
+          handle={(_axis, ref) => (
+            <span
+              ref={ref}
+              className="builder-v3-sql-resize-grip"
+              role="separator"
+              tabIndex={0}
+              aria-label="Resize SQL preview panel"
+              aria-controls="builder-sql-panel"
+              aria-orientation="horizontal"
+              aria-valuemin={SQL_PANEL_MIN_HEIGHT}
+              aria-valuemax={getSqlPanelMaxHeight()}
+              aria-valuenow={sqlPanelHeight}
+              onKeyDown={handleSqlKeyboardResize}
+            />
+          )}
+          onResize={handleSqlResize}
+        >
+          {sqlPanel}
+        </Resizable>
+      )}
+
       {isSaveModalOpen ? (
         <ChartSavePanel
           builderContext={builderContext}

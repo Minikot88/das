@@ -5,6 +5,7 @@ export default function ChartMappingPanel({
   template,
   mapping,
   validation,
+  availableFields = [],
   onDropField,
   onRemoveField,
   canAssignField,
@@ -15,10 +16,10 @@ export default function ChartMappingPanel({
     <section className="builder-v3-panel builder-v3-mapping-panel">
       <div className="builder-v3-section-head">
         <div>
-          <span className="builder-v3-kicker">การแมป</span>
-          <h2 className="builder-v3-title">กำหนดฟิลด์</h2>
+          <span className="builder-v3-kicker">Chart Builder</span>
+          <h2 className="builder-v3-title">เลือกฟิลด์ให้กราฟ</h2>
         </div>
-        <span className="builder-v3-pill">{template.roles.length} บทบาท</span>
+        <span className="builder-v3-pill">{template.roles.length} ช่อง</span>
       </div>
 
       <div className="builder-v3-mapping-grid">
@@ -28,6 +29,7 @@ export default function ChartMappingPanel({
             role={role}
             mappedValue={mapping[role.key]}
             validation={validation}
+            availableFields={availableFields}
             onDropField={onDropField}
             onRemoveField={onRemoveField}
             canAssignField={canAssignField}

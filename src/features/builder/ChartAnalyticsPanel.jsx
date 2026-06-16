@@ -115,7 +115,7 @@ export default function ChartAnalyticsPanel({ template, settings = {}, onSetting
       </div>
 
       {supportsTrend ? (
-        <details className="builder-v3-subsection builder-v3-format-accordion" open>
+        <details className="builder-v3-subsection builder-v3-format-accordion" name="builder-config-accordion" open>
           <summary className="builder-v3-inline-meta">
             <strong>Trend</strong>
             <span>เพิ่มเส้นแนวโน้มเชิงเส้นบนตัวอย่างกราฟ</span>
@@ -131,7 +131,7 @@ export default function ChartAnalyticsPanel({ template, settings = {}, onSetting
       ) : null}
 
       {supportsLines ? (
-        <details className="builder-v3-subsection builder-v3-format-accordion">
+        <details className="builder-v3-subsection builder-v3-format-accordion" name="builder-config-accordion">
           <summary className="builder-v3-inline-meta">
             <strong>Target</strong>
             <span>กำหนดเส้นเป้าหมายตัวเลขและป้ายกำกับ</span>
@@ -148,7 +148,7 @@ export default function ChartAnalyticsPanel({ template, settings = {}, onSetting
       ) : null}
 
       {supportsLines ? (
-        <details className="builder-v3-subsection builder-v3-format-accordion">
+        <details className="builder-v3-subsection builder-v3-format-accordion" name="builder-config-accordion">
           <summary className="builder-v3-inline-meta">
             <strong>Threshold</strong>
             <span>แสดงแถบสีเขียว เหลือง แดงตามช่วงค่า</span>
@@ -165,7 +165,7 @@ export default function ChartAnalyticsPanel({ template, settings = {}, onSetting
       ) : null}
 
       {supportsForecast ? (
-        <details className="builder-v3-subsection builder-v3-format-accordion">
+        <details className="builder-v3-subsection builder-v3-format-accordion" name="builder-config-accordion">
           <summary className="builder-v3-inline-meta">
             <strong>Forecast</strong>
             <span>คาดการณ์ค่าถัดไปด้วย moving average</span>
@@ -183,7 +183,7 @@ export default function ChartAnalyticsPanel({ template, settings = {}, onSetting
       ) : null}
 
       {supportsLines ? (
-        <details className="builder-v3-subsection builder-v3-format-accordion">
+        <details className="builder-v3-subsection builder-v3-format-accordion" name="builder-config-accordion">
           <summary className="builder-v3-inline-meta">
             <strong>Reference</strong>
             <span>เพิ่มเส้นอ้างอิงแบบค่าคงที่หรือค่าเฉลี่ย</span>

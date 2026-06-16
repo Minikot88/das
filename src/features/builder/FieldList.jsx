@@ -1,6 +1,13 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const EXPANDED_NODES_STORAGE_KEY = "mini-bi.datasource.expandedNodes";
+const TREE_ROW_HEIGHT = 25;
+const TREE_OVERSCAN = 8;
+const TREE_VIRTUALIZATION_THRESHOLD = 180;
+
+function getDomId(prefix, value = "") {
+  return `${prefix}-${String(value).replace(/[^a-zA-Z0-9_-]+/g, "-")}`;
+}
 
 function normalizeType(type = "") {
   return String(type || "string").trim().toLowerCase();
@@ -182,6 +189,8 @@ function TreeChevron({ expanded = false, hidden = false }) {
 }
 
 function TreeRow({
+  nodeId,
+  controlsId,
   depth = 0,
   icon,
   label,
@@ -193,11 +202,32 @@ function TreeRow({
   ariaLabel,
   draggable = false,
   onDragStart,
+  tabIndex = -1,
+  onKeyDown,
+  onFocus,
+  rowRef,
+  posInSet,
+  setSize,
 }) {
+  const iconKey = String(icon || "node").toLowerCase();
+  const rowClassName = [
+    "builder-tree-row",
+    `is-depth-${depth}`,
+    `is-icon-${iconKey}`,
+    active ? "is-active" : "",
+    collapsible ? "is-collapsible" : "",
+    collapsible && expanded ? "is-expanded" : "",
+    draggable ? "is-field" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
     <div
-      className={`builder-tree-row${active ? " is-active" : ""}${draggable ? " is-field" : ""}`}
+      className={rowClassName}
+      role="none"
       style={{ "--depth": depth }}
+      data-tree-depth={depth}
       title={meta ? `${label} - ${meta}` : label}
     >
       <span className="builder-tree-indent" aria-hidden="true" />
@@ -208,6 +238,8 @@ function TreeRow({
           onClick={onClick}
           aria-label={ariaLabel || label}
           aria-expanded={expanded}
+          aria-controls={controlsId}
+          tabIndex={-1}
         >
           <TreeChevron expanded={expanded} />
         </button>
@@ -216,13 +248,24 @@ function TreeRow({
           <TreeChevron hidden />
         </span>
       )}
-      <span className="builder-tree-icon" aria-hidden="true">{icon}</span>
+      <span className="builder-tree-icon" data-tree-icon={icon} aria-hidden="true">{icon}</span>
       <button
+        id={nodeId}
         type="button"
         className="builder-tree-main"
+        role="treeitem"
         onClick={onClick}
+        onKeyDown={onKeyDown}
+        onFocus={onFocus}
+        ref={rowRef}
+        tabIndex={tabIndex}
         aria-label={ariaLabel || label}
+        aria-level={depth + 1}
+        aria-selected={active || undefined}
         aria-expanded={collapsible ? expanded : undefined}
+        aria-controls={collapsible ? controlsId : undefined}
+        aria-posinset={posInSet}
+        aria-setsize={setSize}
         draggable={draggable}
         onDragStart={onDragStart}
       >
@@ -236,7 +279,13 @@ function TreeRow({
 export default function FieldList({ dataset, schema, onDragStart, mappedFieldNames = [] }) {
   const [search, setSearch] = useState("");
   const [selectedTableId, setSelectedTableId] = useState("");
+  const [showAllFields, setShowAllFields] = useState(false);
+  const [treeScrollTop, setTreeScrollTop] = useState(0);
+  const [activeTreeIndex, setActiveTreeIndex] = useState(0);
   const searchExpandedSnapshotRef = useRef(null);
+  const treeWrapRef = useRef(null);
+  const treeItemRefs = useRef(new Map());
+  const [treeViewportHeight, setTreeViewportHeight] = useState(420);
 
   const structure = useMemo(() => normalizeStructure(dataset, schema), [dataset, schema]);
   const filtered = useMemo(() => filterStructure(structure, search), [structure, search]);
@@ -252,6 +301,7 @@ export default function FieldList({ dataset, schema, onDragStart, mappedFieldNam
     () => (selectedTable ? getNodeId("table", getTableNodeKey(selectedTable)) : null),
     [selectedTable]
   );
+  const recommendedFields = useMemo(() => (selectedTable?.fields || []).slice(0, 6), [selectedTable]);
 
   const [expandedNodes, setExpandedNodes] = useState(() => {
     const saved = readExpandedNodes();
@@ -287,6 +337,20 @@ export default function FieldList({ dataset, schema, onDragStart, mappedFieldNam
   useEffect(() => {
     writeExpandedNodes(expandedNodes);
   }, [expandedNodes]);
+
+  useEffect(() => {
+    const node = treeWrapRef.current;
+    if (!node || typeof ResizeObserver === "undefined") return;
+
+    const observer = new ResizeObserver(([entry]) => {
+      const nextHeight = entry?.contentRect?.height;
+      if (Number.isFinite(nextHeight) && nextHeight > 0) {
+        setTreeViewportHeight(nextHeight);
+      }
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
 
   const searchActive = Boolean(search.trim());
 
@@ -327,7 +391,7 @@ export default function FieldList({ dataset, schema, onDragStart, mappedFieldNam
     });
   }, [expandedNodes, filtered.schemas, searchActive, structure.database]);
 
-  function toggle(nodeId) {
+  const toggle = useCallback((nodeId) => {
     setExpandedNodes((current) => {
       const next = new Set(current);
       if (next.has(nodeId)) {
@@ -337,13 +401,13 @@ export default function FieldList({ dataset, schema, onDragStart, mappedFieldNam
       }
       return next;
     });
-  }
+  }, []);
 
-  function isExpanded(nodeId) {
+  const isExpanded = useCallback((nodeId) => {
     return expandedNodes.has(nodeId);
-  }
+  }, [expandedNodes]);
 
-  function onTableClick(table, isOpen) {
+  const onTableClick = useCallback((table, isOpen) => {
     const schemaName = table.schemaName || "analytics";
     const tableNodeId = getNodeId("table", getTableNodeKey(table));
     setSelectedTableId(table.id);
@@ -361,7 +425,7 @@ export default function FieldList({ dataset, schema, onDragStart, mappedFieldNam
       }
       return next;
     });
-  }
+  }, [structure.database]);
 
   const visibleTables = filtered.schemas.flatMap((schemaItem) => schemaItem.tables || []);
   const hasResults = visibleTables.length > 0;
@@ -370,6 +434,344 @@ export default function FieldList({ dataset, schema, onDragStart, mappedFieldNam
   const schemasNodeId = getNodeId("folder", "schemas");
   const dbExpanded = isExpanded(dbNodeId);
   const schemasExpanded = dbExpanded && isExpanded(schemasNodeId);
+
+  useEffect(() => {
+    setTreeScrollTop(0);
+    if (treeWrapRef.current) treeWrapRef.current.scrollTop = 0;
+  }, [search]);
+
+  const treeRows = useMemo(() => {
+    const rows = [
+      {
+        id: dbNodeId,
+        kind: "node",
+        depth: 0,
+        icon: "DB",
+        label: structure.database,
+        meta: structure.readOnly ? "อ่านอย่างเดียว" : "อ่าน/เขียน",
+        collapsible: true,
+        expanded: dbExpanded,
+        onClick: () => toggle(dbNodeId),
+        ariaLabel: `เปิดหรือปิดฐานข้อมูล ${structure.database}`,
+      },
+    ];
+
+    if (!dbExpanded) return rows;
+
+    rows.push({
+      id: schemasNodeId,
+      kind: "node",
+      depth: 1,
+      icon: "SC",
+      label: "สคีมา",
+      collapsible: true,
+      expanded: schemasExpanded,
+      onClick: () => toggle(schemasNodeId),
+      ariaLabel: "เปิดหรือปิดโฟลเดอร์สคีมา",
+    });
+
+    if (!schemasExpanded) return rows;
+
+    if (!hasResults) {
+      rows.push({
+        id: "empty:search",
+        kind: "empty",
+        depth: 2,
+        label: "ไม่พบสคีมา ตาราง หรือฟิลด์ที่ตรงกัน",
+      });
+      return rows;
+    }
+
+    filtered.schemas.forEach((schemaItem) => {
+      const schemaNodeId = getNodeId("schema", schemaItem.name);
+      const tablesNodeId = getNodeId("folder", `${schemaItem.name}:tables`);
+      const schemaExpanded = isExpanded(schemaNodeId);
+      const tablesExpanded = schemaExpanded && isExpanded(tablesNodeId);
+
+      rows.push({
+        id: schemaNodeId,
+        kind: "node",
+        depth: 2,
+        icon: "SC",
+        label: schemaItem.name,
+        meta: `${schemaItem.tables.length} ตาราง`,
+        collapsible: true,
+        expanded: schemaExpanded,
+        onClick: () => toggle(schemaNodeId),
+        ariaLabel: `เปิดหรือปิดสคีมา ${schemaItem.name}`,
+      });
+
+      if (!schemaExpanded) return;
+
+      rows.push({
+        id: tablesNodeId,
+        kind: "node",
+        depth: 3,
+        icon: "TB",
+        label: "ตาราง",
+        collapsible: true,
+        expanded: tablesExpanded,
+        onClick: () => toggle(tablesNodeId),
+        ariaLabel: `เปิดหรือปิดตารางในสคีมา ${schemaItem.name}`,
+      });
+
+      if (!tablesExpanded) return;
+
+      if (!schemaItem.tables.length) {
+        rows.push({
+          id: `empty:${schemaItem.name}:tables`,
+          kind: "empty",
+          depth: 4,
+          label: "ไม่มีตาราง",
+        });
+        return;
+      }
+
+      schemaItem.tables.forEach((table) => {
+        const tableNodeId = getNodeId("table", getTableNodeKey(table));
+        const tableExpanded = isExpanded(tableNodeId);
+        const isSelected = selectedTable?.id === table.id;
+        const tableMeta = `${table.fields?.length ?? 0} ฟิลด์${Number.isFinite(table.rowCount) ? ` | ${table.rowCount} แถว` : ""}`;
+
+        rows.push({
+          id: tableNodeId,
+          kind: "node",
+          depth: 4,
+          icon: "TB",
+          label: table.name,
+          meta: tableMeta,
+          active: isSelected,
+          collapsible: true,
+          expanded: tableExpanded,
+          onClick: () => onTableClick(table, tableExpanded),
+          ariaLabel: `เลือกและเปิดหรือปิดตาราง ${table.name}`,
+        });
+
+        if (!tableExpanded) return;
+
+        const fields = table.fields || [];
+        if (!fields.length) {
+          rows.push({
+            id: `empty:${table.id}:fields`,
+            kind: "empty",
+            depth: 5,
+            label: "ไม่มีฟิลด์",
+          });
+          return;
+        }
+
+        const visibleFields = showAllFields || searchActive ? fields : fields.slice(0, 8);
+        visibleFields.forEach((field) => {
+          const typeBadge = getTypeBadge(field);
+          const fieldMeta = formatFieldType(field.type || field.semanticType || field.sourceType || "string");
+          rows.push({
+            id: `${table.id}:${field.name}`,
+            kind: "node",
+            depth: 5,
+            icon: typeBadge,
+            label: field.label || field.name,
+            meta: fieldMeta,
+            active: mappedSet.has(field.name),
+            draggable: true,
+            onClick: () => setSelectedTableId(table.id),
+            onDragStart: (event) => {
+              if (typeof onDragStart === "function") {
+                onDragStart(event, field);
+              }
+            },
+            ariaLabel: `ฟิลด์ ${field.name}`,
+          });
+        });
+
+        if (!showAllFields && !searchActive && fields.length > 8) {
+          rows.push({
+            id: `show-more:${table.id}`,
+            kind: "showMore",
+            depth: 5,
+            label: `Show All Fields (${fields.length})`,
+            onClick: () => setShowAllFields(true),
+          });
+        }
+      });
+    });
+
+    return rows;
+  }, [
+    dbExpanded,
+    dbNodeId,
+    filtered.schemas,
+    hasResults,
+    isExpanded,
+    mappedSet,
+    onDragStart,
+    onTableClick,
+    schemasExpanded,
+    schemasNodeId,
+    searchActive,
+    selectedTable?.id,
+    showAllFields,
+    structure.database,
+    structure.readOnly,
+    toggle,
+  ]);
+
+  const shouldVirtualizeTree = treeRows.length > TREE_VIRTUALIZATION_THRESHOLD;
+  const virtualStartIndex = shouldVirtualizeTree
+    ? Math.max(0, Math.floor(treeScrollTop / TREE_ROW_HEIGHT) - TREE_OVERSCAN)
+    : 0;
+  const virtualVisibleCount = shouldVirtualizeTree
+    ? Math.ceil(treeViewportHeight / TREE_ROW_HEIGHT) + TREE_OVERSCAN * 2
+    : treeRows.length;
+  const virtualRows = shouldVirtualizeTree
+    ? treeRows.slice(virtualStartIndex, virtualStartIndex + virtualVisibleCount)
+    : treeRows;
+  const ownedTreeItemIds = virtualRows
+    .filter((row) => row.kind === "node")
+    .map((row) => getDomId("builder-treeitem", row.id))
+    .join(" ");
+
+  useEffect(() => {
+    setActiveTreeIndex((index) => Math.min(Math.max(index, 0), Math.max(treeRows.length - 1, 0)));
+  }, [treeRows.length]);
+
+  const focusTreeIndex = useCallback((index) => {
+    const nextIndex = Math.min(Math.max(index, 0), Math.max(treeRows.length - 1, 0));
+    const nextRow = treeRows[nextIndex];
+    if (!nextRow) return;
+
+    setActiveTreeIndex(nextIndex);
+    if (treeWrapRef.current) {
+      const nextTop = nextIndex * TREE_ROW_HEIGHT;
+      const nextBottom = nextTop + TREE_ROW_HEIGHT;
+      const currentTop = treeWrapRef.current.scrollTop;
+      const currentBottom = currentTop + treeWrapRef.current.clientHeight;
+
+      if (nextTop < currentTop) {
+        treeWrapRef.current.scrollTop = nextTop;
+      } else if (nextBottom > currentBottom) {
+        treeWrapRef.current.scrollTop = nextBottom - treeWrapRef.current.clientHeight;
+      }
+    }
+
+    if (typeof window === "undefined") return;
+    window.requestAnimationFrame?.(() => {
+      treeItemRefs.current.get(nextRow.id)?.focus();
+    });
+  }, [treeRows]);
+
+  function handleTreeItemKeyDown(event, rowIndex, row) {
+    switch (event.key) {
+      case "ArrowDown":
+        event.preventDefault();
+        focusTreeIndex(rowIndex + 1);
+        break;
+      case "ArrowUp":
+        event.preventDefault();
+        focusTreeIndex(rowIndex - 1);
+        break;
+      case "Home":
+        event.preventDefault();
+        focusTreeIndex(0);
+        break;
+      case "End":
+        event.preventDefault();
+        focusTreeIndex(treeRows.length - 1);
+        break;
+      case "ArrowRight":
+        if (row.collapsible && !row.expanded) {
+          event.preventDefault();
+          row.onClick?.();
+        }
+        break;
+      case "ArrowLeft":
+        if (row.collapsible && row.expanded) {
+          event.preventDefault();
+          row.onClick?.();
+        } else if (rowIndex > 0) {
+          event.preventDefault();
+          const parentIndex = treeRows
+            .slice(0, rowIndex)
+            .map((candidate, index) => ({ candidate, index }))
+            .reverse()
+            .find(({ candidate }) => candidate.depth < row.depth)?.index;
+          if (Number.isInteger(parentIndex)) focusTreeIndex(parentIndex);
+        }
+        break;
+      case "Enter":
+      case " ":
+        event.preventDefault();
+        row.onClick?.();
+        break;
+      default:
+        break;
+    }
+  }
+
+  function renderTreeItem(row, index) {
+    const rowIndex = shouldVirtualizeTree ? virtualStartIndex + index : index;
+    const nodeId = getDomId("builder-treeitem", row.id);
+    const controlsId = row.collapsible ? getDomId("builder-treegroup", row.id) : undefined;
+    const content =
+      row.kind === "empty" ? (
+        <div className="builder-tree-empty" role="status" style={{ "--depth": row.depth }}>
+          {row.label}
+        </div>
+      ) : row.kind === "showMore" ? (
+        <button type="button" className="builder-tree-show-more" style={{ "--depth": row.depth }} onClick={row.onClick}>
+          {row.label}
+        </button>
+      ) : (
+        <TreeRow
+          nodeId={nodeId}
+          controlsId={controlsId}
+          depth={row.depth}
+          icon={row.icon}
+          label={row.label}
+          meta={row.meta}
+          active={row.active}
+          collapsible={row.collapsible}
+          expanded={row.expanded}
+          onClick={row.onClick}
+          ariaLabel={row.ariaLabel}
+          draggable={row.draggable}
+          onDragStart={row.onDragStart}
+          tabIndex={rowIndex === activeTreeIndex ? 0 : -1}
+          onKeyDown={(event) => handleTreeItemKeyDown(event, rowIndex, row)}
+          onFocus={() => setActiveTreeIndex(rowIndex)}
+          rowRef={(node) => {
+            if (node) {
+              treeItemRefs.current.set(row.id, node);
+            } else {
+              treeItemRefs.current.delete(row.id);
+            }
+          }}
+          posInSet={rowIndex + 1}
+          setSize={treeRows.length}
+        />
+      );
+    const contentWithControls = (
+      <>
+        {content}
+        {row.collapsible && controlsId ? <span id={controlsId} hidden /> : null}
+      </>
+    );
+
+    if (!shouldVirtualizeTree) return <React.Fragment key={row.id}>{contentWithControls}</React.Fragment>;
+
+    return (
+      <div
+        key={row.id}
+        className="builder-tree-virtual-row"
+        role="none"
+        style={{
+          height: TREE_ROW_HEIGHT,
+          transform: `translateY(${(virtualStartIndex + index) * TREE_ROW_HEIGHT}px)`,
+        }}
+      >
+        {contentWithControls}
+      </div>
+    );
+  }
 
   return (
     <section className="builder-v3-panel builder-v3-explorer-panel">
@@ -392,140 +794,70 @@ export default function FieldList({ dataset, schema, onDragStart, mappedFieldNam
           onChange={(event) => setSearch(event.target.value)}
           placeholder="ค้นหาฟิลด์ ตาราง..."
           aria-label="ค้นหาสคีมา ตาราง และฟิลด์"
+          aria-controls="builder-dataset-tree"
         />
       </label>
+      <p id="builder-dataset-tree-help" className="sr-only">
+        Use Up and Down Arrow keys to move through the dataset tree. Use Right Arrow to expand, Left Arrow to collapse, and Enter or Space to select.
+      </p>
 
-      <div className="builder-tree-wrap" role="tree" aria-label="โครงสร้างตัวสำรวจฐานข้อมูล">
-        <TreeRow
-          depth={0}
-          icon="DB"
-          label={structure.database}
-          meta={structure.readOnly ? "อ่านอย่างเดียว" : "อ่าน/เขียน"}
-          collapsible
-          expanded={dbExpanded}
-          onClick={() => toggle(dbNodeId)}
-          ariaLabel={`เปิดหรือปิดฐานข้อมูล ${structure.database}`}
-        />
+      {recommendedFields.length ? (
+        <div className="builder-v3-recommended-fields">
+          <div className="builder-v3-mini-section-head">
+            <span>Recommended Fields</span>
+            <button type="button" className="builder-v3-link-button" onClick={() => setShowAllFields((value) => !value)}>
+              {showAllFields ? "Show Top Fields" : "Show All Fields"}
+            </button>
+          </div>
+          <div className="builder-v3-recommended-field-grid">
+            {recommendedFields.map((field) => {
+              const typeBadge = getTypeBadge(field);
+              const fieldMeta = formatFieldType(field.type || field.semanticType || field.sourceType || "string");
+              return (
+                <button
+                  key={`${selectedTable?.id || "table"}:recommended:${field.name}`}
+                  type="button"
+                  className={`builder-v3-recommended-field${mappedSet.has(field.name) ? " is-active" : ""}`}
+                  draggable
+                  onClick={() => {
+                    if (selectedTable?.id) setSelectedTableId(selectedTable.id);
+                  }}
+                  onDragStart={(event) => {
+                    if (typeof onDragStart === "function") {
+                      onDragStart(event, field);
+                    }
+                  }}
+                >
+                  <span>{typeBadge}</span>
+                  <strong>{field.label || field.name}</strong>
+                  <small>{fieldMeta}</small>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
 
-        {dbExpanded ? (
-          <>
-            <TreeRow
-              depth={1}
-              icon="SC"
-              label="สคีมา"
-              collapsible
-              expanded={schemasExpanded}
-              onClick={() => toggle(schemasNodeId)}
-              ariaLabel="เปิดหรือปิดโฟลเดอร์สคีมา"
-            />
-
-            {schemasExpanded ? (
-              hasResults ? (
-                filtered.schemas.map((schemaItem) => {
-                  const schemaNodeId = getNodeId("schema", schemaItem.name);
-                  const tablesNodeId = getNodeId("folder", `${schemaItem.name}:tables`);
-                  const schemaExpanded = isExpanded(schemaNodeId);
-                  const tablesExpanded = schemaExpanded && isExpanded(tablesNodeId);
-
-                  return (
-                    <div key={schemaItem.name}>
-                      <TreeRow
-                        depth={2}
-                        icon="SC"
-                        label={schemaItem.name}
-                        meta={`${schemaItem.tables.length} ตาราง`}
-                        collapsible
-                        expanded={schemaExpanded}
-                        onClick={() => toggle(schemaNodeId)}
-                        ariaLabel={`เปิดหรือปิดสคีมา ${schemaItem.name}`}
-                      />
-
-                      {schemaExpanded ? (
-                        <>
-                          <TreeRow
-                            depth={3}
-                            icon="TB"
-                            label="ตาราง"
-                            collapsible
-                            expanded={tablesExpanded}
-                            onClick={() => toggle(tablesNodeId)}
-                            ariaLabel={`เปิดหรือปิดตารางในสคีมา ${schemaItem.name}`}
-                          />
-
-                          {tablesExpanded ? (
-                            schemaItem.tables.length ? (
-                              schemaItem.tables.map((table) => {
-                                const tableNodeId = getNodeId("table", getTableNodeKey(table));
-                                const tableExpanded = isExpanded(tableNodeId);
-                                const isSelected = selectedTable?.id === table.id;
-                                const tableMeta = `${table.fields?.length ?? 0} ฟิลด์${Number.isFinite(table.rowCount) ? ` | ${table.rowCount} แถว` : ""}`;
-
-                                return (
-                                  <div key={table.id}>
-                                    <TreeRow
-                                      depth={4}
-                                      icon="TB"
-                                      label={table.name}
-                                      meta={tableMeta}
-                                      active={isSelected}
-                                      collapsible
-                                      expanded={tableExpanded}
-                                      onClick={() => onTableClick(table, tableExpanded)}
-                                      ariaLabel={`เลือกและเปิดหรือปิดตาราง ${table.name}`}
-                                    />
-
-                                    {tableExpanded ? (
-                                      table.fields?.length ? (
-                                        table.fields.map((field) => {
-                                          const typeBadge = getTypeBadge(field);
-                                          const fieldMeta = formatFieldType(field.type || field.semanticType || field.sourceType || "string");
-                                          return (
-                                            <TreeRow
-                                              key={`${table.id}:${field.name}`}
-                                              depth={5}
-                                              icon={typeBadge}
-                                              label={field.label || field.name}
-                                              meta={fieldMeta}
-                                              active={mappedSet.has(field.name)}
-                                              ariaLabel={`ฟิลด์ ${field.name}`}
-                                              draggable
-                                              onClick={() => setSelectedTableId(table.id)}
-                                              onDragStart={(event) => {
-                                                if (typeof onDragStart === "function") {
-                                                  onDragStart(event, field);
-                                                }
-                                              }}
-                                            />
-                                          );
-                                        })
-                                      ) : (
-                                        <div className="builder-tree-empty" style={{ "--depth": 5 }}>
-                                          ไม่มีฟิลด์
-                                        </div>
-                                      )
-                                    ) : null}
-                                  </div>
-                                );
-                              })
-                            ) : (
-                              <div className="builder-tree-empty" style={{ "--depth": 4 }}>
-                                ไม่มีตาราง
-                              </div>
-                            )
-                          ) : null}
-                        </>
-                      ) : null}
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="builder-tree-empty" style={{ "--depth": 2 }}>
-                  ไม่พบสคีมา ตาราง หรือฟิลด์ที่ตรงกัน
-                </div>
-              )
-            ) : null}
-          </>
-        ) : null}
+      <div
+        id="builder-dataset-tree"
+        ref={treeWrapRef}
+        className={`builder-tree-wrap${shouldVirtualizeTree ? " is-virtualized" : ""}`}
+        role="tree"
+        aria-label={"\u0E42\u0E04\u0E23\u0E07\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E15\u0E31\u0E27\u0E2A\u0E33\u0E23\u0E27\u0E08\u0E10\u0E32\u0E19\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25"}
+        aria-describedby="builder-dataset-tree-help"
+        aria-owns={ownedTreeItemIds || undefined}
+        data-tree-rows={treeRows.length}
+        onScroll={(event) => {
+          if (shouldVirtualizeTree) setTreeScrollTop(event.currentTarget.scrollTop);
+        }}
+      >
+        {shouldVirtualizeTree ? (
+          <div className="builder-tree-virtual-spacer" role="none" style={{ height: treeRows.length * TREE_ROW_HEIGHT }}>
+            {virtualRows.map(renderTreeItem)}
+          </div>
+        ) : (
+          virtualRows.map(renderTreeItem)
+        )}
       </div>
     </section>
   );

@@ -1,7 +1,7 @@
 import React from "react";
 import ChartRenderer from "../../components/charts/ChartRenderer";
 
-export default function ChartPreviewPanel({ previewConfig, settings, validation }) {
+export default function ChartPreviewPanel({ previewConfig, settings, validation, children }) {
   const previewTitle = typeof settings.title === "string" ? settings.title.trim() : "";
   const previewSubtitle = typeof settings.subtitle === "string" ? settings.subtitle.trim() : "";
   const previewType = String(previewConfig?.type ?? "").toLowerCase();
@@ -57,6 +57,7 @@ export default function ChartPreviewPanel({ previewConfig, settings, validation 
           height="clamp(240px, 32vh, 360px)"
         />
       </div>
+      {children ? <div className="builder-v3-preview-sql-slot">{children}</div> : null}
     </section>
   );
 }

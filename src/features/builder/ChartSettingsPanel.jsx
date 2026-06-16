@@ -57,7 +57,7 @@ function getAxisTitleFallbacks(template, mapping = {}) {
 
 function SettingsAccordion({ title, description, open = false, children }) {
   return (
-    <details className="builder-v3-subsection builder-v3-format-accordion" open={open}>
+    <details className="builder-v3-subsection builder-v3-format-accordion" name="builder-config-accordion" open={open}>
       <summary className="builder-v3-inline-meta">
         <strong>{title}</strong>
         <span>{description}</span>
