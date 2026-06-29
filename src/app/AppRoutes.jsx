@@ -5,6 +5,8 @@ import RouteErrorBoundary from "@/components/common/RouteErrorBoundary";
 import { useStore } from "@/store/useStore";
 
 const BuilderPage = lazy(() => import("@/pages/Builder.jsx"));
+const DashboardCanvasBuilder = lazy(() => import("@/pages/DashboardCanvasBuilder.jsx"));
+const DashboardDesignerV2 = lazy(() => import("@/pages/DashboardDesignerV2"));
 const DashboardPage = lazy(() => import("@/pages/DashboardPage.jsx"));
 const DashboardPublicPage = lazy(() => import("@/pages/DashboardPublicPage.jsx"));
 const DatasetsPage = lazy(() => import("@/pages/DatasetsPage.jsx"));
@@ -61,7 +63,9 @@ export default function AppRoutes() {
           <Route element={<MainLayout />}>
             <Route index element={withRouteBoundary(<HomePage />)} />
             <Route path="/home" element={withRouteBoundary(<HomePage />)} />
-            <Route path="/dashboard" element={withRouteBoundary(<DashboardPage />)} />
+            <Route path="/dashboard" element={withRouteBoundary(<DashboardCanvasBuilder />)} />
+            <Route path="/dashboard-v2" element={withRouteBoundary(<DashboardDesignerV2 />)} />
+            <Route path="/dashboard-legacy" element={withRouteBoundary(<DashboardPage />)} />
             <Route path="/builder" element={withRouteBoundary(<BuilderPage />)} />
             <Route path="/datasets" element={withRouteBoundary(<DatasetsPage />)} />
             <Route path="/settings" element={withRouteBoundary(<SettingsPage />)} />

@@ -10,6 +10,7 @@ function normalizeValue(value) {
 export default function CommandPaletteModal({
   isOpen,
   actions = [],
+  initialQuery = "",
   onClose,
   onOpenDatasetExplorer,
 }) {
@@ -26,7 +27,8 @@ export default function CommandPaletteModal({
       const label = normalizeValue(action.label);
       const detail = normalizeValue(action.detail ?? "");
       const group = normalizeValue(action.group ?? "");
-      return label.includes(search) || detail.includes(search) || group.includes(search);
+      const keywords = normalizeValue(action.keywords ?? "");
+      return label.includes(search) || detail.includes(search) || group.includes(search) || keywords.includes(search);
     });
   }, [actions, query]);
 
@@ -37,9 +39,10 @@ export default function CommandPaletteModal({
       return;
     }
 
+    setQuery(initialQuery);
     setHighlightedIndex(0);
     requestAnimationFrame(() => inputRef.current?.focus());
-  }, [isOpen]);
+  }, [initialQuery, isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;

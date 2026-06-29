@@ -1,7 +1,6 @@
 import React, { useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import AppHeader from "../../layout/AppHeader";
-import SidebarLeft from "../../layout/SidebarLeft";
 import SidebarRight from "../../layout/SidebarRight";
 import { useStore } from "../../store/useStore";
 
@@ -96,29 +95,40 @@ export function MainLayout() {
     setMobileMenuOpen(false);
   }, [location.pathname, setMobileMenuOpen]);
 
-  const isWorkspaceRoute = location.pathname === "/dashboard" || location.pathname === "/builder";
+  const isDashboardCanvasRoute = location.pathname === "/dashboard";
+  const isChartDesignerRoute = location.pathname === "/dashboard-v2";
+  const isWorkspaceRoute =
+    isDashboardCanvasRoute ||
+    isChartDesignerRoute ||
+    location.pathname === "/dashboard-legacy" ||
+    location.pathname === "/builder";
+  const isHomeRoute = location.pathname === "/" || location.pathname === "/home";
   const isBuilderRoute = location.pathname === "/builder";
   const shellClassName = joinClassNames(
     "shell",
+    "mini-bi-ribbon-shell",
     sidebarCollapsed && "sidebar-collapsed",
     isWorkspaceRoute && "is-workspace-route",
-    isBuilderRoute && "is-builder-route"
+    isBuilderRoute && "is-builder-route",
+    isDashboardCanvasRoute && "is-dashboard-canvas-route",
+    isChartDesignerRoute && "is-chart-designer-route"
   );
   const mainClassName = joinClassNames(
     "main-content",
     isWorkspaceRoute && "is-workspace-route",
-    isBuilderRoute && "is-builder-route"
+    isBuilderRoute && "is-builder-route",
+    isDashboardCanvasRoute && "is-dashboard-canvas-route",
+    isChartDesignerRoute && "is-chart-designer-route"
   );
 
   return (
     <div className={shellClassName}>
       <AppHeader />
       <div className="body-row">
-        <SidebarLeft />
         <main className={mainClassName} id="main-content" role="main">
           <Outlet />
         </main>
-        {!isWorkspaceRoute ? <SidebarRight /> : null}
+        {!isWorkspaceRoute && !isHomeRoute ? <SidebarRight /> : null}
       </div>
     </div>
   );

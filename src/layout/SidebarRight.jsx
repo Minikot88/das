@@ -501,9 +501,9 @@ export default function SidebarRight({
             </InspectorAccordion>
 
             <InspectorAccordion title="ตัวอักษร" meta="สเกลแดชบอร์ด">
-              <InspectorControlPreview label="หัวเรื่อง" value="22px / 700" />
+              <InspectorControlPreview label="หัวเรื่อง" value="22px / 600" />
               <InspectorControlPreview label="เนื้อหา" value="14px / 500" />
-              <InspectorControlPreview label="คำกำกับ" value="12px / 700" />
+              <InspectorControlPreview label="คำกำกับ" value="12px / 500" />
             </InspectorAccordion>
 
             <InspectorAccordion title="คำอธิบาย แกน และรูปแบบ" meta="ส่วนประกอบกราฟ">

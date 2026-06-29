@@ -64,7 +64,7 @@ export default function CreateProjectModal({ onClose, onCreate }) {
           />
           <div className="modal-actions">
             <Button type="button" variant="ghost" className="modal-btn cancel" onClick={onClose} disabled={submitting}>{t("common.cancel")}</Button>
-            <Button type="submit" variant="primary" className="modal-btn primary" disabled={submitting}>{submitting ? "Creating..." : t("home.createProject")}</Button>
+            <Button type="submit" variant="primary" className="modal-btn primary" disabled={submitting}>{submitting ? "กำลังสร้าง..." : t("home.createProject")}</Button>
           </div>
         </form>
       </div>

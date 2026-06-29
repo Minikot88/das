@@ -73,13 +73,13 @@ export default function SettingsPage() {
       <PageHeader
         kicker="ตั้งค่า"
         title="ค่าการใช้งานพื้นที่ทำงาน"
-        subtitle="บันทึกค่าการใช้งานในเครื่องสำหรับธีม ความหนาแน่น รูปแบบข้อมูล และค่าเริ่มต้นแดชบอร์ด"
+        subtitle="จัดการธีม ความหนาแน่น รูปแบบข้อมูล และค่าเริ่มต้นของแดชบอร์ด"
       />
 
       <div className="settings-grid">
         <section className="settings-panel">
           <div className="settings-panel-head">
-            <span>การแสดงผล</span>
+            <span>รูปลักษณ์</span>
             <h2>ธีมและความหนาแน่น</h2>
           </div>
           <div className="settings-field-grid">
@@ -100,7 +100,7 @@ export default function SettingsPage() {
 
         <section className="settings-panel">
           <div className="settings-panel-head">
-            <span>รูปแบบ</span>
+            <span>รูปแบบข้อมูล</span>
             <h2>วันที่และตัวเลข</h2>
           </div>
           <div className="settings-field-grid">
@@ -121,7 +121,7 @@ export default function SettingsPage() {
 
         <section className="settings-panel settings-panel-wide">
           <div className="settings-panel-head">
-            <span>ค่าแดชบอร์ด</span>
+            <span>ค่าเริ่มต้นแดชบอร์ด</span>
             <h2>ค่าเริ่มต้นของพื้นที่วิเคราะห์</h2>
           </div>
           <div className="settings-field-grid">

@@ -117,7 +117,7 @@
   padding: 0 8px;
   border-radius: 6px !important;
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   box-shadow: none;
@@ -188,7 +188,7 @@
 .dashboard-workspace-stat span {
   color: var(--text-secondary);
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -276,7 +276,7 @@
 
 .dashboard-workspace-canvas-title {
   font-size: 18px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.02em;
 }
 
@@ -321,7 +321,7 @@
 
 .dashboard-empty-state-title {
   font-size: 22px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .dashboard-empty-state-copy {
@@ -695,7 +695,7 @@
 
 .home-stat-card-label {
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-secondary);
@@ -798,7 +798,7 @@
 
 .project-card-name {
   font-size: 17px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .project-card-context {
@@ -857,7 +857,7 @@
   background: linear-gradient(180deg, color-mix(in srgb, var(--danger) 90%, white 10%) 0%, color-mix(in srgb, var(--danger) 94%, black 6%) 100%);
   color: #fff;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
 }
 
@@ -1143,14 +1143,14 @@ body.dark .schema-item-meta {
 .builder-left-section-label,
 .dashboard-sidebar-overview-label {
   font-size: 10px !important;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
 .dashboard-workspace-title {
   font-size: 24px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .dashboard-workspace-meta {
@@ -1175,7 +1175,7 @@ body.dark .schema-item-meta {
 .dashboard-sidebar-selection-row strong,
 .dashboard-sidebar-overview-title,
 .builder-preview-summary-strip strong {
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .dashboard-workspace-tabs-section {
@@ -1227,7 +1227,7 @@ body.dark .schema-item-meta {
 
 .dashboard-workspace-page .chart-card-title {
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .dashboard-empty-state {

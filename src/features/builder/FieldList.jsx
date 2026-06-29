@@ -588,7 +588,7 @@ export default function FieldList({ dataset, schema, onDragStart, mappedFieldNam
             id: `show-more:${table.id}`,
             kind: "showMore",
             depth: 5,
-            label: `Show All Fields (${fields.length})`,
+            label: `แสดงฟิลด์ทั้งหมด (${fields.length})`,
             onClick: () => setShowAllFields(true),
           });
         }
@@ -717,7 +717,14 @@ export default function FieldList({ dataset, schema, onDragStart, mappedFieldNam
           {row.label}
         </div>
       ) : row.kind === "showMore" ? (
-        <button type="button" className="builder-tree-show-more" style={{ "--depth": row.depth }} onClick={row.onClick}>
+        <button
+          type="button"
+          className="builder-tree-show-more"
+          style={{ "--depth": row.depth }}
+          onClick={row.onClick}
+          aria-label={row.label}
+          title={row.label}
+        >
           {row.label}
         </button>
       ) : (
@@ -806,7 +813,7 @@ export default function FieldList({ dataset, schema, onDragStart, mappedFieldNam
           <div className="builder-v3-mini-section-head">
             <span>Recommended Fields</span>
             <button type="button" className="builder-v3-link-button" onClick={() => setShowAllFields((value) => !value)}>
-              {showAllFields ? "Show Top Fields" : "Show All Fields"}
+              {showAllFields ? "แสดงฟิลด์แนะนำ" : "แสดงฟิลด์ทั้งหมด"}
             </button>
           </div>
           <div className="builder-v3-recommended-field-grid">

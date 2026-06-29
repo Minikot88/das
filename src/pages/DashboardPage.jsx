@@ -33,6 +33,7 @@ import {
 } from "../utils/dashboardFilters";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
+import "../styles/enterpriseBiRedesign.css";
 
 const GLOBAL_FILTER_PRESETS = [
   {
@@ -149,10 +150,6 @@ const COMMAND_WIDGET_LIBRARY_ITEMS = [
   "Filter",
   "Divider",
 ];
-
-function getNextName(prefix, items = []) {
-  return `${prefix} ${items.length + 1}`;
-}
 
 function getChartExportRows(chart = {}, rows = []) {
   if (Array.isArray(rows) && rows.length) return rows;
@@ -275,59 +272,18 @@ function RenameWidgetModal({ widget, value, onChange, onCancel, onSave }) {
 function WorkspaceTab({
   item,
   isActive,
-  isEditing,
-  editingValue,
   tone = "sheet",
   onSelect,
-  onStartEdit,
-  onChangeEdit,
-  onCommitEdit,
-  onCancelEdit,
-  onOpenMenu,
 }) {
-  const inputRef = useRef(null);
-
-  useEffect(() => {
-    if (isEditing && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
-    }
-  }, [isEditing]);
-
   return (
     <button
       type="button"
       onClick={() => onSelect(item.id)}
-      onDoubleClick={() => onStartEdit(item)}
-      onContextMenu={(event) => onOpenMenu(event, item)}
       className={`dashboard-workspace-tab is-${tone}${isActive ? " is-active" : ""}`}
     >
       <span className="dashboard-workspace-tab-accent" aria-hidden="true" />
-      {isEditing ? (
-        <input
-          ref={inputRef}
-          value={editingValue}
-          onChange={(event) => onChangeEdit(event.target.value)}
-          onClick={(event) => event.stopPropagation()}
-          onBlur={onCommitEdit}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              event.preventDefault();
-              onCommitEdit();
-            }
-            if (event.key === "Escape") {
-              event.preventDefault();
-              onCancelEdit();
-            }
-          }}
-          className="dashboard-workspace-tab-input"
-        />
-      ) : (
-        <>
-          <span className="dashboard-workspace-tab-pill">{tone === "sheet" ? "Sheet" : "Dashboard"}</span>
-          <span className="dashboard-workspace-tab-label">{item.name}</span>
-        </>
-      )}
+      <span className="dashboard-workspace-tab-pill">{tone === "sheet" ? "Sheet" : "Dashboard"}</span>
+      <span className="dashboard-workspace-tab-label">{item.name}</span>
     </button>
   );
 }
@@ -406,10 +362,7 @@ export default function DashboardPage() {
   const chartsPool = useStore((state) => state.charts);
   const ui = useStore((state) => state.ui);
   const addChartToDashboard = useStore((state) => state.addChartToDashboard);
-  const createDashboard = useStore((state) => state.createDashboard);
   const duplicateDashboardAction = useStore((state) => state.duplicateDashboard);
-  const renameDashboard = useStore((state) => state.renameDashboard);
-  const removeDashboard = useStore((state) => state.removeDashboard);
   const setActiveDashboard = useStore((state) => state.setActiveDashboard);
   const updateLayout = useStore((state) => state.updateLayout);
   const removeChart = useStore((state) => state.removeChart);
@@ -437,8 +390,6 @@ export default function DashboardPage() {
   const loadSavedView = useStore((state) => state.loadSavedView);
 
   const [pickingChart, setPickingChart] = useState(false);
-  const [editingTab, setEditingTab] = useState(null);
-  const [editingValue, setEditingValue] = useState("");
   const [contextMenuState, setContextMenuState] = useState(null);
   const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
   const [pendingCreatedWidgetId, setPendingCreatedWidgetId] = useState(null);
@@ -855,33 +806,7 @@ export default function DashboardPage() {
     if (type === "widget") {
       setRenameWidgetTarget(item);
       setRenameWidgetValue(item.name ?? "");
-      return;
     }
-
-    setEditingTab({ type, id: item.id });
-    setEditingValue(item.name);
-  }
-
-  function cancelEdit() {
-    setEditingTab(null);
-    setEditingValue("");
-  }
-
-  function commitEdit() {
-    if (!editingTab) return;
-
-    const nextName = editingValue.trim();
-    if (!nextName) {
-      cancelEdit();
-      return;
-    }
-
-    if (editingTab.type === "dashboard") renameDashboard(editingTab.id, nextName);
-    cancelEdit();
-  }
-
-  function addDashboard() {
-    createDashboard(getNextName("Dashboard", activeSheet?.dashboards ?? []));
   }
 
   function duplicateDashboard(dashboardId) {
@@ -892,11 +817,6 @@ export default function DashboardPage() {
   function duplicateWidget(widgetId) {
     if (!activeSheet?.id || !widgetId) return;
     duplicateChart(activeSheet.id, widgetId);
-    setContextMenuState(null);
-  }
-
-  function deleteDashboard(dashboardId) {
-    removeDashboard(dashboardId);
     setContextMenuState(null);
   }
 
@@ -951,7 +871,7 @@ export default function DashboardPage() {
       projectId: currentProjectId,
       sheetId: activeSheet?.id,
       dashboardId: activeDashboard?.id,
-      returnTo: "/dashboard",
+      returnTo: "/dashboard-legacy",
     });
     if (!builderContext) return;
 
@@ -965,7 +885,7 @@ export default function DashboardPage() {
       projectId: currentProjectId,
       sheetId: activeSheet?.id,
       dashboardId: activeDashboard?.id,
-      returnTo: "/dashboard",
+      returnTo: "/dashboard-legacy",
     });
 
     if (!savedChartId || !builderContext) {
@@ -1045,7 +965,6 @@ export default function DashboardPage() {
 
   function handleContextDelete() {
     if (!contextMenuState) return;
-    if (contextMenuState.type === "dashboard") return deleteDashboard(contextMenuState.target.id);
     return removeWidget(contextMenuState.target.id);
   }
 
@@ -1633,20 +1552,10 @@ export default function DashboardPage() {
                   key={dashboard.id}
                   item={dashboard}
                   isActive={dashboard.id === activeDashboard.id}
-                  isEditing={editingTab?.type === "dashboard" && editingTab.id === dashboard.id}
-                  editingValue={editingValue}
                   tone="dashboard"
                   onSelect={setActiveDashboard}
-                  onStartEdit={(item) => startEdit("dashboard", item)}
-                  onChangeEdit={setEditingValue}
-                  onCommitEdit={commitEdit}
-                  onCancelEdit={cancelEdit}
-                  onOpenMenu={(event, item) => openContextMenu("dashboard", item, event)}
                 />
               ))}
-              <button type="button" onClick={addDashboard} className="dashboard-workspace-tab-add is-secondary" aria-label="เพิ่มแดชบอร์ด">
-                + แดชบอร์ด
-              </button>
             </div>
           </section>
 

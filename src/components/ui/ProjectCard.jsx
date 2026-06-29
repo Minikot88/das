@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { useI18n } from "../../utils/i18n";
 
 export default function ProjectCard({
   project,
@@ -10,19 +9,18 @@ export default function ProjectCard({
   summary,
   canDelete = true,
 }) {
-  const { t } = useI18n();
   const [renamingOpen, setRenamingOpen] = useState(false);
   const [renameVal, setRenameVal] = useState(project.name);
   const sheetCount = summary?.sheetCount ?? project.sheets?.length ?? 0;
   const dashboardCount = summary?.dashboardCount ?? project.sheets?.reduce((total, sheet) => total + sheet.dashboards.length, 0) ?? 0;
-  const activeSheetName = summary?.activeSheetName ?? t("home.noSheet");
-  const activeDashboardName = summary?.activeDashboardName ?? t("home.noDashboard");
-  const lastUpdatedLabel = summary?.lastUpdatedLabel ?? t("home.noRecentUpdates");
-  const statusLabel = isActive ? t("home.active") : t("home.ready");
+  const activeSheetName = summary?.activeSheetName ?? "ไม่มีชีต";
+  const activeDashboardName = summary?.activeDashboardName ?? "ไม่มีแดชบอร์ด";
+  const lastUpdatedLabel = summary?.lastUpdatedLabel ?? "ยังไม่มีการอัปเดต";
+  const statusLabel = isActive ? "ใช้งาน" : "พร้อมใช้";
   const statusTone = isActive ? "is-active" : "is-ready";
   const metricItems = [
-    { label: t("home.sheets"), value: sheetCount },
-    { label: t("home.dashboards"), value: dashboardCount },
+    { label: "ชีต", value: sheetCount },
+    { label: "แดชบอร์ด", value: dashboardCount },
   ];
 
   const handleRenameSubmit = (event) => {
@@ -51,7 +49,7 @@ export default function ProjectCard({
           <div className="project-card-heading">
             <div className="project-card-topline">
               <div className="project-card-icon">PR</div>
-              <div className="project-card-type">{t("home.projectLabel")}</div>
+              <div className="project-card-type">โปรเจกต์</div>
             </div>
             <div className={`project-card-status ${statusTone}`}>{statusLabel}</div>
           </div>
@@ -72,7 +70,7 @@ export default function ProjectCard({
         )}
 
         <div className="project-card-context">
-          <span className="project-card-context-label">{t("home.context")}</span>
+          <span className="project-card-context-label">บริบท</span>
           <div className="project-card-context-value">{activeSheetName} / {activeDashboardName}</div>
         </div>
 
@@ -87,7 +85,7 @@ export default function ProjectCard({
 
         <div className="project-card-footer">
           <div className="project-card-updated">
-            <span className="project-card-updated-label">{t("home.lastUpdated")}</span>
+            <span className="project-card-updated-label">อัปเดตล่าสุด</span>
             <strong>{lastUpdatedLabel}</strong>
           </div>
           <div className="project-card-meta">
@@ -99,10 +97,10 @@ export default function ProjectCard({
               type="button"
               className="project-card-manage-btn"
               onClick={() => setRenamingOpen(true)}
-              title={t("home.manageProject")}
-              aria-label={t("home.manageProject")}
+              title="จัดการ"
+              aria-label="จัดการ"
             >
-              {t("home.manageProject")}
+              จัดการ
             </button>
             {canDelete ? (
               <button
@@ -112,10 +110,10 @@ export default function ProjectCard({
                   e.stopPropagation();
                   onDelete(project.id);
                 }}
-                title={t("home.deleteProject")}
-                aria-label={t("home.deleteProject")}
+                title="ลบ"
+                aria-label="ลบ"
               >
-                {t("home.deleteProject")}
+                ลบ
               </button>
             ) : null}
           </div>

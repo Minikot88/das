@@ -138,7 +138,7 @@ export default function DatasetsPage() {
       <PageHeader
         kicker="ข้อมูล"
         title="ชุดข้อมูล"
-        subtitle="นำเข้าไฟล์ CSV ในเครื่อง ตรวจโครงสร้าง แมปคอลัมน์ และตรวจข้อมูลด้วยตารางระดับองค์กร"
+        subtitle="จัดการแหล่งข้อมูล ตาราง และไฟล์สำหรับแดชบอร์ด"
       />
 
       <div className="datasets-layout">
@@ -167,9 +167,9 @@ export default function DatasetsPage() {
         <main className="datasets-main">
           <section className="datasets-import-panel">
             <div className="datasets-import-copy">
-              <span>ขั้นตอนนำเข้า CSV</span>
-              <h2>อัปโหลด ดูตัวอย่าง ตรวจสอบ แมป และนำเข้า</h2>
-              <p>ชุดข้อมูล CSV ที่นำเข้าจะถูกเก็บไว้ในเครื่องเมื่อไม่มีพื้นที่จัดเก็บจากระบบหลังบ้าน</p>
+              <span>นำเข้า CSV</span>
+              <h2>อัปโหลด ดูตัวอย่าง ตรวจสอบ และนำเข้า</h2>
+              <p>ชุดข้อมูล CSV ที่นำเข้าจะถูกเก็บไว้ในเครื่องจนกว่าจะเชื่อมต่อระบบหลังบ้าน</p>
             </div>
             <div className="datasets-import-controls">
               <label className="dashboard-toolbar-btn datasets-file-picker" htmlFor="dataset-csv-input">
@@ -251,8 +251,8 @@ export default function DatasetsPage() {
                     <span>{formatFieldType(stat.type)}</span>
                   </div>
                   <dl>
-                    <div><dt>มีค่า</dt><dd>{stat.nonEmpty}</dd></div>
-                    <div><dt>ไม่ซ้ำ</dt><dd>{stat.uniqueCount}</dd></div>
+                    <div><dt>มีค่า</dt><dd>{formatStat(stat.nonEmpty)}</dd></div>
+                    <div><dt>ไม่ซ้ำ</dt><dd>{formatStat(stat.uniqueCount)}</dd></div>
                     <div><dt>ต่ำสุด</dt><dd>{formatStat(stat.min)}</dd></div>
                     <div><dt>สูงสุด</dt><dd>{formatStat(stat.max)}</dd></div>
                     <div><dt>เฉลี่ย</dt><dd>{formatStat(stat.average)}</dd></div>

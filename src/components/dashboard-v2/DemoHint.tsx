@@ -1,0 +1,58 @@
+import React, { memo, useEffect, useState } from "react";
+import TipsAndUpdatesRoundedIcon from "@mui/icons-material/TipsAndUpdatesRounded";
+import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
+import { Box, IconButton, Stack, Typography } from "@mui/material";
+import { dashboardV2Tokens as tokens } from "./theme";
+
+type DemoHintProps = {
+  id: string;
+  title: string;
+  description: string;
+};
+
+function DemoHint({ id, title, description }: DemoHintProps) {
+  const storageKey = `dashboard-v2-demo-hint-${id}`;
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    setVisible(window.localStorage.getItem(storageKey) !== "hidden");
+  }, [storageKey]);
+
+  if (!visible) return null;
+
+  return (
+    <Box
+      sx={{
+        border: "1px solid",
+        borderColor: tokens.color.borderSubtle,
+        bgcolor: tokens.color.surfaceMuted,
+        px: 0.75,
+        py: 0.5,
+      }}
+    >
+      <Stack direction="row" alignItems="flex-start" spacing={0.75}>
+        <TipsAndUpdatesRoundedIcon sx={{ fontSize: 14, color: "primary.main", mt: 0.15 }} />
+        <Box minWidth={0} flex={1}>
+          <Typography variant="caption" sx={{ display: "block", color: "text.primary", fontSize: 10, fontWeight: 500 }}>
+            {title}
+          </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ display: "block", fontWeight: 400, lineHeight: 1.35 }}>
+            {description}
+          </Typography>
+        </Box>
+        <IconButton
+          aria-label="ซ่อนคำแนะนำ"
+          onClick={() => {
+            window.localStorage.setItem(storageKey, "hidden");
+            setVisible(false);
+          }}
+          sx={{ width: 22, height: 22 }}
+        >
+          <CloseRoundedIcon sx={{ fontSize: 14 }} />
+        </IconButton>
+      </Stack>
+    </Box>
+  );
+}
+
+export default memo(DemoHint);

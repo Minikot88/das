@@ -1,4 +1,4 @@
-﻿.chart-renderer-root,
+.chart-renderer-root,
 .chart-echarts-surface {
   width: 100%;
   height: 100%;
@@ -27,7 +27,7 @@
 .chart-status-kicker {
   color: var(--text-secondary);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -62,7 +62,7 @@
   background: color-mix(in srgb, var(--surface-muted) 84%, var(--surface) 16%);
   color: var(--text-secondary);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .chart-html-root,
@@ -104,7 +104,7 @@
   border-color: color-mix(in srgb, var(--border) 82%, transparent);
   background: color-mix(in srgb, var(--surface-secondary) 92%, var(--surface) 8%);
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 0.02em;
 }
 
@@ -146,7 +146,7 @@
 
 .chart-heatmap-axis-cell {
   color: var(--text-secondary);
-  font-weight: 800;
+  font-weight: 600;
   text-align: center;
 }
 
@@ -157,7 +157,7 @@
 
 .chart-heatmap-cell {
   border: 1px solid color-mix(in srgb, var(--surface) 32%, transparent);
-  font-weight: 800;
+  font-weight: 600;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
@@ -222,7 +222,7 @@
   font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .bi-kpi-badge {
@@ -235,7 +235,7 @@
   background: var(--surface-muted);
   color: var(--text-secondary);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .bi-kpi-badge.is-up {
@@ -283,7 +283,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .bi-kpi-trend-indicator.up {
@@ -377,7 +377,7 @@
 .kpi-label {
   color: var(--text-secondary);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -434,7 +434,7 @@
 }
 
 .chart-item:hover { background: color-mix(in srgb, var(--surface-muted) 80%, var(--accent) 20%); }
-.chart-name { font-weight: 700; }
+.chart-name { font-weight: 600; }
 .chart-type { color: var(--text-secondary); font-size: 11px; text-transform: uppercase; }
 
 .chart-renderer-root,

@@ -1,4 +1,4 @@
-﻿/* Layout Architecture Pass - final UI polish layer */
+/* Layout Architecture Pass - final UI polish layer */
 
 .dashboard-workspace-page,
 .builder-shell {
@@ -600,7 +600,7 @@ body:has(.home-page) .main-content {
 .home-page .home-stat-card-label {
   color: var(--home-text-muted);
   font-size: 10px;
-  font-weight: 750;
+  font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -818,7 +818,7 @@ body:has(.home-page) .main-content {
   background: transparent;
   color: var(--home-text-muted);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
 }
 
@@ -907,7 +907,7 @@ body:has(.home-page) .main-content {
 .home-page .project-card-name {
   color: var(--home-text-strong);
   font-size: 18px;
-  font-weight: 750;
+  font-weight: 600;
   line-height: 1.25;
   letter-spacing: 0;
 }
@@ -1164,14 +1164,14 @@ body.dark .home-page .project-card-status {
 
 .dashboard-workspace-page .dashboard-bi-brand {
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 0;
 }
 
 .dashboard-workspace-page .dashboard-bi-brand-meta {
   color: #475569;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .dashboard-workspace-page .dashboard-workspace-breadcrumb {
@@ -1197,7 +1197,7 @@ body.dark .home-page .project-card-status {
   background: rgba(254, 243, 199, 0.74);
   color: #92400e;
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 600;
 }
 
 .dashboard-workspace-page .dashboard-workspace-status.is-live {
@@ -1223,7 +1223,7 @@ body.dark .home-page .project-card-status {
   background: rgba(255, 255, 255, 0.74);
   color: #475569;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
   padding: 4px 9px;
 }
 
@@ -1247,7 +1247,7 @@ body.dark .home-page .project-card-status {
 .dashboard-workspace-page .dashboard-workspace-header-panel-label {
   color: #64748b;
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -1308,7 +1308,7 @@ body.dark .home-page .project-card-status {
   background: rgba(255, 255, 255, 0.86);
   color: #334155;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 600;
   box-shadow: none;
   transition:
     background-color 160ms ease,
@@ -1357,7 +1357,7 @@ body.dark .home-page .project-card-status {
 .dashboard-workspace-page .dashboard-workspace-toolbar-meta span {
   color: #64748b;
   font-size: 10px;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -1413,7 +1413,7 @@ body.dark .home-page .project-card-status {
 .dashboard-workspace-page .dashboard-global-filter-label {
   color: #64748b;
   font-size: 10px;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
@@ -1425,7 +1425,7 @@ body.dark .home-page .project-card-status {
   background-color: transparent;
   color: #0f172a;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 600;
 }
 
 .dashboard-workspace-page .dashboard-global-filter-chips {
@@ -1440,7 +1440,7 @@ body.dark .home-page .project-card-status {
   background: rgba(239, 246, 255, 0.76);
   color: #1e40af;
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 600;
   padding: 4px 9px;
 }
 
@@ -1462,7 +1462,7 @@ body.dark .home-page .project-card-status {
 .dashboard-workspace-page .dashboard-workspace-tabs-label {
   color: #64748b;
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -1530,7 +1530,7 @@ body.dark .home-page .project-card-status {
 .dashboard-workspace-page .dashboard-workspace-tab-label {
   color: inherit;
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 600;
 }
 
 .dashboard-workspace-page .dashboard-workspace-canvas {
@@ -1550,7 +1550,7 @@ body.dark .home-page .project-card-status {
 .dashboard-workspace-page .dashboard-workspace-canvas-kicker {
   color: #1d4ed8;
   font-size: 11px;
-  font-weight: 900;
+  font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -1578,7 +1578,7 @@ body.dark .home-page .project-card-status {
   background: rgba(255, 255, 255, 0.82);
   color: #475569;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 600;
   padding: 6px 10px;
 }
 
@@ -1590,7 +1590,7 @@ body.dark .home-page .project-card-status {
 .dashboard-workspace-page .dashboard-canvas-size-label {
   color: #64748b;
   font-size: 10px;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -1603,7 +1603,7 @@ body.dark .home-page .project-card-status {
   background-color: #ffffff;
   color: #0f172a;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 600;
 }
 
 .dashboard-workspace-page .dashboard-workspace-canvas-stage {
@@ -2056,7 +2056,7 @@ body.dark .dashboard-workspace-page .dashboard-empty-state-visual {
   color: #475569;
   cursor: pointer;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 600;
   transition:
     background-color 160ms ease,
     border-color 160ms ease,
@@ -2139,7 +2139,7 @@ body.dark .dashboard-workspace-page .dashboard-empty-state-visual {
   cursor: pointer;
   color: #0f172a;
   font-size: 13px;
-  font-weight: 900;
+  font-weight: 600;
   list-style: none;
 }
 
@@ -2165,7 +2165,7 @@ body.dark .dashboard-workspace-page .dashboard-empty-state-visual {
   margin-left: auto;
   color: #64748b;
   font-size: 10px;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -2209,7 +2209,7 @@ body.dark .dashboard-workspace-page .dashboard-empty-state-visual {
 .dashboard-workspace-page .dashboard-inspector-control-preview span {
   color: #64748b;
   font-size: 10px;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
@@ -2293,7 +2293,7 @@ body.dark .dashboard-workspace-page .dashboard-empty-state-visual {
   background: rgba(248, 250, 252, 0.82);
   color: #475569;
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 600;
 }
 
 .dashboard-workspace-page .dashboard-inspector-swatch span {
@@ -2594,7 +2594,7 @@ body.dark .dashboard-workspace-page .dashboard-inspector-control-preview span {
   color: #475569;
   cursor: pointer;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 600;
 }
 
 .builder-v3-builder-tab:hover,
@@ -2650,7 +2650,7 @@ body.dark .dashboard-workspace-page .dashboard-inspector-control-preview span {
   min-height: 32px;
   border-radius: 999px;
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 600;
 }
 
 .builder-v3-shell .builder-v3-template-card {
@@ -2684,7 +2684,7 @@ body.dark .dashboard-workspace-page .dashboard-inspector-control-preview span {
   background: rgba(37, 99, 235, 0.1);
   color: #2563eb;
   font-size: 20px;
-  font-weight: 900;
+  font-weight: 600;
 }
 
 .builder-v3-template-copy {
@@ -3591,7 +3591,7 @@ body.dark .builder-v3-analytics-card span:not(.builder-v3-pill) {
   justify-content: space-between;
   gap: 8px;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-muted);
 }
 
@@ -3601,7 +3601,7 @@ body.dark .builder-v3-analytics-card span:not(.builder-v3-pill) {
   color: var(--primary);
   cursor: pointer;
   font: inherit;
-  font-weight: 700;
+  font-weight: 600;
   padding: 0;
 }
 
@@ -3633,7 +3633,7 @@ body.dark .builder-v3-analytics-card span:not(.builder-v3-pill) {
   background: var(--surface-muted);
   color: var(--text-muted);
   font-size: 10px;
-  font-weight: 800;
+  font-weight: 600;
 }
 
 .shell.is-builder-route .builder-v3-recommended-field strong,
@@ -3674,7 +3674,7 @@ body.dark .builder-v3-analytics-card span:not(.builder-v3-pill) {
   color: var(--primary);
   cursor: pointer;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
   text-align: left;
 }
 
@@ -3711,7 +3711,7 @@ body.dark .builder-v3-analytics-card span:not(.builder-v3-pill) {
   color: var(--text);
   cursor: pointer;
   font-size: 13px;
-  font-weight: 750;
+  font-weight: 600;
   list-style: none;
 }
 
@@ -4322,7 +4322,7 @@ body.dark .builder-v3-analytics-card span:not(.builder-v3-pill) {
   background: color-mix(in srgb, var(--primary) 8%, var(--surface));
   color: color-mix(in srgb, var(--primary) 76%, var(--text));
   font-size: 10px;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 0;
   text-transform: none;
 }
@@ -4447,7 +4447,7 @@ body.dark .builder-v3-analytics-card span:not(.builder-v3-pill) {
 
 .shell.is-builder-route .builder-tree-main strong {
   color: var(--text);
-  font-weight: 760;
+  font-weight: 600;
 }
 
 .shell.is-builder-route .builder-tree-main small {
@@ -4514,7 +4514,7 @@ body.dark .builder-v3-analytics-card span:not(.builder-v3-pill) {
   min-width: 0;
   color: var(--text);
   font-size: 13px;
-  font-weight: 820;
+  font-weight: 600;
 }
 
 .shell.is-builder-route .builder-v3-format-accordion > summary span,
@@ -4539,7 +4539,7 @@ body.dark .builder-v3-analytics-card span:not(.builder-v3-pill) {
 .shell.is-builder-route .builder-v3-toggle span {
   color: var(--text-secondary);
   font-size: 11px;
-  font-weight: 750;
+  font-weight: 600;
 }
 
 .shell.is-builder-route .builder-v3-field input,
@@ -4655,7 +4655,7 @@ body.dark .builder-v3-analytics-card span:not(.builder-v3-pill) {
   background: rgba(255, 255, 255, 0.22);
   color: #ffffff;
   font-size: 12px;
-  font-weight: 900;
+  font-weight: 600;
 }
 
 .shell.is-builder-route .builder-v3-settings-accordion-stack {
@@ -4753,7 +4753,7 @@ body.dark .builder-v3-analytics-card span:not(.builder-v3-pill) {
 
 .shell.is-builder-route .builder-v3-explorer-panel .builder-v3-title {
   font-size: 13px !important;
-  font-weight: 760 !important;
+  font-weight: 600 !important;
   line-height: 1.2 !important;
 }
 
@@ -4951,7 +4951,7 @@ body.dark .builder-v3-analytics-card span:not(.builder-v3-pill) {
   background: color-mix(in srgb, var(--surface-muted) 64%, var(--surface)) !important;
   color: var(--text-muted) !important;
   font-size: 0 !important;
-  font-weight: 800 !important;
+  font-weight: 600 !important;
   letter-spacing: 0 !important;
   line-height: 1 !important;
   box-shadow: none !important;
@@ -5070,7 +5070,7 @@ body.dark .builder-v3-analytics-card span:not(.builder-v3-pill) {
 
 .shell.is-builder-route .builder-tree-row.is-depth-0 .builder-tree-main strong,
 .shell.is-builder-route .builder-tree-row.is-depth-4 .builder-tree-main strong {
-  font-weight: 760 !important;
+  font-weight: 600 !important;
 }
 
 .shell.is-builder-route .builder-tree-row.is-field .builder-tree-main {
@@ -5094,6 +5094,7 @@ body.dark .builder-v3-analytics-card span:not(.builder-v3-pill) {
   border: 0 !important;
   background: transparent !important;
   color: color-mix(in srgb, var(--primary) 76%, var(--text)) !important;
+  padding: 5px 10px !important;
   text-align: left;
 }
 
@@ -5190,7 +5191,7 @@ body.dark .builder-v3-analytics-card span:not(.builder-v3-pill) {
   display: block;
   color: var(--text) !important;
   font-size: 13px !important;
-  font-weight: 760 !important;
+  font-weight: 600 !important;
   line-height: 1.2 !important;
 }
 
@@ -5218,7 +5219,7 @@ body.dark .builder-v3-analytics-card span:not(.builder-v3-pill) {
 .shell.is-builder-route .builder-v3-dropzone-empty strong {
   color: color-mix(in srgb, var(--primary) 74%, var(--text)) !important;
   font-size: 11px !important;
-  font-weight: 760 !important;
+  font-weight: 600 !important;
   line-height: 1.25 !important;
 }
 
@@ -5271,7 +5272,7 @@ body.dark .builder-v3-analytics-card span:not(.builder-v3-pill) {
 .shell.is-builder-route .builder-v3-dropzone-select > span {
   color: var(--text-muted) !important;
   font-size: 10px !important;
-  font-weight: 700 !important;
+  font-weight: 600 !important;
 }
 
 .shell.is-builder-route .builder-v3-dropzone-select select {
@@ -5384,7 +5385,7 @@ body.dark .builder-v3-analytics-card span:not(.builder-v3-pill) {
 .shell.is-builder-route .builder-v3-sql-ide-toolbar strong {
   color: var(--text);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 600;
   line-height: 1.2;
 }
 
@@ -5780,4 +5781,22 @@ body.dark .builder-v3-analytics-card span:not(.builder-v3-pill) {
   .shell.is-builder-route .builder-v3-bottom-sql-panel .builder-v3-inline-meta span {
     display: none !important;
   }
+}
+
+/* Final product QA: flatten the legacy builder visuals without changing builder behavior. */
+html body .shell.is-builder-route .builder-v3-panel,
+html body .shell.is-builder-route .builder-v3-template-card,
+html body .shell.is-builder-route .builder-v3-template-thumb,
+html body .shell.is-builder-route .builder-v3-family-tab,
+html body .shell.is-builder-route .builder-v3-button,
+html body .shell.is-builder-route .builder-v3-subsection,
+html body .shell.is-builder-route .builder-v3-recommended-field,
+html body .shell.is-builder-route .builder-tree-row {
+  border-radius: var(--radius-card, 8px) !important;
+  box-shadow: none !important;
+}
+
+html body .shell.is-builder-route .builder-v3-button,
+html body .shell.is-builder-route .builder-v3-family-tab {
+  border-radius: var(--radius-control, 6px) !important;
 }

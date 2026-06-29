@@ -1,0 +1,2068 @@
+/* Unified visual direction pass.
+   Presentation-only overrides: corporate, flat, compact, and token-aligned. */
+
+:root {
+  --background: #f7f8fa;
+  --surface: #ffffff;
+  --surface-secondary: #f9fafb;
+  --surface-muted: #f4f7fb;
+  --border: #e6eaf0;
+  --divider: #eef1f5;
+  --hover: #f4f7fb;
+  --selected: #eaf2ff;
+  --primary: #2563eb;
+  --text-primary: #111827;
+  --text-secondary: #6b7280;
+  --text-muted: #9ca3af;
+  --success: #16a34a;
+  --warning: #d97706;
+  --danger: #dc2626;
+  --radius-panel: 4px;
+  --radius-card: 8px;
+  --radius-control: 6px;
+  --radius-dialog: 10px;
+  --shadow-sm: none;
+  --shadow-md: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-lg: 0 18px 40px rgba(15, 23, 42, 0.12);
+  --z-base: 1;
+  --z-sticky: 10;
+  --z-local: 20;
+  --z-popover: 1300;
+  --z-modal: 1400;
+  --z-toast: 1500;
+  --z-tooltip: 1600;
+}
+
+html,
+body,
+#root {
+  font-family: "IBM Plex Sans Thai", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--background);
+  color: var(--text-primary);
+}
+
+* {
+  letter-spacing: 0;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #cbd5e1;
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
+strong,
+b {
+  font-weight: 500;
+}
+
+.mini-bi-appbar,
+.app-header,
+.app-shell-header,
+.dashboard-public-header,
+.readonly-dashboard-header {
+  border-bottom: 1px solid var(--border) !important;
+  background: var(--surface) !important;
+  box-shadow: none !important;
+}
+
+.mini-bi-topbar {
+  min-height: 46px !important;
+}
+
+.mini-bi-logo-mark,
+.avatar-circle,
+.mini-bi-icon-btn,
+.mini-bi-user,
+.appbar-user,
+.appbar-icon-btn {
+  border-radius: var(--radius-control) !important;
+  box-shadow: none !important;
+}
+
+.mini-bi-logo-mark {
+  width: 28px !important;
+  height: 28px !important;
+  flex-basis: 28px !important;
+}
+
+.mini-bi-logo .appbar-logo-copy strong,
+.appbar-logo-copy strong {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  line-height: 1.25 !important;
+}
+
+.mini-bi-logo .appbar-logo-copy span,
+.appbar-logo-copy span {
+  color: var(--text-secondary) !important;
+  font-size: 10px !important;
+  font-weight: 400 !important;
+  line-height: 1.3 !important;
+}
+
+.mini-bi-ribbon-tabs {
+  min-height: 36px !important;
+  border-bottom: 1px solid var(--border) !important;
+  background: var(--surface) !important;
+}
+
+.mini-bi-ribbon-tab {
+  min-height: 36px !important;
+  color: var(--text-secondary) !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  line-height: 1.35 !important;
+}
+
+.mini-bi-ribbon-tab.is-active {
+  color: var(--primary) !important;
+  font-weight: 500 !important;
+}
+
+.mini-bi-ribbon-area {
+  min-height: 54px !important;
+  border-bottom: 1px solid var(--border) !important;
+  background: var(--surface) !important;
+  box-shadow: none !important;
+}
+
+.mini-bi-ribbon-group {
+  min-height: 44px !important;
+  border-right: 1px solid var(--divider) !important;
+}
+
+.mini-bi-ribbon-button,
+.mini-bi-ribbon-command,
+.mini-bi-primary-cta,
+.dashboard-toolbar-btn,
+.ui-button,
+.button-base,
+.project-card-manage-btn,
+.project-card-delete-btn,
+.auth-btn-v2,
+.auth-demo-btn {
+  min-height: 30px !important;
+  border-radius: var(--radius-control) !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  line-height: 1.25 !important;
+  box-shadow: none !important;
+}
+
+.mini-bi-ribbon-button,
+.mini-bi-ribbon-command,
+.dashboard-toolbar-btn:not(.is-primary),
+.ui-button:not(.is-primary),
+.button-base:not(.button-primary),
+.auth-demo-btn {
+  border: 1px solid var(--border) !important;
+  background: var(--surface) !important;
+  color: var(--text-primary) !important;
+}
+
+.mini-bi-ribbon-button:hover,
+.mini-bi-ribbon-command:hover,
+.dashboard-toolbar-btn:hover,
+.ui-button:hover,
+.button-base:hover,
+.auth-demo-btn:hover {
+  border-color: #d8dee8 !important;
+  background: var(--hover) !important;
+}
+
+.ui-button.is-primary,
+.button-primary,
+.dashboard-toolbar-btn.is-primary,
+.mini-bi-primary-cta,
+.auth-btn-v2 {
+  border-color: var(--primary) !important;
+  background: var(--primary) !important;
+  color: #ffffff !important;
+}
+
+.ui-input,
+.input-control,
+.modal-input,
+.ui-select,
+.ui-textarea,
+.mini-bi-workspace-select,
+.appbar-search,
+.auth-input-v2,
+.settings-field select,
+.datasets-import-controls input:not(.sr-only),
+.enterprise-table-controls input,
+.enterprise-table-controls select {
+  min-height: 32px !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-control) !important;
+  background: var(--surface) !important;
+  color: var(--text-primary) !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  line-height: 1.35 !important;
+  box-shadow: none !important;
+}
+
+.ui-input:focus-visible,
+.input-control:focus-visible,
+.modal-input:focus-visible,
+.ui-select:focus-visible,
+.ui-textarea:focus-visible,
+.auth-input-v2:focus-visible,
+.settings-field select:focus-visible,
+.enterprise-table-controls input:focus-visible,
+.enterprise-table-controls select:focus-visible {
+  border-color: var(--primary) !important;
+  outline: 2px solid rgba(37, 99, 235, 0.16) !important;
+  outline-offset: 0 !important;
+}
+
+.ui-card,
+.ui-panel,
+.ui-surface,
+.ui-panel-card,
+.ui-empty-card,
+.home-section-shell,
+.settings-panel,
+.datasets-sidebar,
+.datasets-import-panel,
+.datasets-schema-panel,
+.enterprise-table,
+.dashboard-workspace-header,
+.dashboard-workspace-toolbar,
+.dashboard-workspace-canvas,
+.dashboard-sidebar,
+.builder-card,
+.chart-card,
+.share-card {
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-card) !important;
+  background: var(--surface) !important;
+  box-shadow: none !important;
+}
+
+.ui-card.is-interactive:hover,
+.project-card:hover,
+.home-tool-row:hover,
+.home-template-row:hover,
+.dataset-list-card:hover,
+.chart-card:hover {
+  transform: none !important;
+  box-shadow: var(--shadow-md) !important;
+}
+
+.ui-page-title,
+.text-page-title,
+.home-hero-title,
+.dashboard-workspace-title,
+.auth-title-v2 {
+  color: var(--text-primary) !important;
+  font-size: clamp(18px, 1.8vw, 22px) !important;
+  font-weight: 500 !important;
+  line-height: 1.35 !important;
+}
+
+.ui-section-title,
+.text-section-title,
+.settings-panel h2,
+.datasets-schema-head h2,
+.enterprise-table-toolbar h2,
+.dashboard-workspace-canvas-title {
+  color: var(--text-primary) !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  line-height: 1.35 !important;
+}
+
+.text-card-title,
+.project-card-name,
+.home-template-copy strong,
+.home-tool-copy strong,
+.dataset-list-card strong {
+  color: var(--text-primary) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  line-height: 1.35 !important;
+}
+
+.ui-page-subtitle,
+.ui-section-description,
+.text-body,
+.auth-subtitle-v2,
+.home-hero-summary,
+.dashboard-workspace-canvas-description,
+.dataset-list-card span,
+.dataset-list-card small {
+  color: var(--text-secondary) !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  line-height: 1.45 !important;
+}
+
+.ui-badge,
+.ui-chip,
+.home-filter-chip,
+.dashboard-workspace-status,
+.project-card-status {
+  min-height: 22px !important;
+  border-radius: 999px !important;
+  font-size: 11px !important;
+  font-weight: 400 !important;
+  line-height: 1.35 !important;
+  box-shadow: none !important;
+}
+
+.enterprise-table th {
+  background: #f9fafb !important;
+}
+
+.enterprise-table th button {
+  min-height: 34px !important;
+  color: var(--text-primary) !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+}
+
+.enterprise-table td {
+  height: 38px !important;
+  border-bottom: 1px solid var(--divider) !important;
+  color: var(--text-primary) !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  line-height: 1.45 !important;
+}
+
+.enterprise-table tbody tr:hover {
+  background: var(--hover) !important;
+}
+
+.dcb-modal,
+.MuiDialog-paper,
+.auth-card-v2,
+.modal-card {
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-dialog) !important;
+  background: var(--surface) !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+
+.MuiPopover-paper,
+.MuiMenu-paper,
+.dashboard-actions-menu-list,
+.dcb-modal-backdrop .dcb-modal,
+.share-menu {
+  z-index: var(--z-popover) !important;
+}
+
+.MuiDialog-root,
+.dcb-modal-backdrop {
+  z-index: var(--z-modal) !important;
+}
+
+.MuiSnackbar-root,
+.dcb-toast {
+  z-index: var(--z-toast) !important;
+}
+
+.MuiTooltip-popper {
+  z-index: var(--z-tooltip) !important;
+}
+
+/* /home: keep it a workspace hub, not a landing page. */
+body:has(.home-page) {
+  background: var(--background) !important;
+  overflow-x: hidden !important;
+}
+
+body:has(.home-page) .main-content {
+  padding: 16px 24px 28px !important;
+  background: var(--background) !important;
+}
+
+body:has(.home-page) .home-page {
+  max-width: 1440px !important;
+  gap: 14px !important;
+}
+
+body:has(.home-page) .home-command-center {
+  min-height: 112px !important;
+  padding: 12px !important;
+  border-radius: var(--radius-card) !important;
+  background: var(--surface) !important;
+  box-shadow: none !important;
+}
+
+body:has(.home-page) .home-command-center,
+body:has(.home-page) .home-template-card,
+body:has(.home-page) .home-stat-card,
+body:has(.home-page) .home-section-shell {
+  border-color: var(--border) !important;
+  border-radius: var(--radius-card) !important;
+  background: var(--surface) !important;
+  box-shadow: none !important;
+}
+
+body:has(.home-page) .home-hero-layout {
+  min-height: 0 !important;
+  gap: 14px !important;
+  padding: 0 !important;
+}
+
+body:has(.home-page) .home-hero-title {
+  font-size: 22px !important;
+}
+
+body:has(.home-page) .home-hero-art {
+  display: none !important;
+}
+
+body:has(.home-page) .home-stats-grid,
+body:has(.home-page) .home-command-grid {
+  gap: 12px !important;
+}
+
+body:has(.home-page) .home-stat-card {
+  min-height: 68px !important;
+  padding: 10px !important;
+}
+
+body:has(.home-page) .home-stat-card > strong {
+  font-size: 21px !important;
+  font-weight: 500 !important;
+}
+
+body:has(.home-page) .home-hero-emoji,
+body:has(.home-page) .home-stat-icon,
+body:has(.home-page) .home-template-icon,
+body:has(.home-page) .home-tool-icon,
+body:has(.home-page) .home-list-icon {
+  border-radius: var(--radius-control) !important;
+  background: var(--selected) !important;
+  color: var(--primary) !important;
+}
+
+/* /dashboard canvas builder: canvas remains the visual hero. */
+.dashboard-canvas-builder {
+  --dcb-bg: var(--background) !important;
+  --dcb-panel: var(--surface) !important;
+  --dcb-border: var(--border) !important;
+  --dcb-soft: #f9fafb !important;
+  --dcb-muted: var(--text-secondary) !important;
+  --dcb-text: var(--text-primary) !important;
+  --dcb-primary: var(--primary) !important;
+}
+
+.dashboard-canvas-builder .dcb-header,
+.dashboard-canvas-builder .dcb-toolbar,
+.dashboard-canvas-builder .dcb-panel,
+.dashboard-canvas-builder .dcb-canvas-region,
+.dashboard-canvas-builder .dcb-statusbar {
+  box-shadow: none !important;
+}
+
+.dashboard-canvas-builder .dcb-panel,
+.dashboard-canvas-builder .dcb-canvas-region,
+.dashboard-canvas-builder .dcb-canvas-surface,
+.dashboard-canvas-builder .dcb-widget,
+.dashboard-canvas-builder .dcb-library-item,
+.dashboard-canvas-builder .dcb-template-card {
+  border-color: var(--border) !important;
+  border-radius: var(--radius-card) !important;
+}
+
+.dashboard-canvas-builder .dcb-btn,
+.dashboard-canvas-builder .dcb-tool,
+.dashboard-canvas-builder .dcb-tool-primary,
+.dashboard-canvas-builder .dcb-wide-btn,
+.dashboard-canvas-builder input,
+.dashboard-canvas-builder select,
+.dashboard-canvas-builder textarea {
+  border-radius: var(--radius-control) !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+}
+
+.dashboard-canvas-builder .dcb-tool-primary,
+.dashboard-canvas-builder .dcb-btn-primary {
+  font-weight: 500 !important;
+}
+
+/* /dashboard-v2: keep the designer as reference, only normalize shell density. */
+.MuiCssBaseline-root,
+[data-testid="dashboard-v2-settings-panel"] {
+  font-family: "IBM Plex Sans Thai", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+}
+
+.MuiButton-root,
+.MuiInputBase-root,
+.MuiSelect-select,
+.MuiMenuItem-root,
+.MuiChip-root,
+.MuiTab-root,
+.MuiAccordionSummary-root,
+.MuiAccordionDetails-root,
+.MuiTooltip-tooltip,
+.MuiTableCell-root {
+  font-family: "IBM Plex Sans Thai", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-weight: 400 !important;
+}
+
+.MuiButton-root,
+.MuiTab-root,
+.MuiAccordionSummary-content {
+  font-weight: 500 !important;
+}
+
+.MuiPaper-root {
+  box-shadow: none !important;
+}
+
+.MuiDialog-paper,
+.MuiPopover-paper,
+.MuiMenu-paper {
+  border: 1px solid var(--border) !important;
+}
+
+/* Auth pages: enterprise sign-in, not a marketing hero. */
+body:has(.auth-page-v2) {
+  background: var(--background) !important;
+}
+
+.auth-page-v2 {
+  color: var(--text-primary) !important;
+}
+
+.auth-card-v2,
+.auth-visual-card,
+.auth-floating-card {
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-dialog) !important;
+  background: var(--surface) !important;
+  box-shadow: none !important;
+}
+
+.auth-hero-headline {
+  font-size: clamp(22px, 3vw, 32px) !important;
+  font-weight: 500 !important;
+  line-height: 1.35 !important;
+}
+
+.auth-hero-sub,
+.auth-feature-desc,
+.auth-footnote-v2 {
+  color: var(--text-secondary) !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  line-height: 1.45 !important;
+}
+
+/* Legacy-heavy routes: reduce visual noise without changing behavior. */
+body:has(.builder-page),
+body:has(.dashboard-page),
+body:has(.dashboard-workspace-page),
+body:has(.datasets-page),
+body:has(.settings-page) {
+  background: var(--background) !important;
+  overflow-x: hidden !important;
+}
+
+body:has(.builder-page) .main-content,
+body:has(.dashboard-page) .main-content,
+body:has(.dashboard-workspace-page) .main-content,
+body:has(.datasets-page) .main-content,
+body:has(.settings-page) .main-content {
+  background: var(--background) !important;
+  overflow-x: hidden !important;
+}
+
+body:has(.builder-page) [class*="card"],
+body:has(.builder-page) [class*="panel"],
+body:has(.dashboard-page) [class*="card"],
+body:has(.dashboard-page) [class*="panel"] {
+  box-shadow: none !important;
+}
+
+body:has(.builder-page) button,
+body:has(.dashboard-page) button,
+body:has(.settings-page) button,
+body:has(.datasets-page) button {
+  font-weight: 500 !important;
+}
+
+body:has(.builder-page) input,
+body:has(.builder-page) select,
+body:has(.builder-page) textarea,
+body:has(.dashboard-page) input,
+body:has(.dashboard-page) select,
+body:has(.dashboard-page) textarea {
+  min-height: 32px;
+  border-radius: var(--radius-control);
+}
+
+@media (max-width: 768px) {
+  .mini-bi-topbar {
+    min-height: 44px !important;
+    padding-inline: 12px !important;
+  }
+
+  .mini-bi-ribbon-tabs {
+    overflow-x: auto !important;
+  }
+
+  .main-content,
+  body:has(.home-page) .main-content,
+  body:has(.settings-page) .settings-page,
+  body:has(.datasets-page) .datasets-page {
+    padding: 12px !important;
+  }
+
+  body:has(.home-page) .home-stats-grid,
+  body:has(.home-page) .home-command-grid,
+  body:has(.home-page) .home-workspace-status-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Final QA cleanup: remove legacy visual residue that remained visible after the unified pass. */
+.appbar.mini-bi-appbar,
+.mini-bi-topbar,
+.mini-bi-ribbon {
+  box-shadow: none !important;
+}
+
+.appbar.mini-bi-appbar {
+  border-bottom: 1px solid var(--border) !important;
+}
+
+.mini-bi-ribbon-command-icon {
+  border: 1px solid var(--divider) !important;
+  border-radius: var(--radius-control) !important;
+  box-shadow: none !important;
+}
+
+.mini-bi-ribbon-command {
+  box-sizing: border-box !important;
+  min-height: 44px !important;
+  height: 44px !important;
+  gap: 2px !important;
+  line-height: 1.2 !important;
+}
+
+.mini-bi-ribbon-command-icon {
+  width: 20px !important;
+  height: 20px !important;
+}
+
+.mini-bi-ribbon-command:disabled,
+.mini-bi-ribbon-command[aria-disabled="true"] {
+  cursor: not-allowed !important;
+  opacity: 0.54 !important;
+}
+
+.mini-bi-ribbon-command:disabled:hover,
+.mini-bi-ribbon-command[aria-disabled="true"]:hover {
+  border-color: var(--border) !important;
+  background: var(--surface) !important;
+  color: var(--text-primary) !important;
+  transform: none !important;
+}
+
+.mini-bi-icon-btn:disabled,
+.mini-bi-quick-access button:disabled {
+  cursor: not-allowed !important;
+  opacity: 0.5 !important;
+}
+
+.mini-bi-icon-btn:disabled:hover,
+.mini-bi-quick-access button:disabled:hover {
+  border-color: var(--border) !important;
+  background: var(--surface) !important;
+  transform: none !important;
+}
+
+.mini-bi-ribbon-shell.is-dashboard-canvas-route,
+.mini-bi-ribbon-shell.is-chart-designer-route {
+  height: 100dvh !important;
+  min-height: 100dvh !important;
+  overflow: hidden !important;
+}
+
+.mini-bi-ribbon-shell.is-dashboard-canvas-route .body-row,
+.mini-bi-ribbon-shell.is-chart-designer-route .body-row {
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+.mini-bi-ribbon-shell .main-content.is-dashboard-canvas-route,
+.mini-bi-ribbon-shell .main-content.is-chart-designer-route {
+  height: calc(100dvh - var(--appbar-h, 136px)) !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+.mini-bi-ribbon-shell .main-content.is-dashboard-canvas-route > *,
+.mini-bi-ribbon-shell .main-content.is-chart-designer-route > * {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+}
+
+.mini-bi-notice-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: var(--z-modal) !important;
+  display: grid !important;
+  place-items: center !important;
+  padding: 16px !important;
+  background: rgba(15, 23, 42, 0.18) !important;
+}
+
+.mini-bi-notice-dialog {
+  width: min(420px, 100%) !important;
+  display: grid !important;
+  gap: 12px !important;
+  padding: 16px !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-dialog) !important;
+  background: var(--surface) !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+
+.mini-bi-notice-dialog header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+}
+
+.mini-bi-notice-dialog strong {
+  color: var(--text-primary) !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  line-height: 1.35 !important;
+}
+
+.mini-bi-notice-dialog p {
+  margin: 0 !important;
+  color: var(--text-secondary) !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  line-height: 1.5 !important;
+}
+
+.mini-bi-notice-dialog header button,
+.mini-bi-notice-primary {
+  min-height: 30px !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-control) !important;
+  background: var(--surface) !important;
+  color: var(--text-primary) !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  line-height: 1.25 !important;
+}
+
+.mini-bi-notice-dialog header button {
+  width: 30px !important;
+  padding: 0 !important;
+}
+
+.mini-bi-notice-primary {
+  justify-self: end !important;
+  padding: 0 12px !important;
+  border-color: var(--primary) !important;
+  background: var(--primary) !important;
+  color: #ffffff !important;
+}
+
+.appbar-user.mini-bi-user {
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+body:has(.home-page) .appbar-user.mini-bi-user::before {
+  content: none !important;
+  display: none !important;
+}
+
+.appbar-user.mini-bi-user .avatar-circle {
+  width: 24px !important;
+  height: 24px !important;
+  min-width: 24px !important;
+}
+
+body:has(.home-page) .mini-bi-ribbon-command {
+  box-sizing: border-box !important;
+  min-height: 44px !important;
+  height: 44px !important;
+  gap: 2px !important;
+  line-height: 1.2 !important;
+}
+
+body:has(.home-page) .mini-bi-ribbon-command-icon {
+  width: 20px !important;
+  height: 20px !important;
+}
+
+body:has(.home-page) .home-stats-grid,
+body:has(.home-page) .home-workspace-status-grid,
+body:has(.home-page) .home-command-grid,
+body:has(.home-page) .home-template-list,
+body:has(.home-page) .home-activity-list {
+  border-radius: var(--radius-card) !important;
+  box-shadow: none !important;
+}
+
+body:has(.home-page) .home-hero-emoji,
+body:has(.home-page) .home-stat-icon,
+body:has(.home-page) .home-template-icon,
+body:has(.home-page) .home-tool-icon,
+body:has(.home-page) .home-list-icon {
+  box-shadow: none !important;
+}
+
+body:has(.auth-page-v2) .auth-logo-icon,
+body:has(.auth-page-v2) .auth-visual-metric,
+body:has(.auth-page-v2) .auth-visual-chart,
+body:has(.auth-page-v2) .auth-feature-item,
+body:has(.auth-page-v2) .auth-step-item,
+body:has(.auth-page-v2) .auth-demo-pill,
+body:has(.auth-page-v2) .auth-product-badge,
+body:has(.auth-page-v2) .auth-card-status {
+  border-radius: var(--radius-card) !important;
+  box-shadow: none !important;
+}
+
+body:has(.auth-page-v2) .auth-logo-dot {
+  box-shadow: none !important;
+}
+
+body:has(.dashboard-page) .dashboard-workspace-canvas,
+body:has(.dashboard-page) .dashboard-workspace-canvas-frame,
+body:has(.dashboard-page) .dashboard-empty-state,
+body:has(.dashboard-workspace-canvas) .dashboard-workspace-canvas,
+body:has(.dashboard-workspace-canvas) .dashboard-workspace-canvas-frame,
+body:has(.dashboard-workspace-canvas) .dashboard-empty-state,
+body:has(.builder-page) .builder-v3-panel,
+body:has(.builder-page) .builder-v3-template-thumb,
+body:has(.builder-page) .builder-v3-recommended-field,
+body:has(.builder-page) .builder-tree-row,
+body:has(.builder-v3-shell) .builder-v3-panel,
+body:has(.builder-v3-shell) .builder-v3-template-card,
+body:has(.builder-v3-shell) .builder-v3-template-thumb,
+body:has(.builder-v3-shell) .builder-v3-family-tab,
+body:has(.builder-v3-shell) .builder-v3-recommended-field,
+body:has(.builder-v3-shell) .builder-tree-row,
+body:has(.builder-v3-shell) .builder-v3-subsection,
+body:has(.builder-v3-shell) .builder-v3-button {
+  border-radius: var(--radius-card) !important;
+  box-shadow: none !important;
+}
+
+body:has(.dashboard-page) .dashboard-workspace-canvas,
+body:has(.dashboard-page) .dashboard-workspace-canvas-frame,
+body:has(.builder-page) .builder-v3-panel {
+  border-color: var(--border) !important;
+}
+
+html body.builder-route-active .shell.is-builder-route .main-content.is-builder-route .builder-shell.builder-v3-shell .builder-v3-workspace .builder-v3-column .builder-v3-panel,
+html body.builder-route-active .shell.is-builder-route .main-content.is-builder-route .builder-shell.builder-v3-shell .builder-v3-workspace .builder-v3-column .builder-v3-subsection,
+html body.builder-route-active .shell.is-builder-route .main-content.is-builder-route .builder-shell.builder-v3-shell .builder-v3-workspace .builder-v3-column .builder-v3-template-card,
+html body.builder-route-active .shell.is-builder-route .main-content.is-builder-route .builder-shell.builder-v3-shell .builder-v3-workspace .builder-v3-column .builder-v3-template-thumb,
+html body.builder-route-active .shell.is-builder-route .main-content.is-builder-route .builder-shell.builder-v3-shell .builder-v3-workspace .builder-v3-column .builder-v3-family-tab,
+html body.builder-route-active .shell.is-builder-route .main-content.is-builder-route .builder-shell.builder-v3-shell .builder-v3-workspace .builder-v3-column .builder-v3-button {
+  border-radius: var(--radius-card) !important;
+  box-shadow: none !important;
+}
+
+html body.builder-route-active .shell.is-builder-route .main-content.is-builder-route .builder-shell.builder-v3-shell .builder-v3-workspace .builder-v3-column .builder-v3-family-tab,
+html body.builder-route-active .shell.is-builder-route .main-content.is-builder-route .builder-shell.builder-v3-shell .builder-v3-workspace .builder-v3-column .builder-v3-button {
+  border-radius: var(--radius-control) !important;
+}
+
+.mini-bi-quick-access {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+
+.mini-bi-quick-access button,
+.mini-bi-mobile-icon,
+.mini-bi-mobile-menu-header button {
+  width: 30px !important;
+  height: 30px !important;
+  min-width: 30px !important;
+  min-height: 30px !important;
+  display: inline-grid !important;
+  place-items: center !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-control) !important;
+  background: var(--surface) !important;
+  color: var(--text-primary) !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  line-height: 1 !important;
+  box-shadow: none !important;
+  cursor: pointer !important;
+}
+
+.mini-bi-quick-access button:hover,
+.mini-bi-mobile-icon:hover,
+.mini-bi-mobile-menu-header button:hover {
+  background: var(--hover) !important;
+  border-color: #d8dee8 !important;
+}
+
+.mini-bi-quick-access button:disabled,
+.mini-bi-mobile-icon:disabled {
+  cursor: not-allowed !important;
+  opacity: 0.45 !important;
+}
+
+.mini-bi-page-breadcrumb {
+  min-width: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  color: var(--text-secondary) !important;
+  font-size: 11px !important;
+  font-weight: 400 !important;
+  line-height: 1.35 !important;
+  white-space: nowrap !important;
+}
+
+.mini-bi-page-breadcrumb strong {
+  max-width: 136px !important;
+  overflow: hidden !important;
+  color: var(--text-primary) !important;
+  font-weight: 500 !important;
+  text-overflow: ellipsis !important;
+}
+
+.mini-bi-mobile-nav,
+.mini-bi-mobile-menu-overlay {
+  display: none !important;
+}
+
+.mini-bi-tools-menu-backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: calc(var(--z-modal, 1400) + 1) !important;
+  background: transparent !important;
+}
+
+.mini-bi-tools-menu {
+  position: fixed !important;
+  top: calc(var(--appbar-h, 108px) - 2px) !important;
+  left: clamp(220px, 29vw, 520px) !important;
+  width: min(320px, calc(100vw - 24px)) !important;
+  display: grid !important;
+  gap: 2px !important;
+  padding: 6px !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-card) !important;
+  background: var(--surface) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+.mini-bi-tools-menu button {
+  width: 100% !important;
+  display: grid !important;
+  gap: 2px !important;
+  min-height: 44px !important;
+  padding: 6px 8px !important;
+  border: 0 !important;
+  border-radius: var(--radius-control) !important;
+  background: transparent !important;
+  color: var(--text-primary) !important;
+  text-align: left !important;
+  cursor: pointer !important;
+}
+
+.mini-bi-tools-menu button:hover {
+  background: var(--hover) !important;
+}
+
+.mini-bi-tools-menu button.is-active {
+  background: var(--selected) !important;
+  color: var(--primary) !important;
+}
+
+.mini-bi-tools-menu button:disabled {
+  cursor: not-allowed !important;
+  opacity: 0.55 !important;
+}
+
+.mini-bi-tools-menu button span {
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  line-height: 1.35 !important;
+}
+
+.mini-bi-tools-menu button small {
+  overflow: hidden !important;
+  color: var(--text-muted) !important;
+  font-size: 10px !important;
+  font-weight: 400 !important;
+  line-height: 1.35 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.mini-bi-mobile-menu-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: var(--z-modal) !important;
+  background: rgba(15, 23, 42, 0.2) !important;
+}
+
+.mini-bi-mobile-menu {
+  position: absolute !important;
+  right: 8px !important;
+  left: 8px !important;
+  top: 52px !important;
+  overflow: hidden !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-dialog) !important;
+  background: var(--surface) !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+
+.mini-bi-mobile-menu-header,
+.mini-bi-mobile-menu-list {
+  display: flex !important;
+}
+
+.mini-bi-mobile-menu-header {
+  height: 44px !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 0 10px !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+
+.mini-bi-mobile-menu-header strong {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+}
+
+.mini-bi-mobile-menu-list {
+  max-height: min(420px, calc(100dvh - 112px)) !important;
+  flex-direction: column !important;
+  overflow-y: auto !important;
+  padding: 6px !important;
+}
+
+.mini-bi-mobile-menu-list button {
+  min-height: 34px !important;
+  width: 100% !important;
+  border: 0 !important;
+  border-radius: var(--radius-control) !important;
+  background: transparent !important;
+  color: var(--text-primary) !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  line-height: 1.35 !important;
+  text-align: left !important;
+  padding: 0 10px !important;
+  cursor: pointer !important;
+}
+
+.mini-bi-mobile-menu-list button:hover {
+  background: var(--hover) !important;
+}
+
+.mini-bi-mobile-menu-list button.is-active {
+  background: var(--selected) !important;
+  color: var(--primary) !important;
+  font-weight: 500 !important;
+}
+
+.mini-bi-mobile-submenu {
+  display: grid !important;
+  gap: 2px !important;
+  padding: 2px 0 6px 14px !important;
+}
+
+.mini-bi-mobile-submenu button {
+  min-height: 38px !important;
+  display: grid !important;
+  gap: 2px !important;
+}
+
+.mini-bi-mobile-submenu button span {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.mini-bi-mobile-submenu button small {
+  overflow: hidden !important;
+  color: var(--text-muted) !important;
+  font-size: 10px !important;
+  font-weight: 400 !important;
+  line-height: 1.35 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.mini-bi-mobile-submenu button:disabled {
+  cursor: not-allowed !important;
+  opacity: 0.55 !important;
+}
+
+@media (max-width: 640px) {
+  .mini-bi-ribbon-shell,
+  body:has(.home-page) .mini-bi-ribbon-shell {
+    --appbar-h: 44px !important;
+  }
+
+  .mini-bi-ribbon-shell .mini-bi-appbar,
+  body:has(.home-page) .mini-bi-appbar {
+    height: 44px !important;
+    min-height: 44px !important;
+  }
+
+  .mini-bi-topbar,
+  body:has(.home-page) .mini-bi-topbar {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    padding: 0 8px !important;
+    gap: 8px !important;
+  }
+
+  .mini-bi-brand-cluster,
+  .mini-bi-search,
+  .mini-bi-workspace-select,
+  .mini-bi-quick-access,
+  .mini-bi-ribbon-tabs,
+  .mini-bi-ribbon-area {
+    display: none !important;
+  }
+
+  .mini-bi-tools-menu-backdrop {
+    display: none !important;
+  }
+
+  .mini-bi-mobile-nav {
+    min-width: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+  }
+
+  .mini-bi-mobile-title {
+    min-width: 0 !important;
+    overflow: hidden !important;
+    color: var(--text-primary) !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    line-height: 1.35 !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .mini-bi-mobile-menu-overlay {
+    display: block !important;
+  }
+}
+
+/* Final ribbon button normalization across all primary routes. */
+:root {
+  --app-ribbon-height: 54px;
+  --app-ribbon-button-height: 44px;
+  --app-ribbon-button-min-width: 64px;
+  --app-ribbon-button-max-width: 76px;
+  --app-ribbon-icon-box-size: 22px;
+  --app-ribbon-icon-size: 16px;
+  --app-ribbon-label-size: 10.5px;
+  --app-ribbon-label-line-height: 1.2;
+  --app-ribbon-gap: 6px;
+}
+
+@media (min-width: 641px) {
+  html body .mini-bi-ribbon-shell .mini-bi-ribbon-area,
+  html body:has(.home-page) .mini-bi-ribbon-area {
+    height: var(--app-ribbon-height) !important;
+    min-height: var(--app-ribbon-height) !important;
+    max-height: var(--app-ribbon-height) !important;
+    padding: 4px 12px !important;
+    gap: var(--app-ribbon-gap) !important;
+    align-items: center !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    border-bottom: 1px solid var(--border, #eceff5) !important;
+    background: var(--surface, #ffffff) !important;
+    box-shadow: none !important;
+  }
+
+  html body .mini-bi-ribbon-shell .mini-bi-ribbon-group,
+  html body:has(.home-page) .mini-bi-ribbon-group {
+    position: relative !important;
+    height: var(--app-ribbon-button-height) !important;
+    min-height: var(--app-ribbon-button-height) !important;
+    max-height: var(--app-ribbon-button-height) !important;
+    padding: 0 var(--app-ribbon-gap) 0 0 !important;
+    gap: var(--app-ribbon-gap) !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: visible !important;
+    border-right: 0 !important;
+  }
+
+  html body .mini-bi-ribbon-shell .mini-bi-ribbon-group:not(:last-child)::after,
+  html body:has(.home-page) .mini-bi-ribbon-group:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: 0;
+    width: 1px;
+    height: 34px;
+    transform: translateY(-50%);
+    background: rgba(226, 232, 240, 0.88);
+  }
+
+  html body .mini-bi-ribbon-shell .mini-bi-ribbon-command-row,
+  html body:has(.home-page) .mini-bi-ribbon-command-row {
+    height: var(--app-ribbon-button-height) !important;
+    min-height: var(--app-ribbon-button-height) !important;
+    max-height: var(--app-ribbon-button-height) !important;
+    gap: var(--app-ribbon-gap) !important;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+    overflow: visible !important;
+  }
+
+  html body .mini-bi-ribbon-shell .mini-bi-ribbon-command,
+  html body .mini-bi-ribbon-shell.is-dashboard-canvas-route .mini-bi-ribbon-command,
+  html body .mini-bi-ribbon-shell.is-chart-designer-route .mini-bi-ribbon-command,
+  html body:has(.home-page) .mini-bi-ribbon-command {
+    box-sizing: border-box !important;
+    width: auto !important;
+    min-width: var(--app-ribbon-button-min-width) !important;
+    max-width: var(--app-ribbon-button-max-width) !important;
+    height: var(--app-ribbon-button-height) !important;
+    min-height: var(--app-ribbon-button-height) !important;
+    max-height: var(--app-ribbon-button-height) !important;
+    padding: 2px 6px !important;
+    display: inline-flex !important;
+    flex: 0 0 auto !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 2px !important;
+    border: 1px solid #e6eaf0 !important;
+    border-radius: 6px !important;
+    background: #ffffff !important;
+    color: var(--text-primary, #111827) !important;
+    font-family: "IBM Plex Sans Thai", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+    font-size: var(--app-ribbon-label-size) !important;
+    font-weight: 400 !important;
+    line-height: var(--app-ribbon-label-line-height) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    box-shadow: none !important;
+    transform: none !important;
+    transition: background-color 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out !important;
+  }
+
+  html body .mini-bi-ribbon-shell .mini-bi-ribbon-command:hover:not(:disabled),
+  html body:has(.home-page) .mini-bi-ribbon-command:hover:not(:disabled) {
+    background: #f4f7fb !important;
+    border-color: #d8dee8 !important;
+    transform: none !important;
+    box-shadow: none !important;
+  }
+
+  html body .mini-bi-ribbon-shell .mini-bi-ribbon-command:focus-visible,
+  html body:has(.home-page) .mini-bi-ribbon-command:focus-visible {
+    outline: 2px solid rgba(37, 99, 235, 0.32) !important;
+    outline-offset: 1px !important;
+  }
+
+  html body .mini-bi-ribbon-shell .mini-bi-ribbon-command.is-primary,
+  html body .mini-bi-ribbon-shell .mini-bi-ribbon-command.is-active,
+  html body .mini-bi-ribbon-shell .mini-bi-ribbon-command[aria-pressed="true"],
+  html body:has(.home-page) .mini-bi-ribbon-command.is-primary,
+  html body:has(.home-page) .mini-bi-ribbon-command.is-active,
+  html body:has(.home-page) .mini-bi-ribbon-command[aria-pressed="true"] {
+    background: #eaf2ff !important;
+    border-color: #2563eb !important;
+    color: #2563eb !important;
+  }
+
+  html body .mini-bi-ribbon-shell .mini-bi-ribbon-command:disabled,
+  html body .mini-bi-ribbon-shell .mini-bi-ribbon-command[aria-disabled="true"],
+  html body:has(.home-page) .mini-bi-ribbon-command:disabled,
+  html body:has(.home-page) .mini-bi-ribbon-command[aria-disabled="true"] {
+    background: #f9fafb !important;
+    color: var(--text-muted, #94a3b8) !important;
+    cursor: not-allowed !important;
+    opacity: 0.55 !important;
+  }
+
+  html body .mini-bi-ribbon-shell .mini-bi-ribbon-command > span:last-child,
+  html body:has(.home-page) .mini-bi-ribbon-command > span:last-child {
+    display: block !important;
+    width: 100% !important;
+    max-width: calc(var(--app-ribbon-button-max-width) - 12px) !important;
+    min-height: 13px !important;
+    line-height: var(--app-ribbon-label-line-height) !important;
+    font-size: var(--app-ribbon-label-size) !important;
+    font-weight: 400 !important;
+    text-align: center !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    flex: 0 0 auto !important;
+  }
+
+  html body .mini-bi-ribbon-shell .mini-bi-ribbon-command-icon,
+  html body:has(.home-page) .mini-bi-ribbon-command-icon {
+    width: var(--app-ribbon-icon-box-size) !important;
+    height: var(--app-ribbon-icon-box-size) !important;
+    min-width: var(--app-ribbon-icon-box-size) !important;
+    min-height: var(--app-ribbon-icon-box-size) !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex: 0 0 var(--app-ribbon-icon-box-size) !important;
+    border-radius: 4px !important;
+    background: #f4f7fb !important;
+    color: currentColor !important;
+  }
+
+  html body .mini-bi-ribbon-shell .mini-bi-ribbon-command.is-primary .mini-bi-ribbon-command-icon,
+  html body .mini-bi-ribbon-shell .mini-bi-ribbon-command.is-active .mini-bi-ribbon-command-icon,
+  html body .mini-bi-ribbon-shell .mini-bi-ribbon-command[aria-pressed="true"] .mini-bi-ribbon-command-icon,
+  html body:has(.home-page) .mini-bi-ribbon-command.is-primary .mini-bi-ribbon-command-icon,
+  html body:has(.home-page) .mini-bi-ribbon-command.is-active .mini-bi-ribbon-command-icon,
+  html body:has(.home-page) .mini-bi-ribbon-command[aria-pressed="true"] .mini-bi-ribbon-command-icon {
+    background: rgba(37, 99, 235, 0.08) !important;
+    color: #2563eb !important;
+  }
+
+  html body .mini-bi-ribbon-shell .mini-bi-ribbon-command-icon svg,
+  html body .mini-bi-ribbon-shell .mini-bi-ribbon-command svg,
+  html body:has(.home-page) .mini-bi-ribbon-command-icon svg,
+  html body:has(.home-page) .mini-bi-ribbon-command svg {
+    width: var(--app-ribbon-icon-size) !important;
+    height: var(--app-ribbon-icon-size) !important;
+    min-width: var(--app-ribbon-icon-size) !important;
+    min-height: var(--app-ribbon-icon-size) !important;
+    flex: 0 0 var(--app-ribbon-icon-size) !important;
+  }
+}
+
+/* Post-ribbon workspace QA: keep full-screen builders usable under the global ribbon. */
+@media (min-width: 641px) {
+  .mini-bi-ribbon-shell.is-dashboard-canvas-route,
+  .mini-bi-ribbon-shell.is-chart-designer-route {
+    --appbar-h: var(--app-shell-height) !important;
+  }
+
+  .mini-bi-ribbon-shell.is-dashboard-canvas-route .mini-bi-appbar,
+  .mini-bi-ribbon-shell.is-chart-designer-route .mini-bi-appbar {
+    height: var(--appbar-h) !important;
+    min-height: var(--appbar-h) !important;
+    max-height: var(--appbar-h) !important;
+    overflow: hidden !important;
+  }
+
+  .mini-bi-ribbon-shell.is-dashboard-canvas-route .mini-bi-topbar,
+  .mini-bi-ribbon-shell.is-chart-designer-route .mini-bi-topbar {
+    height: var(--app-topbar-height) !important;
+    min-height: var(--app-topbar-height) !important;
+    max-height: var(--app-topbar-height) !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    gap: 12px !important;
+    padding: 0 14px !important;
+    overflow: hidden !important;
+  }
+
+  .mini-bi-ribbon-shell.is-dashboard-canvas-route .mini-bi-logo,
+  .mini-bi-ribbon-shell.is-chart-designer-route .mini-bi-logo {
+    min-width: 128px !important;
+    height: 40px !important;
+  }
+
+  .mini-bi-ribbon-shell.is-dashboard-canvas-route .mini-bi-logo-mark,
+  .mini-bi-ribbon-shell.is-chart-designer-route .mini-bi-logo-mark {
+    width: 28px !important;
+    height: 28px !important;
+    border-radius: var(--radius-control) !important;
+    font-size: 10px !important;
+  }
+
+  .mini-bi-ribbon-shell.is-dashboard-canvas-route .mini-bi-workspace-select,
+  .mini-bi-ribbon-shell.is-chart-designer-route .mini-bi-workspace-select {
+    height: 30px !important;
+    max-width: 138px !important;
+  }
+
+  .mini-bi-ribbon-shell.is-dashboard-canvas-route .mini-bi-page-breadcrumb,
+  .mini-bi-ribbon-shell.is-chart-designer-route .mini-bi-page-breadcrumb {
+    display: none !important;
+  }
+
+  .mini-bi-ribbon-shell.is-dashboard-canvas-route .mini-bi-primary-cta,
+  .mini-bi-ribbon-shell.is-chart-designer-route .mini-bi-primary-cta {
+    height: 30px !important;
+    min-height: 30px !important;
+    padding: 0 10px !important;
+    border-radius: var(--radius-control) !important;
+    font-size: 12px !important;
+    box-shadow: none !important;
+  }
+
+  .mini-bi-ribbon-shell.is-dashboard-canvas-route .mini-bi-user,
+  .mini-bi-ribbon-shell.is-dashboard-canvas-route .mini-bi-user .avatar-circle,
+  .mini-bi-ribbon-shell.is-chart-designer-route .mini-bi-user,
+  .mini-bi-ribbon-shell.is-chart-designer-route .mini-bi-user .avatar-circle {
+    width: 30px !important;
+    height: 30px !important;
+    min-width: 30px !important;
+  }
+
+  .mini-bi-ribbon-shell.is-dashboard-canvas-route .mini-bi-ribbon-tabs,
+  .mini-bi-ribbon-shell.is-chart-designer-route .mini-bi-ribbon-tabs {
+    height: 36px !important;
+    min-height: 36px !important;
+    max-height: 36px !important;
+    align-items: end !important;
+    padding: 0 12px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+  }
+
+  .mini-bi-ribbon-shell.is-dashboard-canvas-route .mini-bi-ribbon-tab,
+  .mini-bi-ribbon-shell.is-chart-designer-route .mini-bi-ribbon-tab {
+    height: 36px !important;
+    min-height: 36px !important;
+    padding: 0 12px !important;
+    font-size: 12px !important;
+    line-height: 1.25 !important;
+    white-space: nowrap !important;
+  }
+
+  .mini-bi-ribbon-shell.is-dashboard-canvas-route .mini-bi-ribbon-area,
+  .mini-bi-ribbon-shell.is-chart-designer-route .mini-bi-ribbon-area {
+    height: var(--app-ribbon-height) !important;
+    min-height: var(--app-ribbon-height) !important;
+    max-height: var(--app-ribbon-height) !important;
+    padding: 6px 12px !important;
+    align-items: center !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+  }
+
+  .mini-bi-ribbon-shell.is-dashboard-canvas-route .mini-bi-ribbon-group,
+  .mini-bi-ribbon-shell.is-chart-designer-route .mini-bi-ribbon-group {
+    height: 44px !important;
+    min-height: 44px !important;
+    max-height: 44px !important;
+    flex: 0 0 auto !important;
+    justify-content: center !important;
+    padding: 0 10px !important;
+    overflow: hidden !important;
+  }
+
+  .mini-bi-ribbon-shell.is-dashboard-canvas-route .mini-bi-ribbon-command-row,
+  .mini-bi-ribbon-shell.is-chart-designer-route .mini-bi-ribbon-command-row {
+    height: 44px !important;
+    align-items: center !important;
+    gap: 4px !important;
+    flex-wrap: nowrap !important;
+  }
+
+  .mini-bi-ribbon-shell.is-dashboard-canvas-route .mini-bi-ribbon-command,
+  .mini-bi-ribbon-shell.is-chart-designer-route .mini-bi-ribbon-command {
+    width: auto !important;
+    min-width: 46px !important;
+    height: 42px !important;
+    min-height: 42px !important;
+    max-height: 42px !important;
+    padding: 2px 5px !important;
+    border-radius: var(--radius-control) !important;
+    gap: 2px !important;
+    overflow: hidden !important;
+    white-space: nowrap !important;
+  }
+
+  .mini-bi-ribbon-shell.is-dashboard-canvas-route .mini-bi-ribbon-command-icon,
+  .mini-bi-ribbon-shell.is-chart-designer-route .mini-bi-ribbon-command-icon {
+    width: 20px !important;
+    height: 20px !important;
+    min-width: 20px !important;
+    border-radius: var(--radius-control) !important;
+  }
+
+  .mini-bi-ribbon-shell.is-dashboard-canvas-route .mini-bi-ribbon-command-icon svg,
+  .mini-bi-ribbon-shell.is-chart-designer-route .mini-bi-ribbon-command-icon svg {
+    width: 14px !important;
+    height: 14px !important;
+  }
+
+  .mini-bi-ribbon-shell.is-dashboard-canvas-route .body-row,
+  .mini-bi-ribbon-shell.is-chart-designer-route .body-row {
+    height: calc(100dvh - var(--appbar-h)) !important;
+    min-height: 0 !important;
+  }
+
+  .mini-bi-ribbon-shell .main-content.is-dashboard-canvas-route,
+  .mini-bi-ribbon-shell .main-content.is-chart-designer-route {
+    height: calc(100dvh - var(--appbar-h)) !important;
+    min-height: 0 !important;
+  }
+}
+
+body:has(.dashboard-canvas-builder.is-preview) .mini-bi-ribbon-shell.is-dashboard-canvas-route,
+body:has(.dashboard-v2-designer.is-presentation-mode) .mini-bi-ribbon-shell.is-chart-designer-route {
+  --appbar-h: var(--app-topbar-height) !important;
+}
+
+body:has(.dashboard-canvas-builder.is-preview) .mini-bi-ribbon-shell.is-dashboard-canvas-route .mini-bi-appbar,
+body:has(.dashboard-v2-designer.is-presentation-mode) .mini-bi-ribbon-shell.is-chart-designer-route .mini-bi-appbar {
+  height: var(--app-topbar-height) !important;
+  min-height: var(--app-topbar-height) !important;
+  max-height: var(--app-topbar-height) !important;
+  overflow: hidden !important;
+}
+
+body:has(.dashboard-canvas-builder.is-preview) .mini-bi-ribbon-shell.is-dashboard-canvas-route .mini-bi-ribbon-tabs,
+body:has(.dashboard-canvas-builder.is-preview) .mini-bi-ribbon-shell.is-dashboard-canvas-route .mini-bi-ribbon-area,
+body:has(.dashboard-v2-designer.is-presentation-mode) .mini-bi-ribbon-shell.is-chart-designer-route .mini-bi-ribbon-tabs,
+body:has(.dashboard-v2-designer.is-presentation-mode) .mini-bi-ribbon-shell.is-chart-designer-route .mini-bi-ribbon-area {
+  display: none !important;
+}
+
+@media (max-width: 640px) {
+  .mini-bi-ribbon-shell.is-dashboard-canvas-route,
+  .mini-bi-ribbon-shell.is-chart-designer-route {
+    --appbar-h: 44px !important;
+  }
+
+  .mini-bi-ribbon-shell.is-dashboard-canvas-route .body-row,
+  .mini-bi-ribbon-shell.is-chart-designer-route .body-row,
+  .mini-bi-ribbon-shell .main-content.is-dashboard-canvas-route,
+  .mini-bi-ribbon-shell .main-content.is-chart-designer-route {
+    height: calc(100dvh - var(--appbar-h)) !important;
+    min-height: 0 !important;
+  }
+}
+
+/* AppBar size normalization pass.
+   Presentation-only: one shared AppShell rhythm for every ribbon-backed page. */
+:root {
+  --app-topbar-height: 46px;
+  --app-nav-height: 36px;
+  --app-ribbon-height: 54px;
+  --app-shell-height: calc(var(--app-topbar-height) + var(--app-nav-height) + var(--app-ribbon-height));
+}
+
+@media (min-width: 641px) {
+  .mini-bi-ribbon-shell,
+  body:has(.home-page) .mini-bi-ribbon-shell {
+    --appbar-h: var(--app-shell-height) !important;
+  }
+
+  .mini-bi-ribbon-shell .mini-bi-appbar,
+  body:has(.home-page) .mini-bi-appbar {
+    height: var(--app-shell-height) !important;
+    min-height: var(--app-shell-height) !important;
+    max-height: var(--app-shell-height) !important;
+    overflow: hidden !important;
+    border-bottom: 1px solid var(--border) !important;
+    background: var(--surface) !important;
+    box-shadow: none !important;
+  }
+
+  .mini-bi-ribbon-shell .mini-bi-topbar,
+  body:has(.home-page) .mini-bi-topbar {
+    height: var(--app-topbar-height) !important;
+    min-height: var(--app-topbar-height) !important;
+    max-height: var(--app-topbar-height) !important;
+    grid-template-columns: minmax(220px, 0.85fr) minmax(280px, 520px) minmax(260px, auto) !important;
+    align-items: center !important;
+    gap: 12px !important;
+    padding: 0 12px !important;
+    overflow: hidden !important;
+    border-bottom: 1px solid var(--border) !important;
+  }
+
+  .mini-bi-ribbon-shell .mini-bi-brand-cluster,
+  body:has(.home-page) .mini-bi-brand-cluster {
+    min-width: 0 !important;
+    height: var(--app-topbar-height) !important;
+    gap: 10px !important;
+  }
+
+  .mini-bi-ribbon-shell .mini-bi-logo,
+  body:has(.home-page) .mini-bi-logo {
+    height: 34px !important;
+    min-width: 112px !important;
+    gap: 8px !important;
+  }
+
+  .mini-bi-ribbon-shell .mini-bi-logo-mark,
+  body:has(.home-page) .mini-bi-logo-mark {
+    width: 28px !important;
+    height: 28px !important;
+    min-width: 28px !important;
+    flex-basis: 28px !important;
+    border-radius: var(--radius-control) !important;
+    font-size: 9px !important;
+    font-weight: 500 !important;
+    line-height: 1 !important;
+  }
+
+  .mini-bi-ribbon-shell .mini-bi-logo .appbar-logo-copy,
+  body:has(.home-page) .mini-bi-logo .appbar-logo-copy {
+    min-width: 0 !important;
+    gap: 0 !important;
+    line-height: 1 !important;
+  }
+
+  .mini-bi-ribbon-shell .mini-bi-logo .appbar-logo-copy strong,
+  body:has(.home-page) .mini-bi-logo .appbar-logo-copy strong {
+    display: block !important;
+    max-width: 92px !important;
+    overflow: hidden !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    line-height: 1.2 !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .mini-bi-ribbon-shell .mini-bi-logo .appbar-logo-copy span,
+  body:has(.home-page) .mini-bi-logo .appbar-logo-copy span {
+    display: block !important;
+    max-width: 112px !important;
+    overflow: hidden !important;
+    font-size: 10px !important;
+    font-weight: 400 !important;
+    line-height: 1.25 !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .mini-bi-ribbon-shell .mini-bi-workspace-select,
+  body:has(.home-page) .mini-bi-workspace-select {
+    width: 120px !important;
+    min-width: 92px !important;
+    max-width: 140px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    padding: 0 28px 0 10px !important;
+    border-radius: var(--radius-control) !important;
+    font-size: 12px !important;
+    font-weight: 400 !important;
+    line-height: 1.25 !important;
+  }
+
+  .mini-bi-ribbon-shell .mini-bi-page-breadcrumb,
+  body:has(.home-page) .mini-bi-page-breadcrumb {
+    min-width: 0 !important;
+    overflow: hidden !important;
+    color: var(--text-secondary) !important;
+    font-size: 11px !important;
+    font-weight: 400 !important;
+    line-height: 1.25 !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .mini-bi-ribbon-shell .mini-bi-page-breadcrumb strong,
+  body:has(.home-page) .mini-bi-page-breadcrumb strong {
+    color: var(--text-primary) !important;
+    font-size: 11px !important;
+    font-weight: 500 !important;
+  }
+
+  .mini-bi-ribbon-shell .mini-bi-search,
+  body:has(.home-page) .mini-bi-search {
+    width: min(100%, 520px) !important;
+    max-width: 520px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    border-radius: var(--radius-control) !important;
+    border-color: var(--border) !important;
+    box-shadow: none !important;
+  }
+
+  .mini-bi-ribbon-shell .mini-bi-search .appbar-search,
+  body:has(.home-page) .mini-bi-search .appbar-search {
+    height: 30px !important;
+    font-size: 12px !important;
+    font-weight: 400 !important;
+    line-height: 1.35 !important;
+  }
+
+  .mini-bi-ribbon-shell .mini-bi-search .appbar-search::placeholder,
+  body:has(.home-page) .mini-bi-search .appbar-search::placeholder {
+    color: var(--text-muted) !important;
+  }
+
+  .mini-bi-ribbon-shell .mini-bi-topbar-actions,
+  body:has(.home-page) .mini-bi-topbar-actions {
+    height: var(--app-topbar-height) !important;
+    gap: 8px !important;
+  }
+
+  .mini-bi-ribbon-shell .mini-bi-icon-btn,
+  .mini-bi-ribbon-shell .mini-bi-user,
+  body:has(.home-page) .mini-bi-icon-btn,
+  body:has(.home-page) .mini-bi-user {
+    width: 30px !important;
+    height: 30px !important;
+    min-width: 30px !important;
+    min-height: 30px !important;
+    flex: 0 0 30px !important;
+    border-radius: var(--radius-control) !important;
+    box-shadow: none !important;
+  }
+
+  .mini-bi-ribbon-shell .mini-bi-icon-btn svg,
+  body:has(.home-page) .mini-bi-icon-btn svg {
+    width: 15px !important;
+    height: 15px !important;
+  }
+
+  .mini-bi-ribbon-shell .avatar-circle,
+  body:has(.home-page) .avatar-circle {
+    width: 24px !important;
+    height: 24px !important;
+    font-size: 11px !important;
+    font-weight: 500 !important;
+  }
+
+  .mini-bi-ribbon-shell .mini-bi-primary-cta,
+  body:has(.home-page) .mini-bi-primary-cta {
+    height: 32px !important;
+    min-height: 32px !important;
+    padding: 0 12px !important;
+    border-radius: var(--radius-control) !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    line-height: 1.2 !important;
+    box-shadow: none !important;
+  }
+
+  .mini-bi-ribbon-shell .mini-bi-ribbon-tabs,
+  body:has(.home-page) .mini-bi-ribbon-tabs {
+    height: var(--app-nav-height) !important;
+    min-height: var(--app-nav-height) !important;
+    max-height: var(--app-nav-height) !important;
+    align-items: end !important;
+    gap: 2px !important;
+    padding: 0 12px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    border-top: 0 !important;
+    border-bottom: 1px solid var(--border) !important;
+    background: var(--surface) !important;
+  }
+
+  .mini-bi-ribbon-shell .mini-bi-ribbon-tab,
+  body:has(.home-page) .mini-bi-ribbon-tab {
+    height: var(--app-nav-height) !important;
+    min-height: var(--app-nav-height) !important;
+    padding: 0 12px !important;
+    border-radius: 0 !important;
+    font-size: 12px !important;
+    font-weight: 400 !important;
+    line-height: 1.35 !important;
+    white-space: nowrap !important;
+  }
+
+  .mini-bi-ribbon-shell .mini-bi-ribbon-tab.is-active,
+  body:has(.home-page) .mini-bi-ribbon-tab.is-active {
+    font-weight: 500 !important;
+  }
+
+  .mini-bi-ribbon-shell .mini-bi-ribbon-area,
+  body:has(.home-page) .mini-bi-ribbon-area {
+    height: var(--app-ribbon-height) !important;
+    min-height: var(--app-ribbon-height) !important;
+    max-height: var(--app-ribbon-height) !important;
+    align-items: center !important;
+    gap: 12px !important;
+    padding: 5px 12px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    border-bottom: 1px solid var(--border) !important;
+    background: var(--surface) !important;
+    box-shadow: none !important;
+  }
+
+  .mini-bi-ribbon-shell .mini-bi-ribbon-group,
+  body:has(.home-page) .mini-bi-ribbon-group {
+    height: 44px !important;
+    min-height: 44px !important;
+    max-height: 44px !important;
+    flex: 0 0 auto !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    padding: 0 10px 0 0 !important;
+    overflow: hidden !important;
+    border-right: 1px solid var(--divider) !important;
+  }
+
+  .mini-bi-ribbon-shell .mini-bi-ribbon-group:last-child,
+  body:has(.home-page) .mini-bi-ribbon-group:last-child {
+    border-right: 0 !important;
+  }
+
+  .mini-bi-ribbon-shell .mini-bi-ribbon-group-title,
+  body:has(.home-page) .mini-bi-ribbon-group-title {
+    display: none !important;
+  }
+
+  .mini-bi-ribbon-shell .mini-bi-ribbon-command-row,
+  body:has(.home-page) .mini-bi-ribbon-command-row {
+    height: 44px !important;
+    align-items: center !important;
+    gap: 6px !important;
+    flex-wrap: nowrap !important;
+  }
+
+  .mini-bi-ribbon-shell .mini-bi-ribbon-command,
+  body:has(.home-page) .mini-bi-ribbon-command {
+    width: auto !important;
+    min-width: 58px !important;
+    max-width: 82px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    max-height: 44px !important;
+    padding: 4px 8px !important;
+    gap: 3px !important;
+    border-radius: var(--radius-control) !important;
+    color: var(--text-primary) !important;
+    font-size: 10.5px !important;
+    font-weight: 400 !important;
+    line-height: 1.2 !important;
+    overflow: hidden !important;
+    white-space: nowrap !important;
+    box-shadow: none !important;
+  }
+
+  .mini-bi-ribbon-shell .mini-bi-ribbon-command > span:last-child,
+  body:has(.home-page) .mini-bi-ribbon-command > span:last-child {
+    display: block !important;
+    max-width: 66px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .mini-bi-ribbon-shell .mini-bi-ribbon-command-icon,
+  body:has(.home-page) .mini-bi-ribbon-command-icon {
+    width: 22px !important;
+    height: 22px !important;
+    min-width: 22px !important;
+    border-radius: var(--radius-control) !important;
+    background: var(--surface-muted) !important;
+    color: var(--text-secondary) !important;
+  }
+
+  .mini-bi-ribbon-shell .mini-bi-ribbon-command-icon svg,
+  body:has(.home-page) .mini-bi-ribbon-command-icon svg {
+    width: 15px !important;
+    height: 15px !important;
+  }
+
+  .mini-bi-ribbon-shell .mini-bi-ribbon-command.is-primary .mini-bi-ribbon-command-icon,
+  body:has(.home-page) .mini-bi-ribbon-command.is-primary .mini-bi-ribbon-command-icon {
+    background: var(--selected) !important;
+    color: var(--primary) !important;
+  }
+
+  .mini-bi-ribbon-shell .body-row,
+  body:has(.home-page) .body-row {
+    min-height: calc(100dvh - var(--app-shell-height)) !important;
+  }
+
+  .mini-bi-ribbon-shell.is-dashboard-canvas-route,
+  .mini-bi-ribbon-shell.is-chart-designer-route {
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    max-height: 100dvh !important;
+    overflow: hidden !important;
+  }
+
+  .mini-bi-ribbon-shell.is-dashboard-canvas-route .body-row,
+  .mini-bi-ribbon-shell.is-chart-designer-route .body-row,
+  .mini-bi-ribbon-shell .main-content.is-dashboard-canvas-route,
+  .mini-bi-ribbon-shell .main-content.is-chart-designer-route {
+    height: calc(100dvh - var(--app-shell-height)) !important;
+    min-height: 0 !important;
+    max-height: calc(100dvh - var(--app-shell-height)) !important;
+    overflow: hidden !important;
+  }
+}
+
+body:has(.dashboard-canvas-builder.is-preview) .mini-bi-ribbon-shell.is-dashboard-canvas-route,
+body:has(.dashboard-v2-designer.is-presentation-mode) .mini-bi-ribbon-shell.is-chart-designer-route {
+  --appbar-h: var(--app-topbar-height) !important;
+}
+
+body:has(.dashboard-canvas-builder.is-preview) .mini-bi-ribbon-shell.is-dashboard-canvas-route .mini-bi-appbar,
+body:has(.dashboard-v2-designer.is-presentation-mode) .mini-bi-ribbon-shell.is-chart-designer-route .mini-bi-appbar {
+  height: var(--app-topbar-height) !important;
+  min-height: var(--app-topbar-height) !important;
+  max-height: var(--app-topbar-height) !important;
+  overflow: hidden !important;
+}
+
+body:has(.dashboard-canvas-builder.is-preview) .mini-bi-ribbon-shell.is-dashboard-canvas-route .mini-bi-topbar,
+body:has(.dashboard-v2-designer.is-presentation-mode) .mini-bi-ribbon-shell.is-chart-designer-route .mini-bi-topbar {
+  height: var(--app-topbar-height) !important;
+  min-height: var(--app-topbar-height) !important;
+  max-height: var(--app-topbar-height) !important;
+}
+
+body:has(.dashboard-canvas-builder.is-preview) .mini-bi-ribbon-shell.is-dashboard-canvas-route .body-row,
+body:has(.dashboard-v2-designer.is-presentation-mode) .mini-bi-ribbon-shell.is-chart-designer-route .body-row,
+body:has(.dashboard-canvas-builder.is-preview) .mini-bi-ribbon-shell .main-content.is-dashboard-canvas-route,
+body:has(.dashboard-v2-designer.is-presentation-mode) .mini-bi-ribbon-shell .main-content.is-chart-designer-route {
+  height: calc(100dvh - var(--app-topbar-height)) !important;
+  min-height: 0 !important;
+  max-height: calc(100dvh - var(--app-topbar-height)) !important;
+  overflow: hidden !important;
+}
+
+@media (max-width: 640px) {
+  .mini-bi-ribbon-shell,
+  body:has(.home-page) .mini-bi-ribbon-shell {
+    --appbar-h: 44px !important;
+  }
+
+  .mini-bi-ribbon-shell .mini-bi-appbar,
+  body:has(.home-page) .mini-bi-appbar {
+    height: 44px !important;
+    min-height: 44px !important;
+    max-height: 44px !important;
+    overflow: visible !important;
+  }
+
+  .mini-bi-ribbon-shell .mini-bi-ribbon-tabs,
+  .mini-bi-ribbon-shell .mini-bi-ribbon-area,
+  body:has(.home-page) .mini-bi-ribbon-tabs,
+  body:has(.home-page) .mini-bi-ribbon-area {
+    display: none !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    max-height: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    overflow: hidden !important;
+  }
+}
+
+/* Cascade guard: keep ribbon actions the same size on every desktop route. */
+@media (min-width: 641px) {
+  html body .mini-bi-ribbon-shell .mini-bi-ribbon-area,
+  html body:has(.home-page) .mini-bi-ribbon-area {
+    height: var(--app-ribbon-height) !important;
+    min-height: var(--app-ribbon-height) !important;
+    max-height: var(--app-ribbon-height) !important;
+    padding: 4px 12px !important;
+    gap: var(--app-ribbon-gap) !important;
+  }
+
+  html body .mini-bi-ribbon-shell .mini-bi-ribbon-group,
+  html body .mini-bi-ribbon-shell.is-dashboard-canvas-route .mini-bi-ribbon-group,
+  html body .mini-bi-ribbon-shell.is-chart-designer-route .mini-bi-ribbon-group,
+  html body:has(.home-page) .mini-bi-ribbon-group {
+    height: var(--app-ribbon-button-height) !important;
+    min-height: var(--app-ribbon-button-height) !important;
+    max-height: var(--app-ribbon-button-height) !important;
+    padding: 0 var(--app-ribbon-gap) 0 0 !important;
+    gap: var(--app-ribbon-gap) !important;
+    overflow: visible !important;
+    border-right: 0 !important;
+  }
+
+  html body .mini-bi-ribbon-shell .mini-bi-ribbon-command-row,
+  html body .mini-bi-ribbon-shell.is-dashboard-canvas-route .mini-bi-ribbon-command-row,
+  html body .mini-bi-ribbon-shell.is-chart-designer-route .mini-bi-ribbon-command-row,
+  html body:has(.home-page) .mini-bi-ribbon-command-row {
+    height: var(--app-ribbon-button-height) !important;
+    min-height: var(--app-ribbon-button-height) !important;
+    max-height: var(--app-ribbon-button-height) !important;
+    gap: var(--app-ribbon-gap) !important;
+  }
+
+  html body .mini-bi-ribbon-shell .mini-bi-ribbon-command,
+  html body .mini-bi-ribbon-shell.is-dashboard-canvas-route .mini-bi-ribbon-command,
+  html body .mini-bi-ribbon-shell.is-chart-designer-route .mini-bi-ribbon-command,
+  html body:has(.home-page) .mini-bi-ribbon-command {
+    min-width: var(--app-ribbon-button-min-width) !important;
+    max-width: var(--app-ribbon-button-max-width) !important;
+    height: var(--app-ribbon-button-height) !important;
+    min-height: var(--app-ribbon-button-height) !important;
+    max-height: var(--app-ribbon-button-height) !important;
+    padding: 2px 6px !important;
+    display: inline-flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 2px !important;
+    border: 1px solid #e6eaf0 !important;
+    border-radius: 6px !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+
+  html body .mini-bi-ribbon-shell .mini-bi-ribbon-command > span:last-child,
+  html body .mini-bi-ribbon-shell.is-dashboard-canvas-route .mini-bi-ribbon-command > span:last-child,
+  html body .mini-bi-ribbon-shell.is-chart-designer-route .mini-bi-ribbon-command > span:last-child,
+  html body:has(.home-page) .mini-bi-ribbon-command > span:last-child {
+    max-width: calc(var(--app-ribbon-button-max-width) - 12px) !important;
+    min-height: 13px !important;
+    font-size: var(--app-ribbon-label-size) !important;
+    font-weight: 400 !important;
+    line-height: var(--app-ribbon-label-line-height) !important;
+  }
+
+  html body .mini-bi-ribbon-shell .mini-bi-ribbon-command-icon,
+  html body .mini-bi-ribbon-shell.is-dashboard-canvas-route .mini-bi-ribbon-command-icon,
+  html body .mini-bi-ribbon-shell.is-chart-designer-route .mini-bi-ribbon-command-icon,
+  html body:has(.home-page) .mini-bi-ribbon-command-icon {
+    width: var(--app-ribbon-icon-box-size) !important;
+    height: var(--app-ribbon-icon-box-size) !important;
+    min-width: var(--app-ribbon-icon-box-size) !important;
+    min-height: var(--app-ribbon-icon-box-size) !important;
+  }
+
+  html body .mini-bi-ribbon-shell .mini-bi-ribbon-command-icon svg,
+  html body .mini-bi-ribbon-shell.is-dashboard-canvas-route .mini-bi-ribbon-command-icon svg,
+  html body .mini-bi-ribbon-shell.is-chart-designer-route .mini-bi-ribbon-command-icon svg,
+  html body:has(.home-page) .mini-bi-ribbon-command-icon svg {
+    width: var(--app-ribbon-icon-size) !important;
+    height: var(--app-ribbon-icon-size) !important;
+    min-width: var(--app-ribbon-icon-size) !important;
+    min-height: var(--app-ribbon-icon-size) !important;
+  }
+}

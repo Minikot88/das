@@ -400,7 +400,7 @@ function normalizeTitleOptions(config = {}, labels = {}) {
     align: nested.align ?? "start",
     color: nested.color ?? null,
     padding: normalizePadding(nested.padding, { top: 0, right: 0, bottom: 8, left: 0 }),
-    font: normalizeFont(nested.font, { size: 13, weight: "700" }),
+    font: normalizeFont(nested.font, { size: 13, weight: "600" }),
   };
 }
 
@@ -444,7 +444,7 @@ function normalizeTooltip(config = {}, display = {}) {
     bodySpacing: toNumberOr(nested.bodySpacing, 4),
     footerSpacing: toNumberOr(nested.footerSpacing, 4),
     padding: normalizePadding(nested.padding, 12),
-    titleFont: normalizeFont(nested.titleFont, { size: 12, weight: "700" }),
+    titleFont: normalizeFont(nested.titleFont, { size: 12, weight: "600" }),
     bodyFont: normalizeFont(nested.bodyFont, { size: 11, weight: "600" }),
     footerFont: normalizeFont(nested.footerFont, { size: 10, weight: "600" }),
     itemSort: nested.itemSort,

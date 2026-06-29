@@ -188,10 +188,10 @@ export default function EnterpriseDataTable({
       <div className="enterprise-table-footer">
         <span>หน้า {currentPage} จาก {totalPages}</span>
         <div>
-          <button type="button" onClick={() => goToPage(1)} disabled={currentPage === 1}>แรก</button>
-          <button type="button" onClick={() => goToPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>ก่อนหน้า</button>
-          <button type="button" onClick={() => goToPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages}>ถัดไป</button>
-          <button type="button" onClick={() => goToPage(totalPages)} disabled={currentPage === totalPages}>สุดท้าย</button>
+          <button type="button" onClick={() => goToPage(1)} disabled={currentPage === 1} title={currentPage === 1 ? "อยู่หน้าแรกแล้ว" : "ไปหน้าแรก"}>แรก</button>
+          <button type="button" onClick={() => goToPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} title={currentPage === 1 ? "ไม่มีหน้าก่อนหน้า" : "ไปหน้าก่อนหน้า"}>ก่อนหน้า</button>
+          <button type="button" onClick={() => goToPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages} title={currentPage === totalPages ? "ไม่มีหน้าถัดไป" : "ไปหน้าถัดไป"}>ถัดไป</button>
+          <button type="button" onClick={() => goToPage(totalPages)} disabled={currentPage === totalPages} title={currentPage === totalPages ? "อยู่หน้าสุดท้ายแล้ว" : "ไปหน้าสุดท้าย"}>สุดท้าย</button>
         </div>
       </div>
     </section>
