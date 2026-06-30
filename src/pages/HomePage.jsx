@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { createProject as createProjectApi } from "../api/projectApi";
 import { PageContainer } from "../components/layout/Layout";
 import Button from "../components/ui/Button";
 import EmptyState from "../components/ui/EmptyState";
@@ -12,6 +11,18 @@ import { useStore } from "../store/useStore";
 import { useI18n } from "../utils/i18n";
 import { createBuilderContextForDashboard } from "../utils/dashboardWorkspace";
 import { TEMPLATE_GALLERY_CATALOG } from "../data/templateGalleryCatalog";
+import {
+  ACTIVE_DASHBOARD_KEY,
+  ACTIVE_PROJECT_KEY,
+  createDashboard as createStoredDashboard,
+  createProject as createStoredProject,
+  getActiveProject as getStoredActiveProject,
+  getProjects as getStoredProjects,
+  PROJECTS_KEY,
+  renameProject as renameStoredProject,
+  setActiveDashboard as setStoredActiveDashboard,
+  setActiveProject as setStoredActiveProject,
+} from "../services/projectStorage";
 
 function formatLastUpdated(dateValue) {
   if (!dateValue) return null;
@@ -26,47 +37,104 @@ function formatLastUpdated(dateValue) {
   }).format(date);
 }
 
-function getProjectLastUpdated(project, charts) {
-  const projectCharts = charts.filter((chart) => chart.projectId === project.id);
-  const latestChart = projectCharts
-    .map((chart) => chart.createdAt)
+function latestDate(...values) {
+  return values
+    .flat()
     .filter(Boolean)
-    .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0];
+    .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] ?? null;
+}
 
-  return latestChart ?? null;
+function dashboardDisplayName(dashboard) {
+  return dashboard?.name || dashboard?.dashboardName || "แดชบอร์ด";
 }
 
 export default function HomePage() {
   const { t } = useI18n();
   const navigate = useNavigate();
-  const projects = useStore((state) => state.projects);
-  const charts = useStore((state) => state.charts);
-  const ui = useStore((state) => state.ui);
-  const activeProjectId = useStore((state) => state.activeProjectId);
-  const activeSheetId = useStore((state) => state.activeSheetId);
-  const activeDashboardId = useStore((state) => state.activeDashboardId);
-  const renameProject = useStore((state) => state.renameProject);
-  const deleteProject = useStore((state) => state.deleteProject);
-  const setActiveProject = useStore((state) => state.setActiveProject);
+  const legacyProjects = useStore((state) => state.projects);
+  const legacyUi = useStore((state) => state.ui);
+  const legacyActiveProjectId = useStore((state) => state.activeProjectId);
+  const legacyActiveSheetId = useStore((state) => state.activeSheetId);
+  const legacyActiveDashboardId = useStore((state) => state.activeDashboardId);
+  const [workspaceRevision, setWorkspaceRevision] = useState(0);
   const [showModal, setShowModal] = useState(false);
   const [projectSort, setProjectSort] = useState("recent");
+  const [homeNotice, setHomeNotice] = useState("");
+  const projects = useMemo(() => {
+    void workspaceRevision;
+    return getStoredProjects();
+  }, [workspaceRevision]);
+  const activeProject = useMemo(() => getStoredActiveProject(projects), [projects]);
+  const activeProjectId = activeProject?.id ?? projects[0]?.id ?? null;
 
-  const totalDashboards = projects.reduce(
-    (count, project) =>
-      count +
-      (project.sheets?.reduce((sheetCount, sheet) => sheetCount + (sheet.dashboards?.length ?? 0), 0) ?? 0),
-    0
-  );
-  const totalSheets = projects.reduce((count, project) => count + (project.sheets?.length ?? 0), 0);
-  const workspaceTitle = "พื้นที่ทำงาน 01";
-  const activeProject = projects.find((project) => project.id === activeProjectId) ?? projects[0] ?? null;
+  const totalDashboards = projects.reduce((count, project) => count + (project.dashboards?.length ?? 0), 0);
+  const totalDatasets = projects.reduce((count, project) => count + (project.datasets?.length ?? 0), 0);
+  const totalCharts = projects.reduce((count, project) => count + (project.charts?.length ?? 0), 0);
+  const workspaceTitle = activeProject?.name ? `โปรเจกต์: ${activeProject.name}` : "พื้นที่ทำงาน 01";
+  const refreshProjects = () => setWorkspaceRevision((revision) => revision + 1);
+
+  React.useEffect(() => {
+    const onStorage = (event) => {
+      if ([PROJECTS_KEY, ACTIVE_PROJECT_KEY, ACTIVE_DASHBOARD_KEY].includes(event.key)) refreshProjects();
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
+  React.useEffect(() => {
+    if (!homeNotice) return undefined;
+    const timer = window.setTimeout(() => setHomeNotice(""), 2800);
+    return () => window.clearTimeout(timer);
+  }, [homeNotice]);
+
+  const openProject = (projectId) => {
+    if (!projectId) return;
+    setStoredActiveProject(projectId);
+    refreshProjects();
+    navigate("/dashboard");
+  };
+
+  const openDashboard = (projectId, dashboardId) => {
+    if (!projectId || !dashboardId) return;
+    setStoredActiveProject(projectId, dashboardId);
+    setStoredActiveDashboard(dashboardId);
+    refreshProjects();
+    navigate("/dashboard");
+  };
+
+  const createDashboardInProject = (projectId) => {
+    if (!projectId) return;
+    const dashboard = createStoredDashboard(projectId, "แดชบอร์ดใหม่");
+    setStoredActiveProject(projectId, dashboard.id);
+    setStoredActiveDashboard(dashboard.id);
+    refreshProjects();
+    setHomeNotice("สร้าง Dashboard ใหม่แล้ว");
+    navigate("/dashboard");
+  };
+
+  const renameProject = (projectId, name) => {
+    renameStoredProject(projectId, name);
+    refreshProjects();
+    setHomeNotice("เปลี่ยนชื่อโปรเจกต์แล้ว");
+  };
+
+  const deleteProject = () => {
+    setHomeNotice("การลบโปรเจกต์จะเปิดใช้เมื่อเชื่อมต่อ backend แล้ว");
+  };
+
   const quickTools = [
     {
       icon: "DB",
       label: "เปิดแดชบอร์ด",
       description: "จัดวางวิดเจ็ตบน Canvas",
-      action: () => navigate("/dashboard"),
+      action: () => openProject(activeProjectId),
       primary: true,
+    },
+    {
+      icon: "ND",
+      label: "สร้าง Dashboard",
+      description: "สร้าง Dashboard ใหม่ภายในโปรเจกต์ปัจจุบัน",
+      action: () => createDashboardInProject(activeProjectId),
     },
     {
       icon: "CH",
@@ -102,8 +170,8 @@ export default function HomePage() {
   const workspaceStatusItems = [
     { label: "โปรเจกต์", value: projects.length },
     { label: "แดชบอร์ด", value: totalDashboards },
-    { label: "ชุดข้อมูล", value: totalSheets },
-    { label: "ผู้ใช้งาน", value: activeProject ? 1 : 0 },
+    { label: "ชุดข้อมูล", value: totalDatasets },
+    { label: "กราฟ", value: totalCharts },
   ];
   const systemStatusItems = [
     { label: "Demo Mode", value: "เปิดใช้งาน", tone: "success" },
@@ -113,14 +181,13 @@ export default function HomePage() {
     { label: "Backend", value: "ยังไม่เชื่อมต่อ", tone: "muted" },
   ];
   const gettingStartedItems = [
-    "เลือกชุดข้อมูล",
-    "เปิดแดชบอร์ด",
-    "เลือก Template",
-    "Export หรือ Share",
+    "\u0e40\u0e25\u0e37\u0e2d\u0e01\u0e0a\u0e38\u0e14\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25",
+    "\u0e40\u0e1b\u0e34\u0e14\u0e41\u0e14\u0e0a\u0e1a\u0e2d\u0e23\u0e4c\u0e14",
+    "\u0e40\u0e25\u0e37\u0e2d\u0e01 Template",
+    "Export \u0e2b\u0e23\u0e37\u0e2d Share",
   ];
-
   const sortedProjects = useMemo(() => {
-    const recentProjectIds = ui?.recentProjectIds ?? [];
+    const recentProjectIds = legacyUi?.recentProjectIds ?? [];
     return [...projects].sort((a, b) => {
       const aIndex = recentProjectIds.indexOf(a.id);
       const bIndex = recentProjectIds.indexOf(b.id);
@@ -128,37 +195,44 @@ export default function HomePage() {
       const safeB = bIndex === -1 ? Number.MAX_SAFE_INTEGER : bIndex;
       return safeA - safeB;
     });
-  }, [projects, ui?.recentProjectIds]);
+  }, [legacyUi?.recentProjectIds, projects]);
 
   const projectSummaries = useMemo(() => {
     return Object.fromEntries(
       projects.map((project) => {
-        const sheetCount = project.sheets?.length ?? 0;
-        const dashboardCount =
-          project.sheets?.reduce((total, sheet) => total + (sheet.dashboards?.length ?? 0), 0) ?? 0;
-        const activeSheet = project.sheets?.[0] ?? null;
-        const activeDashboard = activeSheet?.dashboards?.[0] ?? null;
-        const lastOpened = ui?.lastOpenedContextByProject?.[project.id];
-        const lastOpenedSheet =
-          project.sheets?.find((sheet) => sheet.id === lastOpened?.sheetId) ?? activeSheet;
-        const lastOpenedDashboard =
-          lastOpenedSheet?.dashboards?.find((dashboard) => dashboard.id === lastOpened?.dashboardId) ??
-          activeDashboard;
-        const lastUpdated = getProjectLastUpdated(project, charts);
+        const dashboards = project.dashboards ?? [];
+        const dashboardCount = dashboards.length;
+        const datasetCount = project.datasets?.length ?? 0;
+        const chartCount = project.charts?.length ?? 0;
+        const dashboardList = dashboards.slice(0, 3).map((dashboard) => {
+          const lastUpdated = latestDate(dashboard.updatedAt, dashboard.createdAt);
+          return {
+            id: dashboard.id,
+            name: dashboardDisplayName(dashboard),
+            widgetCount: dashboard.widgets?.length ?? 0,
+            updatedLabel: formatLastUpdated(lastUpdated) ?? "ยังไม่มีการอัปเดต",
+          };
+        });
+        const lastUpdated = latestDate(
+          dashboards.map((dashboard) => dashboard.updatedAt ?? dashboard.createdAt),
+          project.charts?.map((chart) => chart.updatedAt ?? chart.createdAt),
+          project.updatedAt,
+          project.createdAt
+        );
 
         return [
           project.id,
           {
-            sheetCount,
             dashboardCount,
-            activeSheetName: lastOpenedSheet?.name ?? t("home.noSheet"),
-            activeDashboardName: lastOpenedDashboard?.name ?? t("home.noDashboard"),
+            datasetCount,
+            chartCount,
+            dashboardList,
             lastUpdatedLabel: formatLastUpdated(lastUpdated) ?? t("home.noRecentUpdates"),
           },
         ];
       })
     );
-  }, [charts, projects, t, ui?.lastOpenedContextByProject]);
+  }, [projects, t]);
 
   const visibleProjects = useMemo(() => {
     let next = [...projects];
@@ -214,10 +288,10 @@ export default function HomePage() {
   );
 
   const activeTemplateContext = useMemo(() => {
-    if (!activeProjectId) return null;
-    const activeProject = projects.find((project) => project.id === activeProjectId) ?? null;
-    const activeSheet = activeProject?.sheets.find((sheet) => sheet.id === activeSheetId) ?? activeProject?.sheets?.[0] ?? null;
-    const activeDashboard = activeSheet?.dashboards.find((dashboard) => dashboard.id === activeDashboardId) ?? activeSheet?.dashboards?.[0] ?? null;
+    if (!legacyActiveProjectId) return null;
+    const activeProject = legacyProjects.find((project) => project.id === legacyActiveProjectId) ?? null;
+    const activeSheet = activeProject?.sheets.find((sheet) => sheet.id === legacyActiveSheetId) ?? activeProject?.sheets?.[0] ?? null;
+    const activeDashboard = activeSheet?.dashboards.find((dashboard) => dashboard.id === legacyActiveDashboardId) ?? activeSheet?.dashboards?.[0] ?? null;
 
     if (!activeProject || !activeSheet || !activeDashboard) return null;
 
@@ -228,7 +302,7 @@ export default function HomePage() {
       returnTo: "/dashboard",
       source: "template-gallery",
     });
-  }, [activeDashboardId, activeProjectId, activeSheetId, projects]);
+  }, [legacyActiveDashboardId, legacyActiveProjectId, legacyActiveSheetId, legacyProjects]);
 
   function handleUseTemplate(template) {
     const builderContext = activeTemplateContext
@@ -247,17 +321,19 @@ export default function HomePage() {
   }
 
   const handleOpenProject = (id) => {
-    setActiveProject(id);
-    navigate("/dashboard");
+    openProject(id);
   };
 
   const handleCreate = async (name) => {
-    await createProjectApi(name);
+    const project = createStoredProject(name);
+    refreshProjects();
+    setStoredActiveProject(project.id, project.dashboards[0]?.id);
     navigate("/dashboard");
   };
 
   return (
     <PageContainer className="home-page" role="main">
+      {homeNotice ? <div className="home-toast" role="status">{homeNotice}</div> : null}
       <section className="home-top-showcase" aria-label="ภาพรวมพื้นที่ทำงาน">
         <Panel className="home-panel home-command-center" compact>
           <div className="home-hero-layout">
@@ -270,8 +346,11 @@ export default function HomePage() {
                   จัดการแดชบอร์ด ชุดข้อมูล และเครื่องมือทั้งหมดจากที่เดียว
                 </p>
                 <div className="home-toolbar-actions">
-                  <Button variant="primary" className="home-dashboard-btn" onClick={() => navigate("/dashboard")}>
+                  <Button variant="primary" className="home-dashboard-btn" onClick={() => openProject(activeProjectId)}>
                     เปิดแดชบอร์ด
+                  </Button>
+                  <Button variant="secondary" className="home-dashboard-btn" onClick={() => createDashboardInProject(activeProjectId)}>
+                    สร้าง Dashboard
                   </Button>
                   <Button variant="secondary" className="home-designer-btn" onClick={() => navigate("/dashboard-v2")}>
                     สร้างกราฟ
@@ -318,7 +397,7 @@ export default function HomePage() {
           <div className="home-stat-card is-activity">
             <span className="home-stat-icon" aria-hidden="true">DS</span>
             <span className="home-stat-card-label">ชุดข้อมูล</span>
-            <strong>{totalSheets}</strong>
+            <strong>{totalDatasets}</strong>
             <span className="home-stat-card-helper">เชื่อมต่อแล้ว</span>
           </div>
           <div className="home-stat-card is-highlight">
@@ -386,7 +465,9 @@ export default function HomePage() {
                     summary={projectSummaries[project.id]}
                     isActive={project.id === activeProjectId}
                     onOpen={handleOpenProject}
-                    onRename={renameProject}
+                    onOpenDashboard={openDashboard}
+                    onCreateDashboard={createDashboardInProject}
+                    onRenameProject={renameProject}
                     onDelete={deleteProject}
                     canDelete={projects.length > 1}
                   />

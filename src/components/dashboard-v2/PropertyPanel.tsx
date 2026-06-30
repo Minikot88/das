@@ -1,14 +1,17 @@
 import React, { memo, useEffect, useState } from "react";
 import AutoFixHighRoundedIcon from "@mui/icons-material/AutoFixHighRounded";
 import CodeRoundedIcon from "@mui/icons-material/CodeRounded";
+import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import ExpandMoreRoundedIcon from "@mui/icons-material/ExpandMoreRounded";
 import GridOnRoundedIcon from "@mui/icons-material/GridOnRounded";
 import LabelRoundedIcon from "@mui/icons-material/LabelRounded";
 import PaletteRoundedIcon from "@mui/icons-material/PaletteRounded";
+import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
 import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
+import ShareRoundedIcon from "@mui/icons-material/ShareRounded";
 import SpeedRoundedIcon from "@mui/icons-material/SpeedRounded";
-import TitleRoundedIcon from "@mui/icons-material/TitleRounded";
 import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
+import VisibilityRoundedIcon from "@mui/icons-material/VisibilityRounded";
 import {
   Accordion,
   AccordionDetails,
@@ -16,8 +19,9 @@ import {
   Alert,
   Box,
   Button,
-  Divider,
   FormControlLabel,
+  IconButton,
+  Menu,
   MenuItem,
   Paper,
   Select,
@@ -38,6 +42,11 @@ type PropertyPanelProps = {
   lastSavedAt: string;
   onSettingsChange: <K extends keyof ChartSettings>(section: K, patch: Partial<ChartSettings[K]>) => void;
   onSave: () => void;
+  onPreview: () => void;
+  onShare: () => void;
+  onExportJson: () => void;
+  onExportCsv: () => void;
+  onExportPng: () => void;
   onReset: () => void;
   onCopyConfig: () => void;
   onReplaceConfig: (config: ChartConfig) => void;
@@ -46,7 +55,6 @@ type PropertyPanelProps = {
 };
 
 const sections = [
-  { id: "general", title: "ทั่วไป", icon: <TitleRoundedIcon /> },
   { id: "axis", title: "แกน (Axis)", icon: <TuneRoundedIcon /> },
   { id: "labels", title: "ป้ายกำกับ (Labels)", icon: <LabelRoundedIcon /> },
   { id: "legend", title: "คำอธิบาย (Legend)", icon: <SettingsRoundedIcon /> },
@@ -95,17 +103,45 @@ function PropertyPanel({
   lastSavedAt,
   onSettingsChange,
   onSave,
+  onPreview,
+  onShare,
+  onExportJson,
+  onExportCsv,
+  onExportPng,
   onReset,
   onCopyConfig,
   onReplaceConfig,
   themePresets,
   onThemePresetChange,
 }: PropertyPanelProps) {
-  const [expandedSection, setExpandedSection] = useState<(typeof sections)[number]["id"] | "">("general");
+  const [expandedSection, setExpandedSection] = useState<(typeof sections)[number]["id"] | "">("axis");
   const [jsonText, setJsonText] = useState(() => JSON.stringify(config, null, 2));
   const [jsonError, setJsonError] = useState<string | null>(null);
+  const [exportAnchor, setExportAnchor] = useState<HTMLElement | null>(null);
   const selectedDefinition = getChartDefinition(config.chartType);
   const supportsSetting = (key: ChartSettingKey) => selectedDefinition?.supportedSettings.includes(key) ?? true;
+  const tableLikeChart =
+    config.chartType === "table" ||
+    config.chartType === "summary-table" ||
+    config.chartType === "pivot-table" ||
+    config.chartType === "matrix-table";
+  const axislessChart =
+    tableLikeChart ||
+    config.chartType === "pie" ||
+    config.chartType === "donut" ||
+    config.chartType === "gauge" ||
+    config.chartType === "progress-ring" ||
+    config.chartType === "kpi-card" ||
+    config.chartType === "metric-card" ||
+    config.chartType === "scorecard" ||
+    config.chartType === "treemap" ||
+    config.chartType === "sunburst" ||
+    config.chartType === "sankey" ||
+    config.chartType === "funnel" ||
+    config.chartType === "radar" ||
+    config.chartType === "polar-area" ||
+    config.chartType === "radial-bar";
+  const gridlessChart = axislessChart;
   const labelsSupported =
     config.chartType !== "kpi-card" &&
     config.chartType !== "kpi-trend" &&
@@ -113,10 +149,7 @@ function PropertyPanel({
     config.chartType !== "scorecard" &&
     config.chartType !== "gauge" &&
     config.chartType !== "progress-ring" &&
-    config.chartType !== "table" &&
-    config.chartType !== "summary-table" &&
-    config.chartType !== "pivot-table" &&
-    config.chartType !== "matrix-table" &&
+    !tableLikeChart &&
     config.chartType !== "scatter" &&
     config.chartType !== "bubble";
 
@@ -141,6 +174,23 @@ function PropertyPanel({
     onSettingsChange("colors", { seriesColors: nextColors });
   }
 
+  function closeExportMenu() {
+    setExportAnchor(null);
+  }
+
+  const selectedThemePreset =
+    themePresets.find((theme) => theme.id === config.settings.general.themePreset) ?? themePresets[0];
+
+  function isSectionSupported(sectionId: (typeof sections)[number]["id"]) {
+    if (sectionId === "advanced") return true;
+    if (!supportsSetting(sectionId)) return false;
+    if (sectionId === "axis" && axislessChart) return false;
+    if (sectionId === "grid" && gridlessChart) return false;
+    if (sectionId === "labels" && !labelsSupported) return false;
+    if (sectionId === "legend" && tableLikeChart) return false;
+    return true;
+  }
+
   return (
     <Paper
       data-testid="dashboard-v2-settings-panel"
@@ -159,13 +209,101 @@ function PropertyPanel({
         bgcolor: "background.paper",
       }}
     >
-      <Box sx={{ px: 1, py: 0.75, borderBottom: "1px solid", borderColor: "divider" }}>
-        <Typography variant="overline" color="text.secondary" fontWeight={500} sx={{ fontSize: 12, letterSpacing: ".04em", lineHeight: 1.25 }}>
-          ตั้งค่า
-        </Typography>
-        <Typography variant="caption" color="text.secondary" sx={{ display: "block", fontSize: 11 }}>
-          การตั้งค่ากราฟ
-        </Typography>
+      <Box
+        sx={{
+          position: "relative",
+          zIndex: tokens.zIndex.sticky,
+          px: 1,
+          py: 0.75,
+          borderBottom: "1px solid",
+          borderColor: tokens.color.borderSubtle,
+          bgcolor: tokens.color.surface,
+          minWidth: 0,
+        }}
+      >
+        <Stack spacing={0.75} minWidth={0}>
+          <Box minWidth={0}>
+            <Typography variant="overline" color="text.secondary" fontWeight={500} sx={{ fontSize: 12, letterSpacing: ".04em", lineHeight: 1.25 }}>
+              ตั้งค่า
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: "block", fontSize: 11, lineHeight: 1.35 }}>
+              การตั้งค่ากราฟ
+            </Typography>
+          </Box>
+
+          <Stack
+            direction="row"
+            spacing={0.5}
+            alignItems="center"
+            sx={{
+              minHeight: 34,
+              minWidth: 0,
+              "& .MuiButton-root": {
+                height: 30,
+                minHeight: 30,
+                px: 0.75,
+                fontSize: 11,
+                lineHeight: 1.25,
+                borderRadius: `${tokens.radius.control}px`,
+              },
+              "& .MuiButton-startIcon": { mr: 0.35 },
+              "& .MuiButton-startIcon svg": { fontSize: 15 },
+              "& .MuiIconButton-root": {
+                width: 30,
+                height: 30,
+                border: "1px solid",
+                borderColor: tokens.color.border,
+                borderRadius: `${tokens.radius.control}px`,
+              },
+              "& .MuiSvgIcon-root": { fontSize: 15 },
+            }}
+          >
+            <Button variant="contained" startIcon={<SaveRoundedIcon />} onClick={onSave} aria-label="บันทึกกราฟ">
+              บันทึก
+            </Button>
+            <Button variant="outlined" startIcon={<VisibilityRoundedIcon />} onClick={onPreview} aria-label="พรีวิวกราฟ">
+              พรีวิว
+            </Button>
+            <IconButton onClick={onShare} aria-label="แชร์กราฟ" title="แชร์">
+              <ShareRoundedIcon />
+            </IconButton>
+            <IconButton
+              onClick={(event) => setExportAnchor(event.currentTarget)}
+              aria-label="ส่งออกกราฟ"
+              title="ส่งออก"
+              aria-haspopup="menu"
+              aria-expanded={Boolean(exportAnchor)}
+            >
+              <DownloadRoundedIcon />
+            </IconButton>
+            <Menu anchorEl={exportAnchor} open={Boolean(exportAnchor)} onClose={closeExportMenu}>
+              <MenuItem
+                onClick={() => {
+                  closeExportMenu();
+                  onExportJson();
+                }}
+              >
+                ส่งออก JSON
+              </MenuItem>
+              <MenuItem
+                onClick={() => {
+                  closeExportMenu();
+                  onExportCsv();
+                }}
+              >
+                ส่งออก CSV
+              </MenuItem>
+              <MenuItem
+                onClick={() => {
+                  closeExportMenu();
+                  void onExportPng();
+                }}
+              >
+                ส่งออก PNG
+              </MenuItem>
+            </Menu>
+          </Stack>
+        </Stack>
       </Box>
 
       <Box
@@ -174,25 +312,166 @@ function PropertyPanel({
           overflowY: "auto",
           overflowX: "hidden",
           minWidth: 0,
-          p: 0.5,
+          p: 0,
           "& *": { minWidth: 0 },
           "& .MuiFormControl-root, & .MuiTextField-root, & .MuiInputBase-root, & .MuiSlider-root": {
             width: "100%",
             maxWidth: "100%",
           },
-          "& .MuiOutlinedInput-root": { minHeight: 28 },
-          "& .MuiInputBase-input": { py: 0.375, fontSize: 12 },
-          "& .MuiSelect-select": { py: 0.35, fontSize: 12 },
+          "& .MuiOutlinedInput-root": { minHeight: 32, borderRadius: `${tokens.radius.control}px` },
+          "& .MuiInputBase-input": { py: 0.5, fontSize: 12, lineHeight: 1.35 },
+          "& .MuiSelect-select": { py: 0.45, fontSize: 12, lineHeight: 1.35 },
           "& .MuiFormControlLabel-label": { fontSize: 12, lineHeight: 1.4 },
+          "& .MuiFormControlLabel-root": { minHeight: 26, mr: 0 },
           "& .MuiSwitch-root": { width: 30, height: 17, p: 0.25 },
           "& .MuiSwitch-switchBase": { p: 0.5 },
           "& .MuiSwitch-thumb": { width: 12, height: 12 },
           "& .MuiSwitch-track": { borderRadius: 999 },
+          "& .MuiSlider-root": { py: 0.75 },
+          "& .MuiSlider-rail, & .MuiSlider-track": { height: 2 },
+          "& .MuiSlider-thumb": { width: 12, height: 12 },
         }}
       >
+        <Box
+          sx={{
+            px: 0.75,
+            py: 0.75,
+            borderBottom: "1px solid",
+            borderColor: tokens.color.borderSubtle,
+            bgcolor: tokens.color.surface,
+          }}
+        >
+          <Typography variant="subtitle2" sx={{ fontSize: 12, fontWeight: 500, lineHeight: 1.35, mb: 0.75 }}>
+            Quick settings
+          </Typography>
+          <Stack spacing={0.75}>
+            <TextField
+              label="ชื่อกราฟ"
+              size="small"
+              value={config.settings.general.title}
+              onChange={(event) => onSettingsChange("general", { title: event.target.value })}
+            />
+            <TextField
+              label="คำอธิบาย"
+              size="small"
+              value={config.settings.general.subtitle}
+              onChange={(event) => onSettingsChange("general", { subtitle: event.target.value })}
+            />
+            <FieldLabel>Theme Preset</FieldLabel>
+            <Select
+              size="small"
+              value={config.settings.general.themePreset ?? selectedThemePreset?.id ?? "default-blue"}
+              onChange={(event) => onThemePresetChange(event.target.value as DemoThemeId)}
+              fullWidth
+              aria-label="Theme Preset"
+              inputProps={{ "aria-label": "Theme Preset" }}
+            >
+              {themePresets.map((theme) => (
+                <MenuItem key={theme.id} value={theme.id}>
+                  <Stack direction="row" spacing={1} alignItems="center" minWidth={0}>
+                    <Stack direction="row" spacing={0.25} sx={{ flex: "0 0 auto" }}>
+                      {theme.seriesColors.slice(0, 4).map((color) => (
+                        <Box key={color} sx={{ width: 10, height: 10, bgcolor: color, border: "1px solid", borderColor: tokens.color.borderSubtle }} />
+                      ))}
+                    </Stack>
+                    <Box minWidth={0}>
+                      <Typography variant="body2" noWrap sx={{ fontSize: 12 }}>
+                        {theme.name}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" noWrap sx={{ display: "block", fontSize: 10, fontWeight: 400 }}>
+                        {theme.description}
+                      </Typography>
+                    </Box>
+                  </Stack>
+                </MenuItem>
+              ))}
+            </Select>
+            <Stack spacing={0.25}>
+              <FormControlLabel
+                control={<Switch checked={config.settings.general.showTitle} onChange={(event) => onSettingsChange("general", { showTitle: event.target.checked })} />}
+                label="แสดงชื่อกราฟ"
+                sx={{ m: 0 }}
+              />
+              <FormControlLabel
+                control={<Switch checked={config.settings.general.showSubtitle} onChange={(event) => onSettingsChange("general", { showSubtitle: event.target.checked })} />}
+                label="แสดงคำอธิบายรอง"
+                sx={{ m: 0 }}
+              />
+            </Stack>
+          </Stack>
+        </Box>
+
+        <Box
+          sx={{
+            px: 0.75,
+            py: 0.75,
+            borderBottom: "1px solid",
+            borderColor: tokens.color.borderSubtle,
+            bgcolor: tokens.color.surfaceMuted,
+          }}
+        >
+          <Typography variant="subtitle2" sx={{ fontSize: 12, fontWeight: 500, lineHeight: 1.35, mb: 0.75 }}>
+            Style
+          </Typography>
+          <Stack spacing={0.75}>
+            <Stack direction="row" spacing={0.75} alignItems="center">
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <FieldLabel>Background</FieldLabel>
+                <Select
+                  size="small"
+                  value={config.settings.general.backgroundColor}
+                  onChange={(event) => onSettingsChange("general", { backgroundColor: event.target.value })}
+                  fullWidth
+                  aria-label="พื้นหลังกราฟ"
+                >
+                  <MenuItem value="#FFFFFF">White</MenuItem>
+                  <MenuItem value="#F8F9FB">Light Gray</MenuItem>
+                  <MenuItem value="#F4F7FB">Soft Blue Gray</MenuItem>
+                  <MenuItem value="#0F172A">Executive Dark</MenuItem>
+                </Select>
+              </Box>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <FieldLabel>Palette</FieldLabel>
+                <Select
+                  size="small"
+                  value={config.settings.colors.palette}
+                  onChange={(event) => onSettingsChange("colors", { palette: event.target.value as ChartSettings["colors"]["palette"] })}
+                  fullWidth
+                  aria-label="ชุดสี"
+                >
+                  <MenuItem value="default">Default</MenuItem>
+                  <MenuItem value="business">Business</MenuItem>
+                  <MenuItem value="pastel">Pastel</MenuItem>
+                  <MenuItem value="vivid">Vivid</MenuItem>
+                  <MenuItem value="monochrome">Monochrome</MenuItem>
+                </Select>
+              </Box>
+            </Stack>
+            <Box>
+              <Stack direction="row" alignItems="center" justifyContent="space-between">
+                <FieldLabel>Padding</FieldLabel>
+                <Typography variant="caption" color="text.secondary">{config.settings.general.padding}px</Typography>
+              </Stack>
+              <Slider value={config.settings.general.padding} min={8} max={48} step={4} valueLabelDisplay="auto" onChange={(_, value) => onSettingsChange("general", { padding: value as number })} />
+            </Box>
+            <Box>
+              <Stack direction="row" alignItems="center" justifyContent="space-between">
+                <FieldLabel>Radius</FieldLabel>
+                <Typography variant="caption" color="text.secondary">{config.settings.general.radius}px</Typography>
+              </Stack>
+              <Slider value={config.settings.general.radius} min={0} max={16} step={1} valueLabelDisplay="auto" onChange={(_, value) => onSettingsChange("general", { radius: value as number })} />
+            </Box>
+            <Stack direction="row" spacing={0.5} alignItems="center" sx={{ minWidth: 0 }}>
+              {config.settings.colors.seriesColors.slice(0, 8).map((color) => (
+                <Box key={color} sx={{ width: 16, height: 10, bgcolor: color, border: "1px solid", borderColor: tokens.color.borderSubtle }} />
+              ))}
+            </Stack>
+          </Stack>
+        </Box>
+
         {sections.map((section) => {
           const expanded = expandedSection === section.id;
-          const sectionSupported = section.id === "advanced" || supportsSetting(section.id);
+          const sectionSupported = isSectionSupported(section.id);
           return (
             <Accordion
               key={section.id}
@@ -209,7 +488,17 @@ function PropertyPanel({
                 bgcolor: tokens.color.surface,
               }}
             >
-              <AccordionSummary expandIcon={<ExpandMoreRoundedIcon />} aria-controls={`${section.id}-content`} id={`${section.id}-header`}>
+              <AccordionSummary
+                expandIcon={<ExpandMoreRoundedIcon sx={{ fontSize: 16 }} />}
+                aria-controls={`${section.id}-content`}
+                id={`${section.id}-header`}
+                sx={{
+                  minHeight: "34px !important",
+                  px: 0.75,
+                  "& .MuiAccordionSummary-content": { my: 0, alignItems: "center" },
+                  "& .MuiAccordionSummary-expandIconWrapper": { color: sectionSupported ? "text.secondary" : tokens.color.textMuted },
+                }}
+              >
                 <Stack direction="row" spacing={1} alignItems="center">
                   <Box
                     sx={{
@@ -230,59 +519,11 @@ function PropertyPanel({
               </AccordionSummary>
 
               {expanded ? (
-              <AccordionDetails sx={{ pt: 0.25, pb: 0.75 }}>
+              <AccordionDetails sx={{ pt: 0.25, pb: 0.75, px: 0.75, overflow: "hidden" }}>
                 {!sectionSupported ? (
                   <Alert severity="info">การตั้งค่านี้ไม่รองรับกับกราฟชนิดปัจจุบัน</Alert>
                 ) : (
                   <>
-                {section.id === "general" ? (
-                  <Stack spacing={0.75}>
-                    <TextField label="ชื่อกราฟ" size="small" value={config.settings.general.title} onChange={(event) => onSettingsChange("general", { title: event.target.value })} />
-                    <TextField label="คำอธิบายรอง" size="small" value={config.settings.general.subtitle} onChange={(event) => onSettingsChange("general", { subtitle: event.target.value })} />
-                    <FieldLabel>Theme Preset</FieldLabel>
-                    <Select
-                      size="small"
-                      value={config.settings.general.themePreset ?? "default-blue"}
-                      onChange={(event) => onThemePresetChange(event.target.value as DemoThemeId)}
-                      fullWidth
-                      aria-label="Theme Preset"
-                      inputProps={{ "aria-label": "Theme Preset" }}
-                    >
-                      {themePresets.map((theme) => (
-                        <MenuItem key={theme.id} value={theme.id}>
-                          <Stack direction="row" spacing={1} alignItems="center" minWidth={0}>
-                            <Stack direction="row" spacing={0.25}>
-                              {theme.seriesColors.slice(0, 4).map((color) => (
-                                <Box key={color} sx={{ width: 10, height: 10, bgcolor: color, border: "1px solid", borderColor: tokens.color.borderSubtle }} />
-                              ))}
-                            </Stack>
-                            <Box minWidth={0}>
-                              <Typography variant="body2" noWrap>
-                                {theme.name}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary" noWrap sx={{ display: { xs: "none", xl: "block" }, fontWeight: 400 }}>
-                                {theme.description}
-                              </Typography>
-                            </Box>
-                          </Stack>
-                        </MenuItem>
-                      ))}
-                    </Select>
-                    <FormControlLabel control={<Switch checked={config.settings.general.showTitle} onChange={(event) => onSettingsChange("general", { showTitle: event.target.checked })} />} label="แสดงชื่อกราฟ" />
-                    <FormControlLabel control={<Switch checked={config.settings.general.showSubtitle} onChange={(event) => onSettingsChange("general", { showSubtitle: event.target.checked })} />} label="แสดงคำอธิบายรอง" />
-                    <Select size="small" value={config.settings.general.backgroundColor} onChange={(event) => onSettingsChange("general", { backgroundColor: event.target.value })} fullWidth aria-label="พื้นหลังกราฟ">
-                      <MenuItem value="#FFFFFF">White</MenuItem>
-                      <MenuItem value="#F8F9FB">Light Gray</MenuItem>
-                      <MenuItem value="#F4F7FB">Soft Blue Gray</MenuItem>
-                      <MenuItem value="#0F172A">Executive Dark</MenuItem>
-                    </Select>
-                    <FieldLabel>Padding</FieldLabel>
-                    <Slider value={config.settings.general.padding} min={8} max={48} step={4} valueLabelDisplay="auto" onChange={(_, value) => onSettingsChange("general", { padding: value as number })} />
-                    <FieldLabel>Radius</FieldLabel>
-                    <Slider value={config.settings.general.radius} min={0} max={16} step={1} valueLabelDisplay="auto" onChange={(_, value) => onSettingsChange("general", { radius: value as number })} />
-                  </Stack>
-                ) : null}
-
                 {section.id === "axis" ? (
                   <Stack spacing={0.75}>
                     <FormControlLabel control={<Switch checked={config.settings.axis.showXAxis} onChange={(event) => onSettingsChange("axis", { showXAxis: event.target.checked })} />} label="แสดง X Axis" />
@@ -343,13 +584,6 @@ function PropertyPanel({
 
                 {section.id === "colors" ? (
                   <Stack spacing={0.75}>
-                    <Select size="small" value={config.settings.colors.palette} onChange={(event) => onSettingsChange("colors", { palette: event.target.value as ChartSettings["colors"]["palette"] })} fullWidth aria-label="ชุดสี">
-                      <MenuItem value="default">Default</MenuItem>
-                      <MenuItem value="business">Business</MenuItem>
-                      <MenuItem value="pastel">Pastel</MenuItem>
-                      <MenuItem value="vivid">Vivid</MenuItem>
-                      <MenuItem value="monochrome">Monochrome</MenuItem>
-                    </Select>
                     {config.settings.colors.seriesColors.slice(0, 6).map((color, index) => (
                       <ColorInput key={index} label={`Series ${index + 1}`} value={color} onChange={(value) => updateSeriesColor(index, value)} />
                     ))}
@@ -435,11 +669,7 @@ function PropertyPanel({
         })}
       </Box>
 
-      <Box sx={{ px: 1, py: 0.75, borderTop: "1px solid", borderColor: "divider", bgcolor: tokens.color.surface }}>
-        <Button fullWidth variant="contained" onClick={onSave} sx={{ height: 30, minHeight: 30 }}>
-          บันทึกกราฟ
-        </Button>
-        <Divider sx={{ my: 0.75 }} />
+      <Box sx={{ height: 44, px: 1, py: 0.6, borderTop: "1px solid", borderColor: "divider", bgcolor: tokens.color.surface }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1}>
           <Box>
             <Typography variant="caption" color={saveStatus === "unsaved" ? "warning.main" : "success.main"} sx={{ display: "block", fontSize: 11, fontWeight: 500 }}>

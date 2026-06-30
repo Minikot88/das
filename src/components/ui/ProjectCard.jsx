@@ -4,29 +4,35 @@ export default function ProjectCard({
   project,
   isActive,
   onOpen,
-  onRename,
+  onOpenDashboard,
+  onCreateDashboard,
+  onRenameProject,
   onDelete,
   summary,
   canDelete = true,
 }) {
   const [renamingOpen, setRenamingOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [renameVal, setRenameVal] = useState(project.name);
-  const sheetCount = summary?.sheetCount ?? project.sheets?.length ?? 0;
-  const dashboardCount = summary?.dashboardCount ?? project.sheets?.reduce((total, sheet) => total + sheet.dashboards.length, 0) ?? 0;
-  const activeSheetName = summary?.activeSheetName ?? "ไม่มีชีต";
-  const activeDashboardName = summary?.activeDashboardName ?? "ไม่มีแดชบอร์ด";
+  const dashboardCount = summary?.dashboardCount ?? project.dashboards?.length ?? 0;
+  const datasetCount = summary?.datasetCount ?? project.datasets?.length ?? 0;
+  const chartCount = summary?.chartCount ?? project.charts?.length ?? 0;
+  const dashboardList = summary?.dashboardList ?? [];
+  const moreDashboardCount = Math.max(0, dashboardCount - dashboardList.length);
   const lastUpdatedLabel = summary?.lastUpdatedLabel ?? "ยังไม่มีการอัปเดต";
   const statusLabel = isActive ? "ใช้งาน" : "พร้อมใช้";
   const statusTone = isActive ? "is-active" : "is-ready";
   const metricItems = [
-    { label: "ชีต", value: sheetCount },
     { label: "แดชบอร์ด", value: dashboardCount },
+    { label: "ชุดข้อมูล", value: datasetCount },
+    { label: "กราฟ", value: chartCount },
   ];
 
   const handleRenameSubmit = (event) => {
     event.preventDefault();
-    if (renameVal.trim()) onRename(project.id, renameVal.trim());
+    if (renameVal.trim()) onRenameProject?.(project.id, renameVal.trim());
     setRenamingOpen(false);
+    setMenuOpen(false);
   };
 
   return (
@@ -70,8 +76,10 @@ export default function ProjectCard({
         )}
 
         <div className="project-card-context">
-          <span className="project-card-context-label">บริบท</span>
-          <div className="project-card-context-value">{activeSheetName} / {activeDashboardName}</div>
+          <span className="project-card-context-label">สรุป</span>
+          <div className="project-card-context-value">
+            {dashboardCount} แดชบอร์ด · {datasetCount} ชุดข้อมูล · {chartCount} กราฟ
+          </div>
         </div>
 
         <div className="project-card-metrics">
@@ -83,38 +91,88 @@ export default function ProjectCard({
           ))}
         </div>
 
+        <div className="project-card-dashboard-list" onClick={(event) => event.stopPropagation()}>
+          {dashboardList.length ? (
+            dashboardList.map((dashboard) => (
+              <button
+                key={dashboard.id}
+                type="button"
+                className="project-card-dashboard-row"
+                onClick={() => onOpenDashboard?.(project.id, dashboard.id)}
+              >
+                <span className="project-card-dashboard-name">{dashboard.name}</span>
+                <span className="project-card-dashboard-meta">
+                  {dashboard.widgetCount} วิดเจ็ต · {dashboard.updatedLabel}
+                </span>
+              </button>
+            ))
+          ) : (
+            <div className="project-card-dashboard-empty">ยังไม่มีแดชบอร์ด</div>
+          )}
+          {moreDashboardCount > 0 ? (
+            <span className="project-card-dashboard-more">อีก {moreDashboardCount} แดชบอร์ด</span>
+          ) : null}
+        </div>
+
         <div className="project-card-footer">
           <div className="project-card-updated">
             <span className="project-card-updated-label">อัปเดตล่าสุด</span>
             <strong>{lastUpdatedLabel}</strong>
           </div>
           <div className="project-card-meta">
-            <span>{activeSheetName}</span>
-            <span>{activeDashboardName}</span>
+            <span>{dashboardCount} แดชบอร์ด</span>
+            <span>{chartCount} กราฟ</span>
           </div>
           <div className="project-card-actions" onClick={(event) => event.stopPropagation()}>
             <button
               type="button"
+              className="project-card-open-btn"
+              onClick={() => onOpen(project.id)}
+            >
+              เปิดโปรเจกต์
+            </button>
+            <button
+              type="button"
+              className="project-card-create-dashboard-btn"
+              onClick={() => onCreateDashboard?.(project.id)}
+            >
+              สร้าง Dashboard
+            </button>
+            <button
+              type="button"
               className="project-card-manage-btn"
-              onClick={() => setRenamingOpen(true)}
+              onClick={() => setMenuOpen((open) => !open)}
               title="จัดการ"
               aria-label="จัดการ"
+              aria-expanded={menuOpen}
             >
               จัดการ
             </button>
-            {canDelete ? (
-              <button
-                type="button"
-                className="project-card-delete-btn"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(project.id);
-                }}
-                title="ลบ"
-                aria-label="ลบ"
-              >
-                ลบ
-              </button>
+            {menuOpen ? (
+              <div className="project-card-menu" role="menu">
+                <button type="button" role="menuitem" onClick={() => setRenamingOpen(true)}>
+                  เปลี่ยนชื่อโปรเจกต์
+                </button>
+                <button type="button" role="menuitem" onClick={() => onCreateDashboard?.(project.id)}>
+                  สร้าง Dashboard
+                </button>
+                <button type="button" role="menuitem" onClick={() => onOpen(project.id)}>
+                  ดู Dashboards
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  disabled={!canDelete}
+                  title={canDelete ? "ลบโปรเจกต์" : "ต้องมีโปรเจกต์อย่างน้อย 1 รายการ"}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete?.(project.id);
+                    setMenuOpen(false);
+                  }}
+                >
+                  ลบโปรเจกต์
+                </button>
+              </div>
             ) : null}
           </div>
         </div>

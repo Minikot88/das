@@ -333,7 +333,7 @@ function MappingDropZone({
         sx={{
           minHeight: 0,
           display: "grid",
-          gridTemplateColumns: showAggregationControl ? "minmax(0, 1fr) 88px" : "minmax(0, 1fr)",
+          gridTemplateColumns: showAggregationControl ? "minmax(82px, 1fr) 52px" : "minmax(0, 1fr)",
           alignItems: "center",
           gap: 0.5,
           overflow: "visible",
@@ -347,7 +347,11 @@ function MappingDropZone({
                 slotId={slot.id}
                 field={field}
                 compact={compact}
-                label={`${field.name}${slot.aggregation && slot.aggregation !== "None" ? ` (${slot.aggregation})` : ""}`}
+                label={
+                  showAggregationControl
+                    ? field.name
+                    : `${field.name}${slot.aggregation && slot.aggregation !== "None" ? ` (${slot.aggregation})` : ""}`
+                }
                 onRemove={() => onRemoveField(slot.id, field.id)}
               />
             ))
@@ -382,7 +386,12 @@ function MappingDropZone({
             onChange={(event) => onAggregationChange(slot.id, event.target.value as Aggregation)}
             disabled={!slot.fields.length || options.length === 1}
             aria-label={`aggregation ${slot.label}`}
-            sx={{ height: 28, maxWidth: "100%", minWidth: 0, "& .MuiSelect-select": { py: 0.25, fontSize: 10, lineHeight: 1.35 } }}
+            sx={{
+              height: 28,
+              maxWidth: "100%",
+              minWidth: 0,
+              "& .MuiSelect-select": { py: 0.25, pl: 0.75, pr: "18px !important", fontSize: 10, lineHeight: 1.35 },
+            }}
           >
             {options.map((option) => (
               <MenuItem key={option} value={option}>

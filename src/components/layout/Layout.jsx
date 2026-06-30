@@ -104,12 +104,14 @@ export function MainLayout() {
     location.pathname === "/builder";
   const isHomeRoute = location.pathname === "/" || location.pathname === "/home";
   const isBuilderRoute = location.pathname === "/builder";
+  const isConnectionRoute = location.pathname === "/connections";
   const shellClassName = joinClassNames(
     "shell",
     "mini-bi-ribbon-shell",
     sidebarCollapsed && "sidebar-collapsed",
     isWorkspaceRoute && "is-workspace-route",
     isBuilderRoute && "is-builder-route",
+    isConnectionRoute && "is-connection-route",
     isDashboardCanvasRoute && "is-dashboard-canvas-route",
     isChartDesignerRoute && "is-chart-designer-route"
   );
@@ -117,6 +119,7 @@ export function MainLayout() {
     "main-content",
     isWorkspaceRoute && "is-workspace-route",
     isBuilderRoute && "is-builder-route",
+    isConnectionRoute && "is-connection-route",
     isDashboardCanvasRoute && "is-dashboard-canvas-route",
     isChartDesignerRoute && "is-chart-designer-route"
   );
@@ -128,7 +131,7 @@ export function MainLayout() {
         <main className={mainClassName} id="main-content" role="main">
           <Outlet />
         </main>
-        {!isWorkspaceRoute && !isHomeRoute ? <SidebarRight /> : null}
+        {!isWorkspaceRoute && !isHomeRoute && !isConnectionRoute ? <SidebarRight /> : null}
       </div>
     </div>
   );

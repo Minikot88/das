@@ -1,5 +1,6 @@
 import React, { Suspense, lazy } from "react";
 import { Alert, Box, CssBaseline, GlobalStyles, Skeleton, Snackbar, Stack, ThemeProvider } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { DndProvider } from "react-dnd";
 import BottomStatus from "@/components/dashboard-v2/BottomStatus";
@@ -51,6 +52,7 @@ function GallerySkeleton() {
 
 function DashboardDesignerContent() {
   const { state, actions } = useDashboardDesigner();
+  const navigate = useNavigate();
   const [templateOpen, setTemplateOpen] = React.useState(false);
   const [featurePreviewId, setFeaturePreviewId] = React.useState<string | null>(null);
   const [mobileTab, setMobileTab] = React.useState<MobileDesignerTab>("preview");
@@ -215,6 +217,47 @@ function DashboardDesignerContent() {
         </Box>
       ) : null}
 
+      {!state.previewMode && state.returnToDashboard ? (
+        <Box
+          sx={{
+            height: 32,
+            flex: "0 0 32px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 1,
+            px: 1.25,
+            borderBottom: "1px solid",
+            borderColor: tokens.color.borderSubtle,
+            bgcolor: tokens.color.surface,
+            fontSize: 11,
+            color: tokens.color.textMuted,
+          }}
+        >
+          <span>กำลังแก้ไขกราฟจากตัวจัดวางแดชบอร์ด</span>
+          <Box
+            component="button"
+            type="button"
+            onClick={() => navigate("/dashboard")}
+            sx={{
+              height: 24,
+              px: 1,
+              border: "1px solid",
+              borderColor: tokens.color.border,
+              borderRadius: `${tokens.radius.control}px`,
+              bgcolor: tokens.color.surface,
+              color: tokens.color.text,
+              font: "inherit",
+              fontWeight: 500,
+              cursor: "pointer",
+              "&:hover": { bgcolor: tokens.color.primarySubtle },
+            }}
+          >
+            กลับแดชบอร์ด
+          </Box>
+        </Box>
+      ) : null}
+
       <Box
         component="main"
         sx={{
@@ -343,6 +386,11 @@ function DashboardDesignerContent() {
               onSettingsChange={actions.updateSettings}
               onThemePresetChange={actions.applyThemePreset}
               onSave={actions.saveChart}
+              onPreview={actions.togglePreviewMode}
+              onShare={() => actions.setShareOpen(true)}
+              onExportJson={actions.exportJson}
+              onExportCsv={actions.exportCsv}
+              onExportPng={actions.exportPng}
               onReset={actions.resetConfig}
               onCopyConfig={() => {
                 void actions.copyConfig();

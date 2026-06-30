@@ -12,7 +12,7 @@ const RIBBON_TABS = [
   { id: "home", label: "หน้าหลัก", routes: ["/", "/home"] },
   { id: "dashboard", label: "แดชบอร์ด", routes: ["/dashboard"] },
   { id: "chart", label: "สร้างกราฟ", routes: ["/dashboard-v2"] },
-  { id: "data", label: "ข้อมูล", routes: ["/datasets"] },
+  { id: "data", label: "ข้อมูล", routes: ["/datasets", "/connections"] },
   { id: "tools", label: "เครื่องมือ", routes: ["/builder", "/dashboard-legacy"] },
   { id: "settings", label: "ตั้งค่า", routes: ["/settings"] },
 ];
@@ -217,7 +217,7 @@ const MINI_RIBBON_TABS = [
   { id: "home", label: "หน้าหลัก", route: "/home", routes: ["/", "/home"] },
   { id: "dashboard", label: "แดชบอร์ด", route: "/dashboard", routes: ["/dashboard"] },
   { id: "chart", label: "สร้างกราฟ", route: "/dashboard-v2", routes: ["/dashboard-v2"] },
-  { id: "data", label: "ข้อมูล", route: "/datasets", routes: ["/datasets"] },
+  { id: "data", label: "ข้อมูล", route: "/datasets", routes: ["/datasets", "/connections"] },
   { id: "tools", label: "เครื่องมือ", routes: ["/builder", "/dashboard-legacy"] },
   { id: "settings", label: "ตั้งค่า", route: "/settings", routes: ["/settings"] },
 ];
@@ -259,6 +259,13 @@ const TOOL_NAV_ITEMS = [
     description: "สำหรับดูหน้าเดิม",
     route: "/dashboard-legacy",
     keywords: "dashboard legacy แดชบอร์ดเดิม",
+  },
+  {
+    id: "connections",
+    label: "เชื่อมต่อฐานข้อมูล",
+    description: "ตั้งค่า connection profile แบบ demo",
+    route: "/connections",
+    keywords: "database connection postgresql mysql dbeaver เชื่อมต่อฐานข้อมูล",
   },
   {
     id: "tool-export",
@@ -350,22 +357,13 @@ const MINI_RIBBON_GROUPS = {
         { label: "Table", icon: "table", action: "chart:select", chartType: "table" },
       ],
     },
-    {
-      title: "การทำงาน",
-      items: [
-        { label: "Save Chart", icon: "save", action: "chart:save" },
-        { label: "Preview", icon: "desktop", action: "chart:preview" },
-        { label: "Share", icon: "share", action: "chart:share" },
-        { label: "Export", icon: "pdf", action: "chart:export" },
-      ],
-    },
   ],
   data: [
     {
       title: "นำเข้า",
       items: [
         { label: "นำเข้าข้อมูล", icon: "csv", route: "/datasets", tone: "primary" },
-        { label: "เชื่อมต่อ", title: "เชื่อมต่อฐานข้อมูล", icon: "api", action: "coming-soon", noticeTitle: "เชื่อมต่อฐานข้อมูล", noticeMessage: "ฟีเจอร์เชื่อมต่อฐานข้อมูลจริงจะเปิดใช้เมื่อมี backend/API" },
+        { label: "เชื่อมต่อ", title: "เชื่อมต่อฐานข้อมูล", icon: "api", route: "/connections" },
         { label: "รีเฟรช", icon: "refresh", action: "coming-soon", noticeTitle: "รีเฟรชข้อมูล", noticeMessage: "ตอนนี้ใช้ข้อมูลเดโมในเครื่อง ยังไม่มี backend สำหรับรีเฟรชข้อมูลจริง" },
         { label: "ค้นหา", icon: "filter", route: "/datasets" },
       ],
@@ -385,6 +383,7 @@ const MINI_RIBBON_GROUPS = {
       items: [
         { label: "ตัวสร้างกราฟ", icon: "bar", route: "/dashboard-v2", tone: "primary" },
         { label: "แดชบอร์ด", title: "ตัวจัดวางแดชบอร์ด", icon: "dashboard", route: "/dashboard" },
+        { label: "เชื่อมต่อ", title: "เชื่อมต่อฐานข้อมูล", icon: "api", route: "/connections" },
         { label: "เดิม", title: "เครื่องมือเดิม", icon: "settings", route: "/builder" },
         { label: "เดิม", title: "แดชบอร์ดเดิม", icon: "dashboard", route: "/dashboard-legacy" },
         { label: "ส่งออก", title: "ส่งออก / รายงาน", icon: "pdf", action: "coming-soon", noticeTitle: "ส่งออก / รายงาน", noticeMessage: "ศูนย์ส่งออกและรายงานจะเปิดใช้ในเวอร์ชันถัดไป" },
@@ -596,6 +595,15 @@ export default function AppHeader() {
         keywords: "data dataset datasets ข้อมูล ชุดข้อมูล",
         shortcut: "Data",
         onActivate: () => navigate("/datasets"),
+      },
+      {
+        id: "go-connections",
+        label: "เชื่อมต่อฐานข้อมูล",
+        detail: "เปิดหน้าตั้งค่า database connection profile",
+        group: "ข้อมูล",
+        keywords: "database connection postgresql mysql mariadb sql server dbeaver เชื่อมต่อฐานข้อมูล",
+        shortcut: "DB",
+        onActivate: () => navigate("/connections"),
       },
       {
         id: "go-settings",

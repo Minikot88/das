@@ -9,6 +9,7 @@ const DashboardCanvasBuilder = lazy(() => import("@/pages/DashboardCanvasBuilder
 const DashboardDesignerV2 = lazy(() => import("@/pages/DashboardDesignerV2"));
 const DashboardPage = lazy(() => import("@/pages/DashboardPage.jsx"));
 const DashboardPublicPage = lazy(() => import("@/pages/DashboardPublicPage.jsx"));
+const DatabaseConnectionPage = lazy(() => import("@/pages/DatabaseConnectionPage.jsx"));
 const DatasetsPage = lazy(() => import("@/pages/DatasetsPage.jsx"));
 const HomePage = lazy(() => import("@/pages/HomePage.jsx"));
 const LoginPage = lazy(() => import("@/pages/LoginPage"));
@@ -67,6 +68,7 @@ export default function AppRoutes() {
             <Route path="/dashboard-v2" element={withRouteBoundary(<DashboardDesignerV2 />)} />
             <Route path="/dashboard-legacy" element={withRouteBoundary(<DashboardPage />)} />
             <Route path="/builder" element={withRouteBoundary(<BuilderPage />)} />
+            <Route path="/connections" element={withRouteBoundary(<DatabaseConnectionPage />)} />
             <Route path="/datasets" element={withRouteBoundary(<DatasetsPage />)} />
             <Route path="/settings" element={withRouteBoundary(<SettingsPage />)} />
           </Route>

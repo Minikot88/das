@@ -19,6 +19,9 @@ import { exportRowsToCsv, transformChartData } from "@/components/dashboard-v2/u
 import { getLatestEChartsDataUrl } from "@/components/dashboard-v2/utils/echartsInstanceRegistry";
 import { validateChartConfig, validateFieldForSlot } from "@/components/dashboard-v2/utils/chartValidation";
 import { getChartDefinition } from "@/components/dashboard-v2/utils/chartRegistry";
+import { getSavedChartById, upsertSavedChart } from "@/utils/savedChartsStorage";
+import { compactChartConfigForStorage, consumeStorageRecoveryMessage, safeSetLocalStorage } from "@/services/projectStorage";
+import { useLocation } from "react-router-dom";
 import type {
   Aggregation,
   ChartCategory,
@@ -34,7 +37,6 @@ import type {
 } from "@/components/dashboard-v2/types";
 
 const STORAGE_KEY = "dashboard-v2-chart-config";
-const SAVED_CHARTS_KEY = "dashboard-v2-saved-charts";
 const SQL_SAVED_QUERIES_KEY = "dashboard-v2-sql-saved-queries";
 const CONFIG_SCHEMA_VERSION = 3;
 const DEFAULT_DATASET_ID = "sales_performance";
@@ -137,7 +139,6 @@ function serializeChartConfig(config: ChartConfig, sqlSnapshot?: { query: string
     sqlModeEnabled: config.sourceType === "demo-sql",
     sqlQuery: sqlSnapshot?.query ?? "",
     sqlResultSchema: sqlSnapshot?.result?.fields ?? [],
-    sqlResultPreview: sqlSnapshot?.result?.rows.slice(0, 100) ?? [],
     createdAt: config.createdAt,
     updatedAt: config.updatedAt,
   };
@@ -151,40 +152,43 @@ type SavedDesignerChartRecord = {
   config: ReturnType<typeof serializeChartConfig>;
 };
 
-function loadSavedDesignerCharts(): SavedDesignerChartRecord[] {
-  if (typeof window === "undefined") return [];
-  const saved = window.localStorage.getItem(SAVED_CHARTS_KEY);
-  if (!saved) return [];
-  try {
-    const parsed = JSON.parse(saved) as unknown;
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter((item): item is SavedDesignerChartRecord =>
-      isObject(item) &&
-      typeof item.id === "string" &&
-      typeof item.title === "string" &&
-      typeof item.chartType === "string" &&
-      typeof item.updatedAt === "string" &&
-      isObject(item.config)
-    );
-  } catch {
-    return [];
-  }
+function makeSavedChartId() {
+  return `chart-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function persistDesignerChartConfig(config: ChartConfig, sqlSnapshot?: { query: string; result: SqlQueryResult | null }) {
+function persistDesignerChartConfig(
+  config: ChartConfig,
+  sqlSnapshot?: { query: string; result: SqlQueryResult | null },
+  activeChartId?: string | null,
+  options: { createIfMissing?: boolean } = {}
+) {
   const serialized = serializeChartConfig(config, sqlSnapshot);
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(serialized));
+  const now = new Date().toISOString();
+  const hasActiveChart = Boolean(activeChartId);
+  const id = activeChartId || (options.createIfMissing ? makeSavedChartId() : serialized.chartId || "chart-v2-draft");
+  const latestConfig = {
+    ...serialized,
+    chartId: id,
+    createdAt: hasActiveChart ? serialized.createdAt : serialized.createdAt || now,
+    updatedAt: now,
+  };
 
-  const record: SavedDesignerChartRecord = {
-    id: serialized.chartId || "chart-v2-main",
+  if (!hasActiveChart && !options.createIfMissing) {
+    safeSetLocalStorage(STORAGE_KEY, JSON.stringify(compactChartConfigForStorage(latestConfig)));
+    return null;
+  }
+
+  const record = upsertSavedChart({
+    id,
     title: serialized.settings.general.title || "กราฟที่บันทึก",
     chartType: serialized.chartType,
-    updatedAt: serialized.updatedAt || new Date().toISOString(),
-    config: serialized,
-  };
-  const existing = loadSavedDesignerCharts();
-  const nextRecords = [record, ...existing.filter((item) => item.id !== record.id)].slice(0, 24);
-  window.localStorage.setItem(SAVED_CHARTS_KEY, JSON.stringify(nextRecords));
+    createdAt: latestConfig.createdAt,
+    updatedAt: now,
+    config: latestConfig,
+  }) as SavedDesignerChartRecord | null;
+
+  safeSetLocalStorage(STORAGE_KEY, JSON.stringify(compactChartConfigForStorage(record?.config ?? latestConfig)));
+  return record;
 }
 
 function isSupportedSavedConfig(value: unknown) {
@@ -315,8 +319,9 @@ function loadSavedSqlQueries(): SqlSavedQuery[] {
   }
 }
 
-function loadInitialDesignerSnapshot() {
-  const parsed = loadStoredConfigValue();
+function loadInitialDesignerSnapshot(chartId?: string | null) {
+  const savedChart = chartId ? getSavedChartById(chartId) : null;
+  const parsed = savedChart?.config ?? loadStoredConfigValue();
   if (!parsed || !isSupportedSavedConfig(parsed)) {
     return {
       config: createDefaultConfig(),
@@ -326,6 +331,8 @@ function loadInitialDesignerSnapshot() {
       selectedTable: INITIAL_DATASOURCES[0]?.table ?? DEFAULT_DATASET_ID,
       sqlQuery: sqlExamples[0]?.sql ?? "",
       sqlResult: null as SqlQueryResult | null,
+      loadedSavedChartId: null as string | null,
+      requestedChartMissing: Boolean(chartId && !savedChart),
     };
   }
 
@@ -336,7 +343,8 @@ function loadInitialDesignerSnapshot() {
       : null;
   const sqlResult = sqlExecution?.ok ? sqlExecution.result : null;
   const activeFields = sqlResult ? sqlResult.fields : dataFields;
-  const config = normalizeConfig(parsed, activeFields);
+  const normalizedConfig = normalizeConfig(parsed, activeFields);
+  const config = savedChart ? { ...normalizedConfig, chartId: savedChart.id } : normalizedConfig;
   const sqlActive = config.sourceType === "demo-sql" && Boolean(sqlResult);
 
   if (sqlActive && sqlResult) {
@@ -348,6 +356,8 @@ function loadInitialDesignerSnapshot() {
       selectedTable: SQL_TABLE_NAME,
       sqlQuery,
       sqlResult,
+      loadedSavedChartId: savedChart?.id ?? null,
+      requestedChartMissing: Boolean(chartId && !savedChart),
     };
   }
 
@@ -359,6 +369,8 @@ function loadInitialDesignerSnapshot() {
     selectedTable: INITIAL_DATASOURCES[0]?.table ?? DEFAULT_DATASET_ID,
     sqlQuery,
     sqlResult,
+    loadedSavedChartId: savedChart?.id ?? null,
+    requestedChartMissing: Boolean(chartId && !savedChart),
   };
 }
 
@@ -704,9 +716,13 @@ async function downloadElementAsPng(element: HTMLElement, filename: string, requ
 }
 
 export function useDashboardDesignerState() {
+  const location = useLocation();
+  const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const requestedChartId = queryParams.get("chartId");
+  const returnToDashboard = queryParams.get("from") === "dashboard";
   const initialSnapshotRef = useRef<ReturnType<typeof loadInitialDesignerSnapshot> | null>(null);
   if (!initialSnapshotRef.current) {
-    initialSnapshotRef.current = loadInitialDesignerSnapshot();
+    initialSnapshotRef.current = loadInitialDesignerSnapshot(requestedChartId);
   }
   const initialSnapshot = initialSnapshotRef.current;
   const [config, setConfig] = useState<ChartConfig>(() => initialSnapshot.config);
@@ -730,12 +746,20 @@ export function useDashboardDesignerState() {
   const [shareAccess, setShareAccess] = useState<"private" | "link" | "team">("private");
   const [shareCopyFallback, setShareCopyFallback] = useState<ManualCopyFallback>(null);
   const [activeTemplateId, setActiveTemplateId] = useState<string | null>(null);
-  const [snackbar, setSnackbar] = useState<string | null>("โหลดแดชบอร์ดสำเร็จ");
+  const [snackbar, setSnackbar] = useState<string | null>(
+    initialSnapshot.loadedSavedChartId
+      ? "โหลดกราฟสำหรับแก้ไขแล้ว"
+      : initialSnapshot.requestedChartMissing
+        ? "ไม่พบกราฟที่ต้องการแก้ไข"
+        : "โหลดแดชบอร์ดสำเร็จ"
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [historyPast, setHistoryPast] = useState<ChartConfig[]>([]);
   const [historyFuture, setHistoryFuture] = useState<ChartConfig[]>([]);
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "unsaved">("saved");
   const [lastSavedAt, setLastSavedAt] = useState(formatSavedTime());
+  const [activeSavedChartId, setActiveSavedChartId] = useState<string | null>(() => initialSnapshot.loadedSavedChartId);
+  const loadedQueryChartIdRef = useRef<string | null>(initialSnapshot.loadedSavedChartId);
   const previewRef = useRef<HTMLDivElement | null>(null);
 
   const selectedChart = useMemo(
@@ -768,17 +792,56 @@ export function useDashboardDesignerState() {
   }, []);
 
   useEffect(() => {
-    setSaveStatus("saving");
-    const timer = window.setTimeout(() => {
-      persistDesignerChartConfig(config, { query: sqlQuery, result: sqlResult });
-      setSaveStatus("saved");
-      setLastSavedAt(formatSavedTime());
-    }, 800);
-    return () => window.clearTimeout(timer);
-  }, [config, sqlQuery, sqlResult]);
+    if (!requestedChartId || requestedChartId === loadedQueryChartIdRef.current) return;
+    const snapshot = loadInitialDesignerSnapshot(requestedChartId);
+    if (!snapshot.loadedSavedChartId) {
+      setSnackbar("ไม่พบกราฟที่ต้องการแก้ไข");
+      loadedQueryChartIdRef.current = requestedChartId;
+      return;
+    }
+
+    setConfig(snapshot.config);
+    setRows(snapshot.rows);
+    setFields(snapshot.fields);
+    setActiveDatasourceId(snapshot.activeDatasourceId);
+    setSelectedTable(snapshot.selectedTable);
+    setSqlQuery(snapshot.sqlQuery);
+    setSqlResult(snapshot.sqlResult);
+    setSqlError(null);
+    setActiveTemplateId(null);
+    setSelectedFieldId(null);
+    setHistoryPast([]);
+    setHistoryFuture([]);
+    setActiveSavedChartId(snapshot.loadedSavedChartId);
+    loadedQueryChartIdRef.current = snapshot.loadedSavedChartId;
+    setSaveStatus("saved");
+    setLastSavedAt(formatSavedTime());
+    setSnackbar("โหลดกราฟสำหรับแก้ไขแล้ว");
+  }, [requestedChartId]);
 
   useEffect(() => {
-    window.localStorage.setItem(SQL_SAVED_QUERIES_KEY, JSON.stringify(savedSqlQueries));
+    setSaveStatus("saving");
+    const timer = window.setTimeout(() => {
+      const record = persistDesignerChartConfig(config, { query: sqlQuery, result: sqlResult }, activeSavedChartId);
+      if (record?.id) setActiveSavedChartId(record.id);
+      setSaveStatus("saved");
+      setLastSavedAt(formatSavedTime());
+      const storageMessage = consumeStorageRecoveryMessage();
+      if (storageMessage) setSnackbar(storageMessage);
+    }, 800);
+    return () => window.clearTimeout(timer);
+  }, [activeSavedChartId, config, sqlQuery, sqlResult]);
+
+  useEffect(() => {
+    const compactQueries = savedSqlQueries.slice(-20).map((query) => ({
+      id: query.id,
+      name: query.name,
+      description: query.description,
+      sql: query.sql,
+      createdAt: query.createdAt,
+      updatedAt: query.updatedAt,
+    }));
+    safeSetLocalStorage(SQL_SAVED_QUERIES_KEY, JSON.stringify(compactQueries));
   }, [savedSqlQueries]);
 
   const showMessage = useCallback((message: string) => {
@@ -1022,6 +1085,8 @@ export function useDashboardDesignerState() {
     setActiveDatasourceId(INITIAL_DATASOURCES[0]?.id ?? "researchdb");
     setSelectedTable(INITIAL_DATASOURCES[0]?.table ?? DEFAULT_DATASET_ID);
     setSelectedFieldId(null);
+    setActiveSavedChartId(null);
+    loadedQueryChartIdRef.current = null;
     commitConfig(() => createDefaultConfig(), "รีเซ็ตการตั้งค่ากราฟแล้ว");
     setActiveTemplateId(null);
   }, [commitConfig]);
@@ -1192,11 +1257,15 @@ export function useDashboardDesignerState() {
   }, [config, historyFuture]);
 
   const saveChart = useCallback(() => {
-    persistDesignerChartConfig(config, { query: sqlQuery, result: sqlResult });
+    const updatingExisting = Boolean(activeSavedChartId);
+    const record = persistDesignerChartConfig(config, { query: sqlQuery, result: sqlResult }, activeSavedChartId, {
+      createIfMissing: true,
+    });
+    if (record?.id) setActiveSavedChartId(record.id);
     setSaveStatus("saved");
     setLastSavedAt(formatSavedTime());
-    setSnackbar("บันทึกกราฟแล้ว");
-  }, [config, sqlQuery, sqlResult]);
+    setSnackbar(consumeStorageRecoveryMessage() || (updatingExisting ? "อัปเดตกราฟที่บันทึกไว้แล้ว" : "บันทึกกราฟแล้ว"));
+  }, [activeSavedChartId, config, sqlQuery, sqlResult]);
 
   const refreshDataset = useCallback(() => {
     if (config.sourceType === "demo-sql" && sqlQuery.trim()) {
@@ -1361,6 +1430,8 @@ export function useDashboardDesignerState() {
       canRedo: historyFuture.length > 0,
       saveStatus,
       lastSavedAt,
+      activeSavedChartId,
+      returnToDashboard,
       previewRef,
     },
     actions: {

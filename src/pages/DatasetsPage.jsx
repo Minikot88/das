@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { PageContainer, PageHeader } from "../components/layout/Layout";
 import EnterpriseDataTable from "../components/ui/EnterpriseDataTable";
 import { mockDataset } from "../data/mockData";
@@ -56,6 +57,7 @@ function formatFieldType(type) {
 }
 
 export default function DatasetsPage() {
+  const navigate = useNavigate();
   const importedDatasets = useStore((state) => state.importedDatasets);
   const importDataset = useStore((state) => state.importDataset);
   const deleteImportedDataset = useStore((state) => state.deleteImportedDataset);
@@ -139,6 +141,11 @@ export default function DatasetsPage() {
         kicker="ข้อมูล"
         title="ชุดข้อมูล"
         subtitle="จัดการแหล่งข้อมูล ตาราง และไฟล์สำหรับแดชบอร์ด"
+        actions={(
+          <button type="button" className="dashboard-toolbar-btn is-primary" onClick={() => navigate("/connections")}>
+            เชื่อมต่อฐานข้อมูล
+          </button>
+        )}
       />
 
       <div className="datasets-layout">

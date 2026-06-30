@@ -5,6 +5,28 @@ import ChartPreview from "@/components/dashboard-v2/components/charts/ChartPrevi
 import { createDefaultConfig, dataFields, defaultChartSettings } from "@/components/dashboard-v2/mockData";
 import { getDatasetRows } from "@/components/dashboard-v2/services/datasetService";
 import useNavigationControls from "@/hooks/useNavigationControls";
+import {
+  createSavedChartFromConfig,
+  getSavedCharts,
+  SAVED_CHARTS_KEY,
+  SINGLE_CHART_KEY as V2_SINGLE_CHART_KEY,
+} from "@/utils/savedChartsStorage";
+import {
+  ACTIVE_DASHBOARD_KEY,
+  compactDashboardLayoutForStorage,
+  ACTIVE_PROJECT_KEY,
+  consumeStorageRecoveryMessage,
+  createDashboard as createStoredDashboard,
+  deleteDashboard as deleteStoredDashboard,
+  getActiveDashboard,
+  getActiveProject,
+  getDashboards,
+  PROJECTS_KEY,
+  renameDashboard as renameStoredDashboard,
+  safeSetLocalStorage,
+  setActiveDashboard as setStoredActiveDashboard,
+  upsertDashboard,
+} from "@/services/projectStorage";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import "./DashboardCanvasBuilder.css";
@@ -12,8 +34,7 @@ import "./DashboardCanvasBuilder.css";
 const GridLayout = WidthProvider(ReactGridLayout);
 
 const LAYOUT_STORAGE_KEY = "dashboard-canvas-layout-v1";
-const SAVED_CHARTS_KEY = "dashboard-v2-saved-charts";
-const V2_SINGLE_CHART_KEY = "dashboard-v2-chart-config";
+const PANEL_STATE_STORAGE_KEY = "dashboard-canvas-panel-state";
 const LAYOUT_SCHEMA_VERSION = 1;
 const GRID_UNIT = 8;
 const GRID_COLS = 180;
@@ -76,6 +97,15 @@ function safeParse(value, fallback = null) {
   }
 }
 
+function loadPanelState() {
+  if (typeof window === "undefined") return { leftOpen: true, rightOpen: true };
+  const saved = safeParse(window.localStorage.getItem(PANEL_STATE_STORAGE_KEY), null);
+  return {
+    leftOpen: typeof saved?.leftOpen === "boolean" ? saved.leftOpen : true,
+    rightOpen: typeof saved?.rightOpen === "boolean" ? saved.rightOpen : true,
+  };
+}
+
 function clone(value) {
   if (typeof structuredClone === "function") return structuredClone(value);
   return JSON.parse(JSON.stringify(value));
@@ -86,6 +116,10 @@ function formatSavedTime(value = new Date()) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(value);
+}
+
+function timestampForFilename() {
+  return new Date().toISOString().replace(/[:.]/g, "-");
 }
 
 function mergeChartSettings(settings) {
@@ -140,45 +174,155 @@ function chartTypeLabel(chartType) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
-function readSavedCharts() {
-  if (typeof window === "undefined") return [];
-  const records = [];
-  const savedList = safeParse(window.localStorage.getItem(SAVED_CHARTS_KEY), []);
-  if (Array.isArray(savedList)) {
-    savedList.forEach((item, index) => {
-      const rawConfig = item?.config ?? item?.chartConfig ?? item;
-      const config = normalizeChartConfig(rawConfig);
-      records.push({
-        id: item?.id || config.chartId || `saved-chart-${index}`,
-        title: item?.title || chartTitle(config),
-        chartType: config.chartType,
-        updatedAt: item?.updatedAt || config.updatedAt,
-        config,
-      });
-    });
-  }
+function chartIcon(chartType) {
+  const type = String(chartType || "").toLowerCase();
+  if (type.includes("line") || type.includes("area")) return "⌁";
+  if (type.includes("pie") || type.includes("donut")) return "◔";
+  if (type.includes("kpi") || type.includes("gauge")) return "●";
+  if (type.includes("table") || type.includes("pivot")) return "▦";
+  if (type.includes("scatter") || type.includes("bubble")) return "∴";
+  return "▥";
+}
 
-  const singleConfig = safeParse(window.localStorage.getItem(V2_SINGLE_CHART_KEY), null);
-  if (singleConfig) {
-    const config = normalizeChartConfig(singleConfig);
-    const id = config.chartId || "chart-v2-main";
-    if (!records.some((item) => item.id === id)) {
-      records.unshift({
-        id,
-        title: chartTitle(config),
-        chartType: config.chartType,
-        updatedAt: config.updatedAt,
-        config,
-      });
+function savedChartIdFromWidget(widget) {
+  if (!widget || widget.type !== "chart") return "";
+  return widget.sourceChartId || widget.sourceChartConfigId || widget.config?.sourceChartId || "";
+}
+
+function resolveWidgetChartConfig(widget, savedCharts = []) {
+  if (!widget || widget.type !== "chart") return null;
+  const sourceChartId = savedChartIdFromWidget(widget);
+  const savedChart = sourceChartId ? savedCharts.find((chart) => chart.id === sourceChartId) : null;
+  const copiedConfig = widget.chartConfigSnapshot && typeof widget.chartConfigSnapshot === "object"
+    ? normalizeChartConfig(widget.chartConfigSnapshot)
+    : widget.config?.chartConfig && typeof widget.config.chartConfig === "object"
+      ? normalizeChartConfig(widget.config.chartConfig)
+      : widget.config?.chartType
+        ? normalizeChartConfig({
+          chartType: widget.config.chartType,
+          fieldMappings: widget.config.fieldMappings,
+          mappings: widget.config.fieldMappings,
+          settings: widget.config.settings,
+          filters: widget.config.filters,
+          sourceType: widget.config.dataset?.sourceType,
+          datasetId: widget.config.dataset?.datasetId,
+          updatedAt: widget.updatedAt,
+        })
+        : null;
+
+  if (!savedChart?.config) return copiedConfig;
+
+  const savedConfig = normalizeChartConfig(savedChart.config);
+  const copiedUpdatedAt = Date.parse(copiedConfig?.updatedAt ?? "");
+  const savedUpdatedAt = Date.parse(savedChart.updatedAt ?? savedConfig.updatedAt ?? "");
+  if (!copiedConfig || (Number.isFinite(savedUpdatedAt) && savedUpdatedAt > (Number.isFinite(copiedUpdatedAt) ? copiedUpdatedAt : 0))) {
+    return savedConfig;
+  }
+  return copiedConfig;
+}
+
+function downloadDataUrl(filename, dataUrl) {
+  const link = document.createElement("a");
+  link.href = dataUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+}
+
+function drawWrappedText(context, text, x, y, maxWidth, lineHeight, maxLines = 3) {
+  const words = String(text || "").split(/\s+/);
+  let line = "";
+  let lineCount = 0;
+
+  words.forEach((word) => {
+    if (lineCount >= maxLines) return;
+    const testLine = line ? `${line} ${word}` : word;
+    if (context.measureText(testLine).width > maxWidth && line) {
+      context.fillText(line, x, y + lineCount * lineHeight);
+      line = word;
+      lineCount += 1;
+      return;
     }
+    line = testLine;
+  });
+
+  if (line && lineCount < maxLines) {
+    context.fillText(line, x, y + lineCount * lineHeight);
+  }
+}
+
+function drawWidgetFallbackPng(widget) {
+  if (typeof document === "undefined" || !widget) return "";
+  const width = Math.max(320, Math.round((widget.w || 40) * GRID_UNIT));
+  const height = Math.max(180, Math.round((widget.h || 24) * GRID_UNIT));
+  const pixelRatio = Math.min(2, window.devicePixelRatio || 1);
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(width * pixelRatio);
+  canvas.height = Math.round(height * pixelRatio);
+  const context = canvas.getContext("2d");
+  if (!context) return "";
+
+  context.scale(pixelRatio, pixelRatio);
+  context.fillStyle = widget.background || "#FFFFFF";
+  context.fillRect(0, 0, width, height);
+  context.strokeStyle = widget.borderColor || "#E6EAF0";
+  context.strokeRect(0.5, 0.5, width - 1, height - 1);
+  context.fillStyle = "#172033";
+  context.font = '500 13px "IBM Plex Sans Thai", system-ui, sans-serif';
+  context.fillText(widget.title || WIDGET_LABELS[widget.type] || "Widget", 16, 28);
+  context.strokeStyle = "#E6EAF0";
+  context.beginPath();
+  context.moveTo(16, 42);
+  context.lineTo(width - 16, 42);
+  context.stroke();
+
+  if (widget.type === "kpi") {
+    context.fillStyle = "#64748B";
+    context.font = '400 12px "IBM Plex Sans Thai", system-ui, sans-serif';
+    context.fillText(widget.config?.metricTitle || "KPI", 16, 72);
+    context.fillStyle = "#172033";
+    context.font = '500 32px "IBM Plex Sans Thai", system-ui, sans-serif';
+    context.fillText(widget.config?.value || "-", 16, 112);
+    context.fillStyle = widget.config?.trend === "down" ? "#DC2626" : "#16A34A";
+    context.font = '400 12px "IBM Plex Sans Thai", system-ui, sans-serif';
+    context.fillText(widget.config?.comparison || "", 16, 140);
+  } else if (widget.type === "table") {
+    const columns = widget.config?.columns ?? ["month", "category", "sales", "profit"];
+    context.fillStyle = "#64748B";
+    context.font = '400 11px "IBM Plex Sans Thai", system-ui, sans-serif';
+    columns.slice(0, 4).forEach((column, index) => {
+      context.fillText(column, 16 + index * Math.max(70, (width - 32) / 4), 72);
+    });
+    context.strokeStyle = "#E6EAF0";
+    for (let index = 0; index < 5; index += 1) {
+      const y = 88 + index * 22;
+      context.beginPath();
+      context.moveTo(16, y);
+      context.lineTo(width - 16, y);
+      context.stroke();
+    }
+  } else if (widget.type === "text") {
+    context.fillStyle = widget.config?.color || "#172033";
+    context.font = `400 ${Math.min(22, Number(widget.config?.fontSize) || 16)}px "IBM Plex Sans Thai", system-ui, sans-serif`;
+    drawWrappedText(context, widget.config?.text || widget.title, 16, 76, width - 32, 24, 4);
+  } else {
+    context.fillStyle = "#64748B";
+    context.font = '400 12px "IBM Plex Sans Thai", system-ui, sans-serif';
+    drawWrappedText(context, `${WIDGET_LABELS[widget.type] || "Widget"} export preview`, 16, 78, width - 32, 20, 4);
   }
 
-  const seen = new Set();
-  return records.filter((item) => {
-    if (seen.has(item.id)) return false;
-    seen.add(item.id);
-    return true;
-  });
+  return canvas.toDataURL("image/png");
+}
+
+function readSavedCharts() {
+  return getSavedCharts().map((item) => ({
+    ...item,
+    config: normalizeChartConfig(item.config),
+    chartType: item.chartType || item.config?.chartType || "bar",
+    title: item.title || chartTitle(item.config),
+    updatedAt: item.updatedAt || item.config?.updatedAt || new Date().toISOString(),
+  }));
 }
 
 function buildSampleChartConfig({ chartType = "bar", title = "ยอดขายรายเดือน", subtitle = "ข้อมูลตัวอย่างจาก sales_performance" } = {}) {
@@ -294,7 +438,22 @@ function sanitizeWidget(widget, index = 0, canvasSettings = normalizeCanvasSetti
     borderColor: typeof widget?.borderColor === "string" ? widget.borderColor : fallback.borderColor,
     radius: clamp(finiteNumber(widget?.radius, fallback.radius), 0, 24),
     config: widget?.config && typeof widget.config === "object" ? widget.config : fallback.config,
-    sourceChartConfigId: typeof widget?.sourceChartConfigId === "string" ? widget.sourceChartConfigId : fallback.sourceChartConfigId,
+    projectId: typeof widget?.projectId === "string" ? widget.projectId : fallback.projectId,
+    dashboardId: typeof widget?.dashboardId === "string" ? widget.dashboardId : fallback.dashboardId,
+    sourceChartId:
+      typeof widget?.sourceChartId === "string"
+        ? widget.sourceChartId
+        : typeof widget?.sourceChartConfigId === "string"
+          ? widget.sourceChartConfigId
+          : typeof widget?.config?.sourceChartId === "string"
+            ? widget.config.sourceChartId
+            : fallback.sourceChartId,
+    sourceChartConfigId:
+      typeof widget?.sourceChartConfigId === "string"
+        ? widget.sourceChartConfigId
+        : typeof widget?.sourceChartId === "string"
+          ? widget.sourceChartId
+          : fallback.sourceChartConfigId,
     createdAt: typeof widget?.createdAt === "string" ? widget.createdAt : fallback.createdAt,
     updatedAt: typeof widget?.updatedAt === "string" ? widget.updatedAt : new Date().toISOString(),
   };
@@ -375,14 +534,31 @@ function nextWidgetY(widgets) {
   }, 0);
 }
 
+function nextWidgetZ(widgets) {
+  return widgets.reduce((maxZ, widget) => Math.max(maxZ, finiteNumber(widget.zIndex, 1)), 1) + 1;
+}
+
 function createChartWidget(savedChart, overrides = {}) {
   const config = normalizeChartConfig(savedChart?.config ?? buildSampleChartConfig());
+  const sourceChartId = savedChart?.id || config.chartId;
   return createWidget("chart", {
     title: savedChart?.title || chartTitle(config),
     w: 72,
     h: 42,
-    sourceChartConfigId: savedChart?.id || config.chartId,
+    sourceChartId,
+    sourceChartConfigId: sourceChartId,
+    chartConfigSnapshot: config,
     config: {
+      sourceChartId,
+      title: savedChart?.title || chartTitle(config),
+      chartType: config.chartType,
+      fieldMappings: config.mappings,
+      settings: config.settings,
+      filters: config.filters,
+      dataset: {
+        sourceType: config.sourceType,
+        datasetId: config.datasetId,
+      },
       chartConfig: config,
     },
     ...overrides,
@@ -400,20 +576,23 @@ function createTableWidget(overrides = {}) {
   });
 }
 
-function createTemplateWidgets(templateId, savedChart) {
+function createTemplateWidgets(templateId, savedChart, context = {}) {
   const primaryChart = createChartWidget(savedChart, {
     x: 8,
     y: 36,
     w: 82,
     h: 44,
+    projectId: context.projectId,
+    dashboardId: context.dashboardId,
   });
   const secondaryConfig = buildSampleChartConfig({
     chartType: templateId === "finance" ? "donut" : templateId === "marketing" ? "funnel" : "line",
     title: templateId === "marketing" ? "Funnel ตามช่องทาง" : "แนวโน้มยอดขาย",
     subtitle: "ข้อมูลตัวอย่างสำหรับการสาธิต",
   });
+  const secondarySavedChart = createSavedChartFromConfig(secondaryConfig, { forceNew: true });
   const secondaryChart = createChartWidget(
-    {
+    secondarySavedChart ?? {
       id: secondaryConfig.chartId,
       title: chartTitle(secondaryConfig),
       chartType: secondaryConfig.chartType,
@@ -424,6 +603,8 @@ function createTemplateWidgets(templateId, savedChart) {
       y: 82,
       w: 82,
       h: 32,
+      projectId: context.projectId,
+      dashboardId: context.dashboardId,
     }
   );
 
@@ -486,28 +667,46 @@ function loadDashboardLayout() {
   const defaultCanvasSettings = normalizeCanvasSettings();
   const fallback = {
     version: LAYOUT_SCHEMA_VERSION,
-    dashboardId: "dashboard-canvas-local",
-    dashboardName: "แดชบอร์ด",
+    projectId: "project-default",
+    projectName: "Mini BI Workspace",
+    dashboardId: "dashboard-default",
+    dashboardName: "\u0e41\u0e14\u0e0a\u0e1a\u0e2d\u0e23\u0e4c\u0e14",
     widgets: [],
     canvasSettings: defaultCanvasSettings,
     theme: "light",
+    dashboards: [],
     updatedAt: new Date().toISOString(),
     recovered: false,
   };
 
   if (typeof window === "undefined") return fallback;
-  const stored = safeParse(window.localStorage.getItem(LAYOUT_STORAGE_KEY), null);
-  if (!stored || typeof stored !== "object") return fallback;
+  const activeProject = getActiveProject();
+  const activeDashboard = getActiveDashboard();
+  const stored = activeDashboard && typeof activeDashboard === "object"
+    ? activeDashboard
+    : safeParse(window.localStorage.getItem(LAYOUT_STORAGE_KEY), null);
+  if (!stored || typeof stored !== "object") {
+    return {
+      ...fallback,
+      projectId: activeProject?.id ?? fallback.projectId,
+      projectName: activeProject?.name ?? fallback.projectName,
+      dashboards: activeProject?.dashboards ?? [],
+    };
+  }
+  const projectId = stored.projectId || activeProject?.id || fallback.projectId;
+  const dashboardId = stored.id || stored.dashboardId || fallback.dashboardId;
   const canvasSettings = normalizeCanvasSettings(stored.canvasSettings);
   const rawWidgets = Array.isArray(stored.widgets) ? stored.widgets : [];
   const widgets = sanitizeWidgets(rawWidgets, canvasSettings);
-  const legacyDefaultDashboardName = `${fallback.dashboardName}ใหม่`;
+  const legacyDefaultDashboardName = `${fallback.dashboardName}\u0e43\u0e2b\u0e21\u0e48`;
   const storedDashboardName =
-    typeof stored.dashboardName === "string" && stored.dashboardName && stored.dashboardName !== legacyDefaultDashboardName
-      ? stored.dashboardName
+    typeof stored.name === "string" && stored.name
+      ? stored.name
+      : typeof stored.dashboardName === "string" && stored.dashboardName && stored.dashboardName !== legacyDefaultDashboardName
+        ? stored.dashboardName
       : fallback.dashboardName;
   const recovered =
-    stored.version !== LAYOUT_SCHEMA_VERSION ||
+    (typeof stored.version === "number" && stored.version !== LAYOUT_SCHEMA_VERSION) ||
     !Array.isArray(stored.widgets) ||
     rawWidgets.length !== widgets.length ||
     rawWidgets.some((widget) => {
@@ -518,7 +717,11 @@ function loadDashboardLayout() {
     ...fallback,
     ...stored,
     version: LAYOUT_SCHEMA_VERSION,
+    projectId,
+    projectName: activeProject?.name ?? fallback.projectName,
+    dashboardId,
     dashboardName: storedDashboardName,
+    dashboards: activeProject?.dashboards ?? [],
     widgets,
     canvasSettings,
     theme: stored.theme === "dark" ? "dark" : "light",
@@ -581,15 +784,39 @@ async function copyText(text) {
   }
 }
 
-function WidgetContent({ widget, rows, selected, editingTextId, setEditingTextId, updateWidgetConfig }) {
+function WidgetContent({
+  widget,
+  rows,
+  savedCharts,
+  selected,
+  editingTextId,
+  setEditingTextId,
+  updateWidgetConfig,
+  onExpandWidget,
+}) {
   if (widget.type === "chart") {
-    const chartConfig = normalizeChartConfig(widget.config?.chartConfig);
-    const chartWidth = widget.w * GRID_UNIT;
-    const chartHeight = widget.h * GRID_UNIT;
-    if (chartWidth < 260 || chartHeight < 160) {
+    const chartConfig = resolveWidgetChartConfig(widget, savedCharts);
+    if (!chartConfig) {
       return (
         <div className="dcb-chart-compact-placeholder">
-          <span>ขยายวิดเจ็ตเพื่อดูกราฟ</span>
+          <strong>ไม่พบข้อมูลกราฟ</strong>
+          <span>กรุณาเลือกกราฟใหม่จากรายการวิดเจ็ต</span>
+        </div>
+      );
+    }
+
+    const chartWidth = widget.w * GRID_UNIT;
+    const chartHeight = widget.h * GRID_UNIT;
+    if (chartWidth < 280 || chartHeight < 180) {
+      return (
+        <div className="dcb-chart-compact-placeholder">
+          <strong>ขยายวิดเจ็ตเพื่อดูกราฟ</strong>
+          <span>พื้นที่ไม่พอสำหรับแสดงแกนและคำอธิบาย</span>
+          {!selected ? null : (
+            <button type="button" onClick={() => onExpandWidget?.(widget.id)}>
+              ขยายขนาด
+            </button>
+          )}
         </div>
       );
     }
@@ -723,11 +950,18 @@ export default function DashboardCanvasBuilder() {
   const navigate = useNavigate();
   const navigation = useNavigationControls();
   const initialState = useMemo(() => loadDashboardLayout(), []);
+  const initialPanelState = useMemo(() => loadPanelState(), []);
   const rows = useMemo(() => getDatasetRows("sales_performance"), []);
+  const [activeProjectId, setActiveProjectId] = useState(initialState.projectId);
+  const [activeProjectName, setActiveProjectName] = useState(initialState.projectName);
+  const [activeDashboardId, setActiveDashboardId] = useState(initialState.dashboardId);
+  const [dashboards, setDashboards] = useState(initialState.dashboards);
   const [dashboardName, setDashboardName] = useState(initialState.dashboardName);
   const [widgets, setWidgets] = useState(initialState.widgets);
   const [canvasSettings, setCanvasSettings] = useState(initialState.canvasSettings);
   const [theme, setTheme] = useState(initialState.theme);
+  const [leftPanelOpen, setLeftPanelOpen] = useState(initialPanelState.leftOpen);
+  const [rightPanelOpen, setRightPanelOpen] = useState(initialPanelState.rightOpen);
   const [activeLibraryTab, setActiveLibraryTab] = useState("charts");
   const [selectedWidgetId, setSelectedWidgetId] = useState(null);
   const [previewMode, setPreviewMode] = useState(false);
@@ -735,16 +969,23 @@ export default function DashboardCanvasBuilder() {
   const [chartPickerOpen, setChartPickerOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [pdfModalOpen, setPdfModalOpen] = useState(false);
-  const [toast, setToast] = useState(initialState.recovered ? "กู้คืน layout ที่ไม่สมบูรณ์แล้ว" : "");
+  const [toast, setToast] = useState(() =>
+    consumeStorageRecoveryMessage() || (initialState.recovered ? "กู้คืน layout ที่ไม่สมบูรณ์แล้ว" : "")
+  );
   const [saveStatus, setSaveStatus] = useState("saved");
   const [lastSavedAt, setLastSavedAt] = useState("ล่าสุด");
   const [historyPast, setHistoryPast] = useState([]);
   const [historyFuture, setHistoryFuture] = useState([]);
   const [editingTextId, setEditingTextId] = useState(null);
+  const [widgetMenuId, setWidgetMenuId] = useState(null);
+  const [focusedWidgetId, setFocusedWidgetId] = useState(null);
   const widgetsRef = useRef(widgets);
   const canvasSettingsRef = useRef(canvasSettings);
+  const activeProjectIdRef = useRef(activeProjectId);
+  const activeDashboardIdRef = useRef(activeDashboardId);
   const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
+  const focusPulseTimerRef = useRef(null);
 
   useEffect(() => {
     widgetsRef.current = widgets;
@@ -755,10 +996,45 @@ export default function DashboardCanvasBuilder() {
   }, [canvasSettings]);
 
   useEffect(() => {
+    activeProjectIdRef.current = activeProjectId;
+  }, [activeProjectId]);
+
+  useEffect(() => {
+    activeDashboardIdRef.current = activeDashboardId;
+  }, [activeDashboardId]);
+
+  useEffect(() => {
+    safeSetLocalStorage(PANEL_STATE_STORAGE_KEY, JSON.stringify({
+      leftOpen: leftPanelOpen,
+      rightOpen: rightPanelOpen,
+    }));
+  }, [leftPanelOpen, rightPanelOpen]);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      window.dispatchEvent(new Event("resize"));
+    });
+    const timer = window.setTimeout(() => {
+      window.dispatchEvent(new Event("resize"));
+    }, 260);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
+  }, [leftPanelOpen, previewMode, rightPanelOpen]);
+
+  useEffect(() => {
     const refreshSavedCharts = () => setSavedCharts(readSavedCharts());
     const onStorage = (event) => {
-      if (event.key === SAVED_CHARTS_KEY || event.key === V2_SINGLE_CHART_KEY) {
+      if (
+        event.key === SAVED_CHARTS_KEY ||
+        event.key === V2_SINGLE_CHART_KEY ||
+        event.key === PROJECTS_KEY ||
+        event.key === ACTIVE_PROJECT_KEY ||
+        event.key === ACTIVE_DASHBOARD_KEY
+      ) {
         refreshSavedCharts();
+        setDashboards(getDashboards(activeProjectIdRef.current));
       }
     };
     window.addEventListener("storage", onStorage);
@@ -776,19 +1052,59 @@ export default function DashboardCanvasBuilder() {
     [selectedWidgetId, widgets]
   );
   const selectedSavedChart = useMemo(() => {
-    if (!selectedWidget || selectedWidget.type !== "chart" || !selectedWidget.sourceChartConfigId) return null;
-    return savedCharts.find((chart) => chart.id === selectedWidget.sourceChartConfigId) ?? null;
+    const sourceChartId = savedChartIdFromWidget(selectedWidget);
+    if (!sourceChartId) return null;
+    return savedCharts.find((chart) => chart.id === sourceChartId) ?? null;
   }, [savedCharts, selectedWidget]);
   const selectedChartConfig = useMemo(
-    () => (selectedWidget?.type === "chart" ? normalizeChartConfig(selectedWidget.config.chartConfig) : null),
-    [selectedWidget]
+    () => (selectedWidget?.type === "chart" ? resolveWidgetChartConfig(selectedWidget, savedCharts) : null),
+    [savedCharts, selectedWidget]
   );
-  const selectedChartCanRefresh = Boolean(
-    selectedWidget?.type === "chart" &&
-      selectedSavedChart &&
-      selectedSavedChart.updatedAt &&
-      selectedSavedChart.updatedAt !== selectedWidget.config.chartConfig?.updatedAt
-  );
+  const selectedChartCanRefresh = Boolean(selectedWidget?.type === "chart" && selectedSavedChart);
+  const savedChartUsageCounts = useMemo(() => {
+    const counts = new Map();
+    widgets.forEach((widget) => {
+      const chartId = savedChartIdFromWidget(widget);
+      if (chartId) counts.set(chartId, (counts.get(chartId) ?? 0) + 1);
+    });
+    return counts;
+  }, [widgets]);
+  const dashboardChartItems = useMemo(() => (
+    widgets
+      .filter((widget) => widget.type === "chart")
+      .map((widget) => {
+        const sourceChartId = savedChartIdFromWidget(widget);
+        const savedChart = sourceChartId ? savedCharts.find((chart) => chart.id === sourceChartId) : null;
+        const chartConfig = resolveWidgetChartConfig(widget, savedCharts);
+        const chartType = widget.config?.chartType || chartConfig?.chartType || "bar";
+        return {
+          widget,
+          sourceChartId,
+          savedChart,
+          title: widget.title || chartTitle(chartConfig),
+          chartType,
+          usageCount: sourceChartId ? (savedChartUsageCounts.get(sourceChartId) ?? 0) : 0,
+          updatedAt: widget.updatedAt || widget.createdAt,
+        };
+      })
+  ), [savedChartUsageCounts, savedCharts, widgets]);
+  const layerRange = useMemo(() => {
+    const levels = widgets.map((widget) => finiteNumber(widget.zIndex, 1));
+    return {
+      min: levels.length ? Math.min(...levels) : 1,
+      max: levels.length ? Math.max(...levels) : 1,
+    };
+  }, [widgets]);
+  const selectedLayerState = useMemo(() => {
+    if (!selectedWidget) return { isTop: true, isBottom: true };
+    const currentZ = finiteNumber(selectedWidget.zIndex, 1);
+    const topCount = widgets.filter((widget) => finiteNumber(widget.zIndex, 1) === layerRange.max).length;
+    const bottomCount = widgets.filter((widget) => finiteNumber(widget.zIndex, 1) === layerRange.min).length;
+    return {
+      isTop: widgets.length <= 1 || (currentZ >= layerRange.max && topCount <= 1),
+      isBottom: widgets.length <= 1 || (currentZ <= layerRange.min && bottomCount <= 1),
+    };
+  }, [layerRange.max, layerRange.min, selectedWidget, widgets]);
 
   const activeGridUnit = canvasSettings.snapToGrid ? GRID_UNIT : GRID_UNIT / 2;
   const activeGridCols = Math.floor(canvasSettings.width / activeGridUnit);
@@ -797,22 +1113,93 @@ export default function DashboardCanvasBuilder() {
   const buildLayoutPayload = useCallback(
     () => ({
       version: LAYOUT_SCHEMA_VERSION,
-      dashboardId: initialState.dashboardId ?? "dashboard-canvas-local",
+      id: activeDashboardIdRef.current,
+      dashboardId: activeDashboardIdRef.current,
+      projectId: activeProjectIdRef.current,
+      name: dashboardName,
       dashboardName,
-      widgets: sanitizeWidgets(widgets, canvasSettings),
-      canvasSettings: normalizeCanvasSettings(canvasSettings),
+      widgets: sanitizeWidgets(widgetsRef.current, canvasSettingsRef.current).map((widget) => ({
+        ...widget,
+        projectId: activeProjectIdRef.current,
+        dashboardId: activeDashboardIdRef.current,
+      })),
+      canvasSettings: normalizeCanvasSettings(canvasSettingsRef.current),
       theme,
       updatedAt: new Date().toISOString(),
     }),
-    [canvasSettings, dashboardName, initialState.dashboardId, theme, widgets]
+    [dashboardName, theme]
   );
 
   const persistLayout = useCallback(() => {
     const payload = buildLayoutPayload();
-    window.localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(payload));
+    upsertDashboard(payload.projectId, payload);
+    safeSetLocalStorage(LAYOUT_STORAGE_KEY, JSON.stringify(compactDashboardLayoutForStorage(payload)));
+    const storageMessage = consumeStorageRecoveryMessage();
+    if (storageMessage) setToast(storageMessage);
+    setDashboards(getDashboards(payload.projectId));
     setSaveStatus("saved");
     setLastSavedAt(formatSavedTime());
   }, [buildLayoutPayload]);
+
+  const applyDashboardState = useCallback((nextState, message) => {
+    activeProjectIdRef.current = nextState.projectId;
+    activeDashboardIdRef.current = nextState.dashboardId;
+    setActiveProjectId(nextState.projectId);
+    setActiveProjectName(nextState.projectName);
+    setActiveDashboardId(nextState.dashboardId);
+    setDashboards(nextState.dashboards);
+    setDashboardName(nextState.dashboardName);
+    setWidgets(nextState.widgets);
+    widgetsRef.current = nextState.widgets;
+    setCanvasSettings(nextState.canvasSettings);
+    canvasSettingsRef.current = nextState.canvasSettings;
+    setTheme(nextState.theme);
+    setSelectedWidgetId(null);
+    setWidgetMenuId(null);
+    setHistoryPast([]);
+    setHistoryFuture([]);
+    setSaveStatus("saved");
+    setLastSavedAt(formatSavedTime());
+    setSavedCharts(readSavedCharts());
+    if (message) setToast(message);
+  }, []);
+
+  const loadActiveDashboardState = useCallback((message) => {
+    const nextState = loadDashboardLayout();
+    applyDashboardState(nextState, message);
+  }, [applyDashboardState]);
+
+  const switchDashboard = useCallback((dashboardId) => {
+    if (!dashboardId || dashboardId === activeDashboardIdRef.current) return;
+    persistLayout();
+    setStoredActiveDashboard(dashboardId);
+    loadActiveDashboardState("\u0e40\u0e1b\u0e25\u0e35\u0e48\u0e22\u0e19 Dashboard \u0e41\u0e25\u0e49\u0e27");
+  }, [loadActiveDashboardState, persistLayout]);
+
+  const createNewDashboard = useCallback(() => {
+    persistLayout();
+    const dashboard = createStoredDashboard(activeProjectIdRef.current, "แดชบอร์ดใหม่");
+    setStoredActiveDashboard(dashboard.id);
+    loadActiveDashboardState("\u0e2a\u0e23\u0e49\u0e32\u0e07 Dashboard \u0e43\u0e2b\u0e21\u0e48\u0e41\u0e25\u0e49\u0e27");
+  }, [loadActiveDashboardState, persistLayout]);
+
+  const renameCurrentDashboard = useCallback(() => {
+    const nextName = window.prompt("\u0e0a\u0e37\u0e48\u0e2d Dashboard", dashboardName);
+    if (!nextName || !nextName.trim()) return;
+    renameStoredDashboard(activeProjectIdRef.current, activeDashboardIdRef.current, nextName.trim());
+    loadActiveDashboardState("\u0e40\u0e1b\u0e25\u0e35\u0e48\u0e22\u0e19\u0e0a\u0e37\u0e48\u0e2d Dashboard \u0e41\u0e25\u0e49\u0e27");
+  }, [dashboardName, loadActiveDashboardState]);
+
+  const deleteCurrentDashboard = useCallback(() => {
+    if (dashboards.length <= 1) {
+      setToast("\u0e15\u0e49\u0e2d\u0e07\u0e21\u0e35 Dashboard \u0e2d\u0e22\u0e48\u0e32\u0e07\u0e19\u0e49\u0e2d\u0e22 1 \u0e23\u0e32\u0e22\u0e01\u0e32\u0e23");
+      return;
+    }
+    const confirmed = window.confirm(`\u0e25\u0e1a Dashboard "${dashboardName}" \u0e2b\u0e23\u0e37\u0e2d\u0e44\u0e21\u0e48`);
+    if (!confirmed) return;
+    deleteStoredDashboard(activeProjectIdRef.current, activeDashboardIdRef.current);
+    loadActiveDashboardState("\u0e25\u0e1a Dashboard \u0e41\u0e25\u0e49\u0e27");
+  }, [dashboardName, dashboards.length, loadActiveDashboardState]);
 
   useEffect(() => {
     setSaveStatus("saving");
@@ -828,10 +1215,27 @@ export default function DashboardCanvasBuilder() {
     return () => window.clearTimeout(timer);
   }, [toast]);
 
+  useEffect(() => () => {
+    if (focusPulseTimerRef.current) {
+      window.clearTimeout(focusPulseTimerRef.current);
+    }
+  }, []);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      window.dispatchEvent(new Event("resize"));
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [activeGridUnit, canvasSettings.zoom, previewMode, widgets]);
+
   const commitWidgets = useCallback((updater, message) => {
     const current = widgetsRef.current;
     const next = typeof updater === "function" ? updater(current) : updater;
-    const sanitizedNext = sanitizeWidgets(next, canvasSettingsRef.current);
+    const sanitizedNext = sanitizeWidgets(next, canvasSettingsRef.current).map((widget) => ({
+      ...widget,
+      projectId: activeProjectIdRef.current,
+      dashboardId: activeDashboardIdRef.current,
+    }));
     setHistoryPast((past) => [...past.slice(-29), current]);
     setHistoryFuture([]);
     setWidgets(sanitizedNext);
@@ -878,6 +1282,9 @@ export default function DashboardCanvasBuilder() {
   const addWidget = useCallback((type, overrides = {}) => {
     const placement = {
       y: typeof overrides.y === "number" ? overrides.y : nextWidgetY(widgetsRef.current),
+      zIndex: typeof overrides.zIndex === "number" ? overrides.zIndex : nextWidgetZ(widgetsRef.current),
+      projectId: activeProjectIdRef.current,
+      dashboardId: activeDashboardIdRef.current,
       ...overrides,
     };
     const nextWidget = type === "table" ? createTableWidget(placement) : createWidget(type, placement);
@@ -886,28 +1293,141 @@ export default function DashboardCanvasBuilder() {
   }, [commitWidgets]);
 
   const addChart = useCallback((savedChart) => {
-    const nextWidget = createChartWidget(savedChart, { y: nextWidgetY(widgetsRef.current) });
+    const sourceChart = savedChart ?? createSavedChartFromConfig(buildSampleChartConfig(), { forceNew: true });
+    const nextWidget = createChartWidget(sourceChart, {
+      y: nextWidgetY(widgetsRef.current),
+      zIndex: nextWidgetZ(widgetsRef.current),
+      projectId: activeProjectIdRef.current,
+      dashboardId: activeDashboardIdRef.current,
+    });
     commitWidgets((current) => [...current, nextWidget], "เพิ่มกราฟลงแดชบอร์ดแล้ว");
     setSelectedWidgetId(nextWidget.id);
+    window.requestAnimationFrame(() => window.dispatchEvent(new Event("resize")));
+    setSavedCharts(readSavedCharts());
     setChartPickerOpen(false);
   }, [commitWidgets]);
 
-  const refreshSelectedChartFromSaved = useCallback(() => {
-    if (!selectedWidget || selectedWidget.type !== "chart" || !selectedSavedChart) return;
-    updateWidget(selectedWidget.id, {
-      title: selectedSavedChart.title,
-      sourceChartConfigId: selectedSavedChart.id,
+  const focusWidgetOnCanvas = useCallback((widgetId, message = "เลือกกราฟใน Canvas แล้ว") => {
+    const targetWidget = widgetsRef.current.find((widget) => widget.id === widgetId);
+    if (!targetWidget) return;
+    setSelectedWidgetId(widgetId);
+    setWidgetMenuId(null);
+    setFocusedWidgetId(widgetId);
+    if (focusPulseTimerRef.current) {
+      window.clearTimeout(focusPulseTimerRef.current);
+    }
+    focusPulseTimerRef.current = window.setTimeout(() => {
+      setFocusedWidgetId((current) => (current === widgetId ? null : current));
+    }, 650);
+    window.requestAnimationFrame(() => {
+      const widgetElement = Array.from(document.querySelectorAll("[data-widget-id]")).find(
+        (element) => element.getAttribute("data-widget-id") === widgetId
+      );
+      widgetElement?.scrollIntoView?.({ block: "center", inline: "center", behavior: "smooth" });
+      window.dispatchEvent(new Event("resize"));
+    });
+    if (message) setToast(message);
+  }, []);
+
+  const refreshChartWidgetFromSaved = useCallback((widgetId = selectedWidgetId) => {
+    const targetWidget = widgetsRef.current.find((widget) => widget.id === widgetId && widget.type === "chart");
+    if (!targetWidget) return;
+    const sourceChartId = savedChartIdFromWidget(targetWidget);
+    const savedChart = sourceChartId ? savedCharts.find((chart) => chart.id === sourceChartId) : null;
+    if (!savedChart) {
+      setToast("ไม่พบกราฟที่บันทึกไว้");
+      return;
+    }
+    const nextConfig = normalizeChartConfig(savedChart.config);
+    updateWidget(targetWidget.id, {
+      title: savedChart.title,
+      sourceChartId: savedChart.id,
+      sourceChartConfigId: savedChart.id,
+      chartConfigSnapshot: nextConfig,
       config: {
-        ...selectedWidget.config,
-        chartConfig: normalizeChartConfig(selectedSavedChart.config),
+        ...targetWidget.config,
+        sourceChartId: savedChart.id,
+        title: savedChart.title,
+        chartType: nextConfig.chartType,
+        fieldMappings: nextConfig.mappings,
+        settings: nextConfig.settings,
+        filters: nextConfig.filters,
+        dataset: {
+          sourceType: nextConfig.sourceType,
+          datasetId: nextConfig.datasetId,
+        },
+        chartConfig: nextConfig,
       },
     });
+    setSelectedWidgetId(targetWidget.id);
+    setWidgetMenuId(null);
     setToast("อัปเดตจากกราฟที่บันทึกไว้แล้ว");
-  }, [selectedSavedChart, selectedWidget, updateWidget]);
+  }, [savedCharts, selectedWidgetId, updateWidget]);
+
+  const refreshSelectedChartFromSaved = useCallback(() => {
+    if (!selectedWidget || selectedWidget.type !== "chart") return;
+    refreshChartWidgetFromSaved(selectedWidget.id);
+  }, [refreshChartWidgetFromSaved, selectedWidget]);
+
+  const ensureWidgetSavedChart = useCallback((widgetId = selectedWidgetId) => {
+    const targetWidget = widgetsRef.current.find((widget) => widget.id === widgetId && widget.type === "chart");
+    if (!targetWidget) return null;
+
+    const sourceChartId = savedChartIdFromWidget(targetWidget);
+    const existing = sourceChartId ? savedCharts.find((chart) => chart.id === sourceChartId) : null;
+    if (existing) return existing;
+
+    const snapshot = normalizeChartConfig(targetWidget.config?.chartConfig ?? buildSampleChartConfig({ title: targetWidget.title }));
+    const record = createSavedChartFromConfig(snapshot, {
+      forceNew: true,
+      title: targetWidget.title || chartTitle(snapshot),
+    });
+    if (!record) {
+      setToast("ไม่สามารถบันทึกเป็นกราฟใหม่ได้");
+      return null;
+    }
+
+    const nextConfig = normalizeChartConfig(record.config);
+    updateWidget(targetWidget.id, {
+      title: record.title,
+      sourceChartId: record.id,
+      sourceChartConfigId: record.id,
+      chartConfigSnapshot: nextConfig,
+      config: {
+        ...targetWidget.config,
+        sourceChartId: record.id,
+        title: record.title,
+        chartType: nextConfig.chartType,
+        fieldMappings: nextConfig.mappings,
+        settings: nextConfig.settings,
+        filters: nextConfig.filters,
+        dataset: {
+          sourceType: nextConfig.sourceType,
+          datasetId: nextConfig.datasetId,
+        },
+        chartConfig: nextConfig,
+      },
+    });
+    setSavedCharts(readSavedCharts());
+    setToast("บันทึกเป็นกราฟใหม่แล้ว");
+    return record;
+  }, [savedCharts, selectedWidgetId, updateWidget]);
+
+  const editChartWidget = useCallback((widgetId = selectedWidgetId) => {
+    const record = ensureWidgetSavedChart(widgetId);
+    if (!record) return;
+    setWidgetMenuId(null);
+    navigate(`/dashboard-v2?chartId=${encodeURIComponent(record.id)}&from=dashboard`);
+  }, [ensureWidgetSavedChart, navigate, selectedWidgetId]);
 
   const applyTemplate = useCallback((templateId) => {
     const template = TEMPLATES.find((item) => item.id === templateId);
-    const nextWidgets = createTemplateWidgets(templateId, savedCharts[0]);
+    const primarySavedChart = savedCharts[0] ?? createSavedChartFromConfig(buildSampleChartConfig(), { forceNew: true });
+    const nextWidgets = createTemplateWidgets(templateId, primarySavedChart, {
+      projectId: activeProjectIdRef.current,
+      dashboardId: activeDashboardIdRef.current,
+    });
+    setSavedCharts(readSavedCharts());
     commitWidgets(nextWidgets, `ใช้เทมเพลต: ${template?.title ?? "Dashboard"}`);
     setSelectedWidgetId(nextWidgets[0]?.id ?? null);
   }, [commitWidgets, savedCharts]);
@@ -915,24 +1435,30 @@ export default function DashboardCanvasBuilder() {
   const duplicateWidget = useCallback((widgetId = selectedWidgetId) => {
     const source = widgetsRef.current.find((widget) => widget.id === widgetId);
     if (!source) return;
+    const maxCols = Math.max(1, Math.floor(canvasSettingsRef.current.width / GRID_UNIT));
+    const maxRows = Math.max(1, Math.floor(canvasSettingsRef.current.height / GRID_UNIT));
+    const maxZ = widgetsRef.current.reduce((value, widget) => Math.max(value, finiteNumber(widget.zIndex, 1)), 1);
     const duplicate = {
       ...clone(source),
       id: makeId(source.type),
-      title: `${source.title} Copy`,
-      x: Math.min(source.x + 4, GRID_COLS - source.w),
-      y: source.y + 4,
-      zIndex: source.zIndex + 1,
+      title: `${source.title} สำเนา`,
+      x: clamp(source.x + 3, 0, Math.max(0, maxCols - source.w)),
+      y: clamp(source.y + 3, 0, Math.max(0, maxRows - source.h)),
+      zIndex: maxZ + 1,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
     commitWidgets((current) => [...current, duplicate], "ทำสำเนาวิดเจ็ตแล้ว");
     setSelectedWidgetId(duplicate.id);
+    setWidgetMenuId(null);
+    window.requestAnimationFrame(() => window.dispatchEvent(new Event("resize")));
   }, [commitWidgets, selectedWidgetId]);
 
   const deleteWidget = useCallback((widgetId = selectedWidgetId) => {
     if (!widgetId) return;
     commitWidgets((current) => current.filter((widget) => widget.id !== widgetId), "ลบวิดเจ็ตแล้ว");
     setSelectedWidgetId(null);
+    setWidgetMenuId(null);
   }, [commitWidgets, selectedWidgetId]);
 
   const alignSelected = useCallback((mode) => {
@@ -942,12 +1468,50 @@ export default function DashboardCanvasBuilder() {
     setToast("จัดแนววิดเจ็ตแล้ว");
   }, [selectedWidget, updateWidget]);
 
-  const changeZIndex = useCallback((direction) => {
-    if (!selectedWidget) return;
-    const currentZ = selectedWidget.zIndex ?? 1;
-    updateWidget(selectedWidget.id, { zIndex: Math.max(1, currentZ + direction) });
+  const changeZIndex = useCallback((direction, widgetId = selectedWidgetId) => {
+    const targetWidget = widgetsRef.current.find((widget) => widget.id === widgetId);
+    if (!targetWidget) return;
+    const currentZ = finiteNumber(targetWidget.zIndex, 1);
+    const currentWidgets = widgetsRef.current;
+    const maxZ = currentWidgets.reduce((value, widget) => Math.max(value, finiteNumber(widget.zIndex, 1)), 1);
+    const minZ = currentWidgets.reduce((value, widget) => Math.min(value, finiteNumber(widget.zIndex, 1)), currentZ);
+    const topCount = currentWidgets.filter((widget) => finiteNumber(widget.zIndex, 1) === maxZ).length;
+    const bottomCount = currentWidgets.filter((widget) => finiteNumber(widget.zIndex, 1) === minZ).length;
+    if (direction > 0 && currentZ >= maxZ && topCount <= 1) {
+      setToast("วิดเจ็ตอยู่ด้านหน้าสุดแล้ว");
+      return;
+    }
+    if (direction < 0 && currentZ <= minZ && bottomCount <= 1) {
+      setToast("วิดเจ็ตอยู่ด้านหลังสุดแล้ว");
+      return;
+    }
+    if (direction > 0) {
+      updateWidget(targetWidget.id, { zIndex: maxZ + 1 });
+    } else {
+      commitWidgets((current) =>
+        current.map((widget) =>
+          widget.id === targetWidget.id
+            ? { ...widget, zIndex: 1, updatedAt: new Date().toISOString() }
+            : { ...widget, zIndex: Math.min(998, finiteNumber(widget.zIndex, 1) + 1), updatedAt: new Date().toISOString() }
+        )
+      );
+    }
+    setSelectedWidgetId(targetWidget.id);
+    setWidgetMenuId(null);
     setToast(direction > 0 ? "นำวิดเจ็ตขึ้นด้านหน้าแล้ว" : "ส่งวิดเจ็ตไปด้านหลังแล้ว");
-  }, [selectedWidget, updateWidget]);
+  }, [commitWidgets, selectedWidgetId, updateWidget]);
+
+  const expandWidgetToReadableSize = useCallback((widgetId) => {
+    const widget = widgetsRef.current.find((item) => item.id === widgetId);
+    if (!widget) return;
+    const minSize = minWidgetSize(widget.type);
+    updateWidget(widget.id, {
+      w: Math.max(widget.w, minSize.w),
+      h: Math.max(widget.h, minSize.h),
+    });
+    window.requestAnimationFrame(() => window.dispatchEvent(new Event("resize")));
+    setToast("ขยายวิดเจ็ตเพื่อแสดงกราฟแล้ว");
+  }, [updateWidget]);
 
   const handleLayoutChange = useCallback((nextLayout) => {
     if (previewMode) return;
@@ -1103,43 +1667,96 @@ export default function DashboardCanvasBuilder() {
 
   const updateSelectedChartTitle = useCallback((value) => {
     if (!selectedWidget || selectedWidget.type !== "chart") return;
-    const chartConfig = normalizeChartConfig(selectedWidget.config.chartConfig);
-    updateWidgetConfig(selectedWidget.id, {
-      chartConfig: {
-        ...chartConfig,
-        settings: {
-          ...chartConfig.settings,
-          general: {
-            ...chartConfig.settings.general,
-            title: value,
-          },
+    const chartConfig = selectedChartConfig ?? normalizeChartConfig(selectedWidget.config.chartConfig);
+    const nextConfig = {
+      ...chartConfig,
+      updatedAt: new Date().toISOString(),
+      settings: {
+        ...chartConfig.settings,
+        general: {
+          ...chartConfig.settings.general,
+          title: value,
         },
       },
+    };
+    updateWidget(selectedWidget.id, {
+      title: value,
+      chartConfigSnapshot: nextConfig,
+      config: {
+        ...selectedWidget.config,
+        chartConfig: nextConfig,
+        title: value,
+        chartType: nextConfig.chartType,
+        fieldMappings: nextConfig.mappings,
+        settings: nextConfig.settings,
+        filters: nextConfig.filters,
+      },
     });
-  }, [selectedWidget, updateWidgetConfig]);
+  }, [selectedChartConfig, selectedWidget, updateWidget]);
 
   const updateSelectedChartLegend = useCallback((checked) => {
     if (!selectedWidget || selectedWidget.type !== "chart") return;
-    const chartConfig = normalizeChartConfig(selectedWidget.config.chartConfig);
-    updateWidgetConfig(selectedWidget.id, {
-      chartConfig: {
-        ...chartConfig,
-        settings: {
-          ...chartConfig.settings,
-          legend: {
-            ...chartConfig.settings.legend,
-            showLegend: checked,
-          },
+    const chartConfig = selectedChartConfig ?? normalizeChartConfig(selectedWidget.config.chartConfig);
+    const nextConfig = {
+      ...chartConfig,
+      updatedAt: new Date().toISOString(),
+      settings: {
+        ...chartConfig.settings,
+        legend: {
+          ...chartConfig.settings.legend,
+          showLegend: checked,
         },
       },
+    };
+    updateWidget(selectedWidget.id, {
+      chartConfigSnapshot: nextConfig,
+      config: {
+        ...selectedWidget.config,
+        chartConfig: nextConfig,
+        chartType: nextConfig.chartType,
+        fieldMappings: nextConfig.mappings,
+        settings: nextConfig.settings,
+        filters: nextConfig.filters,
+      },
     });
-  }, [selectedWidget, updateWidgetConfig]);
+  }, [selectedChartConfig, selectedWidget, updateWidget]);
 
-  const exportSelectedWidget = useCallback(() => {
-    if (!selectedWidget) return;
-    downloadFile(`${selectedWidget.type}-${selectedWidget.id}.json`, JSON.stringify(selectedWidget, null, 2), "application/json;charset=utf-8");
+  const exportSelectedWidget = useCallback((widgetId = selectedWidgetId) => {
+    const widget = widgetsRef.current.find((item) => item.id === widgetId);
+    if (!widget) {
+      setToast("กรุณาเลือกวิดเจ็ตก่อนส่งออก");
+      return;
+    }
+
+    const filename = `mini-bi-widget-${widget.type}-${timestampForFilename()}.png`;
+    const widgetElement = Array.from(document.querySelectorAll("[data-widget-id]")).find(
+      (element) => element.getAttribute("data-widget-id") === widget.id
+    );
+
+    if (widget.type === "chart") {
+      const chartCanvas = widgetElement?.querySelector("canvas");
+      if (chartCanvas instanceof HTMLCanvasElement && chartCanvas.width > 0 && chartCanvas.height > 0) {
+        try {
+          downloadDataUrl(filename, chartCanvas.toDataURL("image/png"));
+          setToast("ส่งออกวิดเจ็ตแล้ว");
+          setWidgetMenuId(null);
+          return;
+        } catch {
+          setToast("ไม่สามารถส่งออก PNG ได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง");
+          return;
+        }
+      }
+    }
+
+    const dataUrl = drawWidgetFallbackPng(widget);
+    if (!dataUrl) {
+      setToast("ไม่สามารถส่งออก PNG ได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง");
+      return;
+    }
+    downloadDataUrl(filename, dataUrl);
+    setWidgetMenuId(null);
     setToast("ส่งออกวิดเจ็ตแล้ว");
-  }, [selectedWidget]);
+  }, [selectedWidgetId]);
 
   useEffect(() => {
     const onRibbonCommand = (event) => {
@@ -1217,12 +1834,36 @@ export default function DashboardCanvasBuilder() {
           <button type="button" className="dcb-logo" onClick={() => navigate("/home")} aria-label="กลับหน้าแรก">MB</button>
           <div>
             <span className="dcb-breadcrumb">Mini BI / ตัวจัดวางแดชบอร์ด</span>
+            <div className="dcb-project-context">
+              <span>โปรเจกต์</span>
+              <strong>{activeProjectName}</strong>
+            </div>
             <input
               className="dcb-dashboard-name"
               value={dashboardName}
               onChange={(event) => setDashboardName(event.target.value)}
               aria-label="ชื่อแดชบอร์ด"
             />
+            <div className="dcb-dashboard-switcher" aria-label="เลือก Dashboard">
+              <span>แดชบอร์ด</span>
+              <select value={activeDashboardId} onChange={(event) => switchDashboard(event.target.value)}>
+                {dashboards.map((dashboard) => (
+                  <option key={dashboard.id} value={dashboard.id}>
+                    {dashboard.name || dashboard.dashboardName || "แดชบอร์ด"}
+                  </option>
+                ))}
+              </select>
+              <button type="button" onClick={createNewDashboard}>สร้าง Dashboard</button>
+              <button type="button" onClick={renameCurrentDashboard}>เปลี่ยนชื่อ Dashboard</button>
+              <button
+                type="button"
+                onClick={deleteCurrentDashboard}
+                disabled={dashboards.length <= 1}
+                title={dashboards.length <= 1 ? "\u0e15\u0e49\u0e2d\u0e07\u0e21\u0e35 Dashboard \u0e2d\u0e22\u0e48\u0e32\u0e07\u0e19\u0e49\u0e2d\u0e22 1 \u0e23\u0e32\u0e22\u0e01\u0e32\u0e23" : "\u0e25\u0e1a Dashboard \u0e1b\u0e31\u0e08\u0e08\u0e38\u0e1a\u0e31\u0e19"}
+              >
+                ลบ Dashboard
+              </button>
+            </div>
           </div>
           <div className="dcb-page-nav" aria-label="นำทางหน้า">
             <button type="button" className="dcb-btn dcb-nav-btn" onClick={navigation.goBack} disabled={!navigation.canGoBack} title={navigation.canGoBack ? "ย้อนกลับ" : "อยู่ที่หน้าหลักแล้ว"} aria-label="ย้อนกลับ">←</button>
@@ -1306,12 +1947,32 @@ export default function DashboardCanvasBuilder() {
         </nav>
       )}
 
-      <main className="dcb-main">
+      <main className={`dcb-main ${leftPanelOpen ? "" : "is-left-collapsed"} ${rightPanelOpen ? "" : "is-right-collapsed"}`}>
         {!previewMode ? (
-          <aside className="dcb-panel dcb-left-panel">
+          <aside className={`dcb-panel dcb-left-panel ${leftPanelOpen ? "" : "is-collapsed"}`} aria-hidden={!leftPanelOpen}>
             <div className="dcb-panel-header">
               <strong>วิดเจ็ต</strong>
               <span>กราฟ องค์ประกอบ และเทมเพลต</span>
+            </div>
+            <div className="dcb-dashboard-switcher dcb-dashboard-switcher-panel" aria-label="เลือก Dashboard">
+              <span>แดชบอร์ด</span>
+              <select value={activeDashboardId} onChange={(event) => switchDashboard(event.target.value)}>
+                {dashboards.map((dashboard) => (
+                  <option key={dashboard.id} value={dashboard.id}>
+                    {dashboard.name || dashboard.dashboardName || "แดชบอร์ด"}
+                  </option>
+                ))}
+              </select>
+              <button type="button" onClick={createNewDashboard}>สร้าง Dashboard</button>
+              <button type="button" onClick={renameCurrentDashboard}>เปลี่ยนชื่อ Dashboard</button>
+              <button
+                type="button"
+                onClick={deleteCurrentDashboard}
+                disabled={dashboards.length <= 1}
+                title={dashboards.length <= 1 ? "\u0e15\u0e49\u0e2d\u0e07\u0e21\u0e35 Dashboard \u0e2d\u0e22\u0e48\u0e32\u0e07\u0e19\u0e49\u0e2d\u0e22 1 \u0e23\u0e32\u0e22\u0e01\u0e32\u0e23" : "\u0e25\u0e1a Dashboard \u0e1b\u0e31\u0e08\u0e08\u0e38\u0e1a\u0e31\u0e19"}
+              >
+                ลบ Dashboard
+              </button>
             </div>
             <div className="dcb-tabs" role="tablist" aria-label="คลังวิดเจ็ต">
               {[
@@ -1333,26 +1994,106 @@ export default function DashboardCanvasBuilder() {
             </div>
             <div className="dcb-library-scroll">
               {activeLibraryTab === "charts" ? (
-                <div className="dcb-library-list">
-                  {savedCharts.length ? (
-                    savedCharts.map((chart) => (
-                      <article key={chart.id} className="dcb-library-item">
-                        <div className="dcb-item-icon">▦</div>
-                        <div className="dcb-item-body">
-                          <strong>{chart.title}</strong>
-                          <span>{chartTypeLabel(chart.chartType)} · {formatSavedTime(new Date(chart.updatedAt))}</span>
-                        </div>
-                        <button type="button" onClick={() => addChart(chart)}>เพิ่ม</button>
-                      </article>
-                    ))
-                  ) : (
-                    <div className="dcb-library-empty">
-                      <strong>ยังไม่มีกราฟที่บันทึกไว้</strong>
-                      <span>บันทึกกราฟจากตัวสร้างกราฟ หรือใช้กราฟตัวอย่างเพื่อจัดวางแดชบอร์ด</span>
-                      <button type="button" className="dcb-btn dcb-btn-primary" onClick={() => navigate("/dashboard-v2")}>เปิดตัวสร้างกราฟ</button>
-                      <button type="button" className="dcb-btn" onClick={() => addChart(null)}>ใช้กราฟตัวอย่าง</button>
+                <div className="dcb-chart-library">
+                  <section className="dcb-chart-section">
+                    <div className="dcb-section-heading">
+                      <div>
+                        <strong>กราฟใน Dashboard นี้ ({dashboardChartItems.length})</strong>
+                        <span>กราฟที่ถูกเพิ่มลง Canvas แล้ว</span>
+                      </div>
                     </div>
-                  )}
+                    {dashboardChartItems.length ? (
+                      <div className="dcb-added-chart-list">
+                        {dashboardChartItems.map(({ widget, savedChart, sourceChartId, title, chartType, usageCount, updatedAt }) => (
+                          <article
+                            key={widget.id}
+                            className={`dcb-added-chart-item ${selectedWidgetId === widget.id ? "is-selected" : ""}`}
+                          >
+                            <button
+                              type="button"
+                              className="dcb-added-chart-main"
+                              onClick={() => focusWidgetOnCanvas(widget.id)}
+                              title="เลือกกราฟใน Canvas"
+                            >
+                              <span className="dcb-item-icon">{chartIcon(chartType)}</span>
+                              <span className="dcb-added-chart-copy">
+                                <strong>{title}</strong>
+                                <span>{chartTypeLabel(chartType)} · {formatSavedTime(new Date(updatedAt))}</span>
+                                <small>
+                                  {savedChart?.title
+                                    ? `เชื่อมกับ ${savedChart.title}`
+                                    : sourceChartId
+                                      ? "ไม่พบกราฟต้นฉบับ"
+                                      : "ใช้ snapshot"}
+                                </small>
+                              </span>
+                              {usageCount > 1 ? <small className="dcb-usage-badge">ใช้ {usageCount} ครั้ง</small> : null}
+                            </button>
+                            <div className="dcb-added-chart-actions">
+                              <button type="button" onClick={() => focusWidgetOnCanvas(widget.id)} title="เลือกและโฟกัสกราฟนี้">เลือก</button>
+                              <button type="button" onClick={() => editChartWidget(widget.id)} title="แก้ไขกราฟนี้ในตัวสร้างกราฟ">แก้ไขกราฟ</button>
+                              <button type="button" onClick={() => duplicateWidget(widget.id)} title="ทำสำเนาวิดเจ็ต">ทำสำเนา</button>
+                              <button
+                                type="button"
+                                onClick={() => refreshChartWidgetFromSaved(widget.id)}
+                                disabled={!sourceChartId || !savedChart}
+                                title={savedChart ? "อัปเดตจากกราฟที่บันทึกไว้" : "ไม่พบกราฟต้นฉบับในคลัง"}
+                              >
+                                อัปเดต
+                              </button>
+                              <button type="button" onClick={() => exportSelectedWidget(widget.id)} title="ส่งออกวิดเจ็ต">ส่งออก</button>
+                              <button type="button" className="danger" onClick={() => deleteWidget(widget.id)} title="ลบวิดเจ็ต">ลบ</button>
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="dcb-added-chart-empty">
+                        <strong>ยังไม่มีกราฟใน Dashboard</strong>
+                        <span>เพิ่มกราฟจากรายการที่บันทึกไว้ หรือเปิดตัวสร้างกราฟเพื่อสร้างกราฟใหม่</span>
+                        <div>
+                          <button type="button" className="dcb-btn dcb-btn-primary" onClick={() => addChart(null)}>เพิ่มกราฟตัวอย่าง</button>
+                          <button type="button" className="dcb-btn" onClick={() => navigate("/dashboard-v2")}>เปิดตัวสร้างกราฟ</button>
+                        </div>
+                      </div>
+                    )}
+                  </section>
+
+                  <section className="dcb-chart-section">
+                    <div className="dcb-section-heading">
+                      <div>
+                        <strong>กราฟที่บันทึกไว้</strong>
+                        <span>Reusable charts จากตัวสร้างกราฟ</span>
+                      </div>
+                    </div>
+                    <div className="dcb-library-list">
+                      {savedCharts.length ? (
+                        savedCharts.map((chart) => {
+                          const usageCount = savedChartUsageCounts.get(chart.id) ?? 0;
+                          return (
+                            <article key={chart.id} className="dcb-library-item">
+                              <div className="dcb-item-icon">{chartIcon(chart.chartType)}</div>
+                              <div className="dcb-item-body">
+                                <strong>{chart.title}</strong>
+                                <span>{chartTypeLabel(chart.chartType)} · {formatSavedTime(new Date(chart.updatedAt))}</span>
+                                {usageCount ? (
+                                  <small className="dcb-usage-badge">{usageCount === 1 ? "เพิ่มแล้ว" : `ใช้แล้ว ${usageCount} ครั้ง`}</small>
+                                ) : null}
+                              </div>
+                              <button type="button" onClick={() => addChart(chart)}>เพิ่ม</button>
+                            </article>
+                          );
+                        })
+                      ) : (
+                        <div className="dcb-library-empty">
+                          <strong>ยังไม่มีกราฟที่บันทึกไว้</strong>
+                          <span>บันทึกกราฟจากตัวสร้างกราฟ หรือใช้กราฟตัวอย่างเพื่อจัดวางแดชบอร์ด</span>
+                          <button type="button" className="dcb-btn dcb-btn-primary" onClick={() => navigate("/dashboard-v2")}>เปิดตัวสร้างกราฟ</button>
+                          <button type="button" className="dcb-btn" onClick={() => addChart(null)}>ใช้กราฟตัวอย่าง</button>
+                        </div>
+                      )}
+                    </div>
+                  </section>
                 </div>
               ) : null}
 
@@ -1394,6 +2135,27 @@ export default function DashboardCanvasBuilder() {
             <div className="dcb-canvas-actions">
               {!previewMode ? (
                 <>
+                  <button
+                    type="button"
+                    className={`dcb-panel-toggle ${leftPanelOpen ? "" : "is-active"}`}
+                    onClick={() => setLeftPanelOpen((open) => !open)}
+                    title={leftPanelOpen ? "ซ่อนแถบวิดเจ็ต" : "แสดงแถบวิดเจ็ต"}
+                    aria-label={leftPanelOpen ? "ซ่อนแถบวิดเจ็ต" : "แสดงแถบวิดเจ็ต"}
+                    aria-pressed={!leftPanelOpen}
+                  >
+                    <span aria-hidden="true">◧</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`dcb-panel-toggle dcb-panel-toggle-right ${rightPanelOpen ? "" : "is-active"}`}
+                    onClick={() => setRightPanelOpen((open) => !open)}
+                    title={rightPanelOpen ? "ซ่อนแถบคุณสมบัติ" : "แสดงแถบคุณสมบัติ"}
+                    aria-label={rightPanelOpen ? "ซ่อนแถบคุณสมบัติ" : "แสดงแถบคุณสมบัติ"}
+                    aria-pressed={!rightPanelOpen}
+                  >
+                    <span aria-hidden="true">◨</span>
+                  </button>
+                  <span className="dcb-canvas-actions-divider" aria-hidden="true" />
                   <button type="button" onClick={undo} disabled={!historyPast.length} title={historyPast.length ? "ย้อนกลับการเปลี่ยนแปลงล่าสุด" : "ยังไม่มีประวัติให้ย้อนกลับ"} aria-label="ย้อนกลับ">↶</button>
                   <button type="button" onClick={redo} disabled={!historyFuture.length} title={historyFuture.length ? "ทำซ้ำการเปลี่ยนแปลงล่าสุด" : "ยังไม่มีประวัติให้ทำซ้ำ"} aria-label="ทำซ้ำ">↷</button>
                   <span className="dcb-canvas-actions-divider" aria-hidden="true" />
@@ -1430,7 +2192,13 @@ export default function DashboardCanvasBuilder() {
               <button type="button" onClick={() => setCanvasSettings((current) => ({ ...current, zoom: 75 }))}>Fit</button>
             </div>
           </div>
-          <div className="dcb-workspace" onMouseDown={() => setSelectedWidgetId(null)}>
+          <div
+            className="dcb-workspace"
+            onMouseDown={() => {
+              setSelectedWidgetId(null);
+              setWidgetMenuId(null);
+            }}
+          >
             <div
               className="dcb-canvas-scale-wrap"
               style={{
@@ -1479,7 +2247,8 @@ export default function DashboardCanvasBuilder() {
                   {widgets.map((widget) => (
                     <div
                       key={widget.id}
-                      className={`dcb-grid-item ${selectedWidgetId === widget.id ? "is-selected" : ""}`}
+                      className={`dcb-grid-item ${selectedWidgetId === widget.id ? "is-selected" : ""} ${focusedWidgetId === widget.id ? "is-focus-pulse" : ""}`}
+                      style={{ zIndex: finiteNumber(widget.zIndex, 1) }}
                       onMouseDownCapture={() => setSelectedWidgetId(widget.id)}
                       onMouseDown={(event) => {
                         event.stopPropagation();
@@ -1488,6 +2257,8 @@ export default function DashboardCanvasBuilder() {
                     >
                       <section
                         className={`dcb-widget dcb-widget-${widget.type}`}
+                        data-testid={`dashboard-widget-${widget.id}`}
+                        data-widget-id={widget.id}
                         style={{
                           background: widget.background,
                           borderColor: widget.borderColor,
@@ -1498,21 +2269,53 @@ export default function DashboardCanvasBuilder() {
                         {!previewMode ? (
                           <div className="dcb-widget-handle">
                             <span>{widget.title}</span>
-                            <div>
+                            <div onMouseDown={(event) => event.stopPropagation()}>
                               <button type="button" onClick={() => duplicateWidget(widget.id)} aria-label="ทำสำเนา">⧉</button>
-                              <button type="button" onClick={() => deleteWidget(widget.id)} aria-label="ลบ">×</button>
+                              <button
+                                type="button"
+                                onClick={() => setWidgetMenuId((current) => (current === widget.id ? null : widget.id))}
+                                aria-label="เมนูวิดเจ็ต"
+                                aria-expanded={widgetMenuId === widget.id}
+                              >
+                                ⋯
+                              </button>
+                              <button type="button" className="is-danger" onClick={() => deleteWidget(widget.id)} aria-label="ลบ">×</button>
                             </div>
                           </div>
                         ) : null}
                         <WidgetContent
                           widget={widget}
                           rows={rows}
+                          savedCharts={savedCharts}
                           selected={selectedWidgetId === widget.id}
                           editingTextId={editingTextId}
                           setEditingTextId={setEditingTextId}
                           updateWidgetConfig={updateWidgetConfig}
+                          onExpandWidget={expandWidgetToReadableSize}
                         />
                       </section>
+                      {!previewMode && widgetMenuId === widget.id ? (
+                        <div className="dcb-widget-menu" onMouseDown={(event) => event.stopPropagation()}>
+                          {widget.type === "chart" ? (
+                            <>
+                              <button type="button" onClick={() => editChartWidget(widget.id)}>แก้ไขกราฟ</button>
+                              <button
+                                type="button"
+                                onClick={() => refreshChartWidgetFromSaved(widget.id)}
+                                disabled={!savedChartIdFromWidget(widget)}
+                                title={savedChartIdFromWidget(widget) ? "อัปเดตจากต้นฉบับ" : "ยังไม่มีกราฟต้นฉบับ"}
+                              >
+                                อัปเดตจากต้นฉบับ
+                              </button>
+                            </>
+                          ) : null}
+                          <button type="button" onClick={() => duplicateWidget(widget.id)}>ทำสำเนา</button>
+                          <button type="button" onClick={() => exportSelectedWidget(widget.id)}>ส่งออก PNG</button>
+                          <button type="button" onClick={() => changeZIndex(1, widget.id)}>ขึ้นหน้า</button>
+                          <button type="button" onClick={() => changeZIndex(-1, widget.id)}>ลงหลัง</button>
+                          <button type="button" className="danger" onClick={() => deleteWidget(widget.id)}>ลบ</button>
+                        </div>
+                      ) : null}
                     </div>
                   ))}
                 </GridLayout>
@@ -1522,7 +2325,7 @@ export default function DashboardCanvasBuilder() {
         </section>
 
         {!previewMode ? (
-          <aside className="dcb-panel dcb-right-panel">
+          <aside className={`dcb-panel dcb-right-panel ${rightPanelOpen ? "" : "is-collapsed"}`} aria-hidden={!rightPanelOpen}>
             <div className="dcb-panel-header">
               <strong>คุณสมบัติ</strong>
               <span>{selectedWidget ? `${WIDGET_LABELS[selectedWidget.type]} · ${selectedWidget.title}` : "ตั้งค่าแดชบอร์ดและ Canvas"}</span>
@@ -1653,14 +2456,27 @@ export default function DashboardCanvasBuilder() {
                             ต้นฉบับ: {selectedSavedChart.title}
                             <small>อัปเดตล่าสุด {formatSavedTime(new Date(selectedSavedChart.updatedAt))}</small>
                           </span>
+                          <button type="button" onClick={() => editChartWidget(selectedWidget.id)}>
+                            แก้ไขกราฟ
+                          </button>
                           <button type="button" onClick={refreshSelectedChartFromSaved} disabled={!selectedChartCanRefresh}>
                             อัปเดตจากกราฟที่บันทึกไว้
                           </button>
                         </div>
                       ) : (
-                        <small className="dcb-property-note">ไม่พบกราฟต้นฉบับในคลัง กราฟนี้จะใช้ config ที่บันทึกอยู่ใน layout</small>
+                        <div className="dcb-chart-sync">
+                          <span>
+                            ต้นฉบับ: ใช้ snapshot
+                            <small>ไม่พบกราฟต้นฉบับในคลัง กราฟนี้จะใช้ config ที่บันทึกอยู่ใน layout</small>
+                          </span>
+                          <button type="button" onClick={() => editChartWidget(selectedWidget.id)}>
+                            แก้ไขจาก snapshot
+                          </button>
+                          <button type="button" onClick={() => ensureWidgetSavedChart(selectedWidget.id)}>
+                            บันทึกเป็นกราฟใหม่
+                          </button>
+                        </div>
                       )}
-                      <button type="button" className="dcb-wide-btn" onClick={() => navigate("/dashboard-v2")}>เปิดในตัวสร้างกราฟ</button>
                     </>
                   ) : null}
                   {selectedWidget.type === "text" ? (
@@ -1685,11 +2501,25 @@ export default function DashboardCanvasBuilder() {
                     </>
                   ) : null}
                   <h3>การทำงาน</h3>
-                  <div className="dcb-property-actions">
+                  <div className="dcb-property-actions is-widget-actions">
                     <button type="button" onClick={() => duplicateWidget(selectedWidget.id)}>ทำสำเนา</button>
-                    <button type="button" onClick={() => changeZIndex(1)}>ขึ้นหน้า</button>
-                    <button type="button" onClick={() => changeZIndex(-1)}>ลงหลัง</button>
-                    <button type="button" onClick={exportSelectedWidget}>ส่งออกวิดเจ็ต</button>
+                    <button
+                      type="button"
+                      onClick={() => changeZIndex(1, selectedWidget.id)}
+                      disabled={selectedLayerState.isTop}
+                      title={selectedLayerState.isTop ? "วิดเจ็ตอยู่ด้านหน้าสุดแล้ว" : "นำวิดเจ็ตขึ้นด้านหน้า"}
+                    >
+                      ขึ้นหน้า
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => changeZIndex(-1, selectedWidget.id)}
+                      disabled={selectedLayerState.isBottom}
+                      title={selectedLayerState.isBottom ? "วิดเจ็ตอยู่ด้านหลังสุดแล้ว" : "ส่งวิดเจ็ตลงด้านหลัง"}
+                    >
+                      ลงหลัง
+                    </button>
+                    <button type="button" onClick={() => exportSelectedWidget(selectedWidget.id)}>ส่งออกวิดเจ็ต</button>
                     <button type="button" className="danger" onClick={() => deleteWidget(selectedWidget.id)}>ลบ</button>
                   </div>
                 </div>
@@ -1701,6 +2531,7 @@ export default function DashboardCanvasBuilder() {
 
       <footer className="dcb-statusbar">
         <span>วิดเจ็ต: {widgets.length}</span>
+        <span>กราฟ: {dashboardChartItems.length}</span>
         <span>ซูม: {canvasSettings.zoom}%</span>
         <span>Grid: {canvasSettings.showGrid ? "On" : "Off"}</span>
         <span>Snap: {canvasSettings.snapToGrid ? "On" : "Off"}</span>
