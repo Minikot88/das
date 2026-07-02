@@ -122,6 +122,17 @@ export default function HomePage() {
     setHomeNotice("การลบโปรเจกต์จะเปิดใช้เมื่อเชื่อมต่อ backend แล้ว");
   };
 
+  const changeProjectSort = (nextSort) => {
+    const sortLabels = {
+      recent: "ล่าสุด",
+      active: "ใช้งาน",
+      az: "ก-ฮ",
+    };
+
+    setProjectSort(nextSort);
+    setHomeNotice(`จัดเรียงรายการทำงานต่อ: ${sortLabels[nextSort] ?? "ล่าสุด"}`);
+  };
+
   const quickTools = [
     {
       icon: "DB",
@@ -436,7 +447,7 @@ export default function HomePage() {
                   type="button"
                   className={`home-filter-chip${projectSort === "recent" ? " is-active" : ""}`}
                   aria-pressed={projectSort === "recent"}
-                  onClick={() => setProjectSort("recent")}
+                  onClick={() => changeProjectSort("recent")}
                 >
                   ล่าสุด
                 </button>
@@ -444,7 +455,7 @@ export default function HomePage() {
                   type="button"
                   className={`home-filter-chip${projectSort === "active" ? " is-active" : ""}`}
                   aria-pressed={projectSort === "active"}
-                  onClick={() => setProjectSort("active")}
+                  onClick={() => changeProjectSort("active")}
                 >
                   ใช้งาน
                 </button>
@@ -452,7 +463,7 @@ export default function HomePage() {
                   type="button"
                   className={`home-filter-chip${projectSort === "az" ? " is-active" : ""}`}
                   aria-pressed={projectSort === "az"}
-                  onClick={() => setProjectSort("az")}
+                  onClick={() => changeProjectSort("az")}
                 >
                   ก-ฮ
                 </button>

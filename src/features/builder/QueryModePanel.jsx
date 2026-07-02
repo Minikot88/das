@@ -10,15 +10,43 @@ export default function QueryModePanel({
   onResetSql,
 }) {
   const displayedSql = queryMode === "sql" ? customSql : generatedSql;
+  const [copyState, setCopyState] = React.useState("");
+
+  React.useEffect(() => {
+    if (!copyState) return undefined;
+    const timer = window.setTimeout(() => setCopyState(""), 2400);
+    return () => window.clearTimeout(timer);
+  }, [copyState]);
 
   async function handleCopySql() {
     const sql = displayedSql || generatedSql || "";
-    if (!sql) return;
+    if (!sql) {
+      setCopyState("ยังไม่มี SQL ให้คัดลอก");
+      return;
+    }
+    let copied = false;
     try {
       await navigator.clipboard?.writeText(sql);
+      copied = true;
     } catch {
       // Clipboard availability depends on the browser context.
     }
+    if (!copied) {
+      try {
+        const textarea = document.createElement("textarea");
+        textarea.value = sql;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        copied = document.execCommand("copy");
+        textarea.remove();
+      } catch {
+        copied = false;
+      }
+    }
+    setCopyState(copied ? "คัดลอก SQL แล้ว" : "ไม่สามารถคัดลอกอัตโนมัติได้ กรุณาเลือกข้อความในช่อง SQL");
   }
 
   return (
@@ -54,6 +82,12 @@ export default function QueryModePanel({
             รีเซ็ต SQL
           </button>
         </div>
+
+        {copyState ? (
+          <div className="builder-v3-inline-notice" role="status">
+            {copyState}
+          </div>
+        ) : null}
 
         {queryError ? (
           <div id="builder-sql-error" className="builder-v3-validation-card is-error" role="alert">

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageContainer, PageHeader } from "../components/layout/Layout";
 import EnterpriseDataTable from "../components/ui/EnterpriseDataTable";
@@ -67,6 +67,25 @@ export default function DatasetsPage() {
   const [fileName, setFileName] = useState("");
   const [datasetName, setDatasetName] = useState("");
   const [importError, setImportError] = useState("");
+
+  useEffect(() => {
+    function handleRibbonCommand(event) {
+      const detail = event.detail;
+      if (detail?.scope !== "datasets" || detail?.command !== "focus-search") return;
+
+      const searchInput = document.querySelector(".datasets-page .enterprise-table-controls input[type='search']");
+      if (searchInput instanceof HTMLInputElement) {
+        searchInput.focus();
+        searchInput.select();
+        searchInput.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }
+
+    window.addEventListener("mini-bi:ribbon-command", handleRibbonCommand);
+    return () => {
+      window.removeEventListener("mini-bi:ribbon-command", handleRibbonCommand);
+    };
+  }, []);
 
   const datasets = useMemo(
     () => [

@@ -25,6 +25,7 @@ import {
   renameDashboard as renameStoredDashboard,
   safeSetLocalStorage,
   setActiveDashboard as setStoredActiveDashboard,
+  setActiveProject as setStoredActiveProject,
   upsertDashboard,
 } from "@/services/projectStorage";
 import "react-grid-layout/css/styles.css";
@@ -219,6 +220,13 @@ function resolveWidgetChartConfig(widget, savedCharts = []) {
     return savedConfig;
   }
   return copiedConfig;
+}
+
+function chartWidgetDisplayTitle(widget, savedCharts = []) {
+  if (!widget || widget.type !== "chart") return widget?.title || "Widget";
+  const sourceChartId = savedChartIdFromWidget(widget);
+  const savedChart = sourceChartId ? savedCharts.find((chart) => chart.id === sourceChartId) : null;
+  return savedChart?.title || chartTitle(resolveWidgetChartConfig(widget, savedCharts)) || widget.title || "กราฟ";
 }
 
 function downloadDataUrl(filename, dataUrl) {
@@ -978,6 +986,7 @@ export default function DashboardCanvasBuilder() {
   const [historyFuture, setHistoryFuture] = useState([]);
   const [editingTextId, setEditingTextId] = useState(null);
   const [widgetMenuId, setWidgetMenuId] = useState(null);
+  const [chartActionMenuId, setChartActionMenuId] = useState(null);
   const [focusedWidgetId, setFocusedWidgetId] = useState(null);
   const widgetsRef = useRef(widgets);
   const canvasSettingsRef = useRef(canvasSettings);
@@ -1047,6 +1056,20 @@ export default function DashboardCanvasBuilder() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!chartActionMenuId) return undefined;
+
+    function closeChartActionMenu(event) {
+      if (event.target instanceof Element && event.target.closest(".dcb-added-chart-item")) return;
+      setChartActionMenuId(null);
+    }
+
+    document.addEventListener("mousedown", closeChartActionMenu);
+    return () => {
+      document.removeEventListener("mousedown", closeChartActionMenu);
+    };
+  }, [chartActionMenuId]);
+
   const selectedWidget = useMemo(
     () => widgets.find((widget) => widget.id === selectedWidgetId) ?? null,
     [selectedWidgetId, widgets]
@@ -1069,6 +1092,66 @@ export default function DashboardCanvasBuilder() {
     });
     return counts;
   }, [widgets]);
+
+  useEffect(() => {
+    if (!savedCharts.length || !widgetsRef.current.some((widget) => widget.type === "chart")) return;
+
+    const savedById = new Map(savedCharts.map((chart) => [chart.id, chart]));
+    let changed = false;
+    const nextWidgets = widgetsRef.current.map((widget) => {
+      if (widget.type !== "chart") return widget;
+      const sourceChartId = savedChartIdFromWidget(widget);
+      const savedChart = sourceChartId ? savedById.get(sourceChartId) : null;
+      if (!savedChart?.config) return widget;
+
+      const savedConfig = normalizeChartConfig(savedChart.config);
+      const currentSnapshot = widget.chartConfigSnapshot && typeof widget.chartConfigSnapshot === "object"
+        ? normalizeChartConfig(widget.chartConfigSnapshot)
+        : widget.config?.chartConfig && typeof widget.config.chartConfig === "object"
+          ? normalizeChartConfig(widget.config.chartConfig)
+          : null;
+      const savedUpdatedAt = Date.parse(savedChart.updatedAt || savedConfig.updatedAt || "");
+      const currentUpdatedAt = Date.parse(currentSnapshot?.updatedAt || widget.updatedAt || "");
+      const savedIsNewer = Number.isFinite(savedUpdatedAt) && savedUpdatedAt > (Number.isFinite(currentUpdatedAt) ? currentUpdatedAt : 0);
+      const titleChanged = widget.title !== savedChart.title || widget.config?.title !== savedChart.title;
+      const chartTypeChanged = widget.config?.chartType !== savedConfig.chartType;
+      if (!savedIsNewer && !titleChanged && !chartTypeChanged) return widget;
+
+      changed = true;
+      return sanitizeWidget(
+        {
+          ...widget,
+          title: savedChart.title,
+          sourceChartId: savedChart.id,
+          sourceChartConfigId: savedChart.id,
+          chartConfigSnapshot: savedConfig,
+          config: {
+            ...widget.config,
+            sourceChartId: savedChart.id,
+            title: savedChart.title,
+            chartType: savedConfig.chartType,
+            fieldMappings: savedConfig.mappings,
+            settings: savedConfig.settings,
+            filters: savedConfig.filters,
+            dataset: {
+              sourceType: savedConfig.sourceType,
+              datasetId: savedConfig.datasetId,
+            },
+            chartConfig: savedConfig,
+          },
+          updatedAt: new Date().toISOString(),
+        },
+        0,
+        canvasSettingsRef.current
+      );
+    });
+
+    if (!changed) return;
+    setWidgets(nextWidgets);
+    widgetsRef.current = nextWidgets;
+    setSaveStatus("unsaved");
+  }, [savedCharts]);
+
   const dashboardChartItems = useMemo(() => (
     widgets
       .filter((widget) => widget.type === "chart")
@@ -1076,15 +1159,15 @@ export default function DashboardCanvasBuilder() {
         const sourceChartId = savedChartIdFromWidget(widget);
         const savedChart = sourceChartId ? savedCharts.find((chart) => chart.id === sourceChartId) : null;
         const chartConfig = resolveWidgetChartConfig(widget, savedCharts);
-        const chartType = widget.config?.chartType || chartConfig?.chartType || "bar";
+        const chartType = savedChart?.chartType || widget.config?.chartType || chartConfig?.chartType || "bar";
         return {
           widget,
           sourceChartId,
           savedChart,
-          title: widget.title || chartTitle(chartConfig),
+          title: savedChart?.title || widget.title || chartTitle(chartConfig),
           chartType,
           usageCount: sourceChartId ? (savedChartUsageCounts.get(sourceChartId) ?? 0) : 0,
-          updatedAt: widget.updatedAt || widget.createdAt,
+          updatedAt: savedChart?.updatedAt || widget.updatedAt || widget.createdAt,
         };
       })
   ), [savedChartUsageCounts, savedCharts, widgets]);
@@ -1141,6 +1224,27 @@ export default function DashboardCanvasBuilder() {
     setLastSavedAt(formatSavedTime());
   }, [buildLayoutPayload]);
 
+  const chartDesignerUrl = useCallback((params = {}) => {
+    const search = new URLSearchParams({
+      from: "dashboard",
+      projectId: activeProjectIdRef.current,
+      dashboardId: activeDashboardIdRef.current,
+      ...params,
+    });
+    return `/dashboard-v2?${search.toString()}`;
+  }, []);
+
+  const preserveActiveContext = useCallback(() => {
+    setStoredActiveProject(activeProjectIdRef.current, activeDashboardIdRef.current);
+  }, []);
+
+  const openChartDesignerForCreate = useCallback(() => {
+    persistLayout();
+    preserveActiveContext();
+    setChartPickerOpen(false);
+    navigate(chartDesignerUrl({ mode: "create" }));
+  }, [chartDesignerUrl, navigate, persistLayout, preserveActiveContext]);
+
   const applyDashboardState = useCallback((nextState, message) => {
     activeProjectIdRef.current = nextState.projectId;
     activeDashboardIdRef.current = nextState.dashboardId;
@@ -1156,6 +1260,7 @@ export default function DashboardCanvasBuilder() {
     setTheme(nextState.theme);
     setSelectedWidgetId(null);
     setWidgetMenuId(null);
+    setChartActionMenuId(null);
     setHistoryPast([]);
     setHistoryFuture([]);
     setSaveStatus("saved");
@@ -1184,6 +1289,7 @@ export default function DashboardCanvasBuilder() {
   }, [loadActiveDashboardState, persistLayout]);
 
   const renameCurrentDashboard = useCallback(() => {
+    setToast("เปิดหน้าต่างเปลี่ยนชื่อ Dashboard");
     const nextName = window.prompt("\u0e0a\u0e37\u0e48\u0e2d Dashboard", dashboardName);
     if (!nextName || !nextName.trim()) return;
     renameStoredDashboard(activeProjectIdRef.current, activeDashboardIdRef.current, nextName.trim());
@@ -1319,6 +1425,7 @@ export default function DashboardCanvasBuilder() {
     focusPulseTimerRef.current = window.setTimeout(() => {
       setFocusedWidgetId((current) => (current === widgetId ? null : current));
     }, 650);
+    setChartActionMenuId(null);
     window.requestAnimationFrame(() => {
       const widgetElement = Array.from(document.querySelectorAll("[data-widget-id]")).find(
         (element) => element.getAttribute("data-widget-id") === widgetId
@@ -1361,6 +1468,7 @@ export default function DashboardCanvasBuilder() {
     });
     setSelectedWidgetId(targetWidget.id);
     setWidgetMenuId(null);
+    setChartActionMenuId(null);
     setToast("อัปเดตจากกราฟที่บันทึกไว้แล้ว");
   }, [savedCharts, selectedWidgetId, updateWidget]);
 
@@ -1417,8 +1525,11 @@ export default function DashboardCanvasBuilder() {
     const record = ensureWidgetSavedChart(widgetId);
     if (!record) return;
     setWidgetMenuId(null);
-    navigate(`/dashboard-v2?chartId=${encodeURIComponent(record.id)}&from=dashboard`);
-  }, [ensureWidgetSavedChart, navigate, selectedWidgetId]);
+    setChartActionMenuId(null);
+    persistLayout();
+    preserveActiveContext();
+    navigate(chartDesignerUrl({ chartId: record.id }));
+  }, [chartDesignerUrl, ensureWidgetSavedChart, navigate, persistLayout, preserveActiveContext, selectedWidgetId]);
 
   const applyTemplate = useCallback((templateId) => {
     const template = TEMPLATES.find((item) => item.id === templateId);
@@ -1451,6 +1562,7 @@ export default function DashboardCanvasBuilder() {
     commitWidgets((current) => [...current, duplicate], "ทำสำเนาวิดเจ็ตแล้ว");
     setSelectedWidgetId(duplicate.id);
     setWidgetMenuId(null);
+    setChartActionMenuId(null);
     window.requestAnimationFrame(() => window.dispatchEvent(new Event("resize")));
   }, [commitWidgets, selectedWidgetId]);
 
@@ -1459,6 +1571,7 @@ export default function DashboardCanvasBuilder() {
     commitWidgets((current) => current.filter((widget) => widget.id !== widgetId), "ลบวิดเจ็ตแล้ว");
     setSelectedWidgetId(null);
     setWidgetMenuId(null);
+    setChartActionMenuId(null);
   }, [commitWidgets, selectedWidgetId]);
 
   const alignSelected = useCallback((mode) => {
@@ -1740,6 +1853,7 @@ export default function DashboardCanvasBuilder() {
           downloadDataUrl(filename, chartCanvas.toDataURL("image/png"));
           setToast("ส่งออกวิดเจ็ตแล้ว");
           setWidgetMenuId(null);
+          setChartActionMenuId(null);
           return;
         } catch {
           setToast("ไม่สามารถส่งออก PNG ได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง");
@@ -1755,6 +1869,7 @@ export default function DashboardCanvasBuilder() {
     }
     downloadDataUrl(filename, dataUrl);
     setWidgetMenuId(null);
+    setChartActionMenuId(null);
     setToast("ส่งออกวิดเจ็ตแล้ว");
   }, [selectedWidgetId]);
 
@@ -1873,7 +1988,7 @@ export default function DashboardCanvasBuilder() {
         <div className="dcb-header-actions">
           <span className={`dcb-save-indicator ${saveStatus}`}>{statusText} {lastSavedAt}</span>
           <button type="button" className="dcb-btn" onClick={() => navigate("/home")} title="กลับหน้าหลัก">หน้าหลัก</button>
-          <button type="button" className="dcb-btn" onClick={() => navigate("/dashboard-v2")}>เปิดตัวสร้างกราฟ</button>
+          <button type="button" className="dcb-btn" onClick={openChartDesignerForCreate}>เปิดตัวสร้างกราฟ</button>
           <button type="button" className="dcb-btn" onClick={() => setShareOpen(true)}>แชร์</button>
           <button type="button" className="dcb-btn dcb-btn-primary" onClick={saveDashboard}>บันทึก</button>
         </div>
@@ -2032,17 +2147,32 @@ export default function DashboardCanvasBuilder() {
                             <div className="dcb-added-chart-actions">
                               <button type="button" onClick={() => focusWidgetOnCanvas(widget.id)} title="เลือกและโฟกัสกราฟนี้">เลือก</button>
                               <button type="button" onClick={() => editChartWidget(widget.id)} title="แก้ไขกราฟนี้ในตัวสร้างกราฟ">แก้ไขกราฟ</button>
-                              <button type="button" onClick={() => duplicateWidget(widget.id)} title="ทำสำเนาวิดเจ็ต">ทำสำเนา</button>
                               <button
                                 type="button"
-                                onClick={() => refreshChartWidgetFromSaved(widget.id)}
-                                disabled={!sourceChartId || !savedChart}
-                                title={savedChart ? "อัปเดตจากกราฟที่บันทึกไว้" : "ไม่พบกราฟต้นฉบับในคลัง"}
+                                className="dcb-added-chart-more"
+                                onClick={() => setChartActionMenuId((current) => (current === widget.id ? null : widget.id))}
+                                aria-haspopup="menu"
+                                aria-expanded={chartActionMenuId === widget.id}
+                                title="คำสั่งเพิ่มเติม"
                               >
-                                อัปเดต
+                                ⋯
                               </button>
-                              <button type="button" onClick={() => exportSelectedWidget(widget.id)} title="ส่งออกวิดเจ็ต">ส่งออก</button>
-                              <button type="button" className="danger" onClick={() => deleteWidget(widget.id)} title="ลบวิดเจ็ต">ลบ</button>
+                              {chartActionMenuId === widget.id ? (
+                                <div className="dcb-added-chart-menu" role="menu" aria-label={`คำสั่ง ${title}`}>
+                                  <button type="button" role="menuitem" onClick={() => duplicateWidget(widget.id)}>ทำสำเนา</button>
+                                  <button
+                                    type="button"
+                                    role="menuitem"
+                                    onClick={() => refreshChartWidgetFromSaved(widget.id)}
+                                    disabled={!sourceChartId || !savedChart}
+                                    title={savedChart ? "อัปเดตจากกราฟที่บันทึกไว้" : "ไม่พบกราฟต้นฉบับในคลัง"}
+                                  >
+                                    อัปเดตจากต้นฉบับ
+                                  </button>
+                                  <button type="button" role="menuitem" onClick={() => exportSelectedWidget(widget.id)}>ส่งออก</button>
+                                  <button type="button" role="menuitem" className="danger" onClick={() => deleteWidget(widget.id)}>ลบ</button>
+                                </div>
+                              ) : null}
                             </div>
                           </article>
                         ))}
@@ -2053,7 +2183,7 @@ export default function DashboardCanvasBuilder() {
                         <span>เพิ่มกราฟจากรายการที่บันทึกไว้ หรือเปิดตัวสร้างกราฟเพื่อสร้างกราฟใหม่</span>
                         <div>
                           <button type="button" className="dcb-btn dcb-btn-primary" onClick={() => addChart(null)}>เพิ่มกราฟตัวอย่าง</button>
-                          <button type="button" className="dcb-btn" onClick={() => navigate("/dashboard-v2")}>เปิดตัวสร้างกราฟ</button>
+                          <button type="button" className="dcb-btn" onClick={openChartDesignerForCreate}>เปิดตัวสร้างกราฟ</button>
                         </div>
                       </div>
                     )}
@@ -2088,7 +2218,7 @@ export default function DashboardCanvasBuilder() {
                         <div className="dcb-library-empty">
                           <strong>ยังไม่มีกราฟที่บันทึกไว้</strong>
                           <span>บันทึกกราฟจากตัวสร้างกราฟ หรือใช้กราฟตัวอย่างเพื่อจัดวางแดชบอร์ด</span>
-                          <button type="button" className="dcb-btn dcb-btn-primary" onClick={() => navigate("/dashboard-v2")}>เปิดตัวสร้างกราฟ</button>
+                          <button type="button" className="dcb-btn dcb-btn-primary" onClick={openChartDesignerForCreate}>เปิดตัวสร้างกราฟ</button>
                           <button type="button" className="dcb-btn" onClick={() => addChart(null)}>ใช้กราฟตัวอย่าง</button>
                         </div>
                       )}
@@ -2189,7 +2319,14 @@ export default function DashboardCanvasBuilder() {
               >
                 +
               </button>
-              <button type="button" onClick={() => setCanvasSettings((current) => ({ ...current, zoom: 75 }))}>Fit</button>
+              <button
+                type="button"
+                onClick={() => setCanvasSettings((current) => ({ ...current, zoom: 75 }))}
+                disabled={canvasSettings.zoom === 75}
+                title={canvasSettings.zoom === 75 ? "Canvas อยู่ที่ขนาด Fit แล้ว" : "ปรับขนาด Canvas ให้พอดี"}
+              >
+                Fit
+              </button>
             </div>
           </div>
           <div
@@ -2223,7 +2360,7 @@ export default function DashboardCanvasBuilder() {
                     <div>
                       <button type="button" className="dcb-btn dcb-btn-primary" onClick={openChartPicker}>เพิ่มกราฟ</button>
                       <button type="button" className="dcb-btn" onClick={() => setActiveLibraryTab("templates")}>เลือกเทมเพลต</button>
-                      <button type="button" className="dcb-btn" onClick={() => navigate("/dashboard-v2")}>เปิดตัวสร้างกราฟ</button>
+                      <button type="button" className="dcb-btn" onClick={openChartDesignerForCreate}>เปิดตัวสร้างกราฟ</button>
                     </div>
                   </div>
                 ) : null}
@@ -2268,7 +2405,7 @@ export default function DashboardCanvasBuilder() {
                       >
                         {!previewMode ? (
                           <div className="dcb-widget-handle">
-                            <span>{widget.title}</span>
+                            <span>{chartWidgetDisplayTitle(widget, savedCharts)}</span>
                             <div onMouseDown={(event) => event.stopPropagation()}>
                               <button type="button" onClick={() => duplicateWidget(widget.id)} aria-label="ทำสำเนา">⧉</button>
                               <button
@@ -2569,7 +2706,7 @@ export default function DashboardCanvasBuilder() {
                 <strong>กราฟตัวอย่าง</strong>
                 <small>Bar Chart</small>
               </button>
-              <button type="button" className="dcb-chart-option" onClick={() => navigate("/dashboard-v2")}>
+              <button type="button" className="dcb-chart-option" onClick={openChartDesignerForCreate}>
                 <span>＋</span>
                 <strong>สร้างกราฟใหม่</strong>
                 <small>เปิดตัวสร้างกราฟ</small>

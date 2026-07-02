@@ -280,6 +280,8 @@ export default function FieldList({ dataset, schema, onDragStart, mappedFieldNam
   const [search, setSearch] = useState("");
   const [selectedTableId, setSelectedTableId] = useState("");
   const [showAllFields, setShowAllFields] = useState(false);
+  const [selectedRecommendedField, setSelectedRecommendedField] = useState("");
+  const [recommendedFieldNotice, setRecommendedFieldNotice] = useState("");
   const [treeScrollTop, setTreeScrollTop] = useState(0);
   const [activeTreeIndex, setActiveTreeIndex] = useState(0);
   const searchExpandedSnapshotRef = useRef(null);
@@ -312,6 +314,12 @@ export default function FieldList({ dataset, schema, onDragStart, mappedFieldNam
     if (!selectedTable?.id) return;
     setSelectedTableId((current) => current || selectedTable.id);
   }, [selectedTable?.id]);
+
+  useEffect(() => {
+    if (!recommendedFieldNotice) return undefined;
+    const timer = window.setTimeout(() => setRecommendedFieldNotice(""), 2400);
+    return () => window.clearTimeout(timer);
+  }, [recommendedFieldNotice]);
 
   useEffect(() => {
     if (!selectedTable?.id || !selectedTableNodeId) return;
@@ -824,10 +832,13 @@ export default function FieldList({ dataset, schema, onDragStart, mappedFieldNam
                 <button
                   key={`${selectedTable?.id || "table"}:recommended:${field.name}`}
                   type="button"
-                  className={`builder-v3-recommended-field${mappedSet.has(field.name) ? " is-active" : ""}`}
+                  className={`builder-v3-recommended-field${mappedSet.has(field.name) || selectedRecommendedField === field.name ? " is-active" : ""}`}
+                  aria-pressed={selectedRecommendedField === field.name}
                   draggable
                   onClick={() => {
                     if (selectedTable?.id) setSelectedTableId(selectedTable.id);
+                    setSelectedRecommendedField(field.name);
+                    setRecommendedFieldNotice(`เลือกฟิลด์ ${field.label || field.name} แล้ว ลากไปยังตำแหน่งแมปฟิลด์เพื่อใช้งาน`);
                   }}
                   onDragStart={(event) => {
                     if (typeof onDragStart === "function") {
@@ -842,6 +853,11 @@ export default function FieldList({ dataset, schema, onDragStart, mappedFieldNam
               );
             })}
           </div>
+          {recommendedFieldNotice ? (
+            <div className="builder-v3-inline-notice" role="status">
+              {recommendedFieldNotice}
+            </div>
+          ) : null}
         </div>
       ) : null}
 

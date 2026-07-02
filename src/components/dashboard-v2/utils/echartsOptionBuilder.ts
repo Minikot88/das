@@ -6,6 +6,8 @@ type ChartTheme = {
   palette?: string[];
 };
 
+type ChartVisualTheme = typeof enterpriseChartTheme;
+
 type BuilderInput = {
   chartType: ChartType | null;
   transformedData: TransformedChartData;
@@ -19,6 +21,69 @@ type OptionObject = Record<string, unknown>;
 type SeriesObject = Record<string, unknown>;
 
 const chartFontFamily = "IBM Plex Sans Thai";
+
+const darkChartTheme: ChartVisualTheme = {
+  axisLabel: "#D1D5DB",
+  axisLine: "#333333",
+  gridLine: "rgba(255,255,255,.1)",
+  title: "#F9FAFB",
+  mutedText: "#9CA3AF",
+  panel: "#111111",
+  tooltipDark: "#111111",
+  tooltipLight: "#181818",
+  positive: enterpriseChartTheme.positive,
+  negative: enterpriseChartTheme.negative,
+};
+
+function isDarkAppTheme() {
+  if (typeof document === "undefined") return false;
+  return document.documentElement.dataset.theme === "dark" || document.body.classList.contains("dark");
+}
+
+function isDarkHexColor(value?: string) {
+  if (!value || !value.startsWith("#")) return false;
+  const normalized = value.length === 4
+    ? `#${value[1]}${value[1]}${value[2]}${value[2]}${value[3]}${value[3]}`
+    : value;
+  if (!/^#[0-9a-f]{6}$/i.test(normalized)) return false;
+  const red = Number.parseInt(normalized.slice(1, 3), 16) / 255;
+  const green = Number.parseInt(normalized.slice(3, 5), 16) / 255;
+  const blue = Number.parseInt(normalized.slice(5, 7), 16) / 255;
+  const luminance = 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+  return luminance < 0.28;
+}
+
+function isLightHexColor(value?: string) {
+  if (!value || !value.startsWith("#")) return false;
+  const normalized = value.length === 4
+    ? `#${value[1]}${value[1]}${value[2]}${value[2]}${value[3]}${value[3]}`
+    : value;
+  if (!/^#[0-9a-f]{6}$/i.test(normalized)) return false;
+  const red = Number.parseInt(normalized.slice(1, 3), 16) / 255;
+  const green = Number.parseInt(normalized.slice(3, 5), 16) / 255;
+  const blue = Number.parseInt(normalized.slice(5, 7), 16) / 255;
+  const luminance = 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+  return luminance > 0.72;
+}
+
+function isDarkChartMode(settings: ChartConfig["settings"]) {
+  const preset = settings.general.themePreset ?? "";
+  return isDarkAppTheme() || settings.tooltip.theme === "dark" || preset.includes("dark") || isDarkHexColor(settings.general.backgroundColor);
+}
+
+function chartVisualTheme(settings: ChartConfig["settings"]) {
+  return isDarkChartMode(settings) ? darkChartTheme : enterpriseChartTheme;
+}
+
+function chartBackground(settings: ChartConfig["settings"]) {
+  if (isDarkChartMode(settings) && isLightHexColor(settings.general.backgroundColor)) return darkChartTheme.panel;
+  return settings.general.backgroundColor;
+}
+
+function readableLabelColor(settings: ChartConfig["settings"]) {
+  if (!isDarkChartMode(settings)) return settings.labels.color;
+  return isDarkHexColor(settings.labels.color) ? darkChartTheme.title : settings.labels.color;
+}
 
 function palette(settings: ChartConfig["settings"], chartTheme?: ChartTheme) {
   return chartTheme?.palette?.length ? chartTheme.palette : settings.colors.seriesColors.length ? settings.colors.seriesColors : chartPalettes[settings.colors.palette];
@@ -36,20 +101,21 @@ function lineType(settings: ChartConfig["settings"]) {
 
 function titleOption(settings: ChartConfig["settings"]): OptionObject | undefined {
   if (!settings.general.showTitle && !settings.general.showSubtitle) return undefined;
+  const theme = chartVisualTheme(settings);
   return {
     text: settings.general.showTitle ? settings.general.title : "",
     subtext: settings.general.showSubtitle ? settings.general.subtitle : "",
     left: 0,
     top: 0,
     textStyle: {
-      color: enterpriseChartTheme.title,
+      color: theme.title,
       fontSize: 14,
       fontWeight: 500,
       lineHeight: 19,
       fontFamily: chartFontFamily,
     },
     subtextStyle: {
-      color: enterpriseChartTheme.mutedText,
+      color: theme.mutedText,
       fontSize: 11,
       lineHeight: 16,
       fontFamily: chartFontFamily,
@@ -70,6 +136,7 @@ function gridOption(settings: ChartConfig["settings"]): OptionObject {
 
 function legendOption(settings: ChartConfig["settings"]): OptionObject | undefined {
   if (!settings.legend.showLegend) return undefined;
+  const theme = chartVisualTheme(settings);
   const horizontal = settings.legend.position === "top" || settings.legend.position === "bottom";
   return {
     show: true,
@@ -80,7 +147,7 @@ function legendOption(settings: ChartConfig["settings"]): OptionObject | undefin
     left: settings.legend.position === "left" ? 0 : settings.legend.align === "start" ? 0 : settings.legend.align === "end" ? undefined : "center",
     right: settings.legend.position === "right" ? 0 : settings.legend.align === "end" ? 0 : undefined,
     textStyle: {
-      color: enterpriseChartTheme.mutedText,
+      color: theme.mutedText,
       fontSize: settings.legend.fontSize,
       lineHeight: Math.round(settings.legend.fontSize * 1.35),
       fontFamily: chartFontFamily,
@@ -93,12 +160,13 @@ function legendOption(settings: ChartConfig["settings"]): OptionObject | undefin
 
 function tooltipOption(settings: ChartConfig["settings"]): OptionObject | undefined {
   if (!settings.tooltip.enabled) return undefined;
-  const dark = settings.tooltip.theme === "dark";
+  const dark = isDarkChartMode(settings);
+  const theme = chartVisualTheme(settings);
   return {
     show: true,
     trigger: "axis",
-    backgroundColor: dark ? enterpriseChartTheme.tooltipDark : enterpriseChartTheme.tooltipLight,
-    borderColor: dark ? "#1E293B" : "#E2E8F0",
+    backgroundColor: dark ? theme.tooltipDark : theme.tooltipLight,
+    borderColor: dark ? "#333333" : "#E2E8F0",
     borderWidth: 1,
     borderRadius: settings.tooltip.borderRadius,
     padding: [7, 9],
@@ -114,8 +182,9 @@ function tooltipOption(settings: ChartConfig["settings"]): OptionObject | undefi
 
 function baseOption(input: BuilderInput): EChartsOption {
   const settings = input.chartSettings;
+  const theme = chartVisualTheme(settings);
   return {
-    backgroundColor: settings.general.backgroundColor,
+    backgroundColor: chartBackground(settings),
     color: palette(settings, input.chartTheme),
     title: titleOption(settings),
     legend: legendOption(settings),
@@ -125,31 +194,32 @@ function baseOption(input: BuilderInput): EChartsOption {
     animationEasing: settings.animation.easing,
     textStyle: {
       fontFamily: chartFontFamily,
-      color: enterpriseChartTheme.title,
+      color: theme.title,
       fontWeight: 400,
     },
   };
 }
 
 function valueAxis(settings: ChartConfig["settings"], name?: string): OptionObject {
+  const theme = chartVisualTheme(settings);
   return {
     type: "value",
     show: settings.axis.showYAxis,
     name: settings.axis.showAxisLabels ? name ?? settings.axis.yAxisLabel : "",
-    nameTextStyle: { color: enterpriseChartTheme.mutedText, fontSize: 11, lineHeight: 16, fontFamily: chartFontFamily, fontWeight: 400 },
+    nameTextStyle: { color: theme.mutedText, fontSize: 11, lineHeight: 16, fontFamily: chartFontFamily, fontWeight: 400 },
     axisLabel: {
-      color: enterpriseChartTheme.mutedText,
+      color: theme.mutedText,
       fontSize: 11,
       lineHeight: 16,
       fontFamily: chartFontFamily,
       fontWeight: 400,
       formatter: (value: number) => formatValue(value, settings.axis.numberFormat),
     },
-    axisLine: { lineStyle: { color: enterpriseChartTheme.axisLine } },
+    axisLine: { lineStyle: { color: theme.axisLine } },
     splitLine: {
       show: settings.grid.showGrid,
       lineStyle: {
-        color: settings.grid.color || enterpriseChartTheme.gridLine,
+        color: settings.grid.color || theme.gridLine,
         opacity: settings.grid.opacity / 100,
         type: lineType(settings),
       },
@@ -158,26 +228,27 @@ function valueAxis(settings: ChartConfig["settings"], name?: string): OptionObje
 }
 
 function categoryAxis(settings: ChartConfig["settings"], categories: string[], name?: string): OptionObject {
+  const theme = chartVisualTheme(settings);
   return {
     type: "category",
     data: categories,
     show: settings.axis.showXAxis,
     name: settings.axis.showAxisLabels ? name ?? settings.axis.xAxisLabel : "",
-    nameTextStyle: { color: enterpriseChartTheme.mutedText, fontSize: 11, lineHeight: 16, fontFamily: chartFontFamily, fontWeight: 400 },
+    nameTextStyle: { color: theme.mutedText, fontSize: 11, lineHeight: 16, fontFamily: chartFontFamily, fontWeight: 400 },
     axisLabel: {
-      color: enterpriseChartTheme.mutedText,
+      color: theme.mutedText,
       fontSize: 11,
       lineHeight: 16,
       fontFamily: chartFontFamily,
       fontWeight: 400,
       rotate: settings.axis.rotateXLabels,
     },
-    axisLine: { lineStyle: { color: enterpriseChartTheme.axisLine } },
+    axisLine: { lineStyle: { color: theme.axisLine } },
     axisTick: { show: false },
     splitLine: {
       show: false,
       lineStyle: {
-        color: settings.grid.color || enterpriseChartTheme.gridLine,
+        color: settings.grid.color || theme.gridLine,
         opacity: settings.grid.opacity / 100,
         type: lineType(settings),
       },
@@ -189,7 +260,7 @@ function labelOption(settings: ChartConfig["settings"]) {
   return {
     show: settings.labels.showDataLabels,
     position: settings.labels.position,
-    color: settings.labels.color,
+    color: readableLabelColor(settings),
     fontSize: settings.labels.fontSize,
     lineHeight: Math.round(settings.labels.fontSize * 1.35),
     fontFamily: chartFontFamily,
@@ -223,6 +294,7 @@ function buildCartesianOption(input: BuilderInput, chartKind: "bar" | "line" | "
   const series: SeriesObject[] = [];
 
   if (chartKind === "waterfall") {
+    const theme = chartVisualTheme(settings);
     series.push({
       name: "ฐาน",
       type: "bar",
@@ -237,7 +309,7 @@ function buildCartesianOption(input: BuilderInput, chartKind: "bar" | "line" | "
       stack: "waterfall",
       label: labelOption(settings),
       itemStyle: {
-        color: (params: { dataIndex: number }) => data.waterfallRows[params.dataIndex]?.positive ? enterpriseChartTheme.positive : enterpriseChartTheme.negative,
+        color: (params: { dataIndex: number }) => data.waterfallRows[params.dataIndex]?.positive ? theme.positive : theme.negative,
       },
       data: data.waterfallRows.map((row) => row.value),
     });
@@ -352,6 +424,7 @@ function buildScatterOption(input: BuilderInput, bubble = false): EChartsOption 
 function buildRadarOption(input: BuilderInput): EChartsOption {
   const option = baseOption(input);
   const settings = input.chartSettings;
+  const theme = chartVisualTheme(settings);
   const rows = input.transformedData.pieRows.slice(0, 8);
   const max = Math.max(...rows.map((row) => row.value), 1);
   return {
@@ -360,9 +433,9 @@ function buildRadarOption(input: BuilderInput): EChartsOption {
     radar: {
       radius: "64%",
       indicator: rows.map((row) => ({ name: row.name, max: max * 1.12 })),
-      axisName: { color: enterpriseChartTheme.mutedText, fontSize: 11, lineHeight: 16, fontFamily: chartFontFamily, fontWeight: 400 },
-      splitLine: { lineStyle: { color: enterpriseChartTheme.gridLine } },
-      splitArea: { areaStyle: { color: ["#FFFFFF", "#F8FAFC"] } },
+      axisName: { color: theme.mutedText, fontSize: 11, lineHeight: 16, fontFamily: chartFontFamily, fontWeight: 400 },
+      splitLine: { lineStyle: { color: theme.gridLine } },
+      splitArea: { areaStyle: { color: isDarkChartMode(settings) ? ["#111111", "#181818"] : ["#FFFFFF", "#F8FAFC"] } },
     },
     series: [
       {
@@ -378,6 +451,7 @@ function buildRadarOption(input: BuilderInput): EChartsOption {
 function buildGaugeOption(input: BuilderInput): EChartsOption {
   const option = baseOption(input);
   const settings = input.chartSettings;
+  const theme = chartVisualTheme(settings);
   return {
     ...option,
     series: [
@@ -386,7 +460,7 @@ function buildGaugeOption(input: BuilderInput): EChartsOption {
         min: 0,
         max: 100,
         progress: { show: true, roundCap: true, width: 12 },
-        axisLine: { lineStyle: { width: 12, color: [[1, "#E2E8F0"]] } },
+        axisLine: { lineStyle: { width: 12, color: [[1, isDarkChartMode(settings) ? "#333333" : "#E2E8F0"]] } },
         axisTick: { show: false },
         splitLine: { show: false },
         axisLabel: { show: false },
@@ -398,7 +472,7 @@ function buildGaugeOption(input: BuilderInput): EChartsOption {
           fontWeight: 500,
           lineHeight: 32,
           fontFamily: chartFontFamily,
-          color: enterpriseChartTheme.title,
+          color: theme.title,
         },
         data: [{ value: Number(input.transformedData.gaugePercent.toFixed(1)), name: input.transformedData.kpiLabel }],
       },
@@ -451,6 +525,7 @@ function buildTreemapOption(input: BuilderInput): EChartsOption {
 function buildHeatmapOption(input: BuilderInput): EChartsOption {
   const option = baseOption(input);
   const settings = input.chartSettings;
+  const theme = chartVisualTheme(settings);
   const xs = Array.from(new Set(input.transformedData.heatmapRows.map((row) => row.x)));
   const ys = Array.from(new Set(input.transformedData.heatmapRows.map((row) => row.y)));
   const max = Math.max(...input.transformedData.heatmapRows.map((row) => row.value), 1);
@@ -467,7 +542,7 @@ function buildHeatmapOption(input: BuilderInput): EChartsOption {
       left: "center",
       bottom: 4,
       inRange: { color: ["#EAF2FF", "#2563EB"] },
-      textStyle: { fontFamily: chartFontFamily, fontWeight: 400, fontSize: 10, lineHeight: 14, color: enterpriseChartTheme.mutedText },
+      textStyle: { fontFamily: chartFontFamily, fontWeight: 400, fontSize: 10, lineHeight: 14, color: theme.mutedText },
     },
     series: [
       {
@@ -500,6 +575,7 @@ function buildSunburstOption(input: BuilderInput): EChartsOption {
 
 function buildSankeyOption(input: BuilderInput): EChartsOption {
   const option = baseOption(input);
+  const theme = chartVisualTheme(input.chartSettings);
   return {
     ...option,
     tooltip: input.chartSettings.tooltip.enabled ? { ...tooltipOption(input.chartSettings), trigger: "item" } : undefined,
@@ -514,7 +590,7 @@ function buildSankeyOption(input: BuilderInput): EChartsOption {
         nodeGap: 8,
         emphasis: { focus: "adjacency" },
         lineStyle: { color: "gradient", curveness: 0.5, opacity: 0.28 },
-        label: { color: enterpriseChartTheme.title, fontSize: 11, lineHeight: 15, fontFamily: chartFontFamily, fontWeight: 400 },
+        label: { color: theme.title, fontSize: 11, lineHeight: 15, fontFamily: chartFontFamily, fontWeight: 400 },
         data: input.transformedData.sankeyNodes,
         links: input.transformedData.sankeyLinks,
       },
@@ -525,6 +601,7 @@ function buildSankeyOption(input: BuilderInput): EChartsOption {
 function buildCandlestickOption(input: BuilderInput): EChartsOption {
   const option = baseOption(input);
   const settings = input.chartSettings;
+  const theme = chartVisualTheme(settings);
   return {
     ...option,
     grid: gridOption(settings),
@@ -537,10 +614,10 @@ function buildCandlestickOption(input: BuilderInput): EChartsOption {
         name: "OHLC",
         data: input.transformedData.candlestickRows.map((row) => row.values),
         itemStyle: {
-          color: enterpriseChartTheme.positive,
-          color0: enterpriseChartTheme.negative,
-          borderColor: enterpriseChartTheme.positive,
-          borderColor0: enterpriseChartTheme.negative,
+          color: theme.positive,
+          color0: theme.negative,
+          borderColor: theme.positive,
+          borderColor0: theme.negative,
         },
       },
     ],
@@ -572,6 +649,8 @@ function buildWaterfallOption(input: BuilderInput): EChartsOption {
 
 function buildCalendarOption(input: BuilderInput): EChartsOption {
   const option = baseOption(input);
+  const settings = input.chartSettings;
+  const theme = chartVisualTheme(settings);
   const values = input.transformedData.calendarRows;
   const years = Array.from(new Set(values.map((row) => row[0].slice(0, 4)))).sort();
   const range = years.length ? [values[0]?.[0], values[values.length - 1]?.[0]] : [new Date().toISOString().slice(0, 10), new Date().toISOString().slice(0, 10)];
@@ -586,7 +665,7 @@ function buildCalendarOption(input: BuilderInput): EChartsOption {
       left: "center",
       bottom: 2,
       inRange: { color: ["#EAF2FF", "#2563EB"] },
-      textStyle: { fontFamily: chartFontFamily, fontWeight: 400, fontSize: 10, lineHeight: 14, color: enterpriseChartTheme.mutedText },
+      textStyle: { fontFamily: chartFontFamily, fontWeight: 400, fontSize: 10, lineHeight: 14, color: theme.mutedText },
     },
     calendar: {
       top: input.chartSettings.general.showTitle ? 58 : 22,
@@ -595,11 +674,11 @@ function buildCalendarOption(input: BuilderInput): EChartsOption {
       bottom: 40,
       range,
       cellSize: ["auto", 13],
-      splitLine: { lineStyle: { color: "#E2E8F0", width: 1 } },
-      itemStyle: { borderWidth: 0.5, borderColor: "#F1F5F9" },
-      yearLabel: { show: true, color: enterpriseChartTheme.mutedText, fontSize: 11, lineHeight: 15, fontFamily: chartFontFamily, fontWeight: 400 },
-      dayLabel: { color: enterpriseChartTheme.mutedText, fontSize: 10, lineHeight: 14, fontFamily: chartFontFamily, fontWeight: 400 },
-      monthLabel: { color: enterpriseChartTheme.mutedText, fontSize: 10, lineHeight: 14, fontFamily: chartFontFamily, fontWeight: 400 },
+      splitLine: { lineStyle: { color: isDarkChartMode(settings) ? "#333333" : "#E2E8F0", width: 1 } },
+      itemStyle: { borderWidth: 0.5, borderColor: isDarkChartMode(settings) ? "#252525" : "#F1F5F9" },
+      yearLabel: { show: true, color: theme.mutedText, fontSize: 11, lineHeight: 15, fontFamily: chartFontFamily, fontWeight: 400 },
+      dayLabel: { color: theme.mutedText, fontSize: 10, lineHeight: 14, fontFamily: chartFontFamily, fontWeight: 400 },
+      monthLabel: { color: theme.mutedText, fontSize: 10, lineHeight: 14, fontFamily: chartFontFamily, fontWeight: 400 },
     },
     series: [{ type: "heatmap", coordinateSystem: "calendar", data: values }],
   };
@@ -629,13 +708,14 @@ function buildGraphOption(input: BuilderInput): EChartsOption {
 
 function buildParallelOption(input: BuilderInput): EChartsOption {
   const option = baseOption(input);
+  const theme = chartVisualTheme(input.chartSettings);
   return {
     ...option,
     parallelAxis: input.transformedData.parallelDimensions.map((name, index) => ({
       dim: index,
       name,
-      nameTextStyle: { color: enterpriseChartTheme.mutedText, fontSize: 11, lineHeight: 15, fontFamily: chartFontFamily, fontWeight: 400 },
-      axisLabel: { color: enterpriseChartTheme.mutedText, fontSize: 10, lineHeight: 14, fontFamily: chartFontFamily, fontWeight: 400 },
+      nameTextStyle: { color: theme.mutedText, fontSize: 11, lineHeight: 15, fontFamily: chartFontFamily, fontWeight: 400 },
+      axisLabel: { color: theme.mutedText, fontSize: 10, lineHeight: 14, fontFamily: chartFontFamily, fontWeight: 400 },
     })),
     parallel: { left: 44, right: 24, top: input.chartSettings.general.showTitle ? 58 : 20, bottom: 24 },
     series: [

@@ -17,6 +17,11 @@ import {
 } from "../utils/layoutUtils";
 import { createCopyName, createEntityId, createTimestampId } from "../utils/id";
 import { createShareToken } from "../utils/shareTokens";
+import {
+  normalizeThemeMode,
+  readStoredThemeMode,
+  writeStoredThemeMode,
+} from "../utils/themeMode";
 
 const defaultDashboard = (id = "dash-1", name = "Dashboard 1") => ({
   id,
@@ -138,7 +143,7 @@ const defaultFilters = normalizeFilters();
 function normalizeAppSettings(settings = {}) {
   const dashboardPreferences = settings.dashboardPreferences ?? {};
   return {
-    theme: ["light", "dark"].includes(settings.theme) ? settings.theme : defaultAppSettings.theme,
+    theme: normalizeThemeMode(settings.theme, defaultAppSettings.theme),
     density: ["compact", "comfortable", "spacious"].includes(settings.density)
       ? settings.density
       : defaultAppSettings.density,
@@ -398,6 +403,9 @@ function ensureUniqueWorkspaceStructure(saved) {
 
 const saved = migrateState(loadState());
 const savedBuilderDraft = loadBuilderDraft();
+const savedTheme = readStoredThemeMode(saved?.appSettings?.theme ?? saved?.theme ?? defaultAppSettings.theme);
+const initialAppSettings = normalizeAppSettings(saved?.appSettings ?? { theme: savedTheme });
+initialAppSettings.theme = normalizeThemeMode(savedTheme, initialAppSettings.theme);
 
 function isChartJsConfig(config) {
   return Boolean(config && typeof config === "object" && Array.isArray(config.data?.datasets));
@@ -659,8 +667,8 @@ export const useStore = create((set, get) => ({
   charts: (saved?.charts ?? []).map(normalizeStoredChart),
   shareLinks: saved?.shareLinks ?? {},
 
-  appSettings: normalizeAppSettings(saved?.appSettings ?? { theme: saved?.theme ?? "light" }),
-  theme: normalizeAppSettings(saved?.appSettings ?? { theme: saved?.theme ?? "light" }).theme,
+  appSettings: initialAppSettings,
+  theme: initialAppSettings.theme,
   locale: saved?.locale ?? "th",
 
   filters: normalizeFilters(saved?.filters),
@@ -1826,6 +1834,7 @@ export const useStore = create((set, get) => ({
       },
     });
     const theme = appSettings.theme;
+    writeStoredThemeMode(theme);
     saveState({ ...s, appSettings, theme });
     return { appSettings, theme };
   }),
@@ -2048,8 +2057,9 @@ export const useStore = create((set, get) => ({
   }),
 
   toggleTheme: () => set((s) => {
-    const theme = s.theme === "light" ? "dark" : "light";
+    const theme = s.theme === "dark" ? "light" : "dark";
     const appSettings = normalizeAppSettings({ ...s.appSettings, theme });
+    writeStoredThemeMode(theme);
     saveState({ ...s, theme, appSettings });
     return { theme, appSettings };
   }),

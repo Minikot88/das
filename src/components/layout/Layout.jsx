@@ -3,6 +3,7 @@ import { Outlet, useLocation } from "react-router-dom";
 import AppHeader from "../../layout/AppHeader";
 import SidebarRight from "../../layout/SidebarRight";
 import { useStore } from "../../store/useStore";
+import { applyThemeMode } from "../../utils/themeMode";
 
 function joinClassNames(...values) {
   return values.filter(Boolean).join(" ");
@@ -74,7 +75,7 @@ export function MainLayout() {
   const location = useLocation();
 
   useEffect(() => {
-    document.body.classList.toggle("dark", theme === "dark");
+    applyThemeMode(theme);
   }, [theme]);
 
   useEffect(() => {
@@ -108,6 +109,7 @@ export function MainLayout() {
   const shellClassName = joinClassNames(
     "shell",
     "mini-bi-ribbon-shell",
+    "mini-bi-app-shell",
     sidebarCollapsed && "sidebar-collapsed",
     isWorkspaceRoute && "is-workspace-route",
     isBuilderRoute && "is-builder-route",

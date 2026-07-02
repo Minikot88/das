@@ -1196,3 +1196,164 @@ body:has(.database-connection-page) .main-content {
     padding-inline: 9px;
   }
 }
+
+html[data-theme="dark"] body:has(.database-connection-page),
+html[data-theme="dark"] body:has(.database-connection-page) .main-content {
+  background: #000000 !important;
+  color: #f9fafb !important;
+}
+
+html[data-theme="dark"] .database-connection-page {
+  background: #000000 !important;
+  color: #f9fafb !important;
+}
+
+html[data-theme="dark"] .database-connection-page .ui-page-header,
+html[data-theme="dark"] .db-type-panel,
+html[data-theme="dark"] .db-settings-panel,
+html[data-theme="dark"] .db-summary-panel,
+html[data-theme="dark"] .db-test-result,
+html[data-theme="dark"] .db-demo-note,
+html[data-theme="dark"] .db-driver-card,
+html[data-theme="dark"] .db-preview-card,
+html[data-theme="dark"] .db-modal,
+html[data-theme="dark"] .db-saved-card,
+html[data-theme="dark"] .db-profile-mini,
+html[data-theme="dark"] .db-status-card,
+html[data-theme="dark"] .db-mini-result {
+  background: #111111 !important;
+  border-color: #2f2f2f !important;
+  color: #f9fafb !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="dark"] .db-type-card,
+html[data-theme="dark"] .db-type-icon,
+html[data-theme="dark"] .db-selected-logo,
+html[data-theme="dark"] .db-disabled-note,
+html[data-theme="dark"] .db-security-note,
+html[data-theme="dark"] .db-status-badge.is-muted,
+html[data-theme="dark"] .database-connection-page .ui-page-kicker,
+html[data-theme="dark"] .database-connection-page .db-page-header .ui-page-header-copy::before {
+  background: #181818 !important;
+  border-color: #2f2f2f !important;
+  color: #d1d5db !important;
+}
+
+html[data-theme="dark"] .db-type-card:hover,
+html[data-theme="dark"] .db-tabs button:hover,
+html[data-theme="dark"] .db-header-actions button:hover,
+html[data-theme="dark"] .db-driver-actions button:hover,
+html[data-theme="dark"] .db-action-bar button:hover,
+html[data-theme="dark"] .db-saved-actions button:hover,
+html[data-theme="dark"] .db-inline-input button:hover,
+html[data-theme="dark"] .db-modal button:hover {
+  background: #1f1f1f !important;
+  border-color: #3f3f46 !important;
+}
+
+html[data-theme="dark"] .db-type-card.is-active,
+html[data-theme="dark"] .db-tabs button.is-active {
+  background: #1e3a8a !important;
+  border-color: #3b82f6 !important;
+  color: #ffffff !important;
+}
+
+html[data-theme="dark"] .db-header-actions button,
+html[data-theme="dark"] .db-driver-actions button,
+html[data-theme="dark"] .db-action-bar button,
+html[data-theme="dark"] .db-saved-actions button,
+html[data-theme="dark"] .db-inline-input button,
+html[data-theme="dark"] .db-modal button,
+html[data-theme="dark"] .db-field input,
+html[data-theme="dark"] .db-field select,
+html[data-theme="dark"] .db-radio-row,
+html[data-theme="dark"] .db-toggle-list {
+  background: #181818 !important;
+  border-color: #2f2f2f !important;
+  color: #f9fafb !important;
+}
+
+html[data-theme="dark"] .db-header-actions .is-primary,
+html[data-theme="dark"] .db-action-bar .is-primary,
+html[data-theme="dark"] .db-modal .is-primary {
+  background: #3b82f6 !important;
+  border-color: #3b82f6 !important;
+  color: #ffffff !important;
+}
+
+html[data-theme="dark"] .db-action-bar {
+  background: rgba(17, 17, 17, 0.96) !important;
+  border-color: #2f2f2f !important;
+}
+
+html[data-theme="dark"] .db-panel-head,
+html[data-theme="dark"] .db-settings-head,
+html[data-theme="dark"] .db-tabs,
+html[data-theme="dark"] .db-section-title,
+html[data-theme="dark"] .db-switch-row,
+html[data-theme="dark"] .db-summary-head,
+html[data-theme="dark"] .db-summary-panel .db-summary-list,
+html[data-theme="dark"] .db-summary-panel .db-summary-list div,
+html[data-theme="dark"] .db-header-strip {
+  border-color: #333333 !important;
+}
+
+html[data-theme="dark"] .database-connection-page .ui-page-title,
+html[data-theme="dark"] .db-panel-head strong,
+html[data-theme="dark"] .db-type-copy strong,
+html[data-theme="dark"] .db-saved-card strong,
+html[data-theme="dark"] .db-settings-head h2,
+html[data-theme="dark"] .db-field,
+html[data-theme="dark"] .db-driver-list dd,
+html[data-theme="dark"] .db-summary-list dd,
+html[data-theme="dark"] .db-test-result dd,
+html[data-theme="dark"] .db-test-result strong,
+html[data-theme="dark"] .db-demo-note strong,
+html[data-theme="dark"] .db-status-card strong,
+html[data-theme="dark"] .db-mini-result strong,
+html[data-theme="dark"] .db-profile-mini strong,
+html[data-theme="dark"] .db-preview-card > strong {
+  color: #f9fafb !important;
+}
+
+html[data-theme="dark"] .database-connection-page .ui-page-subtitle,
+html[data-theme="dark"] .db-panel-head span,
+html[data-theme="dark"] .db-settings-head span,
+html[data-theme="dark"] .db-section-title,
+html[data-theme="dark"] .db-type-copy small,
+html[data-theme="dark"] .db-saved-card span,
+html[data-theme="dark"] .db-saved-card small,
+html[data-theme="dark"] .db-empty-state,
+html[data-theme="dark"] .db-settings-head p,
+html[data-theme="dark"] .db-field small,
+html[data-theme="dark"] .db-demo-note span,
+html[data-theme="dark"] .db-test-result span,
+html[data-theme="dark"] .db-test-result small,
+html[data-theme="dark"] .db-radio-row label,
+html[data-theme="dark"] .db-check-row,
+html[data-theme="dark"] .db-switch-row,
+html[data-theme="dark"] .db-driver-list dt,
+html[data-theme="dark"] .db-summary-list dt,
+html[data-theme="dark"] .db-test-result dt,
+html[data-theme="dark"] .db-modal p,
+html[data-theme="dark"] .db-status-card small,
+html[data-theme="dark"] .db-status-card span,
+html[data-theme="dark"] .db-mini-result small,
+html[data-theme="dark"] .db-mini-result span,
+html[data-theme="dark"] .db-profile-mini span,
+html[data-theme="dark"] .db-profile-mini small,
+html[data-theme="dark"] .db-type-group-label,
+html[data-theme="dark"] .db-header-strip {
+  color: #9ca3af !important;
+}
+
+html[data-theme="dark"] .db-json-preview {
+  background: #000000 !important;
+  border-color: #333333 !important;
+  color: #d1d5db !important;
+}
+
+html[data-theme="dark"] .db-modal-backdrop {
+  background: rgba(0, 0, 0, 0.72) !important;
+}

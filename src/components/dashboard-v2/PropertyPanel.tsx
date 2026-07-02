@@ -97,6 +97,44 @@ function ColorInput({ value, onChange, label }: { value: string; label: string; 
   );
 }
 
+function CompactSwitch({
+  checked,
+  label,
+  helper,
+  disabled = false,
+  onChange,
+}: {
+  checked: boolean;
+  label: string;
+  helper?: string;
+  disabled?: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <Box
+      sx={{
+        display: "flex",
+        alignItems: "flex-start",
+        gap: 0.75,
+        minHeight: 26,
+        opacity: disabled ? 0.56 : 1,
+      }}
+    >
+      <Switch disabled={disabled} checked={checked} onChange={(event) => onChange(event.target.checked)} inputProps={{ "aria-label": label }} />
+      <Box sx={{ minWidth: 0, pt: 0.1 }}>
+        <Typography variant="body2" sx={{ fontSize: 12, lineHeight: 1.35 }}>
+          {label}
+        </Typography>
+        {helper ? (
+          <Typography variant="caption" color="text.secondary" sx={{ display: "block", fontSize: 10.5, lineHeight: 1.35 }}>
+            {helper}
+          </Typography>
+        ) : null}
+      </Box>
+    </Box>
+  );
+}
+
 function PropertyPanel({
   config,
   saveStatus,
@@ -114,7 +152,9 @@ function PropertyPanel({
   themePresets,
   onThemePresetChange,
 }: PropertyPanelProps) {
-  const [expandedSection, setExpandedSection] = useState<(typeof sections)[number]["id"] | "">("axis");
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [expandedSection, setExpandedSection] = useState<(typeof sections)[number]["id"] | "">("");
+  const [axisAdvancedOpen, setAxisAdvancedOpen] = useState(false);
   const [jsonText, setJsonText] = useState(() => JSON.stringify(config, null, 2));
   const [jsonError, setJsonError] = useState<string | null>(null);
   const [exportAnchor, setExportAnchor] = useState<HTMLElement | null>(null);
@@ -342,7 +382,7 @@ function PropertyPanel({
           }}
         >
           <Typography variant="subtitle2" sx={{ fontSize: 12, fontWeight: 500, lineHeight: 1.35, mb: 0.75 }}>
-            Quick settings
+            พื้นฐาน
           </Typography>
           <Stack spacing={0.75}>
             <TextField
@@ -386,17 +426,9 @@ function PropertyPanel({
                 </MenuItem>
               ))}
             </Select>
-            <Stack spacing={0.25}>
-              <FormControlLabel
-                control={<Switch checked={config.settings.general.showTitle} onChange={(event) => onSettingsChange("general", { showTitle: event.target.checked })} />}
-                label="แสดงชื่อกราฟ"
-                sx={{ m: 0 }}
-              />
-              <FormControlLabel
-                control={<Switch checked={config.settings.general.showSubtitle} onChange={(event) => onSettingsChange("general", { showSubtitle: event.target.checked })} />}
-                label="แสดงคำอธิบายรอง"
-                sx={{ m: 0 }}
-              />
+            <Stack spacing={0.4}>
+              <CompactSwitch checked={config.settings.general.showTitle} label="แสดงชื่อกราฟ" onChange={(checked) => onSettingsChange("general", { showTitle: checked })} />
+              <CompactSwitch checked={config.settings.general.showSubtitle} label="แสดงคำอธิบาย" onChange={(checked) => onSettingsChange("general", { showSubtitle: checked })} />
             </Stack>
           </Stack>
         </Box>
@@ -411,7 +443,7 @@ function PropertyPanel({
           }}
         >
           <Typography variant="subtitle2" sx={{ fontSize: 12, fontWeight: 500, lineHeight: 1.35, mb: 0.75 }}>
-            Style
+            รูปแบบ
           </Typography>
           <Stack spacing={0.75}>
             <Stack direction="row" spacing={0.75} alignItems="center">
@@ -469,7 +501,81 @@ function PropertyPanel({
           </Stack>
         </Box>
 
-        {sections.map((section) => {
+        <Box
+          sx={{
+            px: 0.75,
+            py: 0.75,
+            borderBottom: "1px solid",
+            borderColor: tokens.color.borderSubtle,
+            bgcolor: tokens.color.surface,
+          }}
+        >
+          <Typography variant="subtitle2" sx={{ fontSize: 12, fontWeight: 500, lineHeight: 1.35, mb: 0.75 }}>
+            ตัวเลือกกราฟ
+          </Typography>
+          <Stack spacing={0.45}>
+            {isSectionSupported("legend") ? (
+              <CompactSwitch checked={config.settings.legend.showLegend} label="Legend" onChange={(checked) => onSettingsChange("legend", { showLegend: checked })} />
+            ) : (
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10.5, lineHeight: 1.35 }}>
+                กราฟประเภทนี้ไม่ใช้ Legend
+              </Typography>
+            )}
+            {isSectionSupported("tooltip") ? (
+              <CompactSwitch checked={config.settings.tooltip.enabled} label="Tooltip" onChange={(checked) => onSettingsChange("tooltip", { enabled: checked })} />
+            ) : null}
+            {isSectionSupported("labels") ? (
+              <CompactSwitch checked={config.settings.labels.showDataLabels} label="Data labels" onChange={(checked) => onSettingsChange("labels", { showDataLabels: checked })} />
+            ) : (
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10.5, lineHeight: 1.35 }}>
+                กราฟประเภทนี้ยังไม่รองรับ data labels
+              </Typography>
+            )}
+            {isSectionSupported("grid") ? (
+              <CompactSwitch checked={config.settings.grid.showGrid} label="Grid" onChange={(checked) => onSettingsChange("grid", { showGrid: checked })} />
+            ) : (
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10.5, lineHeight: 1.35 }}>
+                กราฟประเภทนี้ไม่ใช้แกน X/Y หรือเส้นกริด
+              </Typography>
+            )}
+          </Stack>
+        </Box>
+
+        <Accordion
+          expanded={advancedOpen}
+          onChange={(_, isExpanded) => setAdvancedOpen(isExpanded)}
+          disableGutters
+          elevation={0}
+          sx={{
+            border: 0,
+            borderBottom: "1px solid",
+            borderColor: tokens.color.borderSubtle,
+            borderRadius: "0 !important",
+            bgcolor: tokens.color.surface,
+          }}
+        >
+          <AccordionSummary
+            expandIcon={<ExpandMoreRoundedIcon sx={{ fontSize: 16 }} />}
+            aria-controls="advanced-settings-content"
+            id="advanced-settings-header"
+            sx={{
+              minHeight: "34px !important",
+              px: 0.75,
+              "& .MuiAccordionSummary-content": { my: 0, alignItems: "center" },
+            }}
+          >
+            <Stack spacing={0.1} minWidth={0}>
+              <Typography variant="subtitle2" sx={{ fontSize: 12, fontWeight: 500, lineHeight: 1.25 }}>
+                ขั้นสูง
+              </Typography>
+              <Typography variant="caption" color="text.secondary" noWrap sx={{ fontSize: 10.5, lineHeight: 1.25 }}>
+                Axis, Labels, Legend, Colors, Grid, Tooltip, Animation, JSON
+              </Typography>
+            </Stack>
+          </AccordionSummary>
+          {advancedOpen ? (
+            <AccordionDetails sx={{ p: 0, overflow: "hidden" }}>
+              {sections.map((section) => {
           const expanded = expandedSection === section.id;
           const sectionSupported = isSectionSupported(section.id);
           return (
@@ -526,25 +632,32 @@ function PropertyPanel({
                   <>
                 {section.id === "axis" ? (
                   <Stack spacing={0.75}>
-                    <FormControlLabel control={<Switch checked={config.settings.axis.showXAxis} onChange={(event) => onSettingsChange("axis", { showXAxis: event.target.checked })} />} label="แสดง X Axis" />
-                    <FormControlLabel control={<Switch checked={config.settings.axis.showYAxis} onChange={(event) => onSettingsChange("axis", { showYAxis: event.target.checked })} />} label="แสดง Y Axis" />
-                    <FormControlLabel control={<Switch checked={config.settings.axis.showAxisLabels} onChange={(event) => onSettingsChange("axis", { showAxisLabels: event.target.checked })} />} label="แสดงชื่อแกน" />
+                    <CompactSwitch checked={config.settings.axis.showXAxis} label="แสดง X Axis" onChange={(checked) => onSettingsChange("axis", { showXAxis: checked })} />
+                    <CompactSwitch checked={config.settings.axis.showYAxis} label="แสดง Y Axis" onChange={(checked) => onSettingsChange("axis", { showYAxis: checked })} />
                     <TextField label="ชื่อแกน X" size="small" value={config.settings.axis.xAxisLabel} onChange={(event) => onSettingsChange("axis", { xAxisLabel: event.target.value })} />
                     <TextField label="ชื่อแกน Y" size="small" value={config.settings.axis.yAxisLabel} onChange={(event) => onSettingsChange("axis", { yAxisLabel: event.target.value })} />
-                    <Select size="small" value={config.settings.axis.rotateXLabels} onChange={(event) => onSettingsChange("axis", { rotateXLabels: event.target.value as 0 | 30 | 45 | 90 })} fullWidth aria-label="หมุน label แกน X">
-                      {[0, 30, 45, 90].map((value) => <MenuItem key={value} value={value}>{value}°</MenuItem>)}
-                    </Select>
-                    <Select size="small" value={config.settings.axis.numberFormat} onChange={(event) => onSettingsChange("axis", { numberFormat: event.target.value as ChartSettings["axis"]["numberFormat"] })} fullWidth aria-label="รูปแบบตัวเลข">
-                      <MenuItem value="default">Default</MenuItem>
-                      <MenuItem value="compact">Compact</MenuItem>
-                      <MenuItem value="currency">Currency</MenuItem>
-                      <MenuItem value="percent">Percent</MenuItem>
-                    </Select>
-                    <Select size="small" value={config.settings.axis.dateFormat} onChange={(event) => onSettingsChange("axis", { dateFormat: event.target.value as ChartSettings["axis"]["dateFormat"] })} fullWidth aria-label="รูปแบบวันที่">
-                      <MenuItem value="MMM">MMM</MenuItem>
-                      <MenuItem value="MMM YYYY">MMM YYYY</MenuItem>
-                      <MenuItem value="DD/MM/YYYY">DD/MM/YYYY</MenuItem>
-                    </Select>
+                    <Button variant="text" size="small" onClick={() => setAxisAdvancedOpen((open) => !open)} sx={{ alignSelf: "flex-start", height: 28, px: 0.5 }}>
+                      ตั้งค่าแกนเพิ่มเติม
+                    </Button>
+                    {axisAdvancedOpen ? (
+                      <Box sx={{ display: "grid", gap: 0.75, p: 0.75, border: "1px solid", borderColor: tokens.color.borderSubtle, borderRadius: `${tokens.radius.control}px` }}>
+                        <CompactSwitch checked={config.settings.axis.showAxisLabels} label="แสดงชื่อแกน" onChange={(checked) => onSettingsChange("axis", { showAxisLabels: checked })} />
+                        <Select size="small" value={config.settings.axis.rotateXLabels} onChange={(event) => onSettingsChange("axis", { rotateXLabels: event.target.value as 0 | 30 | 45 | 90 })} fullWidth aria-label="หมุน label แกน X">
+                          {[0, 30, 45, 90].map((value) => <MenuItem key={value} value={value}>{value}°</MenuItem>)}
+                        </Select>
+                        <Select size="small" value={config.settings.axis.numberFormat} onChange={(event) => onSettingsChange("axis", { numberFormat: event.target.value as ChartSettings["axis"]["numberFormat"] })} fullWidth aria-label="รูปแบบตัวเลข">
+                          <MenuItem value="default">Default</MenuItem>
+                          <MenuItem value="compact">Compact</MenuItem>
+                          <MenuItem value="currency">Currency</MenuItem>
+                          <MenuItem value="percent">Percent</MenuItem>
+                        </Select>
+                        <Select size="small" value={config.settings.axis.dateFormat} onChange={(event) => onSettingsChange("axis", { dateFormat: event.target.value as ChartSettings["axis"]["dateFormat"] })} fullWidth aria-label="รูปแบบวันที่">
+                          <MenuItem value="MMM">MMM</MenuItem>
+                          <MenuItem value="MMM YYYY">MMM YYYY</MenuItem>
+                          <MenuItem value="DD/MM/YYYY">DD/MM/YYYY</MenuItem>
+                        </Select>
+                      </Box>
+                    ) : null}
                   </Stack>
                 ) : null}
 
@@ -667,6 +780,9 @@ function PropertyPanel({
             </Accordion>
           );
         })}
+            </AccordionDetails>
+          ) : null}
+        </Accordion>
       </Box>
 
       <Box sx={{ height: 44, px: 1, py: 0.6, borderTop: "1px solid", borderColor: "divider", bgcolor: tokens.color.surface }}>

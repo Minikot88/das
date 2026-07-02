@@ -5,6 +5,7 @@ import CommandPaletteModal from "../components/bi/CommandPaletteModal";
 import DatasetExplorerModal from "../components/bi/DatasetExplorerModal";
 import { TEMPLATE_GALLERY_CATALOG } from "../data/templateGalleryCatalog";
 import useNavigationControls from "../hooks/useNavigationControls";
+import { getActiveDashboard as getStoredActiveDashboard, getActiveProject as getStoredActiveProject } from "../services/projectStorage";
 import { createBuilderContextForDashboard } from "../utils/dashboardWorkspace";
 import { getStorageHealth, subscribeStorageHealth } from "../utils/storage";
 
@@ -365,7 +366,7 @@ const MINI_RIBBON_GROUPS = {
         { label: "นำเข้าข้อมูล", icon: "csv", route: "/datasets", tone: "primary" },
         { label: "เชื่อมต่อ", title: "เชื่อมต่อฐานข้อมูล", icon: "api", route: "/connections" },
         { label: "รีเฟรช", icon: "refresh", action: "coming-soon", noticeTitle: "รีเฟรชข้อมูล", noticeMessage: "ตอนนี้ใช้ข้อมูลเดโมในเครื่อง ยังไม่มี backend สำหรับรีเฟรชข้อมูลจริง" },
-        { label: "ค้นหา", icon: "filter", route: "/datasets" },
+        { label: "ค้นหา", icon: "filter", action: "datasets:focus-search" },
       ],
     },
     {
@@ -741,11 +742,46 @@ export default function AppHeader() {
     setNoticeDialog(null);
   }, []);
 
+  const resolveNavigationRoute = useCallback((route) => {
+    if (route !== "/dashboard-v2" || location.pathname !== "/dashboard") return route;
+    const project = getStoredActiveProject();
+    const dashboard = getStoredActiveDashboard();
+    const search = new URLSearchParams({
+      from: "dashboard",
+      mode: "create",
+    });
+    if (project?.id) search.set("projectId", project.id);
+    if (dashboard?.id) search.set("dashboardId", dashboard.id);
+    return `/dashboard-v2?${search.toString()}`;
+  }, [location.pathname]);
+
+  const saveDashboardBeforeChartDesigner = useCallback((route) => {
+    if (route !== "/dashboard-v2" || location.pathname !== "/dashboard") return;
+    window.dispatchEvent(
+      new CustomEvent("mini-bi:ribbon-command", {
+        detail: {
+          scope: "dashboard",
+          command: "save",
+        },
+      })
+    );
+  }, [location.pathname]);
+
   const navigateToPage = useCallback((route) => {
+    const resolvedRoute = resolveNavigationRoute(route);
+    const resolvedUrl = new URL(resolvedRoute, window.location.origin);
+    const currentPath = location.pathname === "/" ? "/home" : location.pathname;
+    const nextPath = resolvedUrl.pathname === "/" ? "/home" : resolvedUrl.pathname;
+
     closeNavigationOverlays();
     setManualRibbonTab(null);
-    navigate(route);
-  }, [closeNavigationOverlays, navigate]);
+    if (nextPath === currentPath && resolvedUrl.search === location.search) {
+      showNotice("อยู่ที่หน้านี้แล้ว", "คุณอยู่ในหน้าที่เลือกอยู่แล้ว");
+      return;
+    }
+    saveDashboardBeforeChartDesigner(route);
+    navigate(resolvedRoute);
+  }, [closeNavigationOverlays, location.pathname, location.search, navigate, resolveNavigationRoute, saveDashboardBeforeChartDesigner, showNotice]);
 
   const handlePageBack = useCallback(() => {
     closeNavigationOverlays();
@@ -869,6 +905,10 @@ export default function AppHeader() {
       handleScopedRibbonCommand(item, "chart", "/dashboard-v2");
       return;
     }
+    if (item.action?.startsWith("datasets:")) {
+      handleScopedRibbonCommand(item, "datasets", "/datasets");
+      return;
+    }
     if (item.route) {
       navigateToPage(item.route);
     }
@@ -889,7 +929,7 @@ export default function AppHeader() {
         </div>
       ) : null}
 
-      <header className={`appbar mini-bi-appbar${showRibbon ? "" : " is-ribbon-hidden"}`} role="banner">
+      <header className={`appbar mini-bi-appbar mini-bi-app-header mini-bi-header-shell${showRibbon ? "" : " is-ribbon-hidden"}`} role="banner">
         <div className="mini-bi-topbar">
           <div className="mini-bi-brand-cluster">
             <button type="button" className="appbar-logo mini-bi-logo" onClick={() => navigateToPage("/home")} aria-label="กลับหน้าหลัก" title="กลับหน้าหลัก">
@@ -1024,7 +1064,7 @@ export default function AppHeader() {
           </div>
         </div>
 
-        <nav className="mini-bi-ribbon-tabs" aria-label="แท็บริบบอน">
+        <nav className="mini-bi-ribbon-tabs mini-bi-main-nav" aria-label="แท็บริบบอน">
           {MINI_RIBBON_TABS.map((tab) => (
             <button
               key={tab.id}
@@ -1089,7 +1129,7 @@ export default function AppHeader() {
         ) : null}
 
         {showRibbon ? (
-          <div className="mini-bi-ribbon-area" role="toolbar" aria-label={`${activeRibbonTab} คำสั่งริบบอน`}>
+          <div className="mini-bi-ribbon-area mini-bi-ribbon" role="toolbar" aria-label={`${activeRibbonTab} คำสั่งริบบอน`}>
           {ribbonGroups.map((group) => (
             <section className="mini-bi-ribbon-group" key={group.title} aria-label={group.title}>
               <div className="mini-bi-ribbon-command-row">

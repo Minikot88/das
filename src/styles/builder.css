@@ -735,6 +735,17 @@
 
 .builder-query-header-actions { flex-wrap: wrap; }
 .builder-query-copy-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.builder-v3-inline-notice {
+  margin-top: 8px;
+  padding: 6px 8px;
+  border: 1px solid #dbe7ff;
+  border-radius: 6px;
+  background: #f5f8ff;
+  color: #1e3a8a;
+  font-size: 12px;
+  line-height: 1.45;
+}
 .builder-query-tag { gap: 6px; }
 .builder-query-tags { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .builder-query-tag-accent { color: var(--primary); border-color: color-mix(in srgb, var(--primary) 20%, transparent); }

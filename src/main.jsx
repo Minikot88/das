@@ -5,6 +5,7 @@ import "./styles.css";
 import "./styles/homeCorporatePolish.css";
 import "./styles/settingsDatasetsCorporatePolish.css";
 import "./styles/unifiedVisualDirection.css";
+import "./styles/realDarkMode.css";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>

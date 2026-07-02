@@ -1,6 +1,6 @@
 import React, { Suspense, lazy } from "react";
 import { Alert, Box, CssBaseline, GlobalStyles, Skeleton, Snackbar, Stack, ThemeProvider } from "@mui/material";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { DndProvider } from "react-dnd";
 import BottomStatus from "@/components/dashboard-v2/BottomStatus";
@@ -17,6 +17,10 @@ import { chartCatalog } from "@/components/dashboard-v2/mockData";
 import { dashboardV2Theme, dashboardV2Tokens as tokens } from "@/components/dashboard-v2/theme";
 import { DashboardDesignerProvider, useDashboardDesigner } from "@/contexts/dashboard-v2/DashboardDesignerContext";
 import type { ChartType } from "@/components/dashboard-v2/types";
+import {
+  setActiveDashboard as setStoredActiveDashboard,
+  setActiveProject as setStoredActiveProject,
+} from "@/services/projectStorage";
 
 const PreviewCanvas = lazy(() => import("@/components/dashboard-v2/PreviewCanvas"));
 const PropertyPanel = lazy(() => import("@/components/dashboard-v2/PropertyPanel"));
@@ -53,6 +57,7 @@ function GallerySkeleton() {
 function DashboardDesignerContent() {
   const { state, actions } = useDashboardDesigner();
   const navigate = useNavigate();
+  const location = useLocation();
   const [templateOpen, setTemplateOpen] = React.useState(false);
   const [featurePreviewId, setFeaturePreviewId] = React.useState<string | null>(null);
   const [mobileTab, setMobileTab] = React.useState<MobileDesignerTab>("preview");
@@ -62,12 +67,38 @@ function DashboardDesignerContent() {
   const mobileCenterRows = state.previewMode || mobilePreviewOnly ? "minmax(0, 1fr)" : "minmax(156px, auto) minmax(78px, auto) minmax(0, 1fr)";
   const currentPresets = state.chartPresets.filter((preset) => !state.config.chartType || preset.chartTypes.includes(state.config.chartType));
   const featurePreview = getFutureFeature(featurePreviewId);
+  const returnContext = React.useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return {
+      projectId: params.get("projectId"),
+      dashboardId: params.get("dashboardId"),
+    };
+  }, [location.search]);
   const closeTransientOverlays = React.useCallback(() => {
     setTemplateOpen(false);
     setFeaturePreviewId(null);
     actions.setShareOpen(false);
     actions.setSqlPanelOpen(false);
   }, [actions.setShareOpen, actions.setSqlPanelOpen]);
+  const restoreReturnContext = React.useCallback(() => {
+    if (returnContext.projectId) {
+      setStoredActiveProject(returnContext.projectId, returnContext.dashboardId || undefined);
+      return;
+    }
+    if (returnContext.dashboardId) {
+      setStoredActiveDashboard(returnContext.dashboardId);
+    }
+  }, [returnContext.dashboardId, returnContext.projectId]);
+  const handleSaveChart = React.useCallback(() => {
+    actions.saveChart();
+    if (state.returnToDashboard) {
+      actions.showMessage("บันทึกกราฟแล้ว กำลังกลับไปแดชบอร์ด");
+      restoreReturnContext();
+      window.setTimeout(() => {
+        navigate("/dashboard");
+      }, 350);
+    }
+  }, [actions.saveChart, actions.showMessage, navigate, restoreReturnContext, state.returnToDashboard]);
 
   React.useEffect(() => {
     function handlePageHide() {
@@ -109,7 +140,7 @@ function DashboardDesignerContent() {
         return;
       }
       if (detail.command === "save") {
-        actions.saveChart();
+        handleSaveChart();
         return;
       }
       if (detail.command === "preview") {
@@ -132,7 +163,7 @@ function DashboardDesignerContent() {
     };
   }, [
     actions.exportJson,
-    actions.saveChart,
+    handleSaveChart,
     actions.selectChart,
     actions.setShareOpen,
     actions.setSqlPanelOpen,
@@ -238,7 +269,10 @@ function DashboardDesignerContent() {
           <Box
             component="button"
             type="button"
-            onClick={() => navigate("/dashboard")}
+            onClick={() => {
+              restoreReturnContext();
+              navigate("/dashboard");
+            }}
             sx={{
               height: 24,
               px: 1,
@@ -385,7 +419,7 @@ function DashboardDesignerContent() {
               themePresets={state.demoThemes}
               onSettingsChange={actions.updateSettings}
               onThemePresetChange={actions.applyThemePreset}
-              onSave={actions.saveChart}
+              onSave={handleSaveChart}
               onPreview={actions.togglePreviewMode}
               onShare={() => actions.setShareOpen(true)}
               onExportJson={actions.exportJson}

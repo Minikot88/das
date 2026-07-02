@@ -6132,3 +6132,119 @@ body:has(.home-page) .mini-bi-brand-cluster {
     flex-wrap: wrap !important;
   }
 }
+/* Final AppShell full-width cascade guard.
+   This stays at EOF so legacy route-specific rules cannot wrap the chrome. */
+html,
+body,
+#root,
+.mini-bi-ribbon-shell,
+.mini-bi-app-shell {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  box-sizing: border-box !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+.shell,
+.mini-bi-app-shell,
+.appbar.mini-bi-appbar,
+.mini-bi-app-header,
+.mini-bi-header-shell,
+.mini-bi-ribbon-shell {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  overflow-x: clip !important;
+}
+
+.appbar.mini-bi-appbar,
+.mini-bi-app-header,
+.mini-bi-header-shell,
+.mini-bi-ribbon-shell .mini-bi-appbar,
+.mini-bi-ribbon-shell .mini-bi-app-header,
+.mini-bi-ribbon-shell .mini-bi-header-shell,
+.mini-bi-ribbon-shell .mini-bi-topbar,
+.mini-bi-ribbon-shell .mini-bi-ribbon-tabs,
+.mini-bi-ribbon-shell .mini-bi-main-nav,
+.mini-bi-ribbon-shell .mini-bi-ribbon-area,
+.mini-bi-ribbon-shell .mini-bi-ribbon {
+  box-sizing: border-box !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  min-width: 100dvw !important;
+  max-width: none !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  transform: none !important;
+  translate: none !important;
+}
+
+@supports not (width: 100dvw) {
+  .appbar.mini-bi-appbar,
+  .mini-bi-app-header,
+  .mini-bi-header-shell,
+  .mini-bi-ribbon-shell .mini-bi-appbar,
+  .mini-bi-ribbon-shell .mini-bi-app-header,
+  .mini-bi-ribbon-shell .mini-bi-header-shell,
+  .mini-bi-ribbon-shell .mini-bi-topbar,
+  .mini-bi-ribbon-shell .mini-bi-ribbon-tabs,
+  .mini-bi-ribbon-shell .mini-bi-main-nav,
+  .mini-bi-ribbon-shell .mini-bi-ribbon-area,
+  .mini-bi-ribbon-shell .mini-bi-ribbon {
+    width: 100% !important;
+    min-width: 100vw !important;
+    max-width: none !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+}
+
+.mini-bi-ribbon-shell,
+.mini-bi-app-shell {
+  min-width: 100dvw !important;
+}
+
+.shell.mini-bi-ribbon-shell.mini-bi-app-shell {
+  width: 100% !important;
+  min-width: 100dvw !important;
+  max-width: none !important;
+  overflow-x: clip !important;
+}
+
+@supports not (width: 100dvw) {
+  .mini-bi-ribbon-shell,
+  .mini-bi-app-shell,
+  .shell.mini-bi-ribbon-shell.mini-bi-app-shell {
+    min-width: 100vw !important;
+  }
+}
+
+@media (min-width: 641px) {
+  .mini-bi-ribbon-shell .mini-bi-topbar {
+    grid-template-columns: minmax(0, 1fr) max-content !important;
+  }
+
+  .mini-bi-ribbon-shell .mini-bi-brand-cluster {
+    grid-column: 1 !important;
+  }
+
+  .mini-bi-ribbon-shell .mini-bi-search {
+    grid-column: 1 !important;
+  }
+
+  .mini-bi-ribbon-shell .mini-bi-topbar-actions {
+    grid-column: 2 !important;
+    justify-self: end !important;
+    margin-left: auto !important;
+    z-index: 1 !important;
+  }
+}

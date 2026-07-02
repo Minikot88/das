@@ -1,0 +1,1252 @@
+html[data-theme="dark"] {
+  background: #000000;
+  color: #f9fafb;
+}
+
+html[data-theme="dark"] body,
+html[data-theme="dark"] #root,
+html[data-theme="dark"] .shell,
+html[data-theme="dark"] .body-row,
+html[data-theme="dark"] .main-content,
+html[data-theme="dark"] body:has(.home-page),
+html[data-theme="dark"] body:has(.home-page) .mini-bi-ribbon-shell,
+html[data-theme="dark"] body:has(.home-page) .mini-bi-ribbon-shell .main-content {
+  background: #000000 !important;
+  color: #f9fafb;
+}
+
+html[data-theme="dark"] * {
+  scrollbar-color: #333333 transparent;
+}
+
+html[data-theme="dark"] ::selection {
+  background: rgba(59, 130, 246, 0.34);
+  color: #ffffff;
+}
+
+html[data-theme="dark"] .mini-bi-appbar,
+html[data-theme="dark"] body:has(.home-page) .mini-bi-appbar,
+html[data-theme="dark"] .mini-bi-ribbon-shell .mini-bi-appbar {
+  background: #000000 !important;
+  border-color: #2f2f2f !important;
+  box-shadow: none !important;
+  color: #f9fafb !important;
+}
+
+html[data-theme="dark"] .mini-bi-topbar,
+html[data-theme="dark"] body:has(.home-page) .mini-bi-topbar,
+html[data-theme="dark"] .mini-bi-ribbon-tabs,
+html[data-theme="dark"] body:has(.home-page) .mini-bi-ribbon-tabs,
+html[data-theme="dark"] .mini-bi-ribbon-area,
+html[data-theme="dark"] body:has(.home-page) .mini-bi-ribbon-area {
+  background: #000000 !important;
+  border-color: #2f2f2f !important;
+  color: #f9fafb !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="dark"] .mini-bi-ribbon-area {
+  background: #111111 !important;
+}
+
+html[data-theme="dark"] .mini-bi-logo .appbar-logo-copy strong,
+html[data-theme="dark"] .mini-bi-page-breadcrumb strong,
+html[data-theme="dark"] .mini-bi-ribbon-command,
+html[data-theme="dark"] .mini-bi-ribbon-command span,
+html[data-theme="dark"] .mini-bi-ribbon-tab,
+html[data-theme="dark"] .appbar-logo-copy strong {
+  color: #f9fafb !important;
+}
+
+html[data-theme="dark"] .mini-bi-logo .appbar-logo-copy span,
+html[data-theme="dark"] .mini-bi-page-breadcrumb,
+html[data-theme="dark"] .mini-bi-ribbon-group-title,
+html[data-theme="dark"] .mini-bi-ribbon-tab:not(.is-active),
+html[data-theme="dark"] .appbar-logo-copy span {
+  color: #9ca3af !important;
+}
+
+html[data-theme="dark"] .mini-bi-workspace-select,
+html[data-theme="dark"] .mini-bi-icon-btn,
+html[data-theme="dark"] .mini-bi-user,
+html[data-theme="dark"] .mini-bi-ribbon-command,
+html[data-theme="dark"] .mini-bi-ribbon-command-icon,
+html[data-theme="dark"] .appbar-search,
+html[data-theme="dark"] .appbar-search-wrap,
+html[data-theme="dark"] body:has(.home-page) .mini-bi-ribbon-button,
+html[data-theme="dark"] body:has(.home-page) .mini-bi-ribbon-button-icon {
+  background: #181818 !important;
+  border-color: #2f2f2f !important;
+  color: #d1d5db !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="dark"] .mini-bi-ribbon-command:hover,
+html[data-theme="dark"] .mini-bi-ribbon-tab:hover,
+html[data-theme="dark"] .mini-bi-icon-btn:hover,
+html[data-theme="dark"] .mini-bi-workspace-select:hover,
+html[data-theme="dark"] body:has(.home-page) .mini-bi-ribbon-button:hover {
+  background: #1f1f1f !important;
+  border-color: #3f3f46 !important;
+  color: #f9fafb !important;
+}
+
+html[data-theme="dark"] .mini-bi-ribbon-tab.is-active,
+html[data-theme="dark"] body:has(.home-page) .mini-bi-ribbon-tab.is-active,
+html[data-theme="dark"] .mini-bi-ribbon-command.is-primary .mini-bi-ribbon-command-icon {
+  background: #1e3a8a !important;
+  border-color: #3b82f6 !important;
+  color: #ffffff !important;
+}
+
+html[data-theme="dark"] .mini-bi-primary-cta,
+html[data-theme="dark"] .home-dashboard-btn,
+html[data-theme="dark"] .home-create-btn,
+html[data-theme="dark"] .dashboard-toolbar-btn.is-primary,
+html[data-theme="dark"] .auth-btn-v2 {
+  background: #3b82f6 !important;
+  border-color: #3b82f6 !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="dark"] .ui-page-container,
+html[data-theme="dark"] .home-page,
+html[data-theme="dark"] .settings-page,
+html[data-theme="dark"] .datasets-page,
+html[data-theme="dark"] .database-connection-page,
+html[data-theme="dark"] .auth-page-v2,
+html[data-theme="dark"] .dashboard-workspace-page,
+html[data-theme="dark"] .builder-shell {
+  background: #000000 !important;
+  color: #f9fafb !important;
+}
+
+html[data-theme="dark"] .ui-page-header,
+html[data-theme="dark"] .home-command-center,
+html[data-theme="dark"] .home-section-shell,
+html[data-theme="dark"] .home-list-stack,
+html[data-theme="dark"] .home-stat-card,
+html[data-theme="dark"] .home-template-card,
+html[data-theme="dark"] .home-activity-card,
+html[data-theme="dark"] .project-card,
+html[data-theme="dark"] .project-card-new,
+html[data-theme="dark"] .settings-panel,
+html[data-theme="dark"] .settings-toggle,
+html[data-theme="dark"] .settings-field,
+html[data-theme="dark"] .datasets-sidebar,
+html[data-theme="dark"] .datasets-import-panel,
+html[data-theme="dark"] .datasets-schema-panel,
+html[data-theme="dark"] .dataset-list-card,
+html[data-theme="dark"] .datasets-field-card,
+html[data-theme="dark"] .datasets-stat-card,
+html[data-theme="dark"] .enterprise-table,
+html[data-theme="dark"] .auth-card-v2,
+html[data-theme="dark"] .auth-hero-inner,
+html[data-theme="dark"] .auth-feature-item,
+html[data-theme="dark"] .auth-step-item,
+html[data-theme="dark"] .auth-visual-card,
+html[data-theme="dark"] .auth-floating-card,
+html[data-theme="dark"] .share-card,
+html[data-theme="dark"] .dashboard-public-header,
+html[data-theme="dark"] .connection-card,
+html[data-theme="dark"] .connection-panel,
+html[data-theme="dark"] .connection-sidebar,
+html[data-theme="dark"] .connection-main,
+html[data-theme="dark"] .connection-form,
+html[data-theme="dark"] .connection-preview,
+html[data-theme="dark"] .connection-template-card {
+  background: #111111 !important;
+  border-color: #2f2f2f !important;
+  box-shadow: none !important;
+  color: #f9fafb !important;
+}
+
+html[data-theme="dark"] .home-list-row,
+html[data-theme="dark"] .project-card-metric,
+html[data-theme="dark"] .project-card-icon,
+html[data-theme="dark"] .home-title-count-badge,
+html[data-theme="dark"] .settings-panel-head,
+html[data-theme="dark"] .datasets-schema-head,
+html[data-theme="dark"] .datasets-import-copy,
+html[data-theme="dark"] .enterprise-table-toolbar,
+html[data-theme="dark"] .enterprise-table-footer,
+html[data-theme="dark"] .enterprise-table-columns label,
+html[data-theme="dark"] .datasets-selected-file,
+html[data-theme="dark"] .datasets-validation,
+html[data-theme="dark"] .auth-product-badge,
+html[data-theme="dark"] .auth-demo-pill,
+html[data-theme="dark"] .auth-visual-chip,
+html[data-theme="dark"] .connection-toolbar,
+html[data-theme="dark"] .connection-status,
+html[data-theme="dark"] .connection-meta,
+html[data-theme="dark"] .connection-tree-item {
+  background: #181818 !important;
+  border-color: #2f2f2f !important;
+  color: #d1d5db !important;
+}
+
+html[data-theme="dark"] .home-list-row:hover,
+html[data-theme="dark"] .project-card:hover,
+html[data-theme="dark"] .dataset-list-card:hover,
+html[data-theme="dark"] .datasets-field-card:hover,
+html[data-theme="dark"] .connection-template-card:hover,
+html[data-theme="dark"] .connection-tree-item:hover {
+  background: #1f1f1f !important;
+  border-color: #3f3f46 !important;
+}
+
+html[data-theme="dark"] .dataset-list-card.is-active,
+html[data-theme="dark"] .project-card.is-active,
+html[data-theme="dark"] .connection-tree-item.is-active {
+  background: #1e3a8a !important;
+  border-color: #3b82f6 !important;
+}
+
+html[data-theme="dark"] .ui-page-title,
+html[data-theme="dark"] .ui-section-title,
+html[data-theme="dark"] .project-card-name,
+html[data-theme="dark"] .project-card-new-copy strong,
+html[data-theme="dark"] .home-stat-card strong,
+html[data-theme="dark"] .settings-panel h2,
+html[data-theme="dark"] .settings-toggle strong,
+html[data-theme="dark"] .datasets-schema-head h2,
+html[data-theme="dark"] .datasets-import-copy h2,
+html[data-theme="dark"] .datasets-sidebar-head strong,
+html[data-theme="dark"] .dataset-list-card strong,
+html[data-theme="dark"] .datasets-field-card strong,
+html[data-theme="dark"] .datasets-stat-card strong,
+html[data-theme="dark"] .enterprise-table th,
+html[data-theme="dark"] .auth-title-v2,
+html[data-theme="dark"] .auth-card-kicker,
+html[data-theme="dark"] .connection-title,
+html[data-theme="dark"] .connection-card-title {
+  color: #f9fafb !important;
+}
+
+html[data-theme="dark"] .ui-page-subtitle,
+html[data-theme="dark"] .ui-section-description,
+html[data-theme="dark"] .ui-page-kicker,
+html[data-theme="dark"] .ui-section-kicker,
+html[data-theme="dark"] .project-card-context,
+html[data-theme="dark"] .project-card-context-value,
+html[data-theme="dark"] .project-card-meta span,
+html[data-theme="dark"] .project-card-metric-label,
+html[data-theme="dark"] .home-stat-card-helper,
+html[data-theme="dark"] .settings-toggle small,
+html[data-theme="dark"] .settings-panel-head span,
+html[data-theme="dark"] .datasets-import-copy p,
+html[data-theme="dark"] .datasets-field-card span,
+html[data-theme="dark"] .datasets-field-card small,
+html[data-theme="dark"] .datasets-stat-card span,
+html[data-theme="dark"] .datasets-stat-card dt,
+html[data-theme="dark"] .enterprise-table td,
+html[data-theme="dark"] .auth-subtitle-v2,
+html[data-theme="dark"] .auth-footnote-v2,
+html[data-theme="dark"] .auth-feature-desc,
+html[data-theme="dark"] .connection-muted,
+html[data-theme="dark"] .connection-helper {
+  color: #9ca3af !important;
+}
+
+html[data-theme="dark"] input,
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] select,
+html[data-theme="dark"] .auth-input-v2,
+html[data-theme="dark"] .settings-field select,
+html[data-theme="dark"] .datasets-import-controls input:not(.sr-only),
+html[data-theme="dark"] .enterprise-table-controls input,
+html[data-theme="dark"] .enterprise-table-controls select,
+html[data-theme="dark"] .connection-input,
+html[data-theme="dark"] .connection-select,
+html[data-theme="dark"] .connection-textarea {
+  background: #181818 !important;
+  border-color: #2f2f2f !important;
+  color: #f9fafb !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder,
+html[data-theme="dark"] .appbar-search::placeholder,
+html[data-theme="dark"] .auth-input-v2::placeholder {
+  color: #9ca3af !important;
+}
+
+html[data-theme="dark"] table,
+html[data-theme="dark"] .enterprise-table table {
+  background: #111111 !important;
+  color: #f9fafb !important;
+}
+
+html[data-theme="dark"] th,
+html[data-theme="dark"] td,
+html[data-theme="dark"] .enterprise-table th,
+html[data-theme="dark"] .enterprise-table td {
+  border-color: #2f2f2f !important;
+}
+
+html[data-theme="dark"] .enterprise-table tbody tr:hover {
+  background: #1f1f1f !important;
+}
+
+html[data-theme="dark"] .dashboard-canvas-builder {
+  --dcb-bg: #000000;
+  --dcb-panel: #111111;
+  --dcb-border: #2f2f2f;
+  --dcb-border-strong: #3f3f46;
+  --dcb-text: #f9fafb;
+  --dcb-muted: #9ca3af;
+  --dcb-soft: #181818;
+  --dcb-selected: #1e3a8a;
+  --dcb-primary: #3b82f6;
+  background: #000000 !important;
+  color: #f9fafb !important;
+}
+
+html[data-theme="dark"] .dashboard-canvas-builder[data-theme="light"] .dcb-canvas-surface,
+html[data-theme="dark"] .dashboard-canvas-builder[data-theme="light"] .dcb-widget {
+  background: #ffffff;
+  color: #172033;
+}
+
+html[data-theme="dark"] .dashboard-canvas-builder .dcb-widget,
+html[data-theme="dark"] .dashboard-canvas-builder .dcb-panel,
+html[data-theme="dark"] .dashboard-canvas-builder .dcb-canvas-region,
+html[data-theme="dark"] .dashboard-canvas-builder .dcb-library-item,
+html[data-theme="dark"] .dashboard-canvas-builder .dcb-chart-option,
+html[data-theme="dark"] .dashboard-canvas-builder .dcb-widget-menu,
+html[data-theme="dark"] .dashboard-canvas-builder .dcb-statusbar {
+  border-color: #2f2f2f;
+  box-shadow: none;
+}
+
+html[data-theme="dark"] .dashboard-v2-designer,
+html[data-theme="dark"] .dashboard-v2-designer [data-testid="dashboard-v2-data-panel"],
+html[data-theme="dark"] .dashboard-v2-designer [data-testid="dashboard-v2-field-mapping"],
+html[data-theme="dark"] .dashboard-v2-designer [data-testid="dashboard-v2-chart-selector"],
+html[data-theme="dark"] .dashboard-v2-designer [data-testid="dashboard-v2-preview"],
+html[data-theme="dark"] .dashboard-v2-designer [data-testid="dashboard-v2-settings-panel"],
+html[data-theme="dark"] .dashboard-v2-designer [data-dashboard-v2-preview-surface="true"],
+html[data-theme="dark"] .dashboard-v2-scrollarea {
+  background: #111111 !important;
+  border-color: #2f2f2f !important;
+  color: #f9fafb !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="dark"] .dashboard-v2-designer [data-dashboard-v2-preview-surface="true"] {
+  background: #181818 !important;
+}
+
+html[data-theme="dark"] .dashboard-v2-echarts {
+  color: #f9fafb;
+}
+
+html[data-theme="dark"] .MuiPaper-root,
+html[data-theme="dark"] .MuiDialog-paper,
+html[data-theme="dark"] .MuiPopover-paper,
+html[data-theme="dark"] .MuiMenu-paper,
+html[data-theme="dark"] .MuiDrawer-paper,
+html[data-theme="dark"] .MuiAccordion-root,
+html[data-theme="dark"] .MuiCard-root,
+html[data-theme="dark"] .MuiAlert-root {
+  background-color: #111111 !important;
+  background-image: none !important;
+  border-color: #2f2f2f !important;
+  color: #f9fafb !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="dark"] .MuiButton-root:not(.MuiButton-containedPrimary),
+html[data-theme="dark"] .MuiIconButton-root,
+html[data-theme="dark"] .MuiChip-root,
+html[data-theme="dark"] .MuiInputBase-root,
+html[data-theme="dark"] .MuiOutlinedInput-root,
+html[data-theme="dark"] .MuiSelect-select,
+html[data-theme="dark"] .MuiTableCell-root {
+  background-color: #181818 !important;
+  border-color: #2f2f2f !important;
+  color: #f9fafb !important;
+}
+
+html[data-theme="dark"] .MuiButton-root:not(.MuiButton-containedPrimary):hover,
+html[data-theme="dark"] .MuiIconButton-root:hover,
+html[data-theme="dark"] .MuiMenuItem-root:hover,
+html[data-theme="dark"] .MuiChip-root:hover {
+  background-color: #1f1f1f !important;
+}
+
+html[data-theme="dark"] .MuiButton-containedPrimary,
+html[data-theme="dark"] .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track,
+html[data-theme="dark"] .MuiSlider-track,
+html[data-theme="dark"] .MuiTabs-indicator {
+  background-color: #3b82f6 !important;
+}
+
+html[data-theme="dark"] .MuiTypography-root,
+html[data-theme="dark"] .MuiFormControlLabel-label,
+html[data-theme="dark"] .MuiInputLabel-root,
+html[data-theme="dark"] .MuiMenuItem-root,
+html[data-theme="dark"] .MuiTableCell-head {
+  color: #f9fafb !important;
+}
+
+html[data-theme="dark"] .MuiTypography-caption,
+html[data-theme="dark"] .MuiFormHelperText-root,
+html[data-theme="dark"] .MuiTableCell-body,
+html[data-theme="dark"] .MuiSvgIcon-root,
+html[data-theme="dark"] .MuiAccordionSummary-expandIconWrapper {
+  color: #9ca3af !important;
+}
+
+html[data-theme="dark"] .MuiOutlinedInput-notchedOutline,
+html[data-theme="dark"] .MuiDivider-root,
+html[data-theme="dark"] .MuiTableCell-root {
+  border-color: #2f2f2f !important;
+}
+
+html[data-theme="dark"] .MuiTooltip-tooltip {
+  background: #252525 !important;
+  color: #f9fafb !important;
+  border: 1px solid #333333;
+}
+
+html[data-theme="dark"] .MuiBackdrop-root {
+  background-color: rgba(0, 0, 0, 0.72) !important;
+}
+
+html[data-theme="dark"] button:focus-visible,
+html[data-theme="dark"] a:focus-visible,
+html[data-theme="dark"] input:focus-visible,
+html[data-theme="dark"] select:focus-visible,
+html[data-theme="dark"] textarea:focus-visible,
+html[data-theme="dark"] [tabindex]:focus-visible {
+  outline: 2px solid rgba(59, 130, 246, 0.72) !important;
+  outline-offset: 2px;
+}
+
+html[data-theme="dark"] hr,
+html[data-theme="dark"] .divider,
+html[data-theme="dark"] .ui-divider {
+  border-color: #333333 !important;
+}
+
+/* Final dark cascade guard for late route chunks and high-specificity polish rules. */
+html[data-theme="dark"] body .mini-bi-ribbon-shell .mini-bi-topbar,
+html[data-theme="dark"] body:has(.home-page) .mini-bi-ribbon-shell .mini-bi-topbar {
+  background: #000000 !important;
+  border-color: #2f2f2f !important;
+}
+
+html[data-theme="dark"] body .mini-bi-ribbon-shell .mini-bi-ribbon-area,
+html[data-theme="dark"] body:has(.home-page) .mini-bi-ribbon-shell .mini-bi-ribbon-area {
+  background: #111111 !important;
+  border-color: #2f2f2f !important;
+}
+
+html[data-theme="dark"] body .mini-bi-ribbon-shell .mini-bi-ribbon-area .mini-bi-ribbon-group,
+html[data-theme="dark"] body:has(.home-page) .mini-bi-ribbon-area .mini-bi-ribbon-group {
+  border-color: #2f2f2f !important;
+}
+
+html[data-theme="dark"] body .mini-bi-ribbon-shell .mini-bi-ribbon-area .mini-bi-ribbon-command,
+html[data-theme="dark"] body .mini-bi-ribbon-shell.is-dashboard-canvas-route .mini-bi-ribbon-area .mini-bi-ribbon-command,
+html[data-theme="dark"] body .mini-bi-ribbon-shell.is-chart-designer-route .mini-bi-ribbon-area .mini-bi-ribbon-command,
+html[data-theme="dark"] body:has(.home-page) .mini-bi-ribbon-area .mini-bi-ribbon-command,
+html[data-theme="dark"] body:has(.home-page) .mini-bi-ribbon-area .mini-bi-ribbon-button {
+  background: #181818 !important;
+  border-color: #2f2f2f !important;
+  color: #f9fafb !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="dark"] body .mini-bi-ribbon-shell .mini-bi-ribbon-area .mini-bi-ribbon-command > span,
+html[data-theme="dark"] body .mini-bi-ribbon-shell .mini-bi-ribbon-area .mini-bi-ribbon-command > span:last-child,
+html[data-theme="dark"] body:has(.home-page) .mini-bi-ribbon-area .mini-bi-ribbon-command > span,
+html[data-theme="dark"] body:has(.home-page) .mini-bi-ribbon-area .mini-bi-ribbon-button > span {
+  color: #f9fafb !important;
+}
+
+html[data-theme="dark"] body .mini-bi-ribbon-shell .mini-bi-ribbon-area .mini-bi-ribbon-command-icon,
+html[data-theme="dark"] body .mini-bi-ribbon-shell.is-dashboard-canvas-route .mini-bi-ribbon-area .mini-bi-ribbon-command-icon,
+html[data-theme="dark"] body .mini-bi-ribbon-shell.is-chart-designer-route .mini-bi-ribbon-area .mini-bi-ribbon-command-icon,
+html[data-theme="dark"] body:has(.home-page) .mini-bi-ribbon-area .mini-bi-ribbon-command-icon,
+html[data-theme="dark"] body:has(.home-page) .mini-bi-ribbon-area .mini-bi-ribbon-button-icon {
+  background: #252525 !important;
+  border-color: #2f2f2f !important;
+  color: #d1d5db !important;
+}
+
+html[data-theme="dark"] body .mini-bi-ribbon-shell .mini-bi-ribbon-area .mini-bi-ribbon-command-icon svg,
+html[data-theme="dark"] body:has(.home-page) .mini-bi-ribbon-area .mini-bi-ribbon-command-icon svg,
+html[data-theme="dark"] body:has(.home-page) .mini-bi-ribbon-area .mini-bi-ribbon-button-icon svg {
+  color: #d1d5db !important;
+  stroke: currentColor !important;
+}
+
+html[data-theme="dark"] body .mini-bi-ribbon-shell .mini-bi-ribbon-area .mini-bi-ribbon-command:hover,
+html[data-theme="dark"] body:has(.home-page) .mini-bi-ribbon-area .mini-bi-ribbon-command:hover,
+html[data-theme="dark"] body:has(.home-page) .mini-bi-ribbon-area .mini-bi-ribbon-button:hover {
+  background: #1f1f1f !important;
+  border-color: #3f3f46 !important;
+}
+
+html[data-theme="dark"] body .mini-bi-ribbon-shell .mini-bi-ribbon-area .mini-bi-ribbon-command.is-primary,
+html[data-theme="dark"] body:has(.home-page) .mini-bi-ribbon-area .mini-bi-ribbon-command.is-primary,
+html[data-theme="dark"] body:has(.home-page) .mini-bi-ribbon-area .mini-bi-ribbon-button.is-primary {
+  background: #1e3a8a !important;
+  border-color: #3b82f6 !important;
+  color: #ffffff !important;
+}
+
+html[data-theme="dark"] body .mini-bi-ribbon-shell .mini-bi-ribbon-area .mini-bi-ribbon-command.is-primary .mini-bi-ribbon-command-icon,
+html[data-theme="dark"] body:has(.home-page) .mini-bi-ribbon-area .mini-bi-ribbon-command.is-primary .mini-bi-ribbon-command-icon,
+html[data-theme="dark"] body:has(.home-page) .mini-bi-ribbon-area .mini-bi-ribbon-button.is-primary .mini-bi-ribbon-button-icon {
+  background: #3b82f6 !important;
+  border-color: #3b82f6 !important;
+  color: #ffffff !important;
+}
+
+html[data-theme="dark"] body .mini-bi-ribbon-shell .mini-bi-ribbon-area .mini-bi-ribbon-command:disabled,
+html[data-theme="dark"] body:has(.home-page) .mini-bi-ribbon-area .mini-bi-ribbon-command:disabled,
+html[data-theme="dark"] body:has(.home-page) .mini-bi-ribbon-area .mini-bi-ribbon-button:disabled {
+  background: #111111 !important;
+  border-color: #252525 !important;
+  color: #6b7280 !important;
+}
+
+html[data-theme="dark"] body .mini-bi-ribbon-shell .avatar-circle,
+html[data-theme="dark"] body .mini-bi-ribbon-shell .appbar-user .avatar-circle,
+html[data-theme="dark"] body .mini-bi-ribbon-shell .mini-bi-user .avatar-circle {
+  background: #181818 !important;
+  border: 1px solid #2f2f2f !important;
+  color: #f9fafb !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="dark"] body:has(.home-page) .home-page .ui-page-header,
+html[data-theme="dark"] body:has(.home-page) .home-page .home-command-center,
+html[data-theme="dark"] body:has(.home-page) .home-page .home-section-shell,
+html[data-theme="dark"] body:has(.home-page) .home-page .home-stat-card,
+html[data-theme="dark"] body:has(.home-page) .home-page .project-card,
+html[data-theme="dark"] body:has(.home-page) .home-page .project-card-new,
+html[data-theme="dark"] body:has(.home-page) .home-page .home-template-card,
+html[data-theme="dark"] body:has(.home-page) .home-page .home-activity-card,
+html[data-theme="dark"] body:has(.settings-page) .settings-page .ui-page-header,
+html[data-theme="dark"] body:has(.settings-page) .settings-page .settings-panel,
+html[data-theme="dark"] body:has(.datasets-page) .datasets-page .ui-page-header,
+html[data-theme="dark"] body:has(.datasets-page) .datasets-page .datasets-sidebar,
+html[data-theme="dark"] body:has(.datasets-page) .datasets-page .datasets-import-panel,
+html[data-theme="dark"] body:has(.datasets-page) .datasets-page .datasets-schema-panel,
+html[data-theme="dark"] body:has(.datasets-page) .datasets-page .enterprise-table {
+  background: #111111 !important;
+  border-color: #2f2f2f !important;
+  color: #f9fafb !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="dark"] body:has(.home-page) .home-page .project-card-metric,
+html[data-theme="dark"] body:has(.home-page) .home-page .project-card-icon,
+html[data-theme="dark"] body:has(.home-page) .home-page .home-list-row,
+html[data-theme="dark"] body:has(.settings-page) .settings-page .settings-field,
+html[data-theme="dark"] body:has(.settings-page) .settings-page .settings-toggle,
+html[data-theme="dark"] body:has(.datasets-page) .datasets-page .dataset-list-card,
+html[data-theme="dark"] body:has(.datasets-page) .datasets-page .datasets-field-card,
+html[data-theme="dark"] body:has(.datasets-page) .datasets-page .datasets-stat-card,
+html[data-theme="dark"] body:has(.datasets-page) .datasets-page .enterprise-table-columns,
+html[data-theme="dark"] body:has(.datasets-page) .datasets-page .enterprise-table-columns label,
+html[data-theme="dark"] body:has(.datasets-page) .datasets-page .enterprise-table th,
+html[data-theme="dark"] body:has(.datasets-page) .datasets-page .enterprise-table-footer {
+  background: #181818 !important;
+  border-color: #2f2f2f !important;
+  color: #d1d5db !important;
+}
+
+html[data-theme="dark"] body:has(.datasets-page) .datasets-page .dataset-list-card.is-active,
+html[data-theme="dark"] body:has(.settings-page) .settings-page .settings-toggle:has(input:checked) {
+  background: #1e3a8a !important;
+  border-color: #3b82f6 !important;
+  color: #ffffff !important;
+}
+
+html[data-theme="dark"] body:has(.settings-page) .settings-field select,
+html[data-theme="dark"] body:has(.datasets-page) .datasets-import-controls input:not(.sr-only),
+html[data-theme="dark"] body:has(.datasets-page) .enterprise-table-controls input,
+html[data-theme="dark"] body:has(.datasets-page) .enterprise-table-controls select,
+html[data-theme="dark"] body:has(.datasets-page) .dashboard-toolbar-btn,
+html[data-theme="dark"] body:has(.datasets-page) .datasets-file-picker,
+html[data-theme="dark"] body:has(.datasets-page) .enterprise-table-footer button {
+  background: #181818 !important;
+  border-color: #2f2f2f !important;
+  color: #f9fafb !important;
+}
+
+html[data-theme="dark"] body:has(.settings-page) .settings-page .ui-page-title,
+html[data-theme="dark"] body:has(.settings-page) .settings-page .settings-panel h2,
+html[data-theme="dark"] body:has(.settings-page) .settings-page .settings-toggle strong,
+html[data-theme="dark"] body:has(.datasets-page) .datasets-page .ui-page-title,
+html[data-theme="dark"] body:has(.datasets-page) .datasets-page .datasets-schema-head h2,
+html[data-theme="dark"] body:has(.datasets-page) .datasets-page .datasets-import-copy h2,
+html[data-theme="dark"] body:has(.datasets-page) .datasets-page .enterprise-table-toolbar h2,
+html[data-theme="dark"] body:has(.datasets-page) .datasets-page .dataset-list-card strong,
+html[data-theme="dark"] body:has(.datasets-page) .datasets-page .datasets-field-card strong,
+html[data-theme="dark"] body:has(.datasets-page) .datasets-page .datasets-stat-card strong,
+html[data-theme="dark"] body:has(.datasets-page) .datasets-page .datasets-stat-card dd,
+html[data-theme="dark"] body:has(.datasets-page) .datasets-page .enterprise-table th button {
+  color: #f9fafb !important;
+}
+
+html[data-theme="dark"] body:has(.settings-page) .settings-page .ui-page-subtitle,
+html[data-theme="dark"] body:has(.settings-page) .settings-page .ui-page-kicker,
+html[data-theme="dark"] body:has(.settings-page) .settings-page .settings-panel-head span,
+html[data-theme="dark"] body:has(.settings-page) .settings-page .settings-toggle small,
+html[data-theme="dark"] body:has(.datasets-page) .datasets-page .ui-page-subtitle,
+html[data-theme="dark"] body:has(.datasets-page) .datasets-page .ui-page-kicker,
+html[data-theme="dark"] body:has(.datasets-page) .datasets-page .datasets-import-copy p,
+html[data-theme="dark"] body:has(.datasets-page) .datasets-page .dataset-list-card span,
+html[data-theme="dark"] body:has(.datasets-page) .datasets-page .dataset-list-card small,
+html[data-theme="dark"] body:has(.datasets-page) .datasets-page .datasets-field-card span,
+html[data-theme="dark"] body:has(.datasets-page) .datasets-page .datasets-field-card small,
+html[data-theme="dark"] body:has(.datasets-page) .datasets-page .datasets-stat-card span,
+html[data-theme="dark"] body:has(.datasets-page) .datasets-page .datasets-stat-card dt,
+html[data-theme="dark"] body:has(.datasets-page) .datasets-page .enterprise-table td,
+html[data-theme="dark"] body:has(.datasets-page) .datasets-page .enterprise-table-footer {
+  color: #d1d5db !important;
+}
+
+html[data-theme="dark"] body:has(.datasets-page) .datasets-page .enterprise-table tbody tr:hover,
+html[data-theme="dark"] body:has(.datasets-page) .datasets-page .dataset-list-card:hover,
+html[data-theme="dark"] body:has(.datasets-page) .datasets-page .dashboard-toolbar-btn:hover,
+html[data-theme="dark"] body:has(.datasets-page) .datasets-page .datasets-file-picker:hover,
+html[data-theme="dark"] body:has(.settings-page) .settings-page .settings-field select:hover {
+  background: #1f1f1f !important;
+  border-color: #3f3f46 !important;
+}
+
+html[data-theme="dark"] body:has(.dashboard-v2-designer) .MuiAccordion-root,
+html[data-theme="dark"] body:has(.dashboard-v2-designer) .MuiAccordionSummary-root,
+html[data-theme="dark"] body:has(.dashboard-v2-designer) .MuiAccordionDetails-root,
+html[data-theme="dark"] body:has(.dashboard-v2-designer) .MuiTextField-root,
+html[data-theme="dark"] body:has(.dashboard-v2-designer) .MuiFormControl-root {
+  background: #111111 !important;
+  border-color: #2f2f2f !important;
+  color: #f9fafb !important;
+}
+
+html[data-theme="dark"] body:has(.dashboard-v2-designer) .MuiAccordion-root.Mui-expanded,
+html[data-theme="dark"] body:has(.dashboard-v2-designer) .MuiAccordionSummary-root.Mui-expanded,
+html[data-theme="dark"] body:has(.dashboard-v2-designer) .MuiOutlinedInput-root,
+html[data-theme="dark"] body:has(.dashboard-v2-designer) .MuiSelect-select,
+html[data-theme="dark"] body:has(.dashboard-v2-designer) .MuiSlider-rail {
+  background: #181818 !important;
+  border-color: #2f2f2f !important;
+}
+
+html[data-theme="dark"] body:has(.dashboard-v2-designer) .MuiSlider-thumb {
+  background: #f9fafb !important;
+  border: 1px solid #3b82f6 !important;
+}
+
+html[data-theme="dark"] body:has(.home-page) .home-page .home-workspace-status,
+html[data-theme="dark"] body:has(.home-page) .home-page .home-workspace-status-row,
+html[data-theme="dark"] body:has(.home-page) .home-page .home-status-row,
+html[data-theme="dark"] body:has(.home-page) .home-page .home-filter-chip,
+html[data-theme="dark"] body:has(.home-page) .home-page .home-view-all-link {
+  background: #181818 !important;
+  border-color: #2f2f2f !important;
+  color: #f9fafb !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="dark"] body:has(.home-page) .home-page .home-workspace-status-row span,
+html[data-theme="dark"] body:has(.home-page) .home-page .home-status-row span,
+html[data-theme="dark"] body:has(.home-page) .home-page .home-filter-chip:not(.is-active),
+html[data-theme="dark"] body:has(.home-page) .home-page .home-view-all-link {
+  color: #d1d5db !important;
+}
+
+html[data-theme="dark"] body:has(.home-page) .home-page .home-status-row strong,
+html[data-theme="dark"] body:has(.home-page) .home-page .home-workspace-status-row strong {
+  color: #f9fafb !important;
+}
+
+html[data-theme="dark"] body:has(.home-page) .home-page .home-filter-chip.is-active {
+  background: #1e3a8a !important;
+  border-color: #3b82f6 !important;
+  color: #ffffff !important;
+}
+
+html[data-theme="dark"] body:has(.home-page) .home-page .home-stat-icon,
+html[data-theme="dark"] body:has(.home-page) .home-page .home-stat-card.is-dashboards .home-stat-icon,
+html[data-theme="dark"] body:has(.home-page) .home-page .home-stat-card.is-activity .home-stat-icon,
+html[data-theme="dark"] body:has(.home-page) .home-page .home-stat-card.is-highlight .home-stat-icon {
+  background: #252525 !important;
+  border: 1px solid #2f2f2f !important;
+  color: #d1d5db !important;
+}
+
+html[data-theme="dark"] body:has(.home-page) .home-page .project-card-dashboard-row,
+html[data-theme="dark"] body:has(.home-page) .home-page .project-card-open-btn,
+html[data-theme="dark"] body:has(.home-page) .home-page .project-card-create-dashboard-btn,
+html[data-theme="dark"] body:has(.home-page) .home-page .project-card-manage-btn,
+html[data-theme="dark"] body:has(.home-page) .home-page .project-card-delete-btn,
+html[data-theme="dark"] body:has(.home-page) .home-page .home-template-row,
+html[data-theme="dark"] body:has(.home-page) .home-page .home-tool-row {
+  background: #181818 !important;
+  border-color: #2f2f2f !important;
+  color: #f9fafb !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="dark"] body:has(.home-page) .home-page .project-card-dashboard-row:hover,
+html[data-theme="dark"] body:has(.home-page) .home-page .project-card-open-btn:hover,
+html[data-theme="dark"] body:has(.home-page) .home-page .project-card-create-dashboard-btn:hover,
+html[data-theme="dark"] body:has(.home-page) .home-page .project-card-manage-btn:hover,
+html[data-theme="dark"] body:has(.home-page) .home-page .project-card-delete-btn:hover,
+html[data-theme="dark"] body:has(.home-page) .home-page .home-template-row:hover,
+html[data-theme="dark"] body:has(.home-page) .home-page .home-tool-row:hover {
+  background: #1f1f1f !important;
+  border-color: #3f3f46 !important;
+}
+
+html[data-theme="dark"] body:has(.home-page) .home-page .home-tool-row.is-primary {
+  background: #1e3a8a !important;
+  border-color: #3b82f6 !important;
+  color: #ffffff !important;
+}
+
+html[data-theme="dark"] body:has(.home-page) .home-page .project-card-dashboard-row span,
+html[data-theme="dark"] body:has(.home-page) .home-page .home-template-row span,
+html[data-theme="dark"] body:has(.home-page) .home-page .home-template-row small,
+html[data-theme="dark"] body:has(.home-page) .home-page .home-tool-row span,
+html[data-theme="dark"] body:has(.home-page) .home-page .home-tool-row small {
+  color: #d1d5db !important;
+}
+
+html[data-theme="dark"] body:has(.home-page) .home-page .project-card-dashboard-row strong,
+html[data-theme="dark"] body:has(.home-page) .home-page .home-template-row strong,
+html[data-theme="dark"] body:has(.home-page) .home-page .home-tool-row strong,
+html[data-theme="dark"] body:has(.home-page) .home-page .home-tool-row.is-primary span,
+html[data-theme="dark"] body:has(.home-page) .home-page .home-tool-row.is-primary strong,
+html[data-theme="dark"] body:has(.home-page) .home-page .home-tool-row.is-primary small {
+  color: #ffffff !important;
+}
+
+html[data-theme="dark"] body .dashboard-canvas-builder .dcb-dashboard-switcher,
+html[data-theme="dark"] body .dashboard-canvas-builder .dcb-dashboard-switcher-panel,
+html[data-theme="dark"] body .dashboard-canvas-builder .dcb-tabs,
+html[data-theme="dark"] body .dashboard-canvas-builder .dcb-tab,
+html[data-theme="dark"] body .dashboard-canvas-builder .dcb-added-chart-item,
+html[data-theme="dark"] body .dashboard-canvas-builder .dcb-added-chart-main,
+html[data-theme="dark"] body .dashboard-canvas-builder .dcb-library-item,
+html[data-theme="dark"] body .dashboard-canvas-builder .dcb-chart-option,
+html[data-theme="dark"] body .dashboard-canvas-builder .dcb-widget-handle,
+html[data-theme="dark"] body .dashboard-canvas-builder .dcb-widget-menu,
+html[data-theme="dark"] body .dashboard-canvas-builder .dcb-chart-sync,
+html[data-theme="dark"] body .dashboard-canvas-builder .dcb-statusbar {
+  background: #111111 !important;
+  border-color: #2f2f2f !important;
+  color: #f9fafb !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="dark"] body .dashboard-canvas-builder .dcb-tabs button,
+html[data-theme="dark"] body .dashboard-canvas-builder .dcb-tabs button.is-active,
+html[data-theme="dark"] body .dashboard-canvas-builder .dcb-item-icon,
+html[data-theme="dark"] body .dashboard-canvas-builder .dcb-added-chart-item .dcb-item-icon,
+html[data-theme="dark"] body .dashboard-canvas-builder .dcb-library-item .dcb-item-icon,
+html[data-theme="dark"] body .dashboard-canvas-builder .dcb-usage-badge,
+html[data-theme="dark"] body .dashboard-canvas-builder .dcb-widget-handle button,
+html[data-theme="dark"] body .dashboard-canvas-builder .dcb-canvas-actions button,
+html[data-theme="dark"] body .dashboard-canvas-builder .dcb-panel-toggle {
+  background: #181818 !important;
+  border-color: #2f2f2f !important;
+  color: #d1d5db !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="dark"] body .dashboard-canvas-builder .dcb-tabs button.is-active,
+html[data-theme="dark"] body .dashboard-canvas-builder .dcb-grid-item.is-selected .dcb-widget-handle {
+  background: #1e3a8a !important;
+  border-color: #3b82f6 !important;
+  color: #ffffff !important;
+}
+
+html[data-theme="dark"] body .dashboard-canvas-builder[data-theme="light"] .dcb-widget .dcb-widget-handle,
+html[data-theme="dark"] body .dashboard-canvas-builder[data-theme="light"] .dcb-widget .dcb-widget-handle div {
+  background: #181818 !important;
+  border-color: #2f2f2f !important;
+  color: #f9fafb !important;
+}
+
+html[data-theme="dark"] body .dashboard-canvas-builder .dcb-canvas-surface.show-grid {
+  background-color: var(--dcb-panel) !important;
+  background-image:
+    linear-gradient(#252525 1px, transparent 1px),
+    linear-gradient(90deg, #252525 1px, transparent 1px) !important;
+}
+
+html[data-theme="dark"] body:has(.dashboard-v2-designer) [data-testid="dashboard-v2-data-panel"] .MuiBox-root,
+html[data-theme="dark"] body:has(.dashboard-v2-designer) [data-testid="dashboard-v2-field-mapping"] .MuiBox-root,
+html[data-theme="dark"] body:has(.dashboard-v2-designer) [data-testid="dashboard-v2-chart-selector"] .MuiBox-root,
+html[data-theme="dark"] body:has(.dashboard-v2-designer) [data-testid="dashboard-v2-settings-panel"] .MuiBox-root {
+  background-color: transparent !important;
+  border-color: #2f2f2f !important;
+  color: #f9fafb !important;
+}
+
+html[data-theme="dark"] body:has(.dashboard-v2-designer) [data-testid="dashboard-v2-data-panel"] .MuiBox-root[role="button"],
+html[data-theme="dark"] body:has(.dashboard-v2-designer) [data-testid="dashboard-v2-field-mapping"] .MuiBox-root[role="button"],
+html[data-theme="dark"] body:has(.dashboard-v2-designer) [data-testid="dashboard-v2-chart-selector"] button.MuiBox-root,
+html[data-theme="dark"] body:has(.dashboard-v2-designer) [data-testid="dashboard-v2-chart-selector"] .MuiBox-root[role="button"],
+html[data-theme="dark"] body:has(.dashboard-v2-designer) [data-testid="dashboard-v2-field-mapping"] .MuiBox-root:has(.MuiChip-root),
+html[data-theme="dark"] body:has(.dashboard-v2-designer) [data-testid="dashboard-v2-preview"] > .MuiStack-root,
+html[data-theme="dark"] body:has(.dashboard-v2-designer) [data-testid="dashboard-v2-preview"] > .MuiStack-root .MuiBox-root,
+html[data-theme="dark"] body:has(.dashboard-v2-designer) [data-testid="dashboard-v2-settings-panel"] .MuiBox-root:has(.MuiButton-root) {
+  background-color: #181818 !important;
+  border-color: #2f2f2f !important;
+  color: #f9fafb !important;
+}
+
+html[data-theme="dark"] body:has(.dashboard-v2-designer) [data-testid="dashboard-v2-data-panel"] .MuiBox-root[aria-selected="true"],
+html[data-theme="dark"] body:has(.dashboard-v2-designer) [data-testid="dashboard-v2-chart-selector"] button.MuiBox-root[aria-pressed="true"],
+html[data-theme="dark"] body:has(.dashboard-v2-designer) [data-testid="dashboard-v2-chart-selector"] .MuiBox-root[aria-selected="true"] {
+  background-color: #1e3a8a !important;
+  border-color: #3b82f6 !important;
+  color: #ffffff !important;
+}
+
+html[data-theme="dark"] body:has(.dashboard-v2-designer) [data-testid="dashboard-v2-field-mapping"] .MuiBox-root:has(.MuiTypography-caption),
+html[data-theme="dark"] body:has(.dashboard-v2-designer) [data-testid="dashboard-v2-field-mapping"] .MuiBox-root:has(.MuiChip-root) {
+  background-color: #181818 !important;
+}
+
+html[data-theme="dark"] body:has(.dashboard-v2-designer) [data-testid="dashboard-v2-preview"],
+html[data-theme="dark"] body:has(.dashboard-v2-designer) [data-testid="dashboard-v2-preview"] > .MuiBox-root,
+html[data-theme="dark"] body:has(.dashboard-v2-designer) [data-testid="dashboard-v2-preview"] .MuiBox-root:has([data-dashboard-v2-preview-surface="true"]),
+html[data-theme="dark"] body:has(.dashboard-v2-designer) [data-testid="dashboard-v2-preview"] [data-dashboard-v2-preview-surface="true"] .MuiBox-root,
+html[data-theme="dark"] body:has(.dashboard-v2-designer) [data-testid="dashboard-v2-preview"] [data-dashboard-v2-preview-surface="true"] .MuiStack-root {
+  background-color: #111111 !important;
+  border-color: #2f2f2f !important;
+  color: #f9fafb !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="dark"] body:has(.dashboard-v2-designer) [data-testid="dashboard-v2-preview"] [data-dashboard-v2-preview-surface="true"] .MuiBox-root:has(.MuiTypography-root) {
+  background-color: #181818 !important;
+  border-color: #2f2f2f !important;
+  color: #d1d5db !important;
+}
+
+html[data-theme="dark"] body:has(.dashboard-v2-designer) [data-testid="dashboard-v2-preview"] [data-dashboard-v2-preview-surface="true"] {
+  background-color: #111111 !important;
+}
+
+html[data-theme="dark"] body:has(.dashboard-v2-designer) .dashboard-v2-designer > .MuiBox-root,
+html[data-theme="dark"] body:has(.dashboard-v2-designer) .dashboard-v2-designer main > .MuiBox-root,
+html[data-theme="dark"] body:has(.dashboard-v2-designer) .dashboard-v2-designer main > .MuiBox-root > .MuiBox-root,
+html[data-theme="dark"] body:has(.dashboard-v2-designer) .dashboard-v2-designer main > .MuiBox-root > .MuiBox-root > .MuiBox-root {
+  background-color: transparent !important;
+  border-color: #2f2f2f !important;
+  color: #f9fafb !important;
+}
+
+html[data-theme="dark"] body:has(.dashboard-v2-designer) .dashboard-v2-designer main > .MuiBox-root > .MuiBox-root > .MuiBox-root:empty {
+  background-color: #111111 !important;
+  border-color: #2f2f2f !important;
+}
+
+html[data-theme="dark"] body:has(.dashboard-v2-designer) [data-testid="dashboard-v2-status-bar"],
+html[data-theme="dark"] body:has(.dashboard-v2-designer) [data-testid="dashboard-v2-status-bar"] .MuiStack-root,
+html[data-theme="dark"] body:has(.dashboard-v2-designer) [data-testid="dashboard-v2-status-bar"] .MuiBox-root {
+  background-color: #000000 !important;
+  border-color: #2f2f2f !important;
+  color: #d1d5db !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="dark"] body:has(.dashboard-v2-designer) [data-testid="dashboard-v2-status-bar"] span,
+html[data-theme="dark"] body:has(.dashboard-v2-designer) [data-testid="dashboard-v2-status-bar"] .MuiChip-root {
+  background-color: #181818 !important;
+  border-color: #2f2f2f !important;
+  color: #d1d5db !important;
+}
+
+html[data-theme="dark"] body:has(.dashboard-v2-designer) [data-testid="dashboard-v2-status-bar"] [class*="success"],
+html[data-theme="dark"] body:has(.dashboard-v2-designer) [data-testid="dashboard-v2-status-bar"] [class*="online"] {
+  color: #22c55e !important;
+}
+
+html[data-theme="dark"] body:has(.database-connection-page) .db-demo-badge,
+html[data-theme="dark"] body:has(.database-connection-page) .db-status-badge {
+  background: #181818 !important;
+  border-color: #2f2f2f !important;
+  color: #d1d5db !important;
+}
+
+html[data-theme="dark"] body:has(.database-connection-page) .db-status-badge:not(.is-muted) {
+  border-color: rgba(34, 197, 94, 0.45) !important;
+  color: #22c55e !important;
+}
+
+/* Final AppBar/Ribbon alignment QA overrides.
+   This file loads last, so keep these presentation-only fixes scoped and token-like. */
+body:has(.home-page) .main-content,
+body:has(.datasets-page) .main-content,
+body:has(.settings-page) .main-content,
+body:has(.database-connection-page) .main-content {
+  padding: 18px 20px 40px !important;
+  overflow-x: hidden !important;
+}
+
+body:has(.home-page) .mini-bi-ribbon-shell .main-content {
+  padding: 18px 20px 40px !important;
+}
+
+html[data-theme="dark"] body:has(.home-page) .mini-bi-ribbon-shell .main-content {
+  padding: 18px 20px 40px !important;
+}
+
+body:has(.home-page) .home-page,
+body:has(.datasets-page) .datasets-page,
+body:has(.settings-page) .settings-page,
+body:has(.database-connection-page) .database-connection-page {
+  width: 100% !important;
+  margin-inline: auto !important;
+  padding: 0 !important;
+  gap: 16px !important;
+}
+
+body:has(.home-page) .home-page {
+  max-width: 1440px !important;
+}
+
+body:has(.datasets-page) .datasets-page,
+body:has(.database-connection-page) .database-connection-page {
+  max-width: none !important;
+  margin-inline: 0 !important;
+}
+
+body:has(.settings-page) .settings-page {
+  max-width: none !important;
+  margin-inline: 0 !important;
+}
+
+body:has(.settings-page) .settings-page .ui-page-header,
+body:has(.datasets-page) .datasets-page .ui-page-header {
+  padding: 10px 14px !important;
+  min-height: 0 !important;
+  border-radius: 8px !important;
+}
+
+body:has(.settings-page) .settings-page .ui-page-header-main,
+body:has(.datasets-page) .datasets-page .ui-page-header-main {
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+body:has(.settings-page) .settings-page .ui-page-header-copy,
+body:has(.datasets-page) .datasets-page .ui-page-header-copy {
+  gap: 2px !important;
+  min-width: 0 !important;
+}
+
+body:has(.settings-page) .settings-page .ui-page-title,
+body:has(.datasets-page) .datasets-page .ui-page-title {
+  margin: 1px 0 0 !important;
+  font-size: 19px !important;
+  line-height: 1.3 !important;
+}
+
+body:has(.settings-page) .settings-page .ui-page-subtitle,
+body:has(.datasets-page) .datasets-page .ui-page-subtitle {
+  max-width: 640px !important;
+  margin-top: 2px !important;
+  line-height: 1.4 !important;
+}
+
+body:has(.datasets-page) .datasets-page .ui-page-header .dashboard-toolbar-btn {
+  height: 30px !important;
+  min-height: 30px !important;
+}
+
+body:has(.datasets-page) .datasets-layout,
+body:has(.settings-page) .settings-grid {
+  margin-top: 0 !important;
+}
+
+body:has(.datasets-page) .datasets-import-panel {
+  align-items: center !important;
+}
+
+@media (max-width: 640px) {
+  body:has(.home-page) .main-content,
+  body:has(.datasets-page) .main-content,
+  body:has(.settings-page) .main-content,
+  body:has(.database-connection-page) .main-content {
+    padding: 12px 12px 24px !important;
+  }
+
+  body:has(.settings-page) .settings-page .ui-page-header,
+  body:has(.datasets-page) .datasets-page .ui-page-header {
+    padding: 10px 12px !important;
+  }
+}
+
+/* AppBar/Ribbon full-width edge alignment.
+   Keep content containers constrained, but let the shell chrome paint to the viewport edge. */
+html body .mini-bi-ribbon-shell,
+html body .mini-bi-app-shell {
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  overflow-x: clip !important;
+}
+
+html body .shell,
+html body .mini-bi-app-shell,
+html body .appbar.mini-bi-appbar,
+html body .mini-bi-app-header,
+html body .mini-bi-header-shell,
+html body .mini-bi-ribbon-shell {
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+html body .appbar.mini-bi-appbar,
+html body .mini-bi-app-header,
+html body .mini-bi-header-shell,
+html body .mini-bi-ribbon-shell .mini-bi-appbar,
+html body .mini-bi-ribbon-shell .mini-bi-app-header,
+html body .mini-bi-ribbon-shell .mini-bi-header-shell,
+html body .mini-bi-ribbon-shell .mini-bi-topbar,
+html body .mini-bi-ribbon-shell .mini-bi-ribbon-tabs,
+html body .mini-bi-ribbon-shell .mini-bi-main-nav,
+html body .mini-bi-ribbon-shell .mini-bi-ribbon-area,
+html body .mini-bi-ribbon-shell .mini-bi-ribbon {
+  box-sizing: border-box !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 100dvw !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  transform: none !important;
+  translate: none !important;
+}
+
+@supports not (width: 100dvw) {
+  html body .appbar.mini-bi-appbar,
+  html body .mini-bi-app-header,
+  html body .mini-bi-header-shell,
+  html body .mini-bi-ribbon-shell .mini-bi-appbar,
+  html body .mini-bi-ribbon-shell .mini-bi-app-header,
+  html body .mini-bi-ribbon-shell .mini-bi-header-shell,
+  html body .mini-bi-ribbon-shell .mini-bi-topbar,
+  html body .mini-bi-ribbon-shell .mini-bi-ribbon-tabs,
+  html body .mini-bi-ribbon-shell .mini-bi-main-nav,
+  html body .mini-bi-ribbon-shell .mini-bi-ribbon-area,
+  html body .mini-bi-ribbon-shell .mini-bi-ribbon {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 100vw !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+}
+
+html body .mini-bi-ribbon-shell .mini-bi-appbar {
+  left: 0 !important;
+  right: 0 !important;
+  overflow-x: clip !important;
+}
+
+html body .mini-bi-ribbon-shell .mini-bi-topbar,
+html body .mini-bi-ribbon-shell .mini-bi-ribbon-tabs,
+html body .mini-bi-ribbon-shell .mini-bi-main-nav,
+html body .mini-bi-ribbon-shell .mini-bi-ribbon-area,
+html body .mini-bi-ribbon-shell .mini-bi-ribbon {
+  flex-shrink: 0 !important;
+  min-width: 100dvw !important;
+}
+
+html body .mini-bi-ribbon-shell,
+html body .mini-bi-app-shell {
+  min-width: 100dvw !important;
+}
+
+html body .shell.mini-bi-ribbon-shell.mini-bi-app-shell {
+  width: 100% !important;
+  min-width: 100dvw !important;
+  max-width: none !important;
+  overflow-x: clip !important;
+}
+
+@supports not (width: 100dvw) {
+  html body .mini-bi-ribbon-shell,
+  html body .mini-bi-app-shell,
+  html body .shell.mini-bi-ribbon-shell.mini-bi-app-shell {
+    min-width: 100vw !important;
+  }
+}
+
+@media (min-width: 641px) {
+  html body .mini-bi-ribbon-shell .mini-bi-topbar {
+    grid-template-columns: minmax(0, 1fr) max-content !important;
+  }
+
+  html body .mini-bi-ribbon-shell .mini-bi-brand-cluster {
+    grid-column: 1 !important;
+  }
+
+  html body .mini-bi-ribbon-shell .mini-bi-search {
+    grid-column: 1 !important;
+  }
+
+  html body .mini-bi-ribbon-shell .mini-bi-topbar-actions {
+    grid-column: 2 !important;
+    justify-self: end !important;
+    margin-left: auto !important;
+    z-index: 1 !important;
+  }
+}
+
+/* Management pages workspace rail
+   Keep the global chrome full-bleed, but align page content and the workspace
+   context panel inside a deliberate reading grid. */
+body:has(.settings-page) .mini-bi-ribbon-shell .body-row,
+body:has(.datasets-page) .mini-bi-ribbon-shell .body-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 300px !important;
+  align-items: start !important;
+  gap: 16px !important;
+  min-height: calc(100vh - var(--appbar-h)) !important;
+  padding: 20px 20px 32px !important;
+  background: var(--mini-bi-bg, #f8fafc) !important;
+  overflow-x: clip !important;
+}
+
+body:has(.settings-page) .mini-bi-ribbon-shell .main-content,
+body:has(.datasets-page) .mini-bi-ribbon-shell .main-content {
+  grid-column: 1 !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+}
+
+body:has(.settings-page) .mini-bi-ribbon-shell .dashboard-sidebar-home,
+body:has(.datasets-page) .mini-bi-ribbon-shell .dashboard-sidebar-home {
+  grid-column: 2 !important;
+  position: sticky !important;
+  top: 16px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 300px !important;
+  max-height: calc(100vh - var(--appbar-h) - 40px) !important;
+  margin: 0 !important;
+  overflow: auto !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 10px !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+body:has(.settings-page) .dashboard-sidebar-home .dashboard-sidebar-header,
+body:has(.settings-page) .dashboard-sidebar-home .dashboard-sidebar-section,
+body:has(.datasets-page) .dashboard-sidebar-home .dashboard-sidebar-header,
+body:has(.datasets-page) .dashboard-sidebar-home .dashboard-sidebar-section {
+  padding: 14px !important;
+}
+
+body:has(.settings-page) .dashboard-sidebar-home .dashboard-sidebar-title,
+body:has(.datasets-page) .dashboard-sidebar-home .dashboard-sidebar-title {
+  font-size: 17px !important;
+  font-weight: 500 !important;
+  line-height: 1.35 !important;
+  letter-spacing: 0 !important;
+}
+
+body:has(.settings-page) .dashboard-sidebar-home .dashboard-sidebar-overview-card,
+body:has(.settings-page) .dashboard-sidebar-home .dashboard-sidebar-selection-card,
+body:has(.datasets-page) .dashboard-sidebar-home .dashboard-sidebar-overview-card,
+body:has(.datasets-page) .dashboard-sidebar-home .dashboard-sidebar-selection-card {
+  border-radius: 8px !important;
+  border-color: #e8ecf5 !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+body:has(.settings-page) .dashboard-sidebar-home .dashboard-sidebar-overview-grid div,
+body:has(.datasets-page) .dashboard-sidebar-home .dashboard-sidebar-overview-grid div {
+  border-radius: 8px !important;
+  background: #f8fafc !important;
+}
+
+html[data-theme="dark"] body:has(.settings-page) .mini-bi-ribbon-shell .body-row,
+html[data-theme="dark"] body:has(.datasets-page) .mini-bi-ribbon-shell .body-row {
+  background: var(--mini-bi-bg, #0f172a) !important;
+}
+
+html[data-theme="dark"] body:has(.settings-page) .mini-bi-ribbon-shell .dashboard-sidebar-home,
+html[data-theme="dark"] body:has(.datasets-page) .mini-bi-ribbon-shell .dashboard-sidebar-home {
+  border-color: rgba(148, 163, 184, 0.22) !important;
+  background: #111827 !important;
+}
+
+html[data-theme="dark"] body:has(.settings-page) .dashboard-sidebar-home .dashboard-sidebar-overview-card,
+html[data-theme="dark"] body:has(.settings-page) .dashboard-sidebar-home .dashboard-sidebar-selection-card,
+html[data-theme="dark"] body:has(.datasets-page) .dashboard-sidebar-home .dashboard-sidebar-overview-card,
+html[data-theme="dark"] body:has(.datasets-page) .dashboard-sidebar-home .dashboard-sidebar-selection-card {
+  border-color: rgba(148, 163, 184, 0.22) !important;
+  background: #111827 !important;
+}
+
+html[data-theme="dark"] body:has(.settings-page) .dashboard-sidebar-home .dashboard-sidebar-overview-grid div,
+html[data-theme="dark"] body:has(.datasets-page) .dashboard-sidebar-home .dashboard-sidebar-overview-grid div {
+  background: rgba(15, 23, 42, 0.72) !important;
+}
+
+@media (max-width: 1280px) {
+  body:has(.settings-page) .mini-bi-ribbon-shell .body-row,
+  body:has(.datasets-page) .mini-bi-ribbon-shell .body-row {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  body:has(.settings-page) .mini-bi-ribbon-shell .dashboard-sidebar-home,
+  body:has(.datasets-page) .mini-bi-ribbon-shell .dashboard-sidebar-home {
+    grid-column: 1 !important;
+    position: static !important;
+    width: min(100%, 720px) !important;
+    max-width: 720px !important;
+    max-height: none !important;
+    justify-self: center !important;
+  }
+}
+
+@media (max-width: 640px) {
+  body:has(.settings-page) .mini-bi-ribbon-shell .body-row,
+  body:has(.datasets-page) .mini-bi-ribbon-shell .body-row {
+    gap: 12px !important;
+    padding: 12px 12px 24px !important;
+  }
+
+  body:has(.settings-page) .mini-bi-ribbon-shell .dashboard-sidebar-home,
+  body:has(.datasets-page) .mini-bi-ribbon-shell .dashboard-sidebar-home {
+    justify-self: stretch !important;
+    width: 100% !important;
+    max-width: none !important;
+  }
+}

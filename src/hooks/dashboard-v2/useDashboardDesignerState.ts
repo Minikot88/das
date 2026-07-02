@@ -20,7 +20,13 @@ import { getLatestEChartsDataUrl } from "@/components/dashboard-v2/utils/echarts
 import { validateChartConfig, validateFieldForSlot } from "@/components/dashboard-v2/utils/chartValidation";
 import { getChartDefinition } from "@/components/dashboard-v2/utils/chartRegistry";
 import { getSavedChartById, upsertSavedChart } from "@/utils/savedChartsStorage";
-import { compactChartConfigForStorage, consumeStorageRecoveryMessage, safeSetLocalStorage } from "@/services/projectStorage";
+import {
+  compactChartConfigForStorage,
+  consumeStorageRecoveryMessage,
+  safeSetLocalStorage,
+  setActiveDashboard as setStoredActiveDashboard,
+  setActiveProject as setStoredActiveProject,
+} from "@/services/projectStorage";
 import { useLocation } from "react-router-dom";
 import type {
   Aggregation,
@@ -374,6 +380,16 @@ function loadInitialDesignerSnapshot(chartId?: string | null) {
   };
 }
 
+function restoreDashboardContext(projectId?: string | null, dashboardId?: string | null) {
+  if (projectId) {
+    setStoredActiveProject(projectId, dashboardId || undefined);
+    return;
+  }
+  if (dashboardId) {
+    setStoredActiveDashboard(dashboardId);
+  }
+}
+
 function createFilterValue(field: DataField): FilterValue {
   if (field.type === "number" || field.type === "currency" || field.type === "percentage") return { type: "number", min: "", max: "" };
   if (field.type === "date") return { type: "date", start: "", end: "" };
@@ -720,9 +736,13 @@ export function useDashboardDesignerState() {
   const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const requestedChartId = queryParams.get("chartId");
   const returnToDashboard = queryParams.get("from") === "dashboard";
+  const returnProjectId = queryParams.get("projectId");
+  const returnDashboardId = queryParams.get("dashboardId");
+  const createMode = queryParams.get("mode") === "create";
   const initialSnapshotRef = useRef<ReturnType<typeof loadInitialDesignerSnapshot> | null>(null);
   if (!initialSnapshotRef.current) {
-    initialSnapshotRef.current = loadInitialDesignerSnapshot(requestedChartId);
+    restoreDashboardContext(returnProjectId, returnDashboardId);
+    initialSnapshotRef.current = loadInitialDesignerSnapshot(createMode ? null : requestedChartId);
   }
   const initialSnapshot = initialSnapshotRef.current;
   const [config, setConfig] = useState<ChartConfig>(() => initialSnapshot.config);
@@ -792,7 +812,12 @@ export function useDashboardDesignerState() {
   }, []);
 
   useEffect(() => {
+    restoreDashboardContext(returnProjectId, returnDashboardId);
+  }, [returnProjectId, returnDashboardId]);
+
+  useEffect(() => {
     if (!requestedChartId || requestedChartId === loadedQueryChartIdRef.current) return;
+    restoreDashboardContext(returnProjectId, returnDashboardId);
     const snapshot = loadInitialDesignerSnapshot(requestedChartId);
     if (!snapshot.loadedSavedChartId) {
       setSnackbar("ไม่พบกราฟที่ต้องการแก้ไข");
@@ -817,7 +842,7 @@ export function useDashboardDesignerState() {
     setSaveStatus("saved");
     setLastSavedAt(formatSavedTime());
     setSnackbar("โหลดกราฟสำหรับแก้ไขแล้ว");
-  }, [requestedChartId]);
+  }, [requestedChartId, returnDashboardId, returnProjectId]);
 
   useEffect(() => {
     setSaveStatus("saving");
@@ -1257,14 +1282,13 @@ export function useDashboardDesignerState() {
   }, [config, historyFuture]);
 
   const saveChart = useCallback(() => {
-    const updatingExisting = Boolean(activeSavedChartId);
     const record = persistDesignerChartConfig(config, { query: sqlQuery, result: sqlResult }, activeSavedChartId, {
       createIfMissing: true,
     });
     if (record?.id) setActiveSavedChartId(record.id);
     setSaveStatus("saved");
     setLastSavedAt(formatSavedTime());
-    setSnackbar(consumeStorageRecoveryMessage() || (updatingExisting ? "อัปเดตกราฟที่บันทึกไว้แล้ว" : "บันทึกกราฟแล้ว"));
+    setSnackbar(consumeStorageRecoveryMessage() || "บันทึกกราฟแล้ว");
   }, [activeSavedChartId, config, sqlQuery, sqlResult]);
 
   const refreshDataset = useCallback(() => {
