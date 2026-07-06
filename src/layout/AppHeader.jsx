@@ -320,7 +320,7 @@ const MINI_RIBBON_GROUPS = {
     {
       title: "เพิ่มวิดเจ็ต",
       items: [
-        { label: "เพิ่มกราฟ", icon: "bar", tone: "primary", action: "dashboard:add-chart" },
+        { label: "เพิ่มกราฟ", title: "ไปที่ตัวสร้างกราฟเพื่อสร้างกราฟใหม่", icon: "bar", tone: "primary", action: "dashboard:add-chart" },
         { label: "เพิ่ม KPI", icon: "kpi", action: "dashboard:add-kpi" },
         { label: "เพิ่มตาราง", icon: "table", action: "dashboard:add-table" },
         { label: "เพิ่มข้อความ", icon: "text", action: "dashboard:add-text" },
@@ -332,6 +332,7 @@ const MINI_RIBBON_GROUPS = {
       title: "การทำงาน",
       items: [
         { label: "เลือกเทมเพลต", icon: "template", action: "dashboard:templates" },
+        { label: "จัดเรียง", title: "จัดเรียงวิดเจ็ตบน Canvas อัตโนมัติ", icon: "grid", action: "dashboard:auto-arrange" },
         { label: "บันทึก", icon: "save", action: "dashboard:save" },
         { label: "พรีวิว", icon: "desktop", action: "dashboard:preview" },
         { label: "แชร์", icon: "share", action: "dashboard:share" },

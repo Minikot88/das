@@ -1,12 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactGridLayout, { WidthProvider } from "react-grid-layout";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import ChartPreview from "@/components/dashboard-v2/components/charts/ChartPreview";
 import { createDefaultConfig, dataFields, defaultChartSettings } from "@/components/dashboard-v2/mockData";
 import { getDatasetRows } from "@/components/dashboard-v2/services/datasetService";
 import useNavigationControls from "@/hooks/useNavigationControls";
 import {
   createSavedChartFromConfig,
+  deleteSavedChart,
   getSavedCharts,
   SAVED_CHARTS_KEY,
   SINGLE_CHART_KEY as V2_SINGLE_CHART_KEY,
@@ -41,6 +42,17 @@ const GRID_UNIT = 8;
 const GRID_COLS = 180;
 const DASHBOARD_WIDTH = 1440;
 const DASHBOARD_HEIGHT = 900;
+const AUTO_LAYOUT_GAP = 4;
+const AUTO_LAYOUT_SECTION_GAP = 6;
+const AUTO_LAYOUT_MAX_HEIGHT = 1600;
+const WIDGET_CONTEXT_MENU_WIDTH = 210;
+const WIDGET_CONTEXT_MENU_HEIGHT = 280;
+
+const CHART_LIST_FILTERS = [
+  { id: "all", label: "ทั้งหมด" },
+  { id: "dashboard", label: "อยู่ใน Dashboard" },
+  { id: "available", label: "ยังไม่ได้เพิ่ม" },
+];
 
 const WIDGET_LABELS = {
   chart: "กราฟ",
@@ -65,12 +77,34 @@ const ELEMENTS = [
   { type: "button", title: "Button", description: "ปุ่มเรียก action" },
 ];
 
+const ELEMENT_ICONS = {
+  kpi: "K",
+  table: "▦",
+  text: "T",
+  image: "▧",
+  filter: "F",
+  shape: "□",
+  divider: "─",
+  button: "B",
+};
+
 const TEMPLATES = [
   { id: "sales", title: "Sales Overview", description: "KPI ยอดขาย กราฟแนวโน้ม และตารางสินค้า" },
-  { id: "executive", title: "Executive Dashboard", description: "ภาพรวมผู้บริหารพร้อมตัวชี้วัดหลัก" },
+  { id: "executive", title: "Executive Summary", description: "ภาพรวมผู้บริหารพร้อมตัวชี้วัดหลัก" },
   { id: "marketing", title: "Marketing Funnel", description: "Funnel, KPI และ performance by channel" },
   { id: "operations", title: "Operations Monitor", description: "สถานะงานและตารางตรวจสอบ" },
   { id: "finance", title: "Financial Summary", description: "รายได้ ต้นทุน กำไร และสัดส่วนหมวดหมู่" },
+];
+
+const DASHBOARD_TEMPLATE_OPTIONS = [
+  ...TEMPLATES.map((template) => ({ ...template, widgetCount: 7 })),
+  {
+    id: "blank",
+    title: "Blank Canvas",
+    description: "เริ่มจากพื้นที่ว่างแล้วจัดวางเองทั้งหมด",
+    widgetCount: 0,
+    blank: true,
+  },
 ];
 
 const ZOOM_OPTIONS = [25, 50, 75, 100, 125];
@@ -79,9 +113,17 @@ const WIDGET_TYPES = new Set(Object.keys(WIDGET_LABELS));
 function makeId(prefix) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
-
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
+}
+
+function clampContextMenuPosition(clientX, clientY, width = WIDGET_CONTEXT_MENU_WIDTH, height = WIDGET_CONTEXT_MENU_HEIGHT) {
+  if (typeof window === "undefined") return { x: clientX, y: clientY };
+  const margin = 8;
+  return {
+    x: clamp(clientX, margin, Math.max(margin, window.innerWidth - width - margin)),
+    y: clamp(clientY, margin, Math.max(margin, window.innerHeight - height - margin)),
+  };
 }
 
 function finiteNumber(value, fallback) {
@@ -117,6 +159,11 @@ function formatSavedTime(value = new Date()) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(value);
+}
+
+function formatChartListTime(value) {
+  const date = value ? new Date(value) : new Date();
+  return Number.isNaN(date.getTime()) ? "ล่าสุด" : formatSavedTime(date);
 }
 
 function timestampForFilename() {
@@ -236,6 +283,16 @@ function downloadDataUrl(filename, dataUrl) {
   document.body.appendChild(link);
   link.click();
   link.remove();
+}
+
+function requestDashboardResize() {
+  if (typeof window === "undefined") return;
+  window.requestAnimationFrame(() => {
+    window.dispatchEvent(new Event("resize"));
+  });
+  window.setTimeout(() => {
+    window.dispatchEvent(new Event("resize"));
+  }, 220);
 }
 
 function drawWrappedText(context, text, x, y, maxWidth, lineHeight, maxLines = 3) {
@@ -397,6 +454,201 @@ function minWidgetSize(type) {
     default:
       return { w: 24, h: 16 };
   }
+}
+
+function isHeaderTextWidget(widget) {
+  if (widget?.type !== "text") return false;
+  const text = `${widget.title ?? ""} ${widget.config?.text ?? ""}`.toLowerCase();
+  const fontSize = finiteNumber(widget.config?.fontSize, 0);
+  return widget.w >= 100 || widget.h >= 14 || fontSize >= 20 || /dashboard|overview|summary|สรุป|ภาพรวม|หัวข้อ/.test(text);
+}
+
+function autoLayoutRank(widget) {
+  if (isHeaderTextWidget(widget)) return 0;
+  switch (widget?.type) {
+    case "filter":
+      return 1;
+    case "kpi":
+      return 2;
+    case "chart":
+      return 3;
+    case "table":
+      return 4;
+    case "text":
+      return 5;
+    default:
+      return 6;
+  }
+}
+
+function sortWidgetsForDashboardLayout(widgets) {
+  return widgets
+    .map((widget, index) => ({ widget, index, rank: autoLayoutRank(widget) }))
+    .sort((a, b) => {
+      if (a.rank !== b.rank) return a.rank - b.rank;
+      const ay = finiteNumber(a.widget.y, 0);
+      const by = finiteNumber(b.widget.y, 0);
+      if (ay !== by) return ay - by;
+      const ax = finiteNumber(a.widget.x, 0);
+      const bx = finiteNumber(b.widget.x, 0);
+      if (ax !== bx) return ax - bx;
+      return a.index - b.index;
+    });
+}
+
+function getRecommendedWidgetSize(widget, counts = {}) {
+  const maxCols = GRID_COLS;
+  const minimum = minWidgetSize(widget?.type);
+  let recommended;
+
+  if (isHeaderTextWidget(widget)) {
+    recommended = { w: maxCols, h: 14 };
+  } else {
+    switch (widget?.type) {
+      case "filter":
+        recommended = { w: 42, h: 16 };
+        break;
+      case "kpi":
+        recommended = { w: 42, h: 18 };
+        break;
+      case "chart":
+        recommended = counts.chart === 1 ? { w: maxCols, h: 48 } : { w: 88, h: 40 };
+        break;
+      case "table":
+        recommended = { w: maxCols, h: 36 };
+        break;
+      case "text":
+        recommended = { w: 88, h: 14 };
+        break;
+      case "divider":
+        recommended = { w: maxCols, h: 4 };
+        break;
+      case "button":
+        recommended = { w: 30, h: 10 };
+        break;
+      case "image":
+        recommended = { w: 42, h: 28 };
+        break;
+      case "shape":
+      default:
+        recommended = { w: 42, h: 22 };
+        break;
+    }
+  }
+
+  return {
+    w: clamp(Math.round(finiteNumber(recommended.w, minimum.w)), minimum.w, maxCols),
+    h: Math.max(minimum.h, Math.round(finiteNumber(recommended.h, minimum.h))),
+  };
+}
+
+function doRectsOverlap(a, b) {
+  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+}
+
+function findNextGridPosition(placed, size, cursor) {
+  let x = cursor.x;
+  let y = cursor.y;
+  const w = clamp(size.w, 1, GRID_COLS);
+  const h = Math.max(1, size.h);
+
+  if (x > 0 && x + w > GRID_COLS) {
+    x = 0;
+    y = cursor.nextRowY;
+  }
+
+  let guard = 0;
+  while (
+    guard < 1000 &&
+    placed.some((rect) => doRectsOverlap({ x, y, w, h }, rect))
+  ) {
+    x += w + AUTO_LAYOUT_GAP;
+    if (x + w > GRID_COLS) {
+      x = 0;
+      y += h + AUTO_LAYOUT_GAP;
+    }
+    guard += 1;
+  }
+
+  return { x, y, w, h };
+}
+
+function normalizeWidgetLayout(widget, layout, zIndex) {
+  return {
+    ...widget,
+    x: clamp(Math.round(finiteNumber(layout.x, 0)), 0, Math.max(0, GRID_COLS - layout.w)),
+    y: Math.max(0, Math.round(finiteNumber(layout.y, 0))),
+    w: layout.w,
+    h: layout.h,
+    zIndex,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+function autoArrangeWidgets(widgets, options = {}) {
+  const safeWidgets = Array.isArray(widgets) ? widgets : [];
+  const canvasSettings = normalizeCanvasSettings(options.canvasSettings);
+  const counts = safeWidgets.reduce((acc, widget) => {
+    acc[widget.type] = (acc[widget.type] ?? 0) + 1;
+    return acc;
+  }, {});
+  const sorted = sortWidgetsForDashboardLayout(safeWidgets);
+  const arranged = new Map();
+  const placed = [];
+  let currentRank = null;
+  let cursor = { x: 0, y: 0, nextRowY: 0, rowHeight: 0 };
+
+  sorted.forEach(({ widget, rank }, index) => {
+    if (currentRank !== null && rank !== currentRank) {
+      cursor = {
+        x: 0,
+        y: cursor.nextRowY + AUTO_LAYOUT_SECTION_GAP,
+        nextRowY: cursor.nextRowY + AUTO_LAYOUT_SECTION_GAP,
+        rowHeight: 0,
+      };
+    }
+    currentRank = rank;
+
+    const size = getRecommendedWidgetSize(widget, counts);
+    const rect = findNextGridPosition(placed, size, cursor);
+    placed.push(rect);
+    arranged.set(widget.id, normalizeWidgetLayout(widget, rect, index + 1));
+
+    const nextRowY = Math.max(cursor.nextRowY, rect.y + rect.h);
+    if (rect.w >= GRID_COLS) {
+      cursor = {
+        x: 0,
+        y: nextRowY + AUTO_LAYOUT_GAP,
+        nextRowY: nextRowY + AUTO_LAYOUT_GAP,
+        rowHeight: 0,
+      };
+      return;
+    }
+
+    cursor = {
+      x: rect.x + rect.w + AUTO_LAYOUT_GAP,
+      y: rect.y,
+      nextRowY,
+      rowHeight: Math.max(cursor.rowHeight, rect.h),
+    };
+  });
+
+  const nextWidgets = safeWidgets.map((widget) => arranged.get(widget.id) ?? widget);
+  const maxRow = placed.reduce((value, rect) => Math.max(value, rect.y + rect.h), 0);
+  const requiredHeight = clamp(
+    Math.ceil((maxRow + AUTO_LAYOUT_SECTION_GAP) * GRID_UNIT),
+    canvasSettings.height,
+    AUTO_LAYOUT_MAX_HEIGHT
+  );
+  const nextCanvasSettings = requiredHeight > canvasSettings.height
+    ? normalizeCanvasSettings({ ...canvasSettings, height: requiredHeight })
+    : canvasSettings;
+
+  return {
+    widgets: nextWidgets,
+    canvasSettings: nextCanvasSettings,
+    expandedCanvas: nextCanvasSettings.height > canvasSettings.height,
+  };
 }
 
 function normalizeCanvasSettings(settings = {}) {
@@ -956,6 +1208,7 @@ function WidgetContent({
 
 export default function DashboardCanvasBuilder() {
   const navigate = useNavigate();
+  const location = useLocation();
   const navigation = useNavigationControls();
   const initialState = useMemo(() => loadDashboardLayout(), []);
   const initialPanelState = useMemo(() => loadPanelState(), []);
@@ -970,11 +1223,13 @@ export default function DashboardCanvasBuilder() {
   const [theme, setTheme] = useState(initialState.theme);
   const [leftPanelOpen, setLeftPanelOpen] = useState(initialPanelState.leftOpen);
   const [rightPanelOpen, setRightPanelOpen] = useState(initialPanelState.rightOpen);
-  const [activeLibraryTab, setActiveLibraryTab] = useState("charts");
   const [selectedWidgetId, setSelectedWidgetId] = useState(null);
   const [previewMode, setPreviewMode] = useState(false);
   const [savedCharts, setSavedCharts] = useState(() => readSavedCharts());
-  const [chartPickerOpen, setChartPickerOpen] = useState(false);
+  const [elementsModalOpen, setElementsModalOpen] = useState(false);
+  const [suggestedElementType, setSuggestedElementType] = useState(null);
+  const [templateModalOpen, setTemplateModalOpen] = useState(false);
+  const [templateConfirm, setTemplateConfirm] = useState(null);
   const [shareOpen, setShareOpen] = useState(false);
   const [pdfModalOpen, setPdfModalOpen] = useState(false);
   const [toast, setToast] = useState(() =>
@@ -986,7 +1241,12 @@ export default function DashboardCanvasBuilder() {
   const [historyFuture, setHistoryFuture] = useState([]);
   const [editingTextId, setEditingTextId] = useState(null);
   const [widgetMenuId, setWidgetMenuId] = useState(null);
+  const [widgetContextMenu, setWidgetContextMenu] = useState(null);
+  const [contextDeleteWidget, setContextDeleteWidget] = useState(null);
   const [chartActionMenuId, setChartActionMenuId] = useState(null);
+  const [chartListFilter, setChartListFilter] = useState("all");
+  const [savedChartDeleteConfirm, setSavedChartDeleteConfirm] = useState(null);
+  const [dashboardActionMenuOpen, setDashboardActionMenuOpen] = useState(false);
   const [focusedWidgetId, setFocusedWidgetId] = useState(null);
   const widgetsRef = useRef(widgets);
   const canvasSettingsRef = useRef(canvasSettings);
@@ -995,6 +1255,7 @@ export default function DashboardCanvasBuilder() {
   const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
   const focusPulseTimerRef = useRef(null);
+  const contextMenuRef = useRef(null);
 
   useEffect(() => {
     widgetsRef.current = widgets;
@@ -1060,15 +1321,86 @@ export default function DashboardCanvasBuilder() {
     if (!chartActionMenuId) return undefined;
 
     function closeChartActionMenu(event) {
-      if (event.target instanceof Element && event.target.closest(".dcb-added-chart-item")) return;
+      if (event.target instanceof Element && event.target.closest(".dcb-added-chart-more-wrap")) return;
       setChartActionMenuId(null);
     }
 
-    document.addEventListener("mousedown", closeChartActionMenu);
+    function closeChartActionMenuWithKeyboard(event) {
+      if (event.key !== "Escape") return;
+      setChartActionMenuId(null);
+    }
+
+    document.addEventListener("pointerdown", closeChartActionMenu, true);
+    document.addEventListener("keydown", closeChartActionMenuWithKeyboard);
     return () => {
-      document.removeEventListener("mousedown", closeChartActionMenu);
+      document.removeEventListener("pointerdown", closeChartActionMenu, true);
+      document.removeEventListener("keydown", closeChartActionMenuWithKeyboard);
     };
   }, [chartActionMenuId]);
+
+  useEffect(() => {
+    if (!widgetContextMenu) return undefined;
+
+    function closeContextMenu(event) {
+      if (event.target instanceof Element && event.target.closest(".dcb-widget-context-menu")) return;
+      setWidgetContextMenu(null);
+    }
+
+    function closeContextMenuWithKeyboard(event) {
+      if (event.key !== "Escape") return;
+      setWidgetContextMenu(null);
+    }
+
+    function closeContextMenuOnViewportChange() {
+      setWidgetContextMenu(null);
+    }
+
+    document.addEventListener("pointerdown", closeContextMenu, true);
+    document.addEventListener("keydown", closeContextMenuWithKeyboard);
+    window.addEventListener("resize", closeContextMenuOnViewportChange);
+    window.addEventListener("scroll", closeContextMenuOnViewportChange, true);
+    return () => {
+      document.removeEventListener("pointerdown", closeContextMenu, true);
+      document.removeEventListener("keydown", closeContextMenuWithKeyboard);
+      window.removeEventListener("resize", closeContextMenuOnViewportChange);
+      window.removeEventListener("scroll", closeContextMenuOnViewportChange, true);
+    };
+  }, [widgetContextMenu]);
+
+  useEffect(() => {
+    setWidgetContextMenu(null);
+  }, [location.hash, location.pathname, location.search]);
+
+  useEffect(() => {
+    if (!dashboardActionMenuOpen) return undefined;
+
+    function closeDashboardActionMenu(event) {
+      if (event.target instanceof Element && event.target.closest(".dcb-dashboard-more-wrap")) return;
+      setDashboardActionMenuOpen(false);
+    }
+
+    function closeDashboardActionMenuWithKeyboard(event) {
+      if (event.key !== "Escape") return;
+      setDashboardActionMenuOpen(false);
+    }
+
+    document.addEventListener("pointerdown", closeDashboardActionMenu, true);
+    document.addEventListener("keydown", closeDashboardActionMenuWithKeyboard);
+    return () => {
+      document.removeEventListener("pointerdown", closeDashboardActionMenu, true);
+      document.removeEventListener("keydown", closeDashboardActionMenuWithKeyboard);
+    };
+  }, [dashboardActionMenuOpen]);
+
+  const runChartCardAction = useCallback((action) => {
+    setChartActionMenuId(null);
+    action();
+  }, []);
+
+  const runDashboardAction = useCallback((action) => {
+    setDashboardActionMenuOpen(false);
+    action();
+  }, []);
 
   const selectedWidget = useMemo(
     () => widgets.find((widget) => widget.id === selectedWidgetId) ?? null,
@@ -1151,6 +1483,105 @@ export default function DashboardCanvasBuilder() {
     widgetsRef.current = nextWidgets;
     setSaveStatus("unsaved");
   }, [savedCharts]);
+
+  const unifiedChartItems = useMemo(() => {
+    const savedById = new Map(savedCharts.map((chart) => [chart.id, chart]));
+    const widgetGroups = new Map();
+
+    widgets
+      .filter((widget) => widget.type === "chart")
+      .forEach((widget) => {
+        const sourceChartId = savedChartIdFromWidget(widget);
+        const key = sourceChartId ? `chart:${sourceChartId}` : `snapshot:${widget.id}`;
+        const existing = widgetGroups.get(key);
+        if (existing) {
+          existing.widgets.push(widget);
+          return;
+        }
+        widgetGroups.set(key, {
+          key,
+          sourceChartId,
+          savedChart: sourceChartId ? savedById.get(sourceChartId) ?? null : null,
+          widgets: [widget],
+        });
+      });
+
+    const savedItems = savedCharts.map((chart) => {
+      const group = widgetGroups.get(`chart:${chart.id}`);
+      const widgetsUsingChart = group?.widgets ?? [];
+      const usageCount = widgetsUsingChart.length;
+      const status = usageCount ? "dashboard" : "available";
+      return {
+        id: `chart:${chart.id}`,
+        status,
+        savedChart: chart,
+        sourceChartId: chart.id,
+        widgets: widgetsUsingChart,
+        firstWidget: widgetsUsingChart[0] ?? null,
+        title: chart.title || chartTitle(chart.config),
+        chartType: chart.chartType || chart.config?.chartType || "bar",
+        updatedAt: chart.updatedAt || chart.createdAt,
+        usageCount,
+        hasDashboardWidget: usageCount > 0,
+        badge:
+          usageCount > 1
+            ? `ใช้แล้ว ${usageCount} ครั้ง`
+            : usageCount === 1
+              ? "อยู่ใน Dashboard"
+              : "ยังไม่ได้เพิ่ม",
+        description:
+          usageCount > 1
+            ? `ใช้ใน Dashboard นี้ ${usageCount} ครั้ง`
+            : usageCount === 1
+              ? "ใช้ใน Dashboard นี้ 1 ครั้ง"
+              : "กราฟ reusable จากตัวสร้างกราฟ",
+      };
+    });
+
+    const orphanItems = Array.from(widgetGroups.values())
+      .filter((group) => !group.savedChart)
+      .map((group) => {
+        const firstWidget = group.widgets[0];
+        const chartConfig = resolveWidgetChartConfig(firstWidget, savedCharts);
+        const chartType = firstWidget?.config?.chartType || chartConfig?.chartType || "bar";
+        const isMissingSource = Boolean(group.sourceChartId);
+        return {
+          id: group.key,
+          status: isMissingSource ? "missing" : "snapshot",
+          savedChart: null,
+          sourceChartId: group.sourceChartId,
+          widgets: group.widgets,
+          firstWidget,
+          title: firstWidget?.title || chartTitle(chartConfig),
+          chartType,
+          updatedAt: firstWidget?.updatedAt || firstWidget?.createdAt,
+          usageCount: group.widgets.length,
+          hasDashboardWidget: true,
+          badge: isMissingSource ? "ไม่พบต้นฉบับ" : "Snapshot",
+          description: isMissingSource
+            ? "ต้นฉบับถูกลบแล้ว วิดเจ็ตนี้ใช้ snapshot แทน"
+            : "กราฟ snapshot บน Dashboard นี้",
+        };
+      });
+
+    return [...savedItems, ...orphanItems];
+  }, [savedCharts, widgets]);
+
+  const filteredUnifiedChartItems = useMemo(() => {
+    if (chartListFilter === "dashboard") {
+      return unifiedChartItems.filter((item) => item.hasDashboardWidget);
+    }
+    if (chartListFilter === "available") {
+      return unifiedChartItems.filter((item) => item.status === "available");
+    }
+    return unifiedChartItems;
+  }, [chartListFilter, unifiedChartItems]);
+
+  const chartListCounts = useMemo(() => ({
+    all: unifiedChartItems.length,
+    dashboard: unifiedChartItems.filter((item) => item.hasDashboardWidget).length,
+    available: unifiedChartItems.filter((item) => item.status === "available").length,
+  }), [unifiedChartItems]);
 
   const dashboardChartItems = useMemo(() => (
     widgets
@@ -1241,7 +1672,6 @@ export default function DashboardCanvasBuilder() {
   const openChartDesignerForCreate = useCallback(() => {
     persistLayout();
     preserveActiveContext();
-    setChartPickerOpen(false);
     navigate(chartDesignerUrl({ mode: "create" }));
   }, [chartDesignerUrl, navigate, persistLayout, preserveActiveContext]);
 
@@ -1260,6 +1690,7 @@ export default function DashboardCanvasBuilder() {
     setTheme(nextState.theme);
     setSelectedWidgetId(null);
     setWidgetMenuId(null);
+    setWidgetContextMenu(null);
     setChartActionMenuId(null);
     setHistoryPast([]);
     setHistoryFuture([]);
@@ -1398,7 +1829,7 @@ export default function DashboardCanvasBuilder() {
     setSelectedWidgetId(nextWidget.id);
   }, [commitWidgets]);
 
-  const addChart = useCallback((savedChart) => {
+  const addChart = useCallback((savedChart, message = "เพิ่มกราฟลงแดชบอร์ดแล้ว") => {
     const sourceChart = savedChart ?? createSavedChartFromConfig(buildSampleChartConfig(), { forceNew: true });
     const nextWidget = createChartWidget(sourceChart, {
       y: nextWidgetY(widgetsRef.current),
@@ -1406,11 +1837,40 @@ export default function DashboardCanvasBuilder() {
       projectId: activeProjectIdRef.current,
       dashboardId: activeDashboardIdRef.current,
     });
-    commitWidgets((current) => [...current, nextWidget], "เพิ่มกราฟลงแดชบอร์ดแล้ว");
+    commitWidgets((current) => [...current, nextWidget], message);
     setSelectedWidgetId(nextWidget.id);
     window.requestAnimationFrame(() => window.dispatchEvent(new Event("resize")));
     setSavedCharts(readSavedCharts());
-    setChartPickerOpen(false);
+  }, [commitWidgets]);
+
+  const arrangeAllWidgets = useCallback(() => {
+    const currentWidgets = widgetsRef.current;
+    if (!currentWidgets.length) {
+      setToast("ยังไม่มีวิดเจ็ตให้จัดเรียง");
+      return;
+    }
+
+    try {
+      const result = autoArrangeWidgets(currentWidgets, {
+        canvasSettings: canvasSettingsRef.current,
+      });
+      if (result.expandedCanvas) {
+        canvasSettingsRef.current = result.canvasSettings;
+        setCanvasSettings(result.canvasSettings);
+      }
+      commitWidgets(
+        result.widgets,
+        result.expandedCanvas
+          ? "จัดเรียงวิดเจ็ตและขยายพื้นที่ Canvas แล้ว"
+          : "จัดเรียงวิดเจ็ตบน Canvas แล้ว"
+      );
+      setWidgetMenuId(null);
+      setWidgetContextMenu(null);
+      setChartActionMenuId(null);
+      requestDashboardResize();
+    } catch {
+      setToast("ไม่สามารถจัดเรียงวิดเจ็ตได้ในขณะนี้");
+    }
   }, [commitWidgets]);
 
   const focusWidgetOnCanvas = useCallback((widgetId, message = "เลือกกราฟใน Canvas แล้ว") => {
@@ -1418,6 +1878,7 @@ export default function DashboardCanvasBuilder() {
     if (!targetWidget) return;
     setSelectedWidgetId(widgetId);
     setWidgetMenuId(null);
+    setWidgetContextMenu(null);
     setFocusedWidgetId(widgetId);
     if (focusPulseTimerRef.current) {
       window.clearTimeout(focusPulseTimerRef.current);
@@ -1468,6 +1929,7 @@ export default function DashboardCanvasBuilder() {
     });
     setSelectedWidgetId(targetWidget.id);
     setWidgetMenuId(null);
+    setWidgetContextMenu(null);
     setChartActionMenuId(null);
     setToast("อัปเดตจากกราฟที่บันทึกไว้แล้ว");
   }, [savedCharts, selectedWidgetId, updateWidget]);
@@ -1525,22 +1987,72 @@ export default function DashboardCanvasBuilder() {
     const record = ensureWidgetSavedChart(widgetId);
     if (!record) return;
     setWidgetMenuId(null);
+    setWidgetContextMenu(null);
     setChartActionMenuId(null);
     persistLayout();
     preserveActiveContext();
     navigate(chartDesignerUrl({ chartId: record.id }));
   }, [chartDesignerUrl, ensureWidgetSavedChart, navigate, persistLayout, preserveActiveContext, selectedWidgetId]);
 
-  const applyTemplate = useCallback((templateId) => {
+  const applyTemplate = useCallback((templateId, mode = "replace") => {
     const template = TEMPLATES.find((item) => item.id === templateId);
+    if (templateId === "blank") {
+      if (mode === "append") {
+        setToast("Blank Canvas ไม่มีวิดเจ็ตให้เพิ่มต่อ");
+        setTemplateModalOpen(false);
+        setTemplateConfirm(null);
+        return;
+      }
+      commitWidgets([], "เริ่ม Blank Canvas แล้ว");
+      setSelectedWidgetId(null);
+      setTemplateModalOpen(false);
+      setTemplateConfirm(null);
+      requestDashboardResize();
+      setToast("ใช้เทมเพลต Dashboard แล้ว");
+      return;
+    }
+
     const primarySavedChart = savedCharts[0] ?? createSavedChartFromConfig(buildSampleChartConfig(), { forceNew: true });
-    const nextWidgets = createTemplateWidgets(templateId, primarySavedChart, {
+    const templateWidgets = createTemplateWidgets(templateId, primarySavedChart, {
       projectId: activeProjectIdRef.current,
       dashboardId: activeDashboardIdRef.current,
     });
+
+    if (mode === "append") {
+      const currentWidgets = widgetsRef.current;
+      const yOffset = nextWidgetY(currentWidgets);
+      const zBase = currentWidgets.reduce((value, widget) => Math.max(value, finiteNumber(widget.zIndex, 1)), 1);
+      const appendedWidgets = templateWidgets.map((widget, index) => ({
+        ...widget,
+        y: widget.y + yOffset,
+        zIndex: zBase + index + 1,
+        updatedAt: new Date().toISOString(),
+      }));
+      const nextWidgets = [...currentWidgets, ...appendedWidgets];
+      commitWidgets(nextWidgets, `เพิ่มเทมเพลต Dashboard: ${template?.title ?? "Dashboard"}`);
+      setSelectedWidgetId(appendedWidgets[0]?.id ?? null);
+      setTemplateModalOpen(false);
+      setTemplateConfirm(null);
+      requestDashboardResize();
+      setToast("ใช้เทมเพลต Dashboard แล้ว");
+      return;
+    }
+
+    const arranged = autoArrangeWidgets(templateWidgets, {
+      canvasSettings: canvasSettingsRef.current,
+    });
+    if (arranged.expandedCanvas) {
+      canvasSettingsRef.current = arranged.canvasSettings;
+      setCanvasSettings(arranged.canvasSettings);
+    }
+    const nextWidgets = arranged.widgets;
     setSavedCharts(readSavedCharts());
-    commitWidgets(nextWidgets, `ใช้เทมเพลต: ${template?.title ?? "Dashboard"}`);
+    commitWidgets(nextWidgets, `ใช้เทมเพลตและจัดเรียง: ${template?.title ?? "Dashboard"}`);
     setSelectedWidgetId(nextWidgets[0]?.id ?? null);
+    setTemplateModalOpen(false);
+    setTemplateConfirm(null);
+    requestDashboardResize();
+    setToast("ใช้เทมเพลต Dashboard แล้ว");
   }, [commitWidgets, savedCharts]);
 
   const duplicateWidget = useCallback((widgetId = selectedWidgetId) => {
@@ -1562,6 +2074,7 @@ export default function DashboardCanvasBuilder() {
     commitWidgets((current) => [...current, duplicate], "ทำสำเนาวิดเจ็ตแล้ว");
     setSelectedWidgetId(duplicate.id);
     setWidgetMenuId(null);
+    setWidgetContextMenu(null);
     setChartActionMenuId(null);
     window.requestAnimationFrame(() => window.dispatchEvent(new Event("resize")));
   }, [commitWidgets, selectedWidgetId]);
@@ -1571,6 +2084,7 @@ export default function DashboardCanvasBuilder() {
     commitWidgets((current) => current.filter((widget) => widget.id !== widgetId), "ลบวิดเจ็ตแล้ว");
     setSelectedWidgetId(null);
     setWidgetMenuId(null);
+    setWidgetContextMenu(null);
     setChartActionMenuId(null);
   }, [commitWidgets, selectedWidgetId]);
 
@@ -1700,16 +2214,58 @@ export default function DashboardCanvasBuilder() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [deleteWidget, duplicateWidget]);
 
-  const refreshSavedCharts = useCallback(() => {
-    const nextCharts = readSavedCharts();
-    setSavedCharts(nextCharts);
-    return nextCharts;
+  const openElementsModal = useCallback((suggestedType = null) => {
+    setSuggestedElementType(suggestedType);
+    setElementsModalOpen(true);
   }, []);
 
-  const openChartPicker = useCallback(() => {
-    refreshSavedCharts();
-    setChartPickerOpen(true);
-  }, [refreshSavedCharts]);
+  const addElementFromModal = useCallback((type) => {
+    addWidget(type);
+    setElementsModalOpen(false);
+    setSuggestedElementType(null);
+    setToast("เพิ่มองค์ประกอบลง Dashboard แล้ว");
+  }, [addWidget]);
+
+  const openTemplateModal = useCallback(() => {
+    setTemplateConfirm(null);
+    setTemplateModalOpen(true);
+  }, []);
+
+  const requestTemplateApply = useCallback((template) => {
+    if (widgetsRef.current.length) {
+      setTemplateModalOpen(false);
+      setTemplateConfirm(template);
+      return;
+    }
+    applyTemplate(template.id, "replace");
+  }, [applyTemplate]);
+
+  useEffect(() => {
+    const hasModalOpen =
+      elementsModalOpen ||
+      templateModalOpen ||
+      Boolean(templateConfirm) ||
+      Boolean(contextDeleteWidget) ||
+      Boolean(savedChartDeleteConfirm) ||
+      shareOpen ||
+      pdfModalOpen;
+    if (!hasModalOpen) return undefined;
+
+    const onKeyDown = (event) => {
+      if (event.key !== "Escape") return;
+      setElementsModalOpen(false);
+      setSuggestedElementType(null);
+      setTemplateModalOpen(false);
+      setTemplateConfirm(null);
+      setContextDeleteWidget(null);
+      setSavedChartDeleteConfirm(null);
+      setShareOpen(false);
+      setPdfModalOpen(false);
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [contextDeleteWidget, elementsModalOpen, pdfModalOpen, savedChartDeleteConfirm, shareOpen, templateConfirm, templateModalOpen]);
 
   const exportJson = useCallback(() => {
     downloadFile("dashboard-canvas-layout.json", JSON.stringify(buildLayoutPayload(), null, 2), "application/json;charset=utf-8");
@@ -1853,6 +2409,7 @@ export default function DashboardCanvasBuilder() {
           downloadDataUrl(filename, chartCanvas.toDataURL("image/png"));
           setToast("ส่งออกวิดเจ็ตแล้ว");
           setWidgetMenuId(null);
+          setWidgetContextMenu(null);
           setChartActionMenuId(null);
           return;
         } catch {
@@ -1873,38 +2430,228 @@ export default function DashboardCanvasBuilder() {
     setToast("ส่งออกวิดเจ็ตแล้ว");
   }, [selectedWidgetId]);
 
+  const getChartItemWidget = useCallback((item) => (
+    item?.widgets?.find((widget) => widget.id === selectedWidgetId) ?? item?.firstWidget ?? item?.widgets?.[0] ?? null
+  ), [selectedWidgetId]);
+
+  const selectChartListItem = useCallback((item) => {
+    const targetWidget = getChartItemWidget(item);
+    if (!targetWidget) {
+      setToast("กราฟนี้ยังไม่ได้เพิ่มลง Dashboard");
+      return;
+    }
+    focusWidgetOnCanvas(targetWidget.id, "เลือกกราฟบน Canvas แล้ว");
+  }, [focusWidgetOnCanvas, getChartItemWidget]);
+
+  const addChartListItem = useCallback((item) => {
+    if (!item?.savedChart) {
+      setToast("ไม่พบกราฟต้นฉบับสำหรับเพิ่มลง Dashboard");
+      return;
+    }
+    addChart(item.savedChart, "เพิ่มกราฟลง Dashboard แล้ว");
+  }, [addChart]);
+
+  const addAnotherChartListItem = useCallback((item) => {
+    if (!item?.savedChart) {
+      setToast("ไม่พบกราฟต้นฉบับสำหรับเพิ่มอีกชุด");
+      return;
+    }
+    addChart(item.savedChart, "เพิ่มกราฟอีกชุดลง Dashboard แล้ว");
+  }, [addChart]);
+
+  const editChartListItem = useCallback((item) => {
+    if (item?.savedChart?.id) {
+      persistLayout();
+      preserveActiveContext();
+      navigate(chartDesignerUrl({ chartId: item.savedChart.id }));
+      return;
+    }
+
+    const targetWidget = getChartItemWidget(item);
+    if (targetWidget) {
+      editChartWidget(targetWidget.id);
+      return;
+    }
+
+    setToast("ไม่พบกราฟสำหรับแก้ไข");
+  }, [chartDesignerUrl, editChartWidget, getChartItemWidget, navigate, persistLayout, preserveActiveContext]);
+
+  const refreshChartListItemFromSaved = useCallback((item) => {
+    const targetWidget = getChartItemWidget(item);
+    if (!targetWidget) {
+      setToast("กราฟนี้ยังไม่ได้อยู่บน Dashboard");
+      return;
+    }
+    refreshChartWidgetFromSaved(targetWidget.id);
+  }, [getChartItemWidget, refreshChartWidgetFromSaved]);
+
+  const exportChartListWidget = useCallback((item) => {
+    const targetWidget = getChartItemWidget(item);
+    if (!targetWidget) {
+      setToast("กราฟนี้ยังไม่ได้อยู่บน Dashboard");
+      return;
+    }
+    exportSelectedWidget(targetWidget.id);
+  }, [exportSelectedWidget, getChartItemWidget]);
+
+  const removeChartListItemFromDashboard = useCallback((item) => {
+    const targetWidget = getChartItemWidget(item);
+    if (!targetWidget) {
+      setToast("กราฟนี้ยังไม่ได้อยู่บน Dashboard");
+      return;
+    }
+    setContextDeleteWidget(targetWidget);
+  }, [getChartItemWidget]);
+
+  const saveChartListSnapshotAsNew = useCallback((item) => {
+    const targetWidget = getChartItemWidget(item);
+    if (!targetWidget) {
+      setToast("ไม่พบ snapshot สำหรับบันทึกเป็นกราฟใหม่");
+      return;
+    }
+    ensureWidgetSavedChart(targetWidget.id);
+    setSavedCharts(readSavedCharts());
+  }, [ensureWidgetSavedChart, getChartItemWidget]);
+
+  const duplicateSavedChartFromList = useCallback((chart) => {
+    if (!chart?.config) {
+      setToast("ไม่พบกราฟต้นฉบับสำหรับทำสำเนา");
+      return;
+    }
+    createSavedChartFromConfig(normalizeChartConfig(chart.config), {
+      forceNew: true,
+      title: `${chart.title || "กราฟ"} สำเนา`,
+      chartType: chart.chartType,
+      source: chart.source || "dashboard-v2",
+    });
+    setSavedCharts(readSavedCharts());
+    setToast("ทำสำเนากราฟแล้ว");
+  }, []);
+
+  const exportSavedChartFromList = useCallback((chart) => {
+    if (!chart) {
+      setToast("ไม่พบกราฟสำหรับส่งออก");
+      return;
+    }
+    downloadFile(
+      `mini-bi-chart-${chart.id || "saved"}-${timestampForFilename()}.json`,
+      JSON.stringify({
+        id: chart.id,
+        title: chart.title,
+        chartType: chart.chartType,
+        config: normalizeChartConfig(chart.config),
+        exportedAt: new Date().toISOString(),
+      }, null, 2),
+      "application/json;charset=utf-8"
+    );
+    setToast("ส่งออกกราฟแล้ว");
+  }, []);
+
+  const requestDeleteSavedChartFromList = useCallback((item) => {
+    if (!item?.savedChart) {
+      setToast("ไม่พบกราฟที่บันทึกไว้สำหรับลบ");
+      return;
+    }
+    setSavedChartDeleteConfirm({
+      chart: item.savedChart,
+      usageCount: item.usageCount || 0,
+    });
+  }, []);
+
+  const confirmDeleteSavedChartFromList = useCallback(() => {
+    if (!savedChartDeleteConfirm?.chart?.id) return;
+    deleteSavedChart(savedChartDeleteConfirm.chart.id);
+    setSavedCharts(readSavedCharts());
+    setSavedChartDeleteConfirm(null);
+    setChartActionMenuId(null);
+    setToast("ลบกราฟที่บันทึกไว้แล้ว");
+  }, [savedChartDeleteConfirm]);
+
+  const openWidgetContextMenu = useCallback((event, widget) => {
+    if (previewMode) return;
+    event.preventDefault();
+    event.stopPropagation();
+    setSelectedWidgetId(widget.id);
+    setWidgetMenuId(null);
+    setWidgetContextMenu(null);
+    setChartActionMenuId(null);
+    setDashboardActionMenuOpen(false);
+    setWidgetContextMenu({
+      widgetId: widget.id,
+      ...clampContextMenuPosition(event.clientX, event.clientY),
+    });
+  }, [previewMode]);
+
+  const runWidgetContextAction = useCallback((action) => {
+    setWidgetContextMenu(null);
+    action();
+  }, []);
+
+  const editWidgetFromContext = useCallback((widgetId) => {
+    const widget = widgetsRef.current.find((item) => item.id === widgetId);
+    if (!widget) return;
+    setSelectedWidgetId(widget.id);
+    setRightPanelOpen(true);
+
+    if (widget.type === "chart") {
+      const sourceChartId = savedChartIdFromWidget(widget);
+      if (sourceChartId) {
+        persistLayout();
+        preserveActiveContext();
+        navigate(chartDesignerUrl({ chartId: sourceChartId }));
+        return;
+      }
+    }
+
+    setToast("เลือกวิดเจ็ตเพื่อแก้ไขแล้ว");
+  }, [chartDesignerUrl, navigate, persistLayout, preserveActiveContext]);
+
+  const copyWidgetFromContext = useCallback((widgetId) => {
+    duplicateWidget(widgetId);
+    setToast("คัดลอกวิดเจ็ตแล้ว");
+  }, [duplicateWidget]);
+
+  const confirmDeleteWidgetFromContext = useCallback(() => {
+    if (!contextDeleteWidget) return;
+    deleteWidget(contextDeleteWidget.id);
+    setContextDeleteWidget(null);
+  }, [contextDeleteWidget, deleteWidget]);
+
   useEffect(() => {
     const onRibbonCommand = (event) => {
       const detail = event.detail;
       if (detail?.scope !== "dashboard") return;
 
       if (detail.command === "add-chart") {
-        openChartPicker();
+        openChartDesignerForCreate();
         return;
       }
       if (detail.command === "add-kpi") {
-        addWidget("kpi");
+        openElementsModal("kpi");
         return;
       }
       if (detail.command === "add-table") {
-        addWidget("table");
+        openElementsModal("table");
         return;
       }
       if (detail.command === "add-text") {
-        addWidget("text");
+        openElementsModal("text");
         return;
       }
       if (detail.command === "add-image") {
-        addWidget("image");
+        openElementsModal("image");
         return;
       }
       if (detail.command === "add-filter") {
-        addWidget("filter");
+        openElementsModal("filter");
         return;
       }
       if (detail.command === "templates") {
-        setActiveLibraryTab("templates");
-        setToast("เลือกเทมเพลตจากคลังด้านซ้าย");
+        openTemplateModal();
+        return;
+      }
+      if (detail.command === "auto-arrange") {
+        arrangeAllWidgets();
         return;
       }
       if (detail.command === "save") {
@@ -1928,7 +2675,7 @@ export default function DashboardCanvasBuilder() {
     return () => {
       window.removeEventListener("mini-bi:ribbon-command", onRibbonCommand);
     };
-  }, [addWidget, exportJson, openChartPicker, saveDashboard]);
+  }, [arrangeAllWidgets, exportJson, openChartDesignerForCreate, openElementsModal, openTemplateModal, saveDashboard]);
 
   const handleImageUpload = useCallback((event) => {
     const file = event.target.files?.[0];
@@ -1940,7 +2687,15 @@ export default function DashboardCanvasBuilder() {
 
   const canvasScale = canvasSettings.zoom / 100;
   const canvasHeightRows = Math.floor(canvasSettings.height / activeGridUnit);
+  const showLegacyChartSections = false;
   const statusText = saveStatus === "saving" ? "กำลังบันทึก" : saveStatus === "unsaved" ? "ยังไม่บันทึก" : "บันทึกแล้ว";
+  const contextMenuWidget = widgetContextMenu
+    ? widgets.find((widget) => widget.id === widgetContextMenu.widgetId)
+    : null;
+  const contextMenuSourceChartId = savedChartIdFromWidget(contextMenuWidget);
+  const contextMenuSavedChart = contextMenuSourceChartId
+    ? savedCharts.find((chart) => chart.id === contextMenuSourceChartId)
+    : null;
 
   return (
     <div className={`dashboard-canvas-builder ${previewMode ? "is-preview" : ""}`} data-theme={theme}>
@@ -2012,11 +2767,12 @@ export default function DashboardCanvasBuilder() {
       ) : (
         <nav className="dcb-toolbar" aria-label="เครื่องมือตัวจัดวางแดชบอร์ด">
           <div className="dcb-toolbar-group">
-            <button type="button" className="dcb-tool-primary" onClick={openChartPicker}>+ เพิ่มกราฟ</button>
-            <button type="button" className="dcb-tool" onClick={() => addWidget("kpi")}>KPI</button>
-            <button type="button" className="dcb-tool" onClick={() => addWidget("table")}>ตาราง</button>
-            <button type="button" className="dcb-tool" onClick={() => addWidget("text")}>ข้อความ</button>
-            <button type="button" className="dcb-tool" onClick={() => addWidget("image")}>รูปภาพ</button>
+            <button type="button" className="dcb-tool-primary" onClick={openChartDesignerForCreate}>+ เพิ่มกราฟ</button>
+            <button type="button" className="dcb-tool" onClick={() => openElementsModal("kpi")}>KPI</button>
+            <button type="button" className="dcb-tool" onClick={() => openElementsModal("table")}>ตาราง</button>
+            <button type="button" className="dcb-tool" onClick={() => openElementsModal("text")}>ข้อความ</button>
+            <button type="button" className="dcb-tool" onClick={() => openElementsModal("image")}>รูปภาพ</button>
+            <button type="button" className="dcb-tool" onClick={openTemplateModal}>เทมเพลต</button>
           </div>
           <div className="dcb-toolbar-group">
             <button type="button" className="dcb-tool" onClick={undo} disabled={!historyPast.length} title={historyPast.length ? "ย้อนกลับการเปลี่ยนแปลงล่าสุด" : "ยังไม่มีประวัติให้ย้อนกลับ"}>ย้อนกลับ</button>
@@ -2054,6 +2810,16 @@ export default function DashboardCanvasBuilder() {
             </select>
           </div>
           <div className="dcb-toolbar-group dcb-toolbar-end">
+            <button
+              type="button"
+              className="dcb-tool dcb-tool-arrange"
+              onClick={arrangeAllWidgets}
+              disabled={!widgets.length}
+              title={widgets.length ? "จัดเรียงวิดเจ็ตบน Canvas อัตโนมัติ" : "ยังไม่มีวิดเจ็ตให้จัดเรียง"}
+            >
+              <span aria-hidden="true">▦</span>
+              จัดเรียง
+            </button>
             <button type="button" className="dcb-tool" onClick={() => setPreviewMode(true)}>ดูตัวอย่าง</button>
             <button type="button" className="dcb-tool" onClick={exportPng}>PNG</button>
             <button type="button" className="dcb-tool" onClick={exportJson}>JSON</button>
@@ -2062,156 +2828,343 @@ export default function DashboardCanvasBuilder() {
         </nav>
       )}
 
-      <main className={`dcb-main ${leftPanelOpen ? "" : "is-left-collapsed"} ${rightPanelOpen ? "" : "is-right-collapsed"}`}>
-        {!previewMode ? (
-          <aside className={`dcb-panel dcb-left-panel ${leftPanelOpen ? "" : "is-collapsed"}`} aria-hidden={!leftPanelOpen}>
-            <div className="dcb-panel-header">
-              <strong>วิดเจ็ต</strong>
-              <span>กราฟ องค์ประกอบ และเทมเพลต</span>
-            </div>
-            <div className="dcb-dashboard-switcher dcb-dashboard-switcher-panel" aria-label="เลือก Dashboard">
-              <span>แดชบอร์ด</span>
-              <select value={activeDashboardId} onChange={(event) => switchDashboard(event.target.value)}>
-                {dashboards.map((dashboard) => (
-                  <option key={dashboard.id} value={dashboard.id}>
-                    {dashboard.name || dashboard.dashboardName || "แดชบอร์ด"}
-                  </option>
-                ))}
-              </select>
-              <button type="button" onClick={createNewDashboard}>สร้าง Dashboard</button>
-              <button type="button" onClick={renameCurrentDashboard}>เปลี่ยนชื่อ Dashboard</button>
-              <button
-                type="button"
-                onClick={deleteCurrentDashboard}
-                disabled={dashboards.length <= 1}
-                title={dashboards.length <= 1 ? "\u0e15\u0e49\u0e2d\u0e07\u0e21\u0e35 Dashboard \u0e2d\u0e22\u0e48\u0e32\u0e07\u0e19\u0e49\u0e2d\u0e22 1 \u0e23\u0e32\u0e22\u0e01\u0e32\u0e23" : "\u0e25\u0e1a Dashboard \u0e1b\u0e31\u0e08\u0e08\u0e38\u0e1a\u0e31\u0e19"}
-              >
-                ลบ Dashboard
-              </button>
-            </div>
-            <div className="dcb-tabs" role="tablist" aria-label="คลังวิดเจ็ต">
-              {[
-                ["charts", "กราฟ"],
-                ["elements", "องค์ประกอบ"],
-                ["templates", "เทมเพลต"],
-              ].map(([id, label]) => (
-                <button
-                  key={id}
-                  type="button"
-                  role="tab"
-                  aria-selected={activeLibraryTab === id}
-                  className={activeLibraryTab === id ? "is-active" : ""}
-                  onClick={() => setActiveLibraryTab(id)}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <div className="dcb-library-scroll">
-              {activeLibraryTab === "charts" ? (
-                <div className="dcb-chart-library">
-                  <section className="dcb-chart-section">
-                    <div className="dcb-section-heading">
-                      <div>
-                        <strong>กราฟใน Dashboard นี้ ({dashboardChartItems.length})</strong>
-                        <span>กราฟที่ถูกเพิ่มลง Canvas แล้ว</span>
-                      </div>
-                    </div>
-                    {dashboardChartItems.length ? (
-                      <div className="dcb-added-chart-list">
-                        {dashboardChartItems.map(({ widget, savedChart, sourceChartId, title, chartType, usageCount, updatedAt }) => (
-                          <article
-                            key={widget.id}
-                            className={`dcb-added-chart-item ${selectedWidgetId === widget.id ? "is-selected" : ""}`}
+        <main className={`dcb-main ${leftPanelOpen ? "" : "is-left-collapsed"} ${rightPanelOpen ? "" : "is-right-collapsed"}`}>
+          {!previewMode ? (
+            <aside className={`dcb-panel dcb-left-panel ${leftPanelOpen ? "" : "is-collapsed"}`} aria-hidden={!leftPanelOpen}>
+              <div className="dcb-panel-header">
+                <strong>แดชบอร์ด</strong>
+                <span>จัดการแดชบอร์ดและวิดเจ็ตที่เชื่อมอยู่</span>
+              </div>
+              <div className="dcb-dashboard-switcher dcb-dashboard-switcher-panel" aria-label="เลือก Dashboard">
+                <div className="dcb-dashboard-switcher-title">แดชบอร์ด</div>
+                <div className="dcb-dashboard-control-row">
+                  <select className="dcb-dashboard-select" value={activeDashboardId} onChange={(event) => switchDashboard(event.target.value)}>
+                    {dashboards.map((dashboard) => (
+                      <option key={dashboard.id} value={dashboard.id}>
+                        {dashboard.name || dashboard.dashboardName || "แดชบอร์ด"}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="dcb-dashboard-actions">
+                    <button type="button" className="dcb-dashboard-action dcb-dashboard-action-primary" onClick={createNewDashboard}>สร้าง</button>
+                    <div className="dcb-dashboard-more-wrap">
+                      <button
+                        type="button"
+                        className="dcb-dashboard-more"
+                        onClick={() => setDashboardActionMenuOpen((current) => !current)}
+                        aria-haspopup="menu"
+                        aria-expanded={dashboardActionMenuOpen}
+                        title="จัดการ Dashboard เพิ่มเติม"
+                      >
+                        ...
+                      </button>
+                      {dashboardActionMenuOpen ? (
+                        <div className="dcb-dashboard-menu" role="menu" aria-label="เมนู Dashboard">
+                          <button type="button" role="menuitem" onClick={() => runDashboardAction(renameCurrentDashboard)}>
+                            เปลี่ยนชื่อ Dashboard
+                          </button>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            className="danger"
+                            onClick={() => runDashboardAction(deleteCurrentDashboard)}
+                            disabled={dashboards.length <= 1}
+                            title={dashboards.length <= 1 ? "ต้องมี Dashboard อย่างน้อย 1 รายการ" : "ลบ Dashboard ปัจจุบัน"}
                           >
-                            <button
-                              type="button"
-                              className="dcb-added-chart-main"
-                              onClick={() => focusWidgetOnCanvas(widget.id)}
-                              title="เลือกกราฟใน Canvas"
+                            ลบ Dashboard
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            <div className="dcb-library-scroll">
+                <div className="dcb-chart-library dcb-chart-library-unified">
+                  <section className="dcb-chart-section dcb-chart-section-unified">
+                    <div className="dcb-section-heading dcb-unified-chart-heading">
+                      <div>
+                        <strong>กราฟทั้งหมด ({unifiedChartItems.length})</strong>
+                        <span>เลือก เพิ่ม และจัดการกราฟใน Dashboard</span>
+                      </div>
+                      <button type="button" className="dcb-library-create" onClick={openChartDesignerForCreate}>
+                        สร้างกราฟ
+                      </button>
+                    </div>
+                    <div className="dcb-chart-filter-chips" role="group" aria-label="กรองรายการกราฟ">
+                      {CHART_LIST_FILTERS.map((filter) => (
+                        <button
+                          key={filter.id}
+                          type="button"
+                          className={chartListFilter === filter.id ? "is-active" : ""}
+                          onClick={() => setChartListFilter(filter.id)}
+                          aria-pressed={chartListFilter === filter.id}
+                        >
+                          <span>{filter.label}</span>
+                          <strong>{chartListCounts[filter.id] ?? 0}</strong>
+                        </button>
+                      ))}
+                    </div>
+                    {filteredUnifiedChartItems.length ? (
+                      <div className="dcb-added-chart-list dcb-unified-chart-list">
+                        {filteredUnifiedChartItems.map((item) => {
+                          const isSelected = item.widgets.some((widget) => widget.id === selectedWidgetId);
+                          const itemTime = formatChartListTime(item.updatedAt);
+                          const isAvailable = item.status === "available";
+                          const isDetached = item.status === "missing" || item.status === "snapshot";
+                          const badgeClass = `dcb-chart-status-badge is-${item.status}`;
+                          return (
+                            <article
+                              key={item.id}
+                              className={`dcb-added-chart-item dcb-unified-chart-item ${isSelected ? "is-selected" : ""}`}
                             >
-                              <span className="dcb-item-icon">{chartIcon(chartType)}</span>
-                              <span className="dcb-added-chart-copy">
-                                <strong>{title}</strong>
-                                <span>{chartTypeLabel(chartType)} · {formatSavedTime(new Date(updatedAt))}</span>
-                                <small>
-                                  {savedChart?.title
-                                    ? `เชื่อมกับ ${savedChart.title}`
-                                    : sourceChartId
-                                      ? "ไม่พบกราฟต้นฉบับ"
-                                      : "ใช้ snapshot"}
-                                </small>
-                              </span>
-                              {usageCount > 1 ? <small className="dcb-usage-badge">ใช้ {usageCount} ครั้ง</small> : null}
-                            </button>
-                            <div className="dcb-added-chart-actions">
-                              <button type="button" onClick={() => focusWidgetOnCanvas(widget.id)} title="เลือกและโฟกัสกราฟนี้">เลือก</button>
-                              <button type="button" onClick={() => editChartWidget(widget.id)} title="แก้ไขกราฟนี้ในตัวสร้างกราฟ">แก้ไขกราฟ</button>
-                              <button
-                                type="button"
-                                className="dcb-added-chart-more"
-                                onClick={() => setChartActionMenuId((current) => (current === widget.id ? null : widget.id))}
-                                aria-haspopup="menu"
-                                aria-expanded={chartActionMenuId === widget.id}
-                                title="คำสั่งเพิ่มเติม"
-                              >
-                                ⋯
-                              </button>
-                              {chartActionMenuId === widget.id ? (
-                                <div className="dcb-added-chart-menu" role="menu" aria-label={`คำสั่ง ${title}`}>
-                                  <button type="button" role="menuitem" onClick={() => duplicateWidget(widget.id)}>ทำสำเนา</button>
+                              <div className="dcb-added-chart-top-row">
+                                <button
+                                  type="button"
+                                  className="dcb-added-chart-main"
+                                  onClick={() => (item.hasDashboardWidget ? selectChartListItem(item) : addChartListItem(item))}
+                                  title={item.hasDashboardWidget ? "เลือกกราฟบน Canvas" : "เพิ่มกราฟลง Dashboard"}
+                                >
+                                  <span className="dcb-item-icon">{chartIcon(item.chartType)}</span>
+                                  <span className="dcb-added-chart-copy">
+                                    <strong title={item.title}>{item.title}</strong>
+                                    <span title={`${chartTypeLabel(item.chartType)} · ${itemTime}`}>
+                                      {chartTypeLabel(item.chartType)} · {itemTime}
+                                    </span>
+                                  </span>
+                                </button>
+                                <span className={badgeClass} title={item.badge}>{item.badge}</span>
+                              </div>
+                              <p className="dcb-added-chart-description" title={item.description}>
+                                {item.description}
+                              </p>
+                              <div className={`dcb-added-chart-actions ${isAvailable ? "is-available" : ""}`}>
+                                {isAvailable ? (
                                   <button
                                     type="button"
-                                    role="menuitem"
-                                    onClick={() => refreshChartWidgetFromSaved(widget.id)}
-                                    disabled={!sourceChartId || !savedChart}
-                                    title={savedChart ? "อัปเดตจากกราฟที่บันทึกไว้" : "ไม่พบกราฟต้นฉบับในคลัง"}
+                                    className="dcb-added-chart-primary"
+                                    onClick={() => addChartListItem(item)}
                                   >
-                                    อัปเดตจากต้นฉบับ
+                                    เพิ่ม
                                   </button>
-                                  <button type="button" role="menuitem" onClick={() => exportSelectedWidget(widget.id)}>ส่งออก</button>
-                                  <button type="button" role="menuitem" className="danger" onClick={() => deleteWidget(widget.id)}>ลบ</button>
+                                ) : (
+                                  <>
+                                    <button
+                                      type="button"
+                                      className="dcb-added-chart-primary"
+                                      onClick={() => selectChartListItem(item)}
+                                    >
+                                      เลือก
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="dcb-added-chart-secondary"
+                                      onClick={() => (item.usageCount > 1 && item.savedChart ? addAnotherChartListItem(item) : editChartListItem(item))}
+                                    >
+                                      {item.usageCount > 1 && item.savedChart ? "เพิ่มอีก" : "แก้ไข"}
+                                    </button>
+                                  </>
+                                )}
+                                <div className="dcb-added-chart-more-wrap">
+                                  <button
+                                    type="button"
+                                    className="dcb-added-chart-more"
+                                    onClick={() => setChartActionMenuId((current) => (current === item.id ? null : item.id))}
+                                    aria-haspopup="menu"
+                                    aria-expanded={chartActionMenuId === item.id}
+                                    title="จัดการเพิ่มเติม"
+                                  >
+                                    ...
+                                  </button>
+                                  {chartActionMenuId === item.id ? (
+                                    <div className="dcb-added-chart-menu" role="menu" aria-label={`เมนู ${item.title}`}>
+                                      {isAvailable ? (
+                                        <>
+                                          <button type="button" role="menuitem" data-icon="+" onClick={() => runChartCardAction(() => addChartListItem(item))}>เพิ่มลง Dashboard</button>
+                                          <button type="button" role="menuitem" data-icon="✎" onClick={() => runChartCardAction(() => editChartListItem(item))}>แก้ไขกราฟ</button>
+                                          <button type="button" role="menuitem" data-icon="⧉" onClick={() => runChartCardAction(() => duplicateSavedChartFromList(item.savedChart))}>ทำสำเนากราฟ</button>
+                                          <button type="button" role="menuitem" data-icon="⇩" onClick={() => runChartCardAction(() => exportSavedChartFromList(item.savedChart))}>ส่งออกกราฟ</button>
+                                          <span className="dcb-added-chart-menu-divider" role="separator" aria-hidden="true" />
+                                          <button type="button" role="menuitem" data-icon="×" className="danger" onClick={() => runChartCardAction(() => requestDeleteSavedChartFromList(item))}>ลบกราฟที่บันทึกไว้</button>
+                                        </>
+                                      ) : isDetached ? (
+                                        <>
+                                          <button type="button" role="menuitem" data-icon="◎" onClick={() => runChartCardAction(() => selectChartListItem(item))}>เลือกบน Canvas</button>
+                                          <button type="button" role="menuitem" data-icon="+" onClick={() => runChartCardAction(() => saveChartListSnapshotAsNew(item))}>บันทึกเป็นกราฟใหม่</button>
+                                          <button type="button" role="menuitem" data-icon="⇩" onClick={() => runChartCardAction(() => exportChartListWidget(item))}>ส่งออกวิดเจ็ต</button>
+                                          <span className="dcb-added-chart-menu-divider" role="separator" aria-hidden="true" />
+                                          <button type="button" role="menuitem" data-icon="×" className="danger" onClick={() => runChartCardAction(() => removeChartListItemFromDashboard(item))}>ลบออกจาก Dashboard</button>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <button type="button" role="menuitem" data-icon="◎" onClick={() => runChartCardAction(() => selectChartListItem(item))}>เลือกบน Canvas</button>
+                                          <button type="button" role="menuitem" data-icon="+" onClick={() => runChartCardAction(() => addAnotherChartListItem(item))}>เพิ่มอีก</button>
+                                          <button type="button" role="menuitem" data-icon="✎" onClick={() => runChartCardAction(() => editChartListItem(item))}>แก้ไขกราฟ</button>
+                                          <button type="button" role="menuitem" data-icon="↻" onClick={() => runChartCardAction(() => refreshChartListItemFromSaved(item))}>อัปเดตจากกราฟที่บันทึกไว้</button>
+                                          <button type="button" role="menuitem" data-icon="⇩" onClick={() => runChartCardAction(() => exportChartListWidget(item))}>ส่งออกวิดเจ็ต</button>
+                                          <span className="dcb-added-chart-menu-divider" role="separator" aria-hidden="true" />
+                                          <button type="button" role="menuitem" data-icon="×" className="danger" onClick={() => runChartCardAction(() => removeChartListItemFromDashboard(item))}>ลบออกจาก Dashboard</button>
+                                          <button type="button" role="menuitem" data-icon="×" className="danger" onClick={() => runChartCardAction(() => requestDeleteSavedChartFromList(item))}>ลบกราฟที่บันทึกไว้</button>
+                                        </>
+                                      )}
+                                    </div>
+                                  ) : null}
                                 </div>
-                              ) : null}
+                              </div>
+                            </article>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="dcb-added-chart-empty dcb-unified-chart-empty">
+                        {unifiedChartItems.length ? (
+                          <>
+                            <strong>ไม่พบกราฟในตัวกรองนี้</strong>
+                            <span>ลองเปลี่ยนตัวกรองเป็นทั้งหมดเพื่อดูกราฟที่มีอยู่</span>
+                            <div>
+                              <button type="button" className="dcb-btn" onClick={() => setChartListFilter("all")}>ดูทั้งหมด</button>
                             </div>
-                          </article>
+                          </>
+                        ) : (
+                          <>
+                            <strong>ยังไม่มีกราฟ</strong>
+                            <span>สร้างกราฟใหม่ หรือใช้เทมเพลตเพื่อเริ่มต้น Dashboard</span>
+                            <div>
+                              <button type="button" className="dcb-btn dcb-btn-primary" onClick={openChartDesignerForCreate}>สร้างกราฟ</button>
+                              <button type="button" className="dcb-btn" onClick={openTemplateModal}>ใช้เทมเพลต</button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </section>
+                  {showLegacyChartSections ? (
+                    <>
+                  <section className="dcb-chart-section">
+                      <div className="dcb-section-heading">
+                        <div>
+                          <strong>กราฟใน Dashboard นี้ ({dashboardChartItems.length})</strong>
+                          <span>กดเพื่อเลือกและจัดการบน Canvas</span>
+                        </div>
+                      </div>
+                    {dashboardChartItems.length ? (
+                      <div className="dcb-added-chart-list">
+                        {dashboardChartItems.map(({ widget, savedChart, sourceChartId, title, chartType, updatedAt }) => (
+                            <article
+                              key={widget.id}
+                              className={`dcb-added-chart-item ${selectedWidgetId === widget.id ? "is-selected" : ""}`}
+                            >
+                              <button
+                                type="button"
+                                className="dcb-added-chart-main"
+                                onClick={() => focusWidgetOnCanvas(widget.id)}
+                                title="เลือกวางบน Canvas"
+                              >
+                                <span className="dcb-item-icon">{chartIcon(chartType)}</span>
+                                <span className="dcb-added-chart-copy">
+                                  <strong title={title}>{title}</strong>
+                                  <span title={`${chartTypeLabel(chartType)} · ${formatSavedTime(new Date(updatedAt))}`}>
+                                    {chartTypeLabel(chartType)} · {formatSavedTime(new Date(updatedAt))}
+                                  </span>
+                                </span>
+                              </button>
+                              <p
+                                className="dcb-added-chart-description"
+                                title={savedChart?.title ? `จาก ${savedChart.title}` : sourceChartId ? "จากกราฟที่บันทึกไว้เดิม" : "snapshot"}
+                              >
+                                {savedChart?.title
+                                  ? `จาก ${savedChart.title}`
+                                  : sourceChartId
+                                    ? "จากกราฟที่บันทึกไว้เดิม"
+                                    : "snapshot"}
+                              </p>
+                              <div className="dcb-added-chart-actions">
+                                <button
+                                  type="button"
+                                  className="dcb-added-chart-primary"
+                                  onClick={() => focusWidgetOnCanvas(widget.id)}
+                                  title="เลือกวางบน Canvas"
+                                >
+                                  เลือก
+                                </button>
+                                <button
+                                  type="button"
+                                  className="dcb-added-chart-secondary"
+                                  onClick={() => editChartWidget(widget.id)}
+                                  title="แก้ไขกราฟ"
+                                >
+                                  แก้ไข
+                                </button>
+                                <div className="dcb-added-chart-more-wrap">
+                                  <button
+                                    type="button"
+                                    className="dcb-added-chart-more"
+                                    onClick={() => setChartActionMenuId((current) => (current === widget.id ? null : widget.id))}
+                                    aria-haspopup="menu"
+                                    aria-expanded={chartActionMenuId === widget.id}
+                                    title="จัดการเพิ่มเติม"
+                                  >
+                                    ...
+                                  </button>
+                                  {chartActionMenuId === widget.id ? (
+                                    <div className="dcb-added-chart-menu" role="menu" aria-label={`เมนู ${title}`}>
+                                      <button type="button" role="menuitem" data-icon="⧉" onClick={() => runChartCardAction(() => duplicateWidget(widget.id))}>ทำสำเนา</button>
+                                      <button
+                                        type="button"
+                                        role="menuitem"
+                                        data-icon="↻"
+                                        onClick={() => runChartCardAction(() => refreshChartWidgetFromSaved(widget.id))}
+                                        disabled={!sourceChartId || !savedChart}
+                                        title={savedChart ? "อัปเดตจากกราฟที่บันทึกไว้" : "ไม่พบกราฟที่บันทึกไว้"}
+                                      >
+                                        อัปเดตจากกราฟที่บันทึกไว้
+                                      </button>
+                                      <button type="button" role="menuitem" data-icon="⇩" onClick={() => runChartCardAction(() => exportSelectedWidget(widget.id))}>ส่งออกวิดเจ็ต</button>
+                                      <span className="dcb-added-chart-menu-divider" role="separator" aria-hidden="true" />
+                                      <button type="button" role="menuitem" data-icon="×" className="danger" onClick={() => runChartCardAction(() => deleteWidget(widget.id))}>ลบ</button>
+                                    </div>
+                                  ) : null}
+                                </div>
+                              </div>
+                            </article>
                         ))}
                       </div>
                     ) : (
                       <div className="dcb-added-chart-empty">
                         <strong>ยังไม่มีกราฟใน Dashboard</strong>
-                        <span>เพิ่มกราฟจากรายการที่บันทึกไว้ หรือเปิดตัวสร้างกราฟเพื่อสร้างกราฟใหม่</span>
+                        <span>เพิ่มกราฟจากคลัง หรือสร้างกราฟใหม่</span>
                         <div>
-                          <button type="button" className="dcb-btn dcb-btn-primary" onClick={() => addChart(null)}>เพิ่มกราฟตัวอย่าง</button>
-                          <button type="button" className="dcb-btn" onClick={openChartDesignerForCreate}>เปิดตัวสร้างกราฟ</button>
+                          <button type="button" className="dcb-btn dcb-btn-primary" onClick={openChartDesignerForCreate}>เพิ่มกราฟ</button>
                         </div>
                       </div>
                     )}
                   </section>
 
-                  <section className="dcb-chart-section">
-                    <div className="dcb-section-heading">
-                      <div>
-                        <strong>กราฟที่บันทึกไว้</strong>
-                        <span>Reusable charts จากตัวสร้างกราฟ</span>
+                    <section className="dcb-chart-section">
+                      <div className="dcb-section-heading">
+                        <div>
+                          <strong>กราฟที่บันทึกไว้</strong>
+                          <span>กราฟ reusable จากตัวสร้างกราฟ</span>
+                        </div>
                       </div>
-                    </div>
                     <div className="dcb-library-list">
                       {savedCharts.length ? (
                         savedCharts.map((chart) => {
                           const usageCount = savedChartUsageCounts.get(chart.id) ?? 0;
                           return (
-                            <article key={chart.id} className="dcb-library-item">
-                              <div className="dcb-item-icon">{chartIcon(chart.chartType)}</div>
-                              <div className="dcb-item-body">
-                                <strong>{chart.title}</strong>
-                                <span>{chartTypeLabel(chart.chartType)} · {formatSavedTime(new Date(chart.updatedAt))}</span>
-                                {usageCount ? (
-                                  <small className="dcb-usage-badge">{usageCount === 1 ? "เพิ่มแล้ว" : `ใช้แล้ว ${usageCount} ครั้ง`}</small>
-                                ) : null}
-                              </div>
-                              <button type="button" onClick={() => addChart(chart)}>เพิ่ม</button>
-                            </article>
+                              <article key={chart.id} className="dcb-library-item dcb-library-item-saved">
+                                <div className="dcb-item-icon">{chartIcon(chart.chartType)}</div>
+                                <div className="dcb-item-body">
+                                  <strong title={chart.title}>{chart.title}</strong>
+                                  <span title={`${chartTypeLabel(chart.chartType)} • ${formatSavedTime(new Date(chart.updatedAt))}`}>
+                                    {chartTypeLabel(chart.chartType)} • {formatSavedTime(new Date(chart.updatedAt))}
+                                  </span>
+                                  {usageCount ? (
+                                    <small className="dcb-usage-badge">{usageCount === 1 ? "ใช้แล้ว" : `ใช้แล้ว ${usageCount} ครั้ง`}</small>
+                                  ) : null}
+                                </div>
+                                <button type="button" className="dcb-library-add" onClick={() => addChart(chart)}>เพิ่ม</button>
+                              </article>
                           );
                         })
                       ) : (
@@ -2224,34 +3177,9 @@ export default function DashboardCanvasBuilder() {
                       )}
                     </div>
                   </section>
+                    </>
+                  ) : null}
                 </div>
-              ) : null}
-
-              {activeLibraryTab === "elements" ? (
-                <div className="dcb-library-list">
-                  {ELEMENTS.map((element) => (
-                    <button key={element.type} type="button" className="dcb-element-row" onClick={() => addWidget(element.type)}>
-                      <span className="dcb-item-icon">{element.type === "divider" ? "—" : "□"}</span>
-                      <span>
-                        <strong>{element.title}</strong>
-                        <small>{element.description}</small>
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-
-              {activeLibraryTab === "templates" ? (
-                <div className="dcb-library-list">
-                  {TEMPLATES.map((template) => (
-                    <article key={template.id} className="dcb-template-card">
-                      <strong>{template.title}</strong>
-                      <span>{template.description}</span>
-                      <button type="button" onClick={() => applyTemplate(template.id)}>ใช้เทมเพลต</button>
-                    </article>
-                  ))}
-                </div>
-              ) : null}
             </div>
           </aside>
         ) : null}
@@ -2334,6 +3262,7 @@ export default function DashboardCanvasBuilder() {
             onMouseDown={() => {
               setSelectedWidgetId(null);
               setWidgetMenuId(null);
+              setWidgetContextMenu(null);
             }}
           >
             <div
@@ -2358,8 +3287,8 @@ export default function DashboardCanvasBuilder() {
                     <strong>เริ่มสร้าง Dashboard</strong>
                     <span>เพิ่มกราฟ วิดเจ็ต หรือเลือกเทมเพลตเพื่อจัดวางข้อมูลบน Canvas</span>
                     <div>
-                      <button type="button" className="dcb-btn dcb-btn-primary" onClick={openChartPicker}>เพิ่มกราฟ</button>
-                      <button type="button" className="dcb-btn" onClick={() => setActiveLibraryTab("templates")}>เลือกเทมเพลต</button>
+                      <button type="button" className="dcb-btn dcb-btn-primary" onClick={openChartDesignerForCreate}>เพิ่มกราฟ</button>
+                      <button type="button" className="dcb-btn" onClick={openTemplateModal}>เลือกเทมเพลต</button>
                       <button type="button" className="dcb-btn" onClick={openChartDesignerForCreate}>เปิดตัวสร้างกราฟ</button>
                     </div>
                   </div>
@@ -2391,6 +3320,7 @@ export default function DashboardCanvasBuilder() {
                         event.stopPropagation();
                         setSelectedWidgetId(widget.id);
                       }}
+                      onContextMenu={(event) => openWidgetContextMenu(event, widget)}
                     >
                       <section
                         className={`dcb-widget dcb-widget-${widget.type}`}
@@ -2410,7 +3340,10 @@ export default function DashboardCanvasBuilder() {
                               <button type="button" onClick={() => duplicateWidget(widget.id)} aria-label="ทำสำเนา">⧉</button>
                               <button
                                 type="button"
-                                onClick={() => setWidgetMenuId((current) => (current === widget.id ? null : widget.id))}
+                                onClick={() => {
+                                  setWidgetContextMenu(null);
+                                  setWidgetMenuId((current) => (current === widget.id ? null : widget.id));
+                                }}
                                 aria-label="เมนูวิดเจ็ต"
                                 aria-expanded={widgetMenuId === widget.id}
                               >
@@ -2676,41 +3609,157 @@ export default function DashboardCanvasBuilder() {
         <span>โหมดเดโม</span>
       </footer>
 
-      {chartPickerOpen ? (
-        <div className="dcb-modal-backdrop" role="presentation" onMouseDown={() => setChartPickerOpen(false)}>
-          <section className="dcb-modal" role="dialog" aria-modal="true" aria-labelledby="chart-picker-title" onMouseDown={(event) => event.stopPropagation()}>
+      {elementsModalOpen ? (
+        <div className="dcb-modal-backdrop" role="presentation" onMouseDown={() => setElementsModalOpen(false)}>
+          <section className="dcb-modal dcb-elements-modal" role="dialog" aria-modal="true" aria-labelledby="elements-modal-title" onMouseDown={(event) => event.stopPropagation()}>
             <header>
               <div>
-                <h2 id="chart-picker-title">เลือกกราฟ</h2>
-                <p>เลือกกราฟที่บันทึกจากตัวสร้างกราฟ หรือสร้างกราฟใหม่</p>
+                <h2 id="elements-modal-title">เพิ่มองค์ประกอบ</h2>
+                <p>เลือกวิดเจ็ตที่ต้องการเพิ่มลงใน Dashboard</p>
               </div>
-              <button type="button" onClick={() => setChartPickerOpen(false)} aria-label="ปิด">×</button>
+              <button
+                type="button"
+                onClick={() => {
+                  setElementsModalOpen(false);
+                  setSuggestedElementType(null);
+                }}
+                aria-label="ปิด"
+              >
+                ×
+              </button>
             </header>
-            <div className="dcb-modal-grid">
-              {savedCharts.length ? (
-                savedCharts.map((chart) => (
-                  <button key={chart.id} type="button" className="dcb-chart-option" onClick={() => addChart(chart)}>
-                    <span>▦</span>
-                    <strong>{chart.title}</strong>
-                    <small>{chartTypeLabel(chart.chartType)}</small>
+            <div className="dcb-elements-grid">
+              {ELEMENTS.map((element) => (
+                <button
+                  key={element.type}
+                  type="button"
+                  className={`dcb-element-option ${suggestedElementType === element.type ? "is-suggested" : ""}`}
+                  onClick={() => addElementFromModal(element.type)}
+                >
+                  <span className="dcb-element-icon" aria-hidden="true">{ELEMENT_ICONS[element.type] ?? "□"}</span>
+                  <span className="dcb-element-copy">
+                    <strong>{WIDGET_LABELS[element.type] ?? element.title}</strong>
+                    <small>{element.description}</small>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {templateModalOpen ? (
+        <div className="dcb-modal-backdrop" role="presentation" onMouseDown={() => setTemplateModalOpen(false)}>
+          <section className="dcb-modal dcb-template-modal" role="dialog" aria-modal="true" aria-labelledby="template-modal-title" onMouseDown={(event) => event.stopPropagation()}>
+            <header>
+              <div>
+                <h2 id="template-modal-title">เลือกเทมเพลต Dashboard</h2>
+                <p>เริ่มต้นจาก layout สำเร็จรูป แล้วปรับแต่งต่อได้</p>
+              </div>
+              <button type="button" onClick={() => setTemplateModalOpen(false)} aria-label="ปิด">×</button>
+            </header>
+            <div className="dcb-template-grid">
+              {DASHBOARD_TEMPLATE_OPTIONS.map((template) => (
+                <article key={template.id} className={`dcb-template-option ${template.blank ? "is-blank" : ""}`}>
+                  <div className="dcb-template-preview" aria-hidden="true">
+                    <span />
+                    <span />
+                    <span />
+                  </div>
+                  <div className="dcb-template-copy">
+                    <strong>{template.title}</strong>
+                    <span>{template.description}</span>
+                    <small>{template.widgetCount ? `${template.widgetCount} widgets` : "พื้นที่ว่าง"}</small>
+                  </div>
+                  <button type="button" className="dcb-template-apply" onClick={() => requestTemplateApply(template)}>
+                    ใช้เทมเพลต
                   </button>
-                ))
-              ) : (
-                <div className="dcb-modal-empty">
-                  <strong>ยังไม่มีกราฟที่บันทึกไว้</strong>
-                  <span>คุณสามารถใช้กราฟตัวอย่าง หรือเปิดตัวสร้างกราฟเพื่อบันทึกกราฟใหม่</span>
-                </div>
-              )}
-              <button type="button" className="dcb-chart-option" onClick={() => addChart(null)}>
-                <span>▥</span>
-                <strong>กราฟตัวอย่าง</strong>
-                <small>Bar Chart</small>
+                </article>
+              ))}
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {templateConfirm ? (
+        <div className="dcb-modal-backdrop" role="presentation" onMouseDown={() => setTemplateConfirm(null)}>
+          <section className="dcb-modal dcb-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="template-confirm-title" onMouseDown={(event) => event.stopPropagation()}>
+            <header>
+              <div>
+                <h2 id="template-confirm-title">ใช้เทมเพลตนี้กับ Dashboard ปัจจุบัน?</h2>
+                <p>Canvas มีวิดเจ็ตอยู่แล้ว เลือกวิธีนำเทมเพลตไปใช้</p>
+              </div>
+              <button type="button" onClick={() => setTemplateConfirm(null)} aria-label="ปิด">×</button>
+            </header>
+            <div className="dcb-confirm-summary">
+              <strong>{templateConfirm.title}</strong>
+              <span>{templateConfirm.description}</span>
+            </div>
+            <div className="dcb-modal-actions">
+              <button type="button" className="dcb-btn" onClick={() => setTemplateConfirm(null)}>ยกเลิก</button>
+              <button
+                type="button"
+                className="dcb-btn"
+                onClick={() => applyTemplate(templateConfirm.id, "append")}
+                disabled={templateConfirm.blank}
+                title={templateConfirm.blank ? "Blank Canvas ไม่มีวิดเจ็ตให้เพิ่มต่อ" : "เพิ่มเทมเพลตต่อจากวิดเจ็ตเดิม"}
+              >
+                เพิ่มต่อจากของเดิม
               </button>
-              <button type="button" className="dcb-chart-option" onClick={openChartDesignerForCreate}>
-                <span>＋</span>
-                <strong>สร้างกราฟใหม่</strong>
-                <small>เปิดตัวสร้างกราฟ</small>
+              <button type="button" className="dcb-btn dcb-btn-primary" onClick={() => applyTemplate(templateConfirm.id, "replace")}>
+                แทนที่ Dashboard ปัจจุบัน
               </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {contextDeleteWidget ? (
+        <div className="dcb-modal-backdrop" role="presentation" onMouseDown={() => setContextDeleteWidget(null)}>
+          <section className="dcb-modal dcb-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="widget-delete-confirm-title" onMouseDown={(event) => event.stopPropagation()}>
+            <header>
+              <div>
+                <h2 id="widget-delete-confirm-title">ลบวิดเจ็ต</h2>
+                <p>ต้องการลบวิดเจ็ตนี้ออกจาก Dashboard หรือไม่</p>
+              </div>
+              <button type="button" onClick={() => setContextDeleteWidget(null)} aria-label="ปิด">×</button>
+            </header>
+            <div className="dcb-confirm-summary">
+              <strong>{contextDeleteWidget.title || WIDGET_LABELS[contextDeleteWidget.type] || "วิดเจ็ต"}</strong>
+              <span>{WIDGET_LABELS[contextDeleteWidget.type] || contextDeleteWidget.type}</span>
+            </div>
+            <div className="dcb-modal-actions">
+              <button type="button" className="dcb-btn" onClick={() => setContextDeleteWidget(null)}>ยกเลิก</button>
+              <button type="button" className="dcb-btn dcb-btn-danger" onClick={confirmDeleteWidgetFromContext}>ลบ</button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {savedChartDeleteConfirm ? (
+        <div className="dcb-modal-backdrop" role="presentation" onMouseDown={() => setSavedChartDeleteConfirm(null)}>
+          <section className="dcb-modal dcb-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="saved-chart-delete-confirm-title" onMouseDown={(event) => event.stopPropagation()}>
+            <header>
+              <div>
+                <h2 id="saved-chart-delete-confirm-title">ลบกราฟที่บันทึกไว้</h2>
+                <p>
+                  {savedChartDeleteConfirm.usageCount
+                    ? "กราฟนี้ถูกใช้ใน Dashboard อยู่ หากลบต้นฉบับ วิดเจ็ตจะใช้ snapshot แทน"
+                    : "ต้องการลบกราฟนี้ออกจากคลังกราฟหรือไม่"}
+                </p>
+              </div>
+              <button type="button" onClick={() => setSavedChartDeleteConfirm(null)} aria-label="ปิด">×</button>
+            </header>
+            <div className="dcb-confirm-summary">
+              <strong>{savedChartDeleteConfirm.chart.title}</strong>
+              <span>
+                {chartTypeLabel(savedChartDeleteConfirm.chart.chartType)}
+                {savedChartDeleteConfirm.usageCount ? ` · ใช้อยู่ ${savedChartDeleteConfirm.usageCount} ครั้ง` : ""}
+              </span>
+            </div>
+            <div className="dcb-modal-actions">
+              <button type="button" className="dcb-btn" onClick={() => setSavedChartDeleteConfirm(null)}>ยกเลิก</button>
+              <button type="button" className="dcb-btn dcb-btn-danger" onClick={confirmDeleteSavedChartFromList}>ลบกราฟ</button>
             </div>
           </section>
         </div>
@@ -2763,6 +3812,87 @@ export default function DashboardCanvasBuilder() {
             </header>
             <button type="button" className="dcb-btn dcb-btn-primary" onClick={() => setPdfModalOpen(false)}>รับทราบ</button>
           </section>
+        </div>
+      ) : null}
+
+      {contextMenuWidget && widgetContextMenu && !previewMode ? (
+        <div
+          ref={contextMenuRef}
+          className="dcb-widget-context-menu"
+          role="menu"
+          aria-label="เมนูวิดเจ็ต"
+          style={{ left: widgetContextMenu.x, top: widgetContextMenu.y }}
+          onMouseDown={(event) => event.stopPropagation()}
+        >
+          <button
+            type="button"
+            role="menuitem"
+            data-icon="✎"
+            onClick={() => runWidgetContextAction(() => editWidgetFromContext(contextMenuWidget.id))}
+          >
+            แก้ไข
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            data-icon="⧉"
+            onClick={() => runWidgetContextAction(() => copyWidgetFromContext(contextMenuWidget.id))}
+          >
+            คัดลอก
+          </button>
+          <span className="dcb-widget-context-divider" aria-hidden="true" />
+          <button
+            type="button"
+            role="menuitem"
+            data-icon="↑"
+            onClick={() => runWidgetContextAction(() => changeZIndex(1, contextMenuWidget.id))}
+          >
+            ขึ้นหน้า
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            data-icon="↓"
+            onClick={() => runWidgetContextAction(() => changeZIndex(-1, contextMenuWidget.id))}
+          >
+            ลงหลัง
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            data-icon="↧"
+            onClick={() => runWidgetContextAction(() => exportSelectedWidget(contextMenuWidget.id))}
+          >
+            ส่งออกวิดเจ็ต
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            data-icon="↻"
+            disabled={contextMenuWidget.type !== "chart" || !contextMenuSourceChartId || !contextMenuSavedChart}
+            title={
+              contextMenuWidget.type !== "chart"
+                ? "ใช้ได้กับวิดเจ็ตกราฟเท่านั้น"
+                : !contextMenuSourceChartId
+                  ? "วิดเจ็ตนี้ยังไม่ได้เชื่อมกับกราฟที่บันทึกไว้"
+                  : !contextMenuSavedChart
+                    ? "ไม่พบกราฟต้นฉบับที่บันทึกไว้"
+                    : "อัปเดตจากกราฟที่บันทึกไว้"
+            }
+            onClick={() => runWidgetContextAction(() => refreshChartWidgetFromSaved(contextMenuWidget.id))}
+          >
+            อัปเดตจากกราฟที่บันทึกไว้
+          </button>
+          <span className="dcb-widget-context-divider" aria-hidden="true" />
+          <button
+            type="button"
+            role="menuitem"
+            className="danger"
+            data-icon="×"
+            onClick={() => runWidgetContextAction(() => setContextDeleteWidget(contextMenuWidget))}
+          >
+            ลบ
+          </button>
         </div>
       ) : null}
 
