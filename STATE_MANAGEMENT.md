@@ -1,120 +1,33 @@
 # State Management
 
-## Overview
+## Ownership
 
-DashboardMiniBi uses Zustand as the primary client state store. The main store is `src/store/useStore.js`.
+The canonical workspace repository (`src/domain/workspace/workspaceRepository.js`) is the domain source of truth. It owns projects, datasets, charts, dashboards/widgets, shares, settings, and active context. Its `connectionProfiles` collection is reserved but intentionally unpopulated until a separately designed cutover exists.
 
-## State Categories
-
-Workspace:
-- `projects`
-- `activeProjectId`
-- `activeSheetId`
-- `activeDashboardId`
-
-Charts:
-- `charts`
-- chart save/update/delete actions
-- dashboard placement actions
-
-Filters:
-- `filters`
-- `dashboardFilters`
-- `filterPresets`
-
-Interactions:
-- `dashboardInteractions`
-- cross-filter state
-- drilldown path
-
-Views:
-- `savedViews`
-
-Datasets:
-- `importedDatasets`
-
-Sharing:
-- `shareLinks`
-
-Preferences:
-- `theme`
-- `locale`
-- `appSettings`
-- `sidebarCollapsed`
-- `kpiBarVisible`
-
-UI:
-- selected widget by dashboard
-- recent project ids
-- last opened context
-- mobile menu state
-- builder navigation context
+Zustand (`src/store/useStore.js`) remains a compatibility projection for legacy screens and owns transient UI state such as panels, selections, filters, drafts, theme controls, and navigation context. Repository notifications refresh the projection in the same tab and valid browser storage events refresh it across tabs.
 
 ## Persistence
 
-Persistence is handled by `src/utils/storage.js`.
+- Canonical domain key: `mini-bi-workspace-v1`.
+- UI-only key: `mini-bi-ui-v1` and feature-owned draft/panel keys.
+- Sanitized connection-profile compatibility key: `mini-bi-db-connections`; it is explicitly excluded from canonical migration.
+- Legacy `mini-bi-v8-workspace`, `mini-bi-projects`, active keys, chart/layout keys, and unknown keys remain unchanged during migration.
 
-Workspace state is saved to localStorage as a normalized snapshot.
+Every canonical update clones the current snapshot, applies one mutation, normalizes/validates ownership, writes once, rereads and validates, then publishes. Failure retains the last valid snapshot and reports repository health.
 
-Autosave:
-- `queueWorkspaceSave` debounces workspace saves.
-- `flushWorkspaceSave` writes immediately.
+`src/services/projectStorage.js`, `src/utils/storage.js`, and saved-chart utilities are compatibility facades. They delegate canonical domain changes and preserve their public signatures for older routes.
 
-Storage health:
-- read/write failures update a storage health object.
-- `AppHeader` subscribes to storage health and shows a warning banner.
+## Autosave And Recovery
 
-## Migration And Normalization
+- Zustand compatibility saves are debounced through `queueWorkspaceSave` and can be flushed.
+- Dashboard Canvas has a focused autosave scheduler with pending/saving/saved/error states, latest-payload debounce, explicit flush, retry, cancel, and `beforeunload` warning.
+- Uploaded image object URLs are session-only, excluded from durable payloads, labeled in the UI, and revoked on unmount.
+- Invalid/future canonical JSON is preserved for manual recovery instead of overwritten.
 
-The store performs normalization for:
-- legacy sheet-only workspace shape
-- duplicate project/sheet/dashboard ids
-- missing active dashboard references
-- chart records
-- app settings
-- dashboard filters
-- dashboard interactions
-- imported datasets
+## Security Boundary
 
-Malformed imported dataset metadata can be repaired from row keys.
-
-## Key Actions
-
-Project actions:
-- create, rename, delete, set active, duplicate sheet.
-
-Dashboard actions:
-- create, rename, remove, duplicate, set active, update layout, update canvas size.
-
-Chart actions:
-- save chart, save chart to dashboard context, update chart, duplicate chart, delete chart, add saved chart to dashboard.
-
-Filter actions:
-- set dashboard filters
-- reset dashboard filters
-- save/apply filter presets
-
-Interaction actions:
-- set/clear cross filter
-- push/trim drilldown path
-- clear dashboard interactions
-
-Saved views:
-- create
-- rename
-- delete
-- load
-
-Settings:
-- update app settings
-- toggle theme
-- set language
-
-Sharing:
-- get or create dashboard share link
-- update dashboard share snapshot
-- resolve share link
+Share snapshots are sanitized before canonical persistence. Connection metadata is sanitized before feature-key persistence, copy, preview, or export. Passwords, tokens, private keys, SSH passwords, client keys, certificates, credential URLs, and authorization values are not domain state.
 
 ## Testing
 
-Store coverage exists in `src/store/useStore.test.js` for dashboard creation, chart save, saved view load, cross-filter restore, and drilldown restore.
+Repository, migration, selector, compatibility, store bridge, dataset/chart replay, autosave, share, and secret-safety tests run through `npm test -- --run`. Use `npm run check` for the full gate.

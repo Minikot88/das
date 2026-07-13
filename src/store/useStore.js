@@ -4,11 +4,17 @@ import { normalizeChartConfig } from "../utils/normalizeChartConfig";
 import { schema } from "../data/mockData";
 import {
   clearBuilderDraft,
+  createWorkspaceUiSnapshot,
+  flushPendingWorkspaceSave,
+  flushWorkspaceSave,
   loadBuilderDraft,
   loadWorkspaceState,
   queueWorkspaceSave,
   saveBuilderDraft,
 } from "../utils/storage";
+import { toZustandWorkspaceSnapshot } from "../domain/workspace/workspaceCompatibility";
+import { workspaceRepository } from "../domain/workspace/workspaceRepository";
+import { sanitizeLocalShareSnapshot } from "../domain/shares/localShareContract";
 import {
   createLayoutItem,
   getPreferredChartLayout,
@@ -200,13 +206,20 @@ function normalizeImportedDataset(dataset = {}) {
   const validFields = fields
     .filter((field) => field?.name)
     .map((field) => ({
+      id: String(field.id || field.name),
       name: String(field.name),
       label: field.label || field.name,
       type: field.type || "text",
+      ...(typeof field.isMeasure === "boolean" ? { isMeasure: field.isMeasure } : {}),
+      ...(typeof field.isDimension === "boolean" ? { isDimension: field.isDimension } : {}),
+      ...(typeof field.semanticType === "string" ? { semanticType: field.semanticType } : {}),
+      ...(typeof field.format === "string" ? { format: field.format } : {}),
+      ...(typeof field.aggregation === "string" ? { aggregation: field.aggregation } : {}),
     }));
   const recovered = !Array.isArray(dataset.rows) || !Array.isArray(dataset.fields) || validFields.length !== fields.length;
   return {
     id: dataset.id ?? createEntityId("dataset"),
+    projectId: typeof dataset.projectId === "string" ? dataset.projectId : undefined,
     name: dataset.name || "Imported dataset",
     source: dataset.source || "CSV upload",
     createdAt: dataset.createdAt ?? new Date().toISOString(),
@@ -406,6 +419,7 @@ const savedBuilderDraft = loadBuilderDraft();
 const savedTheme = readStoredThemeMode(saved?.appSettings?.theme ?? saved?.theme ?? defaultAppSettings.theme);
 const initialAppSettings = normalizeAppSettings(saved?.appSettings ?? { theme: savedTheme });
 initialAppSettings.theme = normalizeThemeMode(savedTheme, initialAppSettings.theme);
+const initialImportedDatasets = (saved?.importedDatasets ?? []).map(normalizeImportedDataset);
 
 function isChartJsConfig(config) {
   return Boolean(config && typeof config === "object" && Array.isArray(config.data?.datasets));
@@ -440,7 +454,7 @@ function buildQueryResult(rows = [], dataset = null, existingQueryResult = null)
   };
 }
 
-function normalizeStoredChart(chart) {
+function normalizeStoredChart(chart, datasets = []) {
   if (!chart) return chart;
 
   const config = isChartJsConfig(chart.config)
@@ -463,7 +477,15 @@ function normalizeStoredChart(chart) {
     : Array.isArray(config.rows)
       ? config.rows
       : [];
-  const resolvedRows = storedData.length > 0 ? storedData : fallbackRows;
+  const contractRows = Array.isArray(chart.dataContract?.rows) ? chart.dataContract.rows : [];
+  const datasetRows = datasets.find((dataset) => dataset.id === chart.datasetId)?.rows ?? [];
+  const resolvedRows = storedData.length > 0
+    ? storedData
+    : fallbackRows.length > 0
+      ? fallbackRows
+      : contractRows.length > 0
+        ? contractRows
+        : datasetRows;
   const title = chart.title ?? chart.name ?? config.title ?? config.name ?? "Untitled";
   return {
     ...chart,
@@ -659,12 +681,12 @@ export const useStore = create((set, get) => ({
   user:            saved?.user            ?? null,
   isAuthenticated: saved?.isAuthenticated ?? false,
 
-  projects:          saved?.projects          ?? [defaultProject()],
+  projects:          saved?.projects?.length ? saved.projects : [defaultProject()],
   activeProjectId:   saved?.activeProjectId   ?? "project-1",
   activeSheetId:     saved?.activeSheetId     ?? "sheet-1",
   activeDashboardId: saved?.activeDashboardId ?? "dash-1",
 
-  charts: (saved?.charts ?? []).map(normalizeStoredChart),
+  charts: (saved?.charts ?? []).map((chart) => normalizeStoredChart(chart, initialImportedDatasets)),
   shareLinks: saved?.shareLinks ?? {},
 
   appSettings: initialAppSettings,
@@ -676,7 +698,7 @@ export const useStore = create((set, get) => ({
   dashboardInteractions: normalizeDashboardInteractions(saved?.dashboardInteractions),
   filterPresets: saved?.filterPresets ?? [],
   savedViews: saved?.savedViews ?? [],
-  importedDatasets: (saved?.importedDatasets ?? []).map(normalizeImportedDataset),
+  importedDatasets: initialImportedDatasets,
   ui: {
     ...defaultUiState,
     ...(saved?.ui ?? {}),
@@ -812,43 +834,77 @@ export const useStore = create((set, get) => ({
     };
   }),
 
-  deleteProject: (id) => set((s) => {
-    if (s.projects.length === 1) return {};
-    const projects = s.projects.filter((p) => p.id !== id);
-    const active   = s.activeProjectId === id ? projects[0] : s.projects.find((p) => p.id === s.activeProjectId);
-    const sheet    = active?.sheets[0];
-    const dash     = sheet?.dashboards[0];
-    const charts = s.charts.filter((chart) => chart.projectId !== id);
-    const shareLinks = Object.fromEntries(
-      Object.entries(s.shareLinks ?? {}).filter(([, value]) => value?.projectId !== id)
-    );
-    const ui = {
-      ...s.ui,
-      recentProjectIds: (s.ui.recentProjectIds ?? []).filter((projectId) => projectId !== id),
-      lastOpenedContextByProject: Object.fromEntries(
-        Object.entries(s.ui.lastOpenedContextByProject ?? {}).filter(([projectId]) => projectId !== id)
-      ),
-    };
-    saveState({
-      ...s,
-      projects,
-      charts,
-      shareLinks,
-      ui,
-      activeProjectId: active?.id,
-      activeSheetId: sheet?.id,
-      activeDashboardId: dash?.id,
+  deleteProject: (id) => {
+    if (workspaceRepository.getStatus().mode === "canonical") {
+      const initialSnapshot = workspaceRepository.getSnapshot();
+      if (initialSnapshot.projects.length <= 1 || !initialSnapshot.projects.some((project) => project.id === id)) return;
+      flushPendingWorkspaceSave(get());
+      const snapshot = workspaceRepository.getSnapshot();
+      const projects = snapshot.projects.filter((project) => project.id !== id);
+      const activeProject = snapshot.active.projectId === id
+        ? projects[0]
+        : projects.find((project) => project.id === snapshot.active.projectId) ?? projects[0];
+      const activeDashboard = activeProject?.dashboards.find((dashboard) => dashboard.id === snapshot.active.dashboardId)
+        ?? activeProject?.dashboards[0]
+        ?? null;
+      workspaceRepository.update((workspace) => ({
+        ...workspace,
+        projects: workspace.projects.filter((project) => project.id !== id),
+        active: {
+          projectId: activeProject?.id ?? null,
+          dashboardId: activeDashboard?.id ?? null,
+        },
+      }));
+      set((state) => ({
+        ui: {
+          ...state.ui,
+          recentProjectIds: (state.ui.recentProjectIds ?? []).filter((projectId) => projectId !== id),
+          lastOpenedContextByProject: Object.fromEntries(
+            Object.entries(state.ui.lastOpenedContextByProject ?? {}).filter(([projectId]) => projectId !== id),
+          ),
+        },
+      }));
+      return;
+    }
+
+    set((s) => {
+      if (s.projects.length === 1) return {};
+      const projects = s.projects.filter((p) => p.id !== id);
+      const active   = s.activeProjectId === id ? projects[0] : s.projects.find((p) => p.id === s.activeProjectId);
+      const sheet    = active?.sheets[0];
+      const dash     = sheet?.dashboards[0];
+      const charts = s.charts.filter((chart) => chart.projectId !== id);
+      const shareLinks = Object.fromEntries(
+        Object.entries(s.shareLinks ?? {}).filter(([, value]) => value?.projectId !== id)
+      );
+      const ui = {
+        ...s.ui,
+        recentProjectIds: (s.ui.recentProjectIds ?? []).filter((projectId) => projectId !== id),
+        lastOpenedContextByProject: Object.fromEntries(
+          Object.entries(s.ui.lastOpenedContextByProject ?? {}).filter(([projectId]) => projectId !== id)
+        ),
+      };
+      saveState({
+        ...s,
+        projects,
+        charts,
+        shareLinks,
+        ui,
+        activeProjectId: active?.id,
+        activeSheetId: sheet?.id,
+        activeDashboardId: dash?.id,
+      });
+      return {
+        projects,
+        charts,
+        shareLinks,
+        ui,
+        activeProjectId:   active?.id   ?? null,
+        activeSheetId:     sheet?.id    ?? null,
+        activeDashboardId: dash?.id     ?? null,
+      };
     });
-    return {
-      projects,
-      charts,
-      shareLinks,
-      ui,
-      activeProjectId:   active?.id   ?? null,
-      activeSheetId:     sheet?.id    ?? null,
-      activeDashboardId: dash?.id     ?? null,
-    };
-  }),
+  },
 
   createSheet: (name) => set((s) => {
     const id    = createEntityId("sheet");
@@ -902,26 +958,75 @@ export const useStore = create((set, get) => ({
     return { projects };
   }),
 
-  removeSheet: (id) => set((s) => {
-    const project = getActiveProject(s);
-    if (!project || project.sheets.length <= 1) return {};
-    const sheets  = project.sheets.filter((sh) => sh.id !== id);
-    const activeSheetId = s.activeSheetId === id ? sheets[0].id : s.activeSheetId;
-    const activeSheet   = sheets.find((sh) => sh.id === activeSheetId);
-    const activeDashboardId = activeSheet?.dashboards[0]?.id ?? s.activeDashboardId;
-    const projects = s.projects.map((p) =>
-      p.id === s.activeProjectId ? { ...p, sheets } : p
-    );
-    const ui = {
-      ...s.ui,
-      lastOpenedContextByProject: {
-        ...s.ui.lastOpenedContextByProject,
-        [s.activeProjectId]: buildProjectContextSnapshot(activeSheetId, activeDashboardId),
-      },
-    };
-    saveState({ ...s, projects, activeSheetId, activeDashboardId, ui });
-    return { projects, activeSheetId, activeDashboardId, ui };
-  }),
+  removeSheet: (id) => {
+    const current = get();
+    if (workspaceRepository.getStatus().mode === "canonical" && current.activeProjectId) {
+      const project = workspaceRepository.getSnapshot().projects.find((item) => item.id === current.activeProjectId);
+      const aliases = project?.legacySheetAliases ?? [];
+      const targetAlias = aliases.find((alias) => alias.sheetId === id);
+      if (!project || aliases.length <= 1 || !targetAlias) return;
+      flushPendingWorkspaceSave(current);
+      const removedDashboardIds = new Set(targetAlias.dashboardIds);
+      const remainingAliases = aliases.filter((alias) => alias.sheetId !== id);
+      const remainingDashboards = project.dashboards.filter((dashboard) => !removedDashboardIds.has(dashboard.id));
+      const nextAlias = current.activeSheetId === id
+        ? remainingAliases[0]
+        : remainingAliases.find((alias) => alias.sheetId === current.activeSheetId) ?? remainingAliases[0];
+      const nextDashboardId = removedDashboardIds.has(current.activeDashboardId)
+        ? nextAlias?.dashboardIds.find((dashboardId) => remainingDashboards.some((dashboard) => dashboard.id === dashboardId))
+          ?? remainingDashboards[0]?.id
+          ?? null
+        : current.activeDashboardId;
+      workspaceRepository.update((workspace) => ({
+        ...workspace,
+        projects: workspace.projects.map((item) => item.id !== project.id ? item : {
+          ...item,
+          dashboards: item.dashboards.filter((dashboard) => !removedDashboardIds.has(dashboard.id)),
+          shares: item.shares.filter((share) => !removedDashboardIds.has(share.dashboardId)),
+          legacySheetAliases: item.legacySheetAliases.filter((alias) => alias.sheetId !== id),
+          updatedAt: new Date().toISOString(),
+        }),
+        active: workspace.active.projectId === project.id
+          ? { ...workspace.active, dashboardId: nextDashboardId }
+          : workspace.active,
+      }));
+      set((state) => ({
+        ui: {
+          ...state.ui,
+          selectedWidgetIdByDashboard: Object.fromEntries(
+            Object.entries(state.ui.selectedWidgetIdByDashboard ?? {})
+              .filter(([dashboardId]) => !removedDashboardIds.has(dashboardId)),
+          ),
+          lastOpenedContextByProject: {
+            ...state.ui.lastOpenedContextByProject,
+            [project.id]: buildProjectContextSnapshot(nextAlias?.sheetId ?? null, nextDashboardId),
+          },
+        },
+      }));
+      return;
+    }
+
+    set((s) => {
+      const project = getActiveProject(s);
+      if (!project || project.sheets.length <= 1) return {};
+      const sheets  = project.sheets.filter((sh) => sh.id !== id);
+      const activeSheetId = s.activeSheetId === id ? sheets[0].id : s.activeSheetId;
+      const activeSheet   = sheets.find((sh) => sh.id === activeSheetId);
+      const activeDashboardId = activeSheet?.dashboards[0]?.id ?? s.activeDashboardId;
+      const projects = s.projects.map((p) =>
+        p.id === s.activeProjectId ? { ...p, sheets } : p
+      );
+      const ui = {
+        ...s.ui,
+        lastOpenedContextByProject: {
+          ...s.ui.lastOpenedContextByProject,
+          [s.activeProjectId]: buildProjectContextSnapshot(activeSheetId, activeDashboardId),
+        },
+      };
+      saveState({ ...s, projects, activeSheetId, activeDashboardId, ui });
+      return { projects, activeSheetId, activeDashboardId, ui };
+    });
+  },
 
   duplicateSheet: (sheetId) => set((s) => {
     const project = getActiveProject(s);
@@ -1065,33 +1170,75 @@ export const useStore = create((set, get) => ({
     return { projects };
   }),
 
-  removeDashboard: (id) => set((s) => {
-    const sheet   = getActiveSheet(s);
-    if (!sheet || sheet.dashboards.length <= 1) return {};
-    const dashboards = sheet.dashboards.filter((d) => d.id !== id);
-    const activeDashboardId = s.activeDashboardId === id ? dashboards[0].id : s.activeDashboardId;
-    const projects = s.projects.map((p) =>
-      p.id !== s.activeProjectId ? p : {
-        ...p,
-        sheets: p.sheets.map((sh) =>
-          sh.id !== s.activeSheetId ? sh : {
-            ...sh,
-            dashboards,
-            activeDashboardId,
-          }
-        ),
-      }
-    );
-    const ui = {
-      ...s.ui,
-      lastOpenedContextByProject: {
-        ...s.ui.lastOpenedContextByProject,
-        [s.activeProjectId]: buildProjectContextSnapshot(s.activeSheetId, activeDashboardId),
-      },
-    };
-    saveState({ ...s, projects, activeDashboardId, ui });
-    return { projects, activeDashboardId, ui };
-  }),
+  removeDashboard: (id) => {
+    const current = get();
+    if (workspaceRepository.getStatus().mode === "canonical" && current.activeProjectId) {
+      const project = workspaceRepository.getSnapshot().projects.find((item) => item.id === current.activeProjectId);
+      const alias = project?.legacySheetAliases.find((item) => item.sheetId === current.activeSheetId);
+      if (!project || !alias || alias.dashboardIds.length <= 1 || !alias.dashboardIds.includes(id)) return;
+      flushPendingWorkspaceSave(current);
+      const remainingDashboardIds = alias.dashboardIds.filter((dashboardId) => dashboardId !== id);
+      const activeDashboardId = current.activeDashboardId === id
+        ? remainingDashboardIds[0] ?? null
+        : current.activeDashboardId;
+      workspaceRepository.update((workspace) => ({
+        ...workspace,
+        projects: workspace.projects.map((item) => item.id !== project.id ? item : {
+          ...item,
+          dashboards: item.dashboards.filter((dashboard) => dashboard.id !== id),
+          shares: item.shares.filter((share) => share.dashboardId !== id),
+          legacySheetAliases: item.legacySheetAliases.map((itemAlias) => itemAlias.sheetId === alias.sheetId
+            ? { ...itemAlias, dashboardIds: itemAlias.dashboardIds.filter((dashboardId) => dashboardId !== id) }
+            : itemAlias),
+          updatedAt: new Date().toISOString(),
+        }),
+        active: workspace.active.projectId === project.id && workspace.active.dashboardId === id
+          ? { ...workspace.active, dashboardId: activeDashboardId }
+          : workspace.active,
+      }));
+      set((state) => ({
+        ui: {
+          ...state.ui,
+          selectedWidgetIdByDashboard: Object.fromEntries(
+            Object.entries(state.ui.selectedWidgetIdByDashboard ?? {}).filter(([dashboardId]) => dashboardId !== id),
+          ),
+          lastOpenedContextByProject: {
+            ...state.ui.lastOpenedContextByProject,
+            [project.id]: buildProjectContextSnapshot(alias.sheetId, activeDashboardId),
+          },
+        },
+      }));
+      return;
+    }
+
+    set((s) => {
+      const sheet   = getActiveSheet(s);
+      if (!sheet || sheet.dashboards.length <= 1) return {};
+      const dashboards = sheet.dashboards.filter((d) => d.id !== id);
+      const activeDashboardId = s.activeDashboardId === id ? dashboards[0].id : s.activeDashboardId;
+      const projects = s.projects.map((p) =>
+        p.id !== s.activeProjectId ? p : {
+          ...p,
+          sheets: p.sheets.map((sh) =>
+            sh.id !== s.activeSheetId ? sh : {
+              ...sh,
+              dashboards,
+              activeDashboardId,
+            }
+          ),
+        }
+      );
+      const ui = {
+        ...s.ui,
+        lastOpenedContextByProject: {
+          ...s.ui.lastOpenedContextByProject,
+          [s.activeProjectId]: buildProjectContextSnapshot(s.activeSheetId, activeDashboardId),
+        },
+      };
+      saveState({ ...s, projects, activeDashboardId, ui });
+      return { projects, activeDashboardId, ui };
+    });
+  },
 
   duplicateDashboard: (dashboardId) => set((s) => {
     const project = getActiveProject(s);
@@ -1182,7 +1329,6 @@ export const useStore = create((set, get) => ({
 
   saveChart: (chart) => set((state) => {
     if (!state.activeProjectId) {
-      console.error("Missing active context");
       return state;
     }
 
@@ -1445,89 +1591,160 @@ export const useStore = create((set, get) => ({
     return { projects };
   }),
 
-  removeChart: (sheetId, instanceId, dashboardId = null) => set((s) => {
-    const targetDashboardId = dashboardId ?? s.activeDashboardId;
-    const projects = s.projects.map((p) =>
-      p.id !== s.activeProjectId ? p : {
-        ...p,
-        sheets: p.sheets.map((sh) =>
-          sh.id !== sheetId ? sh : {
-            ...sh,
-            dashboards: sh.dashboards.map((d) =>
-              d.id !== targetDashboardId
-                ? d
-                : {
-                    ...d,
-                    layout: (d.layout ?? []).filter((l) => l.i !== instanceId),
-                  }
-            ),
-          }
-        ),
-      }
-    );
-    const ui = {
-      ...s.ui,
-      selectedWidgetIdByDashboard: Object.fromEntries(
-        Object.entries(s.ui.selectedWidgetIdByDashboard ?? {}).map(([dashboardId, widgetId]) => [
-          dashboardId,
-          widgetId === instanceId ? null : widgetId,
-        ])
-      ),
-    };
-    saveState({ ...s, projects, ui });
-    return { projects, ui };
-  }),
+  removeChart: (sheetId, instanceId, dashboardId = null) => {
+    const current = get();
+    const targetDashboardId = dashboardId ?? current.activeDashboardId;
+    if (workspaceRepository.getStatus().mode === "canonical" && current.activeProjectId && targetDashboardId) {
+      flushPendingWorkspaceSave(current);
+      workspaceRepository.update((workspace) => ({
+        ...workspace,
+        projects: workspace.projects.map((project) => project.id !== current.activeProjectId ? project : {
+          ...project,
+          dashboards: project.dashboards.map((dashboard) => dashboard.id !== targetDashboardId
+            ? dashboard
+            : { ...dashboard, widgets: dashboard.widgets.filter((widget) => widget.id !== instanceId) }),
+          updatedAt: new Date().toISOString(),
+        }),
+      }));
+      set((state) => ({
+        ui: {
+          ...state.ui,
+          selectedWidgetIdByDashboard: Object.fromEntries(
+            Object.entries(state.ui.selectedWidgetIdByDashboard ?? {}).map(([itemDashboardId, widgetId]) => [
+              itemDashboardId,
+              widgetId === instanceId ? null : widgetId,
+            ]),
+          ),
+        },
+      }));
+      return;
+    }
 
-  deleteChart: (chartId) => set((s) => {
+    set((s) => {
+      const projects = s.projects.map((p) =>
+        p.id !== s.activeProjectId ? p : {
+          ...p,
+          sheets: p.sheets.map((sh) =>
+            sh.id !== sheetId ? sh : {
+              ...sh,
+              dashboards: sh.dashboards.map((d) =>
+                d.id !== targetDashboardId
+                  ? d
+                  : {
+                      ...d,
+                      layout: (d.layout ?? []).filter((l) => l.i !== instanceId),
+                    }
+              ),
+            }
+          ),
+        }
+      );
+      const ui = {
+        ...s.ui,
+        selectedWidgetIdByDashboard: Object.fromEntries(
+          Object.entries(s.ui.selectedWidgetIdByDashboard ?? {}).map(([itemDashboardId, widgetId]) => [
+            itemDashboardId,
+            widgetId === instanceId ? null : widgetId,
+          ])
+        ),
+      };
+      saveState({ ...s, projects, ui });
+      return { projects, ui };
+    });
+  },
+
+  deleteChart: (chartId) => {
     if (!chartId) return {};
 
-    const charts = s.charts.filter((chart) => chart.id !== chartId);
-    const projects = s.projects.map((project) => ({
-      ...project,
-      sheets: (project.sheets ?? []).map((sheet) => ({
-        ...sheet,
-        dashboards: (sheet.dashboards ?? []).map((dashboard) => ({
-          ...dashboard,
-          layout: (dashboard.layout ?? []).filter((item) => item.chartId !== chartId),
+    const current = get();
+    if (workspaceRepository.getStatus().mode === "canonical" && current.activeProjectId) {
+      flushPendingWorkspaceSave(current);
+      const project = workspaceRepository.getSnapshot().projects.find((item) => item.id === current.activeProjectId);
+      const removedWidgetIds = new Set(
+        project?.dashboards.flatMap((dashboard) => dashboard.widgets)
+          .filter((widget) => widget.chartId === chartId)
+          .map((widget) => widget.id) ?? [],
+      );
+      workspaceRepository.deleteChart(current.activeProjectId, chartId);
+      set((state) => ({
+        ui: {
+          ...state.ui,
+          selectedWidgetIdByDashboard: Object.fromEntries(
+            Object.entries(state.ui.selectedWidgetIdByDashboard ?? {}).filter(([, widgetId]) => !removedWidgetIds.has(widgetId)),
+          ),
+        },
+      }));
+      return;
+    }
+
+    set((s) => {
+      const charts = s.charts.filter((chart) => chart.id !== chartId);
+      const projects = s.projects.map((project) => ({
+        ...project,
+        sheets: (project.sheets ?? []).map((sheet) => ({
+          ...sheet,
+          dashboards: (sheet.dashboards ?? []).map((dashboard) => ({
+            ...dashboard,
+            layout: (dashboard.layout ?? []).filter((item) => item.chartId !== chartId),
+          })),
         })),
-      })),
-    }));
-    const ui = {
-      ...s.ui,
-      selectedWidgetIdByDashboard: Object.fromEntries(
-        Object.entries(s.ui.selectedWidgetIdByDashboard ?? {}).filter(([, widgetId]) =>
-          projects.some((project) =>
-            project.sheets?.some((sheet) =>
-              sheet.dashboards?.some((dashboard) =>
-                dashboard.layout?.some((item) => item.i === widgetId)
+      }));
+      const ui = {
+        ...s.ui,
+        selectedWidgetIdByDashboard: Object.fromEntries(
+          Object.entries(s.ui.selectedWidgetIdByDashboard ?? {}).filter(([, widgetId]) =>
+            projects.some((project) =>
+              project.sheets?.some((sheet) =>
+                sheet.dashboards?.some((dashboard) =>
+                  dashboard.layout?.some((item) => item.i === widgetId)
+                )
               )
             )
-          )
-        )
-      ),
-    };
-
-    saveState({ ...s, projects, charts, ui });
-    return { projects, charts, ui };
-  }),
-
-  clearDashboard: (sheetId, dashId) => set((s) => {
-    const projects = s.projects.map((p) =>
-      p.id !== s.activeProjectId ? p : {
-        ...p,
-        sheets: p.sheets.map((sh) =>
-          sh.id !== sheetId ? sh : {
-            ...sh,
-            dashboards: sh.dashboards.map((d) =>
-              d.id !== dashId ? d : { ...d, charts: [], layout: [] }
-            ),
-          }
+          ),
         ),
-      }
-    );
-    saveState({ ...s, projects });
-    return { projects, aiInsights: [] };
-  }),
+      };
+
+      saveState({ ...s, projects, charts, ui });
+      return { projects, charts, ui };
+    });
+  },
+
+  clearDashboard: (sheetId, dashId) => {
+    const current = get();
+    if (workspaceRepository.getStatus().mode === "canonical" && current.activeProjectId) {
+      flushPendingWorkspaceSave(current);
+      workspaceRepository.update((workspace) => ({
+        ...workspace,
+        projects: workspace.projects.map((project) => project.id === current.activeProjectId
+          ? {
+              ...project,
+              dashboards: project.dashboards.map((dashboard) => dashboard.id === dashId
+                ? { ...dashboard, widgets: [] }
+                : dashboard),
+            }
+          : project),
+      }));
+      set({ aiInsights: [] });
+      return;
+    }
+    set((s) => {
+      const projects = s.projects.map((p) =>
+        p.id !== s.activeProjectId ? p : {
+          ...p,
+          sheets: p.sheets.map((sh) =>
+            sh.id !== sheetId ? sh : {
+              ...sh,
+              dashboards: sh.dashboards.map((d) =>
+                d.id !== dashId ? d : { ...d, charts: [], layout: [] }
+              ),
+            }
+          ),
+        }
+      );
+      saveState({ ...s, projects });
+      return { projects, aiInsights: [] };
+    });
+  },
 
   // Backwards compat: clearSheet(sheetId) clears the active dashboard.
   clearSheet: (sheetId) => {
@@ -1839,21 +2056,38 @@ export const useStore = create((set, get) => ({
     return { appSettings, theme };
   }),
 
-  importDataset: (dataset) => set((s) => {
-    const importedDataset = normalizeImportedDataset(dataset);
-    const importedDatasets = [
-      importedDataset,
-      ...s.importedDatasets.filter((item) => item.id !== importedDataset.id),
-    ];
-    saveState({ ...s, importedDatasets });
-    return { importedDatasets };
-  }),
+  importDataset: (dataset) => {
+    let stateToPersist = null;
+    set((s) => {
+      const importedDataset = normalizeImportedDataset({
+        ...dataset,
+        projectId: dataset?.projectId || s.activeProjectId,
+      });
+      const importedDatasets = [
+        importedDataset,
+        ...s.importedDatasets.filter((item) => item.id !== importedDataset.id),
+      ];
+      stateToPersist = { ...s, importedDatasets };
+      return { importedDatasets };
+    });
+    // Import completion is an explicit workflow boundary: make the dataset
+    // available to repository-backed designer selectors before navigation.
+    flushWorkspaceSave(stateToPersist);
+  },
 
-  deleteImportedDataset: (datasetId) => set((s) => {
-    const importedDatasets = s.importedDatasets.filter((dataset) => dataset.id !== datasetId);
-    saveState({ ...s, importedDatasets });
-    return { importedDatasets };
-  }),
+  deleteImportedDataset: (datasetId) => {
+    const current = get();
+    if (workspaceRepository.getStatus().mode === "canonical" && current.activeProjectId) {
+      flushPendingWorkspaceSave(current);
+      workspaceRepository.deleteDataset(current.activeProjectId, datasetId);
+      return;
+    }
+    set((s) => {
+      const importedDatasets = s.importedDatasets.filter((dataset) => dataset.id !== datasetId);
+      saveState({ ...s, importedDatasets });
+      return { importedDatasets };
+    });
+  },
 
   setAiInsights:      (insights) => set({ aiInsights: insights, isLoadingInsights: false }),
   setLoadingInsights: (v)        => set({ isLoadingInsights: v }),
@@ -1884,7 +2118,7 @@ export const useStore = create((set, get) => ({
     if (!dashboardId) return "";
 
     const existing = Object.values(get().shareLinks ?? {}).find(
-      (link) => link?.dashboardId === dashboardId && link?.mode === "dashboard-readonly"
+      (link) => link?.dashboardId === dashboardId && ["dashboard-readonly", "local-readonly"].includes(link?.mode)
     );
     if (existing?.id) return existing.id;
 
@@ -1896,9 +2130,10 @@ export const useStore = create((set, get) => ({
           id: shareId,
           projectId: projectId ?? s.activeProjectId ?? null,
           sheetId: sheetId ?? s.activeSheetId ?? null,
+          legacySheetId: sheetId ?? s.activeSheetId ?? null,
           dashboardId,
           createdAt: new Date().toISOString(),
-          mode: "dashboard-readonly",
+          mode: "local-readonly",
         },
       };
       saveState({ ...s, shareLinks });
@@ -1912,7 +2147,8 @@ export const useStore = create((set, get) => ({
       ...s.shareLinks,
       [shareId]: {
         ...s.shareLinks[shareId],
-        snapshot: cloneSerializable(snapshot ?? {}),
+        mode: "local-readonly",
+        snapshot: sanitizeLocalShareSnapshot(cloneSerializable(snapshot ?? {}), s.shareLinks[shareId].dashboardId),
         updatedAt: new Date().toISOString(),
       },
     };
@@ -2117,4 +2353,30 @@ export const useStore = create((set, get) => ({
     return { ui };
   }),
 }));
+
+if (workspaceRepository.getStatus().mode === "canonical" && workspaceRepository.getSnapshot().projects.length === 0) {
+  flushWorkspaceSave(useStore.getState());
+}
+
+workspaceRepository.subscribe(() => {
+  if (workspaceRepository.getStatus().mode !== "canonical") return;
+  const current = useStore.getState();
+  const projection = toZustandWorkspaceSnapshot(
+    workspaceRepository.getSnapshot(),
+    createWorkspaceUiSnapshot(current),
+  );
+  const importedDatasets = projection.importedDatasets.map(normalizeImportedDataset);
+  useStore.setState({
+    projects: projection.projects,
+    activeProjectId: projection.activeProjectId,
+    activeSheetId: projection.activeSheetId,
+    activeDashboardId: projection.activeDashboardId,
+    charts: projection.charts.map((chart) => normalizeStoredChart(chart, importedDatasets)),
+    shareLinks: projection.shareLinks,
+    importedDatasets,
+    appSettings: normalizeAppSettings(projection.appSettings),
+    theme: projection.theme,
+    locale: projection.locale,
+  });
+});
 

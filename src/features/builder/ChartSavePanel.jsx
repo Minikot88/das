@@ -1,4 +1,5 @@
 import React from "react";
+import useFocusTrap from "../../hooks/useFocusTrap";
 
 export default function ChartSavePanel({
   builderContext,
@@ -12,6 +13,7 @@ export default function ChartSavePanel({
   onCancel,
   onClose,
 }) {
+  const dialogRef = useFocusTrap(true, onClose);
   const contextLabel = builderContext
     ? `${builderContext.projectId} / ${builderContext.sheetId} / ${builderContext.dashboardId}`
     : "ไม่พร้อมใช้งาน";
@@ -19,10 +21,12 @@ export default function ChartSavePanel({
   return (
     <div className="builder-v3-modal-backdrop" role="presentation" onMouseDown={onClose}>
       <section
+        ref={dialogRef}
         className="builder-v3-panel builder-v3-save-panel builder-v3-save-modal"
         role="dialog"
         aria-modal="true"
         aria-labelledby="builder-save-title"
+        tabIndex={-1}
         onMouseDown={(event) => event.stopPropagation()}
       >
         <div className="builder-v3-section-head">

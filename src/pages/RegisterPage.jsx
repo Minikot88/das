@@ -37,7 +37,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="auth-page-v2">
+    <main className="auth-page-v2">
       <div className="auth-hero register-hero">
         <div className="auth-hero-inner">
           <div className="auth-hero-logo">
@@ -84,6 +84,6 @@ export default function RegisterPage() {
           <p className="auth-switch-v2">{t("auth.alreadyHaveAccount")} <Link to="/login">{t("auth.signInLink")}</Link></p>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

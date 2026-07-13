@@ -1180,8 +1180,14 @@ body:has(.database-connection-page) .main-content {
     padding: 10px;
   }
 
+  .db-type-list {
+    display: grid;
+    overflow-x: hidden;
+  }
+
   .db-type-group {
-    min-width: 230px;
+    min-width: 0;
+    width: 100%;
   }
 
   .db-type-card {

@@ -15,7 +15,8 @@ import TemplateDialog from "@/components/dashboard-v2/TemplateDialog";
 import { getFutureFeature } from "@/components/dashboard-v2/demo/futureFeatures";
 import { chartCatalog } from "@/components/dashboard-v2/mockData";
 import { dashboardV2Theme, dashboardV2Tokens as tokens } from "@/components/dashboard-v2/theme";
-import { DashboardDesignerProvider, useDashboardDesigner } from "@/contexts/dashboard-v2/DashboardDesignerContext";
+import { DashboardDesignerProvider } from "@/contexts/dashboard-v2/DashboardDesignerContext";
+import { useDashboardDesigner } from "@/contexts/dashboard-v2/useDashboardDesigner";
 import type { ChartType } from "@/components/dashboard-v2/types";
 import {
   setActiveDashboard as setStoredActiveDashboard,
@@ -79,7 +80,7 @@ function DashboardDesignerContent() {
     setFeaturePreviewId(null);
     actions.setShareOpen(false);
     actions.setSqlPanelOpen(false);
-  }, [actions.setShareOpen, actions.setSqlPanelOpen]);
+  }, [actions]);
   const restoreReturnContext = React.useCallback(() => {
     if (returnContext.projectId) {
       setStoredActiveProject(returnContext.projectId, returnContext.dashboardId || undefined);
@@ -98,7 +99,7 @@ function DashboardDesignerContent() {
         navigate("/dashboard");
       }, 350);
     }
-  }, [actions.saveChart, actions.showMessage, navigate, restoreReturnContext, state.returnToDashboard]);
+  }, [actions, navigate, restoreReturnContext, state.returnToDashboard]);
 
   React.useEffect(() => {
     function handlePageHide() {
@@ -162,13 +163,8 @@ function DashboardDesignerContent() {
       window.removeEventListener("mini-bi:ribbon-command", handleRibbonCommand);
     };
   }, [
-    actions.exportJson,
+    actions,
     handleSaveChart,
-    actions.selectChart,
-    actions.setShareOpen,
-    actions.setSqlPanelOpen,
-    actions.showMessage,
-    actions.togglePreviewMode,
   ]);
 
   return (
@@ -183,6 +179,7 @@ function DashboardDesignerContent() {
         overflow: "hidden",
       }}
     >
+      <h1 className="sr-only">ตัวสร้างกราฟ</h1>
       {state.previewMode ? (
         <PresentationBar
           deviceMode={state.deviceMode}
@@ -293,7 +290,8 @@ function DashboardDesignerContent() {
       ) : null}
 
       <Box
-        component="main"
+        component="section"
+        aria-label="พื้นที่ออกแบบกราฟ"
         sx={{
           flex: 1,
           minHeight: 0,

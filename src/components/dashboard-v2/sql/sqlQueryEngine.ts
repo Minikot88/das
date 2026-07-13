@@ -1,4 +1,5 @@
-import type { DataField, DemoDatasetRow, FieldType, SemanticType } from "../types";
+import type { DataField, FieldType, SemanticType } from "../types";
+import type { DemoDatasetRow } from "../services/datasetService";
 
 export type SqlValue = string | number | boolean;
 export type SqlRow = Record<string, SqlValue>;
@@ -181,7 +182,7 @@ export function inferSqlFields(
   select: SelectExpression[],
   sourceFields: DataField[],
 ): DataField[] {
-  return select.map((expression, index) => {
+  return select.map((expression) => {
     const values = rows.map((row) => row[expression.outputId]).filter((value) => value !== undefined);
     const sourceField = sourceFields.find((field) => field.id === expression.fieldId);
     const type = inferFieldType(expression.outputId, values, sourceField, expression.aggregate);

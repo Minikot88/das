@@ -2,122 +2,46 @@
 
 ## Overview
 
-DashboardMiniBi is a React/Vite single-page application. It is frontend-only by default and uses mock/local APIs, Zustand state, localStorage persistence, Chart.js rendering, React Grid Layout, and browser-native export APIs.
+DashboardMiniBi is a frontend-only React 19/Vite 8 SPA. React Router owns routes, `mini-bi-workspace-v1` is the canonical local domain document, Zustand projects compatibility/UI state, and Chart.js/ECharts plus React Grid Layout render analytical views.
 
-## Runtime Stack
+## Entry And Routes
 
-- React 19.
-- Vite 8.
-- React Router 7.
-- Zustand 5.
-- Chart.js 4.
-- React Grid Layout.
-- Vitest and React Testing Library.
+- `src/main.jsx` mounts the app.
+- `src/app/AppRoutes.jsx` owns lazy routes, public read-only routes, protected routes, and error boundaries.
+- `src/components/layout/Layout.jsx` provides the authenticated shell and its single main landmark.
+- Current and legacy route parity is documented in `docs/LEGACY_ROUTE_PARITY.md`.
 
-## Application Entry
+Public routes: `/login`, `/register`, `/share/:sheetId`, `/dashboard/:dashboardId/view`, and `/dashboard/:dashboardId/embed`.
 
-- `src/main.jsx`: mounts the React app.
-- `src/App.jsx`: top-level app wrapper.
-- `src/app/AppRoutes.jsx`: route registration, lazy loading, protected routes, and route error boundaries.
+Protected routes: `/`, `/home`, `/dashboard`, `/dashboard-v2`, `/dashboard-legacy`, `/builder`, `/connections`, `/datasets`, and `/settings`.
 
-## Routes
+## Canonical Workspace
 
-Public routes:
-- `/login`
-- `/register`
-- `/share/:sheetId`
-- `/dashboard/:dashboardId/view`
-- `/dashboard/:dashboardId/embed`
+`src/domain/workspace/` defines schema validation, pure migration, selectors, compatibility projections, and the local repository.
 
-Protected routes:
-- `/`
-- `/home`
-- `/dashboard`
-- `/builder`
-- `/datasets`
-- `/settings`
+- Canonical key: `mini-bi-workspace-v1`.
+- Completion marker: `mini-bi-workspace-v1-migration-complete`.
+- Project-owned entities: datasets, charts, dashboards/widgets, and shares. The schema reserves `connectionProfiles` for a future reviewed cutover, but migration leaves it empty.
+- Workspace-owned settings and active project/dashboard context.
+- Sheet IDs remain compatibility aliases rather than canonical entities.
 
-Unknown routes redirect to `/home`.
+Migration leaves all legacy source bytes unchanged. Invalid or unsupported future canonical documents are never overwritten. Writes validate after serialization, increment revision, notify same-tab subscribers, and retain the last valid snapshot on failure.
 
-## Layout
+## Data Workflows
 
-Main layout:
-- `src/components/layout/Layout.jsx`
-- `src/layout/AppHeader.jsx`
-- `src/layout/SidebarLeft.jsx`
-- `src/layout/SidebarRight.jsx`
+- CSV import is record-aware and bounded to 5 MB, 50,000 rows, and 200 columns.
+- Saved charts declare a dataset, SQL-result snapshot, or explicit demo data contract.
+- Missing/empty/invalid sources produce explicit states and never unrelated demo substitution.
+- Dashboard Canvas uses a tested debounced save scheduler with flush, retry, unload warning, and session-only image metadata.
+- Local shares are validated, secret-free `local-readonly` snapshots for the same browser profile.
+- Connection profiles persist whitelisted metadata in the feature-owned `mini-bi-db-connections` compatibility key. Secrets remain transient form state; canonical `connectionProfiles` is reserved and currently unpopulated.
 
-Workspace routes such as Dashboard and Builder use specialized in-page layouts and hide the global right sidebar.
+## API Boundary
 
-## Data Model
+`src/api/` retains mock/local wrappers. A future HTTP adapter must preserve repository ownership and validation semantics; see `docs/FUTURE_HTTP_ADAPTER_CONTRACT.md`. No backend, database, ORM, remote query runner, or real authentication is implemented here.
 
-Primary local state:
-- projects
-- sheets
-- dashboards
-- layout items
-- charts
-- filters
-- dashboard interactions
-- saved views
-- imported datasets
-- settings
-- share links
-- UI state
+## Quality And Deployment
 
-Persistence:
-- Workspace key: `mini-bi-v8-workspace`
-- Builder draft key: `mini-bi-v8-builder-draft`
+`npm run check` runs ESLint, strict TypeScript, tests, build, the full dependency audit, and the production-only audit. `.github/workflows/frontend-checks.yml` repeats this from `npm ci`. The Dockerfile and Compose configuration use digest-pinned Node 22 and nginx images and configure static serving with SPA fallback, cache policy, CSP, and other security headers; runtime behavior must still be smoke-tested on an available Linux container engine.
 
-## API Layer
-
-Files:
-- `src/api/client.js`
-- `src/api/authApi.js`
-- `src/api/projectApi.js`
-- `src/api/chartApi.js`
-- `src/api/dashboardApi.js`
-
-In mock mode, API wrappers call the local store and mock data. In non-mock mode, requests go through `apiRequest`.
-
-## Rendering
-
-Chart rendering:
-- `src/components/charts/ChartRenderer.jsx`
-- `src/components/charts/ChartJsRenderer.jsx`
-- `src/components/charts/KPIWidget.jsx`
-- `src/components/charts/ChartErrorBoundary.jsx`
-
-Dashboard rendering:
-- `src/components/dashboard/DashboardGrid.jsx`
-- `src/components/dashboard/ChartCard.jsx`
-
-## Error Handling
-
-- Chart-level errors render chart status cards.
-- Route-level errors render `RouteErrorBoundary`.
-- Dashboard load failures fail closed to an empty widget list.
-- Storage failures publish a storage health state and show an alert banner.
-
-## Testing
-
-Test setup:
-- `src/test/setup.js`
-- `*.test.js`
-- `*.test.jsx`
-
-Command:
-
-```bash
-npm test
-```
-
-## Build Output
-
-Production build:
-
-```bash
-npm run build
-```
-
-Output directory: `dist/`
+No Data Dictionary was found; this document does not invent server tables or persistence schemas.

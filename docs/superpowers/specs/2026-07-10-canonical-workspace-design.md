@@ -1,8 +1,14 @@
 # Canonical Workspace and Migration Design
 
-**Status:** Approved for Phase 2 specification
+**Status:** Historical alternative candidate - not approved for implementation
 **Date:** 2026-07-10
 **Project:** DashboardMiniBi
+
+> Execution is governed by `docs/audit-remediation-plan.md`. This draft proposes
+> a new `mini-bi-workspace-v1` key, while the current Phase 2 candidate promotes
+> `useStore` / `mini-bi-v8-workspace`. Neither approach may be implemented
+> until dependencies, migration criteria, validation requirements, and rollback
+> strategy are explicitly approved.
 
 ## 1. Purpose
 

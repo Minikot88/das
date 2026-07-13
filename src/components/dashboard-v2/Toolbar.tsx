@@ -1,4 +1,4 @@
-import React, { memo, useRef, useState } from "react";
+import React, { memo, useState } from "react";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import BarChartRoundedIcon from "@mui/icons-material/BarChartRounded";
 import DashboardCustomizeRoundedIcon from "@mui/icons-material/DashboardCustomizeRounded";
@@ -48,7 +48,6 @@ function DesignerToolbar({
   onFeaturePreview,
 }: DesignerToolbarProps) {
   const [addAnchor, setAddAnchor] = useState<HTMLElement | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const insertActions: Array<{ label: string; icon: React.ReactNode; run: () => void }> = [
     { label: "Chart", icon: <BarChartRoundedIcon />, run: () => onSelectChart("bar") },
@@ -56,12 +55,18 @@ function DesignerToolbar({
     { label: "Table", icon: <TableChartRoundedIcon />, run: () => onSelectChart("table") },
     { label: "Filter", icon: <FilterAltRoundedIcon />, run: onFocusFilter },
     { label: "Text", icon: <TextFieldsRoundedIcon />, run: onAddText },
-    { label: "Image", icon: <ImageRoundedIcon />, run: () => fileInputRef.current?.click() },
   ];
 
   function runAddAction(action: () => void) {
     setAddAnchor(null);
     action();
+  }
+
+  function handleImageInput(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (file) onImageSelected(file.name);
+    event.target.value = "";
+    setAddAnchor(null);
   }
 
   return (
@@ -93,18 +98,6 @@ function DesignerToolbar({
           overflow: "hidden",
         }}
       >
-        <input
-          ref={fileInputRef}
-          hidden
-          type="file"
-          accept="image/*"
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            if (file) onImageSelected(file.name);
-            event.target.value = "";
-          }}
-        />
-
         <Stack
           direction="row"
           spacing={1.5}
@@ -143,6 +136,15 @@ function DesignerToolbar({
                 </Stack>
               </MenuItem>
             ))}
+            <MenuItem component="label">
+              <input hidden type="file" accept="image/*" onChange={handleImageInput} />
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Box sx={{ display: "grid", placeItems: "center", color: "text.secondary", "& svg": { fontSize: 16 } }}>
+                  <ImageRoundedIcon />
+                </Box>
+                <Typography variant="body2">Image</Typography>
+              </Stack>
+            </MenuItem>
             <Divider />
             <MenuItem onClick={() => runAddAction(() => onFeaturePreview("real-database"))}>
               <Stack direction="row" spacing={1} alignItems="center">
@@ -210,6 +212,18 @@ function DesignerToolbar({
                 </Button>
               </Tooltip>
             ))}
+            <Tooltip title="Image">
+              <Button
+                component="label"
+                variant="text"
+                color="inherit"
+                startIcon={<ImageRoundedIcon />}
+                sx={{ minWidth: { xs: 30, sm: 54 }, width: { xs: 30, sm: "auto" }, height: 32, minHeight: 32, px: { xs: 0.75, sm: 1 } }}
+              >
+                <input hidden type="file" accept="image/*" onChange={handleImageInput} />
+                <Typography variant="caption" sx={{ display: { xs: "none", sm: "inline" }, fontSize: 12 }}>Image</Typography>
+              </Button>
+            </Tooltip>
           </Box>
         </Stack>
 

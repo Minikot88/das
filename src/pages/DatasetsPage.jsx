@@ -3,8 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { PageContainer, PageHeader } from "../components/layout/Layout";
 import EnterpriseDataTable from "../components/ui/EnterpriseDataTable";
 import { mockDataset } from "../data/mockData";
+import { selectProjectDatasets, useWorkspaceSelector } from "../domain/workspace/workspaceSelectors";
 import { useStore } from "../store/useStore";
-import { createDatasetFromCsv, parseCsvTextAsync } from "../utils/csvImport";
+import { createDatasetFromCsv, parseCsvTextAsync, validateCsvFile } from "../utils/csvImport";
 
 function datasetColumns(dataset) {
   return (dataset?.fields ?? []).map((field) => ({
@@ -58,9 +59,10 @@ function formatFieldType(type) {
 
 export default function DatasetsPage() {
   const navigate = useNavigate();
-  const importedDatasets = useStore((state) => state.importedDatasets);
   const importDataset = useStore((state) => state.importDataset);
   const deleteImportedDataset = useStore((state) => state.deleteImportedDataset);
+  const activeProjectId = useStore((state) => state.activeProjectId);
+  const importedDatasets = useWorkspaceSelector((snapshot) => selectProjectDatasets(snapshot, activeProjectId));
   const appSettings = useStore((state) => state.appSettings);
   const [selectedDatasetId, setSelectedDatasetId] = useState(mockDataset.id);
   const [parsedCsv, setParsedCsv] = useState(null);
@@ -130,6 +132,7 @@ export default function DatasetsPage() {
     if (!file) return;
 
     try {
+      validateCsvFile(file);
       const text = await file.text();
       const parsed = await parseCsvTextAsync(text);
       setFileName(file.name);
@@ -145,7 +148,12 @@ export default function DatasetsPage() {
       setImportError("แก้ข้อผิดพลาดของ CSV ก่อนนำเข้า");
       return;
     }
-    const dataset = createDatasetFromCsv({ name: datasetName, fileName, parsed: parsedCsv });
+    const dataset = createDatasetFromCsv({
+      name: datasetName,
+      fileName,
+      parsed: parsedCsv,
+      projectId: activeProjectId,
+    });
     importDataset(dataset);
     setSelectedDatasetId(dataset.id);
     setParsedCsv(null);
@@ -190,7 +198,7 @@ export default function DatasetsPage() {
           })}
         </aside>
 
-        <main className="datasets-main">
+        <section className="datasets-main" aria-label="รายการชุดข้อมูล">
           <section className="datasets-import-panel">
             <div className="datasets-import-copy">
               <span>นำเข้า CSV</span>
@@ -294,7 +302,7 @@ export default function DatasetsPage() {
             columns={previewColumns}
             density={appSettings.density}
           />
-        </main>
+        </section>
       </div>
     </PageContainer>
   );

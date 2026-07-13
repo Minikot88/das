@@ -62,8 +62,9 @@ export default function HomePage() {
   const [homeNotice, setHomeNotice] = useState("");
   const projects = useMemo(() => {
     void workspaceRevision;
+    void legacyProjects;
     return getStoredProjects();
-  }, [workspaceRevision]);
+  }, [legacyProjects, workspaceRevision]);
   const activeProject = useMemo(() => getStoredActiveProject(projects), [projects]);
   const activeProjectId = activeProject?.id ?? projects[0]?.id ?? null;
 
@@ -343,7 +344,7 @@ export default function HomePage() {
   };
 
   return (
-    <PageContainer className="home-page" role="main">
+    <PageContainer className="home-page" role="region" aria-label="ภาพรวมพื้นที่ทำงาน">
       {homeNotice ? <div className="home-toast" role="status">{homeNotice}</div> : null}
       <section className="home-top-showcase" aria-label="ภาพรวมพื้นที่ทำงาน">
         <Panel className="home-panel home-command-center" compact>

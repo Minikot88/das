@@ -1,116 +1,69 @@
 # DashboardMiniBi
 
-DashboardMiniBi is a frontend-only React/Vite enterprise analytics workspace for building charts, arranging dashboards, importing local CSV datasets, applying dashboard filters, saving views, exporting dashboard snapshots, and opening read-only local share/embed views.
+DashboardMiniBi is a frontend-only React/Vite analytics workspace for importing local CSV data, designing charts, arranging dashboards, and opening read-only Local share/embed views.
 
-Version: v1.0 release candidate.
+## Runtime Boundary
 
-## What Is Included
+The default mode is an explicit local simulation:
 
-- Executive workspace Home.
-- Dashboard canvas with widgets, tabs, filters, saved views, sharing, export, and presentation mode.
-- Professional chart Builder.
-- Local CSV Datasets page.
-- Settings for local preferences.
-- Local read-only public/embed dashboard views.
-- Vitest and React Testing Library baseline tests.
-- Local storage reliability handling and route error recovery.
+- mock authentication;
+- canonical `mini-bi-workspace-v1` browser persistence;
+- non-destructive migration from legacy workspace keys;
+- same-browser read-only share snapshots;
+- metadata-only connection profiles with simulated connection tests.
 
-## Default Mode
-
-The app runs in explicit mock/local mode by default.
-
-Mock/local mode uses:
-- demo data
-- mock authentication
-- browser localStorage persistence
-- local-only share records
-
-Mock login is not production authentication. Local share links are not server-backed access-control.
+It is production-hardened for local/demo evaluation, not secure multi-user hosting. Local share links are not server authorization. Passwords, tokens, certificates, and private keys are transient and are never persisted or exported.
 
 ## Quick Start
+
+Requirements: Node.js `^20.19.0` or `>=22.12.0`, and npm.
 
 ```bash
 npm ci
 npm run dev
 ```
 
-Open the URL printed by Vite.
+Mock login: `demo@dataviz.bi` / `demo1234`. Any non-empty credentials may also work in mock mode.
 
-Mock login:
-- Email: `demo@dataviz.bi`
-- Password: `demo1234`
-
-Any non-empty mock credentials may also work in local mode.
-
-## Quality Commands
+## Quality Gate
 
 ```bash
-npm run lint
-npm test
-npm run build
-npm audit
+npm run check
 ```
 
-## Documentation
-
-User and admin docs:
-- [USER_GUIDE.md](USER_GUIDE.md)
-- [ADMIN_GUIDE.md](ADMIN_GUIDE.md)
-- [DATASET_GUIDE.md](DATASET_GUIDE.md)
-- [DASHBOARD_GUIDE.md](DASHBOARD_GUIDE.md)
-- [RELEASE_NOTES_v1.0.md](RELEASE_NOTES_v1.0.md)
-
-Architecture docs:
-- [ARCHITECTURE.md](ARCHITECTURE.md)
-- [COMPONENT_ARCHITECTURE.md](COMPONENT_ARCHITECTURE.md)
-- [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md)
-- [FILTER_ENGINE.md](FILTER_ENGINE.md)
-- [EXPORT_SYSTEM.md](EXPORT_SYSTEM.md)
-
-Developer docs:
-- [INSTALLATION.md](INSTALLATION.md)
-- [CONTRIBUTING.md](CONTRIBUTING.md)
-- [TESTING_NOTES.md](TESTING_NOTES.md)
-
-Release docs:
-- [CLEANUP_REPORT.md](CLEANUP_REPORT.md)
-- [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md)
-
-Historical design, audit, sprint, and screenshot reports are in [docs/](docs/).
-
-## Requirements
-
-- Node.js 20 or newer.
-- npm.
-- Docker optional.
-
-## Environment Variables
-
-- `VITE_USE_MOCK`: `true` for local demo mode, `false` to call API endpoints.
-- `VITE_API_BASE_URL`: API origin used when mock mode is disabled.
-- `VITE_API_PROXY_TARGET`: Vite dev proxy target for `/api`.
-- `VITE_API_TIMEOUT_MS`: frontend request timeout in milliseconds.
-- `FRONTEND_PORT`: Docker host port.
-
-Vite reads `VITE_*` values at build time. Rebuild after changing them.
+The aggregate gate runs ESLint, strict TypeScript, Vitest/Testing Library/axe-core tests, the Vite production build, the full dependency audit, and the production-only audit. Individual commands include `npm run lint`, `npm run typecheck`, `npm test -- --run`, `npm run build`, `npm audit`, and `npm audit --omit=dev`.
 
 ## Docker
 
 ```bash
-cp .env.example .env
 docker compose up --build
 ```
 
-Default port: `8080`, configurable with `FRONTEND_PORT`.
+The frontend listens on `http://127.0.0.1:8080` by default. `FRONTEND_PORT` changes the port; `FRONTEND_HOST` changes the bind address. Keep the loopback default for local/demo data. nginx provides SPA fallback, immutable hashed-asset caching, HTML revalidation, security headers, and a deliberate same-origin frame policy.
 
-## Production Boundary
+The image is HTTP-only and contains no backend. Terminate HTTPS at a trusted outer proxy and set HSTS there only after the whole origin is HTTPS. The bundled nginx rejects `/api/` with `503`; a non-mock deployment requires a separately reviewed same-origin API proxy and server security controls.
 
-DashboardMiniBi v1.0 is production-hardened for local/frontend release candidate evaluation, not for secure multi-user server deployment.
+## Environment
 
-Before server-backed production use, provide:
-- real authentication and sessions
-- server-side authorization
-- durable project/chart/dashboard persistence
-- durable share-link records
-- backend dataset/query execution
-- server-side checks before returning any user data
+- `VITE_USE_MOCK`: local/mock API mode; defaults to `true`.
+- `VITE_API_BASE_URL`: future API origin when mock mode is disabled.
+- `VITE_API_PROXY_TARGET`: Vite development proxy target.
+- `VITE_API_TIMEOUT_MS`: frontend request timeout.
+- `FRONTEND_HOST`: Docker bind address; defaults to `127.0.0.1`.
+- `FRONTEND_PORT`: Docker host port.
+
+Vite reads `VITE_*` variables at build time.
+
+## Documentation
+
+- [Architecture](ARCHITECTURE.md)
+- [State management](STATE_MANAGEMENT.md)
+- [Installation](INSTALLATION.md)
+- [Testing notes](TESTING_NOTES.md)
+- [User guide](USER_GUIDE.md)
+- [Dataset guide](DATASET_GUIDE.md)
+- [Dashboard guide](DASHBOARD_GUIDE.md)
+- [Legacy route parity](docs/LEGACY_ROUTE_PARITY.md)
+- [Future HTTP adapter contract](docs/FUTURE_HTTP_ADAPTER_CONTRACT.md)
+
+No Data Dictionary is present in the repository. Backend schemas and database tables are intentionally not inferred.

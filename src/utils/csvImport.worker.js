@@ -2,7 +2,7 @@ import { parseCsvText } from "./csvImport.js";
 
 self.onmessage = (event) => {
   try {
-    const result = parseCsvText(event.data?.text ?? "");
+    const result = parseCsvText(event.data?.text ?? "", event.data?.options ?? {});
     self.postMessage({ ok: true, result });
   } catch (error) {
     self.postMessage({

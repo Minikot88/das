@@ -1,4 +1,10 @@
 import { repairMojibakeText, repairObjectTextWithMeta } from "@/utils/textEncodingRepair";
+import {
+  mergeProjectStorageProjects,
+  toProjectStorageProjects,
+} from "@/domain/workspace/workspaceCompatibility";
+import { workspaceRepository } from "@/domain/workspace/workspaceRepository";
+import { cloneWorkspace } from "@/domain/workspace/workspaceSchema";
 
 const PROJECTS_KEY = "mini-bi-projects";
 const ACTIVE_PROJECT_KEY = "mini-bi-active-project-id";
@@ -58,7 +64,12 @@ let storageRecoveryMessage = "";
 let compactingStorage = false;
 
 function storageAvailable() {
-  return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
+  if (typeof window === "undefined") return false;
+  try {
+    return typeof window.localStorage !== "undefined";
+  } catch {
+    return false;
+  }
 }
 
 function isQuotaError(error) {
@@ -210,23 +221,28 @@ function compactDatasets(datasets) {
     .map((dataset) => {
       if (!isObject(dataset)) return null;
       return {
-        id: dataset.id,
-        name: dataset.name,
-        sourceType: dataset.sourceType,
-        connectionId: dataset.connectionId,
-        database: dataset.database,
-        schema: dataset.schema,
-        table: dataset.table,
-        rowCount: dataset.rowCount,
-        fieldCount: dataset.fieldCount,
-        lastUpdated: dataset.lastUpdated,
-        fields: Array.isArray(dataset.fields) ? dataset.fields.map(compactField).filter(Boolean) : undefined,
-        columns: Array.isArray(dataset.columns) ? dataset.columns.map(compactField).filter(Boolean) : undefined,
+        ...cloneWorkspace(dataset),
+        fields: Array.isArray(dataset.fields) ? dataset.fields.map((field) => cloneWorkspace(field)) : [],
+        rows: Array.isArray(dataset.rows) ? dataset.rows.map((row) => cloneWorkspace(row)) : [],
+        rowCount: Number.isInteger(dataset.rowCount) ? dataset.rowCount : Array.isArray(dataset.rows) ? dataset.rows.length : 0,
+        columnCount: Number.isInteger(dataset.columnCount) ? dataset.columnCount : Array.isArray(dataset.fields) ? dataset.fields.length : 0,
       };
     })
-    .filter(Boolean)
-    .map((dataset) => compactSmallValue(dataset))
     .filter(Boolean);
+}
+
+function compactChartDataContract(value) {
+  if (!isObject(value)) return null;
+  const rows = Array.isArray(value.rows)
+    ? value.rows.filter(isObject).map((row) => cloneWorkspace(row))
+    : [];
+  return {
+    sourceType: typeof value.sourceType === "string" ? value.sourceType : "unknown",
+    datasetId: typeof value.datasetId === "string" ? value.datasetId : null,
+    fields: Array.isArray(value.fields) ? value.fields.filter(isObject).map((field) => cloneWorkspace(field)) : [],
+    rows,
+    ...(typeof value.queryText === "string" ? { queryText: value.queryText } : {}),
+  };
 }
 
 export function compactChartConfigForStorage(config) {
@@ -318,6 +334,12 @@ function normalizeChartRecord(item, projectId = DEFAULT_PROJECT_ID, index = 0) {
     createdAt,
   };
   const title = repairStoredText(String(repairedItem.title || repairedItem.name || chartTitle(config)));
+  const dataContract = compactChartDataContract(repairedItem.dataContract);
+  const datasetId = dataContract?.sourceType === "dataset" || dataContract?.sourceType === "demo"
+    ? dataContract.datasetId ?? repairedItem.datasetId ?? config.datasetId
+    : dataContract
+      ? null
+      : repairedItem.datasetId ?? config.datasetId;
 
   return {
     id,
@@ -329,11 +351,13 @@ function normalizeChartRecord(item, projectId = DEFAULT_PROJECT_ID, index = 0) {
     fieldMappings: compactMappings(repairedItem.fieldMappings ?? config.fieldMappings ?? config.mappings ?? []),
     settings: compactSmallValue(repairedItem.settings ?? config.settings ?? {}) ?? {},
     filters: compactSmallValue(repairedItem.filters ?? config.filters ?? {}) ?? {},
-    datasetId: repairedItem.datasetId ?? config.datasetId,
+    datasetId,
     datasetInfo: repairedItem.datasetInfo ?? {
       sourceType: config.sourceType ?? "demo",
       datasetId: config.datasetId ?? "sales_performance",
     },
+    dataContract,
+    engine: ["echarts", "chartjs", "unknown"].includes(repairedItem.engine) ? repairedItem.engine : "echarts",
     source: repairedItem.source || "dashboard-v2",
     createdAt,
     updatedAt,
@@ -356,9 +380,15 @@ function normalizeWidgetRecord(widget, projectId, dashboardId, index = 0) {
       ? repairedWidget.sourceChartId
       : typeof repairedWidget.sourceChartConfigId === "string"
         ? repairedWidget.sourceChartConfigId
+        : typeof repairedWidget.chartId === "string"
+          ? repairedWidget.chartId
         : typeof repairedWidget.config?.sourceChartId === "string"
-        ? repairedWidget.config.sourceChartId
-        : undefined;
+          ? repairedWidget.config.sourceChartId
+          : typeof repairedWidget.config?.chartId === "string"
+            ? repairedWidget.config.chartId
+            : typeof repairedWidget.config?.chartConfig?.chartId === "string"
+              ? repairedWidget.config.chartConfig.chartId
+              : undefined;
   const rawSnapshot = isObject(repairedWidget.chartConfigSnapshot)
     ? repairedWidget.chartConfigSnapshot
     : isObject(repairedWidget.config?.chartConfig)
@@ -448,6 +478,52 @@ function normalizeProjectRecord(project, index = 0) {
     createdAt,
     updatedAt,
   };
+}
+
+function ensureCanonicalMode() {
+  if (workspaceRepository.getStatus().mode === "uninitialized") {
+    workspaceRepository.migrateIfNeeded();
+  }
+  return workspaceRepository.getStatus().mode === "canonical";
+}
+
+function getCanonicalProjects() {
+  return toProjectStorageProjects(workspaceRepository.getSnapshot())
+    .map((project, index) => normalizeProjectRecord(project, index));
+}
+
+function writeCanonicalProjects(projects, { replaceProjects = false } = {}) {
+  const normalized = (Array.isArray(projects) ? projects : [])
+    .map((project, index) => normalizeProjectRecord(project, index));
+  const projectIds = new Set(normalized.map((project) => project.id));
+  const projectionsById = new Map(normalized.map((project) => [project.id, project]));
+  workspaceRepository.update((current) => {
+    const merged = mergeProjectStorageProjects(current, normalized);
+    const exactCollections = merged.projects.map((project) => {
+      const projection = projectionsById.get(project.id);
+      if (!projection) return project;
+      const datasetIds = new Set(projection.datasets.map((dataset) => dataset.id));
+      const chartIds = new Set(projection.charts.map((chart) => chart.id));
+      const dashboardsById = new Map(projection.dashboards.map((dashboard) => [dashboard.id, dashboard]));
+      return {
+        ...project,
+        datasets: project.datasets.filter((dataset) => datasetIds.has(dataset.id)),
+        charts: project.charts.filter((chart) => chartIds.has(chart.id)),
+        dashboards: project.dashboards
+          .filter((dashboard) => dashboardsById.has(dashboard.id))
+          .map((dashboard) => {
+            const projectedDashboard = dashboardsById.get(dashboard.id);
+            const widgetIds = new Set(projectedDashboard.widgets.map((widget) => widget.id));
+            return { ...dashboard, widgets: dashboard.widgets.filter((widget) => widgetIds.has(widget.id)) };
+          }),
+      };
+    });
+    return {
+      ...merged,
+      projects: replaceProjects ? exactCollections.filter((project) => projectIds.has(project.id)) : exactCollections,
+    };
+  });
+  return getCanonicalProjects();
 }
 
 function readLegacyCharts() {
@@ -596,7 +672,7 @@ export function compactMiniBiStorage() {
   }
 }
 
-export function safeSetLocalStorage(key, value, options = {}) {
+export function safeSetLocalStorage(key, value) {
   const stringValue = typeof value === "string" ? value : String(value ?? "");
   if (!storageAvailable()) {
     memoryValues.set(key, stringValue);
@@ -613,21 +689,9 @@ export function safeSetLocalStorage(key, value, options = {}) {
       warnStorageIssue(error);
       return false;
     }
-  }
-
-  setStorageRecovery();
-  compactMiniBiStorage();
-
-  try {
-    directSetLocalStorage(key, stringValue);
-    return true;
-  } catch (retryError) {
-    if (key !== PROJECTS_KEY && options.removeOnFail !== false) {
-      safeRemoveLocalStorage(key);
-    }
     memoryValues.set(key, stringValue);
     setStorageRecovery();
-    warnStorageIssue(retryError);
+    warnStorageIssue(error);
     return false;
   }
 }
@@ -744,10 +808,12 @@ function ensureProjectStorage() {
 }
 
 export function getProjects() {
+  if (ensureCanonicalMode()) return getCanonicalProjects();
   return ensureProjectStorage();
 }
 
 export function saveProjects(projects) {
+  if (ensureCanonicalMode()) return writeCanonicalProjects(projects, { replaceProjects: true });
   const normalized = Array.isArray(projects) ? projects.map(normalizeProjectRecord).filter(Boolean) : [];
   const next = normalized.length ? normalized : [normalizeProjectRecord(null, 0)];
   persistProjects(next);
@@ -757,12 +823,21 @@ export function saveProjects(projects) {
 }
 
 export function getActiveProject(projectsArg) {
+  if (ensureCanonicalMode()) {
+    const projects = projectsArg ?? getCanonicalProjects();
+    const activeProjectId = workspaceRepository.getSnapshot().active.projectId;
+    return projects.find((project) => project.id === activeProjectId) ?? projects[0] ?? normalizeProjectRecord(null, 0);
+  }
   const projects = projectsArg ?? ensureProjectStorage();
   const activeProjectId = safeGetLocalStorage(ACTIVE_PROJECT_KEY);
   return projects.find((project) => project.id === activeProjectId) ?? projects[0] ?? normalizeProjectRecord(null, 0);
 }
 
 export function setActiveProject(projectId, preferredDashboardId) {
+  if (ensureCanonicalMode()) {
+    workspaceRepository.setActiveProject(projectId, preferredDashboardId);
+    return getActiveProject();
+  }
   const projects = ensureProjectStorage();
   const project = projects.find((item) => item.id === projectId) ?? projects[0];
   if (!storageAvailable()) return project;
@@ -778,6 +853,12 @@ export function setActiveProject(projectId, preferredDashboardId) {
 }
 
 export function getActiveDashboard(projectsArg) {
+  if (ensureCanonicalMode()) {
+    const projects = projectsArg ?? getCanonicalProjects();
+    const activeProject = getActiveProject(projects);
+    const activeDashboardId = workspaceRepository.getSnapshot().active.dashboardId;
+    return activeProject.dashboards.find((dashboard) => dashboard.id === activeDashboardId) ?? activeProject.dashboards[0];
+  }
   const projects = projectsArg ?? ensureProjectStorage();
   const activeProject = getActiveProject(projects);
   const activeDashboardId = safeGetLocalStorage(ACTIVE_DASHBOARD_KEY);
@@ -785,6 +866,10 @@ export function getActiveDashboard(projectsArg) {
 }
 
 export function setActiveDashboard(dashboardId) {
+  if (ensureCanonicalMode()) {
+    workspaceRepository.setActiveDashboard(dashboardId);
+    return getActiveDashboard();
+  }
   const projects = ensureProjectStorage();
   const project = getActiveProject(projects);
   const dashboard = project.dashboards.find((item) => item.id === dashboardId) ?? project.dashboards[0];
@@ -795,12 +880,27 @@ export function setActiveDashboard(dashboardId) {
 }
 
 export function getCharts(projectId) {
+  if (ensureCanonicalMode()) {
+    const projects = getCanonicalProjects();
+    const project = projectId ? projects.find((item) => item.id === projectId) : getActiveProject(projects);
+    return project?.charts ?? [];
+  }
   const projects = ensureProjectStorage();
   const project = projectId ? projects.find((item) => item.id === projectId) : getActiveProject(projects);
   return project?.charts ?? [];
 }
 
 export function replaceCharts(projectId, charts) {
+  if (ensureCanonicalMode()) {
+    const projects = getCanonicalProjects();
+    const targetProject = projectId ? projects.find((project) => project.id === projectId) : getActiveProject(projects);
+    if (!targetProject) return [];
+    targetProject.charts = Array.isArray(charts)
+      ? dedupeCharts(charts.map((chart, index) => normalizeChartRecord(chart, targetProject.id, index)).filter(Boolean))
+      : [];
+    writeCanonicalProjects(projects);
+    return getCharts(targetProject.id);
+  }
   const projects = ensureProjectStorage();
   const targetProject = projectId ? projects.find((project) => project.id === projectId) : getActiveProject(projects);
   if (!targetProject) return [];
@@ -820,6 +920,16 @@ export function getChartById(projectId, chartId) {
 }
 
 export function upsertChart(projectId, chart) {
+  if (ensureCanonicalMode()) {
+    const projects = getCanonicalProjects();
+    const targetProject = projectId ? projects.find((project) => project.id === projectId) : getActiveProject(projects);
+    if (!targetProject) return null;
+    const normalized = normalizeChartRecord(chart, targetProject.id, targetProject.charts.length);
+    if (!normalized) return null;
+    targetProject.charts = dedupeCharts([normalized, ...targetProject.charts.filter((item) => item.id !== normalized.id)]);
+    writeCanonicalProjects(projects);
+    return getChartById(targetProject.id, normalized.id);
+  }
   const projects = ensureProjectStorage();
   const targetProject = projectId ? projects.find((project) => project.id === projectId) : getActiveProject(projects);
   if (!targetProject) return null;
@@ -834,18 +944,50 @@ export function upsertChart(projectId, chart) {
 }
 
 export function deleteChart(projectId, chartId) {
+  const withoutChartDependents = (dashboards = []) =>
+    dashboards.map((dashboard) => ({
+      ...dashboard,
+      widgets: (dashboard.widgets ?? []).filter(
+        (widget) =>
+          widget.sourceChartId !== chartId &&
+          widget.sourceChartConfigId !== chartId &&
+          widget.config?.sourceChartId !== chartId
+      ),
+    }));
+
+  if (ensureCanonicalMode()) {
+    const projects = getCanonicalProjects();
+    const targetProject = projectId ? projects.find((project) => project.id === projectId) : getActiveProject(projects);
+    if (!targetProject) return [];
+    targetProject.charts = targetProject.charts.filter((chart) => chart.id !== chartId);
+    targetProject.dashboards = withoutChartDependents(targetProject.dashboards);
+    writeCanonicalProjects(projects);
+    return getCharts(targetProject.id);
+  }
   const projects = ensureProjectStorage();
   const targetProject = projectId ? projects.find((project) => project.id === projectId) : getActiveProject(projects);
   if (!targetProject) return [];
   const nextCharts = targetProject.charts.filter((chart) => chart.id !== chartId);
   const nextProjects = projects.map((project) =>
-    project.id === targetProject.id ? { ...project, charts: nextCharts, updatedAt: nowIso() } : project
+    project.id === targetProject.id
+      ? {
+          ...project,
+          charts: nextCharts,
+          dashboards: withoutChartDependents(project.dashboards),
+          updatedAt: nowIso(),
+        }
+      : project
   );
   saveProjects(nextProjects);
   return nextCharts;
 }
 
 export function getDashboards(projectId) {
+  if (ensureCanonicalMode()) {
+    const projects = getCanonicalProjects();
+    const project = projectId ? projects.find((item) => item.id === projectId) : getActiveProject(projects);
+    return project?.dashboards ?? [];
+  }
   const projects = ensureProjectStorage();
   const project = projectId ? projects.find((item) => item.id === projectId) : getActiveProject(projects);
   return project?.dashboards ?? [];
@@ -857,6 +999,18 @@ export function getDashboardById(projectId, dashboardId) {
 }
 
 export function upsertDashboard(projectId, dashboard) {
+  if (ensureCanonicalMode()) {
+    const projects = getCanonicalProjects();
+    const targetProject = projectId ? projects.find((project) => project.id === projectId) : getActiveProject(projects);
+    if (!targetProject) return null;
+    const normalized = normalizeDashboardRecord(dashboard, targetProject.id, targetProject.dashboards.length);
+    targetProject.dashboards = [
+      normalized,
+      ...targetProject.dashboards.filter((item) => item.id !== normalized.id),
+    ].sort((left, right) => (left.createdAt || "").localeCompare(right.createdAt || ""));
+    writeCanonicalProjects(projects);
+    return getDashboardById(targetProject.id, normalized.id);
+  }
   const projects = ensureProjectStorage();
   const targetProject = projectId ? projects.find((project) => project.id === projectId) : getActiveProject(projects);
   if (!targetProject) return null;
@@ -876,6 +1030,23 @@ export function upsertDashboard(projectId, dashboard) {
 }
 
 export function createDashboard(projectId, name = "\u0e41\u0e14\u0e0a\u0e1a\u0e2d\u0e23\u0e4c\u0e14\u0e43\u0e2b\u0e21\u0e48") {
+  if (ensureCanonicalMode()) {
+    const project = projectId ? getProjects().find((item) => item.id === projectId) : getActiveProject();
+    if (!project) return null;
+    const now = nowIso();
+    const dashboard = normalizeDashboardRecord({
+      id: makeId("dashboard"),
+      name: uniqueDashboardName(project, name),
+      widgets: [],
+      canvasSettings: normalizeCanvasSettings(),
+      theme: "light",
+      createdAt: now,
+      updatedAt: now,
+    }, project.id, project.dashboards.length);
+    upsertDashboard(project.id, dashboard);
+    setActiveDashboard(dashboard.id);
+    return getDashboardById(project.id, dashboard.id);
+  }
   const project = projectId ? getProjects().find((item) => item.id === projectId) : getActiveProject();
   const dashboardName = uniqueDashboardName(project, name);
   const dashboard = normalizeDashboardRecord(
@@ -897,6 +1068,32 @@ export function createDashboard(projectId, name = "\u0e41\u0e14\u0e0a\u0e1a\u0e2
 }
 
 export function createProject(name = "\u0e42\u0e1b\u0e23\u0e40\u0e08\u0e01\u0e15\u0e4c\u0e43\u0e2b\u0e21\u0e48") {
+  if (ensureCanonicalMode()) {
+    const projects = getCanonicalProjects();
+    const now = nowIso();
+    const projectId = makeId("project");
+    const dashboard = normalizeDashboardRecord({
+      id: makeId("dashboard"),
+      name: "\u0e41\u0e14\u0e0a\u0e1a\u0e2d\u0e23\u0e4c\u0e14\u0e43\u0e2b\u0e21\u0e48",
+      widgets: [],
+      canvasSettings: normalizeCanvasSettings(),
+      theme: "light",
+      createdAt: now,
+      updatedAt: now,
+    }, projectId, 0);
+    const project = normalizeProjectRecord({
+      id: projectId,
+      name: uniqueProjectName(projects, name),
+      dashboards: [dashboard],
+      charts: [],
+      datasets: [],
+      createdAt: now,
+      updatedAt: now,
+    }, projects.length);
+    writeCanonicalProjects([...projects, project]);
+    workspaceRepository.setActiveProject(project.id, dashboard.id);
+    return getActiveProject();
+  }
   const projects = ensureProjectStorage();
   const now = nowIso();
   const projectName = uniqueProjectName(projects, name);
@@ -933,6 +1130,17 @@ export function createProject(name = "\u0e42\u0e1b\u0e23\u0e40\u0e08\u0e01\u0e15
 }
 
 export function renameProject(projectId, name) {
+  if (ensureCanonicalMode()) {
+    const nextName = String(name || "").trim();
+    if (!nextName) return null;
+    const projects = getCanonicalProjects();
+    const project = projects.find((item) => item.id === projectId);
+    if (!project) return null;
+    project.name = nextName;
+    project.updatedAt = nowIso();
+    writeCanonicalProjects(projects);
+    return getProjects().find((item) => item.id === projectId) ?? null;
+  }
   const nextName = String(name || "").trim();
   if (!nextName) return null;
   const projects = ensureProjectStorage();
@@ -946,6 +1154,11 @@ export function renameProject(projectId, name) {
 }
 
 export function renameDashboard(projectId, dashboardId, name) {
+  if (ensureCanonicalMode()) {
+    const existing = getDashboardById(projectId, dashboardId);
+    if (!existing || !String(name || "").trim()) return existing;
+    return upsertDashboard(projectId, { ...existing, name: String(name).trim(), dashboardName: String(name).trim() });
+  }
   const existing = getDashboardById(projectId, dashboardId);
   if (!existing || !String(name || "").trim()) return existing;
   return upsertDashboard(projectId, {
@@ -957,6 +1170,26 @@ export function renameDashboard(projectId, dashboardId, name) {
 }
 
 export function deleteDashboard(projectId, dashboardId) {
+  if (ensureCanonicalMode()) {
+    const projects = getCanonicalProjects();
+    const targetProject = projectId ? projects.find((project) => project.id === projectId) : getActiveProject(projects);
+    if (!targetProject || targetProject.dashboards.length <= 1) return getActiveDashboard(projects);
+    const nextDashboardId = targetProject.dashboards.find((dashboard) => dashboard.id !== dashboardId)?.id ?? null;
+    workspaceRepository.update((current) => ({
+      ...current,
+      projects: current.projects.map((project) => project.id === targetProject.id
+        ? {
+            ...project,
+            dashboards: project.dashboards.filter((dashboard) => dashboard.id !== dashboardId),
+            updatedAt: nowIso(),
+          }
+        : project),
+      active: current.active.dashboardId === dashboardId
+        ? { ...current.active, dashboardId: nextDashboardId }
+        : current.active,
+    }));
+    return getActiveDashboard();
+  }
   const projects = ensureProjectStorage();
   const targetProject = projectId ? projects.find((project) => project.id === projectId) : getActiveProject(projects);
   if (!targetProject || targetProject.dashboards.length <= 1) return getActiveDashboard(projects);
@@ -973,6 +1206,13 @@ export function deleteDashboard(projectId, dashboardId) {
 }
 
 export function addWidgetToDashboard(projectId, dashboardId, widget) {
+  if (ensureCanonicalMode()) {
+    const dashboard = getDashboardById(projectId, dashboardId);
+    if (!dashboard) return null;
+    const normalizedWidget = normalizeWidgetRecord(widget, projectId, dashboardId, dashboard.widgets.length);
+    upsertDashboard(projectId, { ...dashboard, widgets: [...dashboard.widgets, normalizedWidget], updatedAt: nowIso() });
+    return getDashboardById(projectId, dashboardId)?.widgets.find((item) => item.id === normalizedWidget.id) ?? null;
+  }
   const dashboard = getDashboardById(projectId, dashboardId);
   if (!dashboard) return null;
   const normalizedWidget = normalizeWidgetRecord(widget, projectId, dashboardId, dashboard.widgets.length);
@@ -986,6 +1226,18 @@ export function addWidgetToDashboard(projectId, dashboardId, widget) {
 }
 
 export function updateWidget(projectId, dashboardId, widgetId, patch) {
+  if (ensureCanonicalMode()) {
+    const dashboard = getDashboardById(projectId, dashboardId);
+    if (!dashboard) return null;
+    upsertDashboard(projectId, {
+      ...dashboard,
+      widgets: dashboard.widgets.map((widget) => widget.id === widgetId
+        ? normalizeWidgetRecord({ ...widget, ...patch, updatedAt: nowIso() }, projectId, dashboardId)
+        : widget),
+      updatedAt: nowIso(),
+    });
+    return getDashboardById(projectId, dashboardId)?.widgets.find((widget) => widget.id === widgetId) ?? null;
+  }
   const dashboard = getDashboardById(projectId, dashboardId);
   if (!dashboard) return null;
   const nextDashboard = {
@@ -1002,6 +1254,16 @@ export function updateWidget(projectId, dashboardId, widgetId, patch) {
 }
 
 export function deleteWidget(projectId, dashboardId, widgetId) {
+  if (ensureCanonicalMode()) {
+    const dashboard = getDashboardById(projectId, dashboardId);
+    if (!dashboard) return [];
+    upsertDashboard(projectId, {
+      ...dashboard,
+      widgets: dashboard.widgets.filter((widget) => widget.id !== widgetId),
+      updatedAt: nowIso(),
+    });
+    return getDashboardById(projectId, dashboardId)?.widgets ?? [];
+  }
   const dashboard = getDashboardById(projectId, dashboardId);
   if (!dashboard) return [];
   const nextWidgets = dashboard.widgets.filter((widget) => widget.id !== widgetId);

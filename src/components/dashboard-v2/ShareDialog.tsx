@@ -1,4 +1,4 @@
-import React, { memo, useMemo } from "react";
+import React, { memo } from "react";
 import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
 import {
   Alert,
@@ -32,9 +32,6 @@ type ShareDialogProps = {
 };
 
 function ShareDialog({ open, access, copyFallback, onAccessChange, onClose, onCopy, onCopyEmbed }: ShareDialogProps) {
-  const link = useMemo(() => (typeof window === "undefined" ? "" : window.location.href), []);
-  const embedCode = `<iframe src="${link}" title="Mini BI Dashboard Designer" width="1200" height="720" loading="lazy"></iframe>`;
-
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth aria-labelledby="share-dashboard-v2-title">
       <DialogTitle id="share-dashboard-v2-title">แชร์แดชบอร์ด</DialogTitle>
@@ -46,6 +43,7 @@ function ShareDialog({ open, access, copyFallback, onAccessChange, onClose, onCo
           <Select
             size="small"
             value={access}
+            disabled
             onChange={(event) => onAccessChange(event.target.value as ShareAccess)}
             aria-label="สิทธิ์การเข้าถึง"
           >
@@ -58,6 +56,10 @@ function ShareDialog({ open, access, copyFallback, onAccessChange, onClose, onCo
               โหมดทีมเป็นตัวอย่างสำหรับเดโม สิทธิ์จริงจะเชื่อมกับ RBAC ใน backend
             </Alert>
           ) : null}
+          <Alert severity="warning">
+            Share และ Embed ใช้งานได้จากหน้า Dashboard หลังสร้าง Local snapshot แบบอ่านอย่างเดียวเท่านั้น
+            หน้าตัวออกแบบนี้เป็นพื้นที่ส่วนตัวและจะไม่ถูกนำไปใช้เป็นลิงก์แชร์
+          </Alert>
           {copyFallback ? (
             <Alert severity="warning">
               เบราว์เซอร์บล็อกการคัดลอกอัตโนมัติ กรุณาคัดลอกข้อความด้านล่างด้วยตนเอง
@@ -66,14 +68,14 @@ function ShareDialog({ open, access, copyFallback, onAccessChange, onClose, onCo
           <TextField
             size="small"
             label="Share link"
-            value={link}
+            value=""
             InputProps={{ readOnly: true }}
             onFocus={(event) => event.target.select()}
           />
           <TextField
             size="small"
             label="Embed code"
-            value={embedCode}
+            value=""
             InputProps={{ readOnly: true }}
             multiline
             minRows={2}
@@ -95,10 +97,10 @@ function ShareDialog({ open, access, copyFallback, onAccessChange, onClose, onCo
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>ปิด</Button>
-        <Button variant="outlined" startIcon={<ContentCopyRoundedIcon />} onClick={onCopyEmbed}>
+        <Button disabled variant="outlined" startIcon={<ContentCopyRoundedIcon />} onClick={onCopyEmbed}>
           คัดลอก Embed
         </Button>
-        <Button variant="contained" startIcon={<ContentCopyRoundedIcon />} onClick={onCopy}>
+        <Button disabled variant="contained" startIcon={<ContentCopyRoundedIcon />} onClick={onCopy}>
           คัดลอกลิงก์
         </Button>
       </DialogActions>

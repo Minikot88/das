@@ -2,6 +2,7 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { login as loginApi } from "../api/authApi";
 import { useI18n } from "../utils/i18n";
+import { resolveLoginRedirect } from "../utils/loginRedirect";
 
 export default function LoginPage() {
   const { locale, t } = useI18n();
@@ -62,7 +63,7 @@ export default function LoginPage() {
     try {
       await new Promise((resolve) => setTimeout(resolve, 300));
       await loginApi({ email, password });
-      const target = location.state?.from?.pathname || "/dashboard";
+      const target = resolveLoginRedirect(location.state?.from);
       navigate(target, { replace: true });
     } catch (submitError) {
       setError(submitError?.message || (isThai ? "ไม่สามารถเข้าสู่ระบบได้ โปรดลองอีกครั้ง" : "Unable to sign in. Please try again."));
@@ -72,7 +73,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="auth-page-v2 auth-page-login">
+    <main className="auth-page-v2 auth-page-login">
       <div className="auth-hero">
         <div className="auth-hero-inner">
           <div className="auth-hero-copy">
@@ -185,6 +186,6 @@ export default function LoginPage() {
           <button className="auth-demo-btn" type="button" onClick={() => { setEmail("demo@dataviz.bi"); setPassword("demo1234"); }}>{t("auth.fillDemoCredentials")}</button>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

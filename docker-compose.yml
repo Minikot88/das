@@ -8,10 +8,10 @@ services:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
         VITE_API_TIMEOUT_MS: ${VITE_API_TIMEOUT_MS:-15000}
     ports:
-      - "${FRONTEND_PORT:-8080}:80"
+      - "${FRONTEND_HOST:-127.0.0.1}:${FRONTEND_PORT:-8080}:80"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost/"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
       interval: 30s
       timeout: 5s
       retries: 3

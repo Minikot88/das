@@ -84,6 +84,14 @@ export type MappingSlot = {
 
 export type DeviceMode = "desktop" | "tablet" | "mobile";
 
+export type DemoThemeId =
+  | "default-blue"
+  | "executive-dark"
+  | "minimal-gray"
+  | "business-green"
+  | "premium-purple"
+  | "warm-orange";
+
 export type DragFieldItem = {
   type: "FIELD";
   field: DataField;
@@ -104,7 +112,7 @@ export type ChartSettings = {
     backgroundColor: string;
     padding: number;
     radius: number;
-    themePreset?: import("./demo/demoTypes").DemoThemeId;
+    themePreset?: DemoThemeId;
   };
   axis: {
     showXAxis: boolean;
@@ -165,7 +173,7 @@ export type ChartConfig = {
   sort: SortMode;
   textElements: string[];
   imageName: string | null;
-  sourceType: "demo" | "demo-sql" | "api";
+  sourceType: "demo" | "demo-sql" | "dataset" | "api";
   datasetId: string;
   version: number;
   createdAt: string;

@@ -75,7 +75,7 @@ export const DATABASE_TYPE_OPTIONS = [
     status: "Demo",
     mode: "file",
     defaults: {
-      filePath: "C:/data/mini-bi.db",
+      filePath: "mini-bi.db",
       database: "mini-bi.db",
       driverName: "SQLite JDBC Driver",
       driverVersion: "3.47.1",

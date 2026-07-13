@@ -20,18 +20,19 @@ export function resolveThemeMode(value) {
 }
 
 export function readStoredThemeMode(fallback = "light") {
-  if (typeof window === "undefined" || !window.localStorage) return fallback;
+  if (typeof window === "undefined") return fallback;
   try {
-    return normalizeThemeMode(window.localStorage.getItem(THEME_STORAGE_KEY), fallback);
+    const storage = window.localStorage;
+    return storage ? normalizeThemeMode(storage.getItem(THEME_STORAGE_KEY), fallback) : fallback;
   } catch {
     return fallback;
   }
 }
 
 export function writeStoredThemeMode(value) {
-  if (typeof window === "undefined" || !window.localStorage) return;
+  if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(THEME_STORAGE_KEY, normalizeThemeMode(value));
+    window.localStorage?.setItem(THEME_STORAGE_KEY, normalizeThemeMode(value));
   } catch {
     // Theme persistence must never block the UI.
   }

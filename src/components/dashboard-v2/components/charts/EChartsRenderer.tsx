@@ -310,6 +310,34 @@ function EChartsCanvas({ option }: { option: BuiltEChartsOption }) {
   return <Box ref={elementRef} className="dashboard-v2-echarts" sx={{ height: "100%", minHeight: 0, width: "100%" }} />;
 }
 
+export function AccessibleChartTable({ data, title }: { data: TransformedChartData; title: string }) {
+  const columns = data.tableColumns.slice(0, 12);
+  const rows = (data.tableRows.length ? data.tableRows : data.filteredRows).slice(0, 20);
+  if (!columns.length) return null;
+  return (
+    <div className="sr-only">
+      <table>
+        <caption>{`Data preview for ${title}`}</caption>
+        <thead>
+          <tr>{columns.map((column) => <th key={column.id} scope="col">{column.label || column.name}</th>)}</tr>
+        </thead>
+        <tbody>
+          {rows.map((row, rowIndex) => (
+            <tr key={rowIndex}>
+              {columns.map((column) => <td key={column.id}>{String(row[column.id] ?? row[column.name] ?? "")}</td>)}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {!rows.length ? (
+        <p role="status">{`ไม่มีแถวข้อมูลที่ตรงกับตัวกรองสำหรับ ${title}`}</p>
+      ) : data.metadata.filteredRowCount > 20 ? (
+        <p>{`Showing the first 20 of ${data.metadata.filteredRowCount} rows.`}</p>
+      ) : null}
+    </div>
+  );
+}
+
 function EChartsRenderer({
   chartType,
   datasetRows,
@@ -406,6 +434,10 @@ function EChartsRenderer({
       sx={{ height: "100%", minHeight: 0 }}
     >
       <EChartsCanvas option={optionResult.option} />
+      <AccessibleChartTable
+        data={transformedData}
+        title={chartSettings.general.title || "Chart preview"}
+      />
     </Box>
   );
 }

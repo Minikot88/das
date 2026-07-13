@@ -1,5 +1,9 @@
 # DashboardMiniBi Goal Mode Implementation Plan
 
+> **Historical draft:** Superseded for execution on 2026-07-11 by
+> `docs/audit-remediation-plan.md`. Its phase assignments do not match the
+> authoritative Phase 1-8 objective and must not be used to start implementation.
+
 > **For agentic workers:** Execute inline and sequentially. Use test-first changes for behavior, verify each phase, and do not start a later phase until `docs/PHASE_N_VERIFICATION.md` says it is safe to continue.
 
 **Goal:** Turn DashboardMiniBi into a stable, backend-ready BI product foundation while preserving local/demo behavior and legacy data readability.

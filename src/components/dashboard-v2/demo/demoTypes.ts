@@ -1,4 +1,6 @@
-import type { Aggregation, ChartSettings, ChartType, MappingSlotId, SortMode } from "../types";
+import type { Aggregation, ChartSettings, ChartType, DemoThemeId, MappingSlotId, SortMode } from "../types";
+
+export type { DemoThemeId } from "../types";
 
 export type DemoSettingsPatch = {
   [K in keyof ChartSettings]?: Partial<ChartSettings[K]>;
@@ -9,14 +11,6 @@ export type DemoMappingPreset = {
   fieldIds: string[];
   aggregation?: Aggregation;
 };
-
-export type DemoThemeId =
-  | "default-blue"
-  | "executive-dark"
-  | "minimal-gray"
-  | "business-green"
-  | "premium-purple"
-  | "warm-orange";
 
 export type DemoThemePreset = {
   id: DemoThemeId;

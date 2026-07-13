@@ -787,6 +787,23 @@ html[data-theme="dark"] body .dashboard-canvas-builder .dcb-canvas-surface.show-
     linear-gradient(90deg, #252525 1px, transparent 1px) !important;
 }
 
+html[data-theme="dark"] body .dashboard-canvas-builder[data-theme="light"] .dcb-canvas-surface.show-grid {
+  background-color: #ffffff !important;
+  background-image:
+    linear-gradient(#e5e7eb 1px, transparent 1px),
+    linear-gradient(90deg, #e5e7eb 1px, transparent 1px) !important;
+  color: #172033 !important;
+}
+
+html[data-theme="dark"] body .dashboard-canvas-builder[data-theme="light"] .dcb-canvas-empty {
+  background: rgba(255, 255, 255, 0.96) !important;
+  color: #172033 !important;
+}
+
+html[data-theme="dark"] body .dashboard-canvas-builder[data-theme="light"] .dcb-canvas-empty span {
+  color: #64748b !important;
+}
+
 html[data-theme="dark"] body:has(.dashboard-v2-designer) [data-testid="dashboard-v2-data-panel"] .MuiBox-root,
 html[data-theme="dark"] body:has(.dashboard-v2-designer) [data-testid="dashboard-v2-field-mapping"] .MuiBox-root,
 html[data-theme="dark"] body:has(.dashboard-v2-designer) [data-testid="dashboard-v2-chart-selector"] .MuiBox-root,
@@ -1038,7 +1055,7 @@ html body .mini-bi-ribbon-shell .mini-bi-ribbon {
   box-sizing: border-box !important;
   width: 100% !important;
   max-width: none !important;
-  min-width: 100dvw !important;
+  min-width: 0 !important;
   margin-left: 0 !important;
   margin-right: 0 !important;
   transform: none !important;
@@ -1059,7 +1076,7 @@ html body .mini-bi-ribbon-shell .mini-bi-ribbon {
   html body .mini-bi-ribbon-shell .mini-bi-ribbon {
     width: 100% !important;
     max-width: none !important;
-    min-width: 100vw !important;
+    min-width: 0 !important;
     margin-left: 0 !important;
     margin-right: 0 !important;
   }
@@ -1077,17 +1094,17 @@ html body .mini-bi-ribbon-shell .mini-bi-main-nav,
 html body .mini-bi-ribbon-shell .mini-bi-ribbon-area,
 html body .mini-bi-ribbon-shell .mini-bi-ribbon {
   flex-shrink: 0 !important;
-  min-width: 100dvw !important;
+  min-width: 0 !important;
 }
 
 html body .mini-bi-ribbon-shell,
 html body .mini-bi-app-shell {
-  min-width: 100dvw !important;
+  min-width: 0 !important;
 }
 
 html body .shell.mini-bi-ribbon-shell.mini-bi-app-shell {
   width: 100% !important;
-  min-width: 100dvw !important;
+  min-width: 0 !important;
   max-width: none !important;
   overflow-x: clip !important;
 }
@@ -1096,7 +1113,7 @@ html body .shell.mini-bi-ribbon-shell.mini-bi-app-shell {
   html body .mini-bi-ribbon-shell,
   html body .mini-bi-app-shell,
   html body .shell.mini-bi-ribbon-shell.mini-bi-app-shell {
-    min-width: 100vw !important;
+    min-width: 0 !important;
   }
 }
 

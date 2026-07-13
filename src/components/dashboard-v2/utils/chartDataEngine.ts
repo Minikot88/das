@@ -12,7 +12,7 @@ import type {
   TransformedChartData,
 } from "../types";
 import { aggregateRows, groupByRows, isNumericField, toNumber, toText, uniqueFields } from "./chartAggregations";
-import { clampPercent, formatValue } from "./chartFormatters";
+import { clampPercent } from "./chartFormatters";
 
 export { formatValue } from "./chartFormatters";
 
@@ -64,10 +64,14 @@ function passesFilter(row: DemoDatasetRow, field: DataField, filter?: FilterValu
     return minPass && maxPass;
   }
 
-  const dateValue = String(value);
-  const startPass = !filter.start || dateValue >= filter.start;
-  const endPass = !filter.end || dateValue <= filter.end;
-  return startPass && endPass;
+  if (filter.type === "date") {
+    const dateValue = String(value);
+    const startPass = !filter.start || dateValue >= filter.start;
+    const endPass = !filter.end || dateValue <= filter.end;
+    return startPass && endPass;
+  }
+
+  return true;
 }
 
 export function applyFilters(rows: DemoDatasetRow[], mappings: MappingSlot[], filters: ChartConfig["filters"]) {
@@ -388,7 +392,6 @@ export function transformChartData(
   const tooltipFields = getFields(mappings, ["tooltip"]);
   const sizeField = firstField(mappings, ["size"]);
   const rowsFields = getFields(mappings, ["rows"]);
-  const columnsField = firstField(mappings, ["columns", "legend"]);
   const sourceField = firstField(mappings, ["source"]);
   const targetField = firstField(mappings, ["target"]);
   const openField = firstField(mappings, ["open"]);

@@ -184,7 +184,7 @@ function PreviewCanvas({
       ) : null}
 
       <Box
-        ref={dropRef}
+        ref={(node: HTMLDivElement | null) => { dropRef(node); }}
         sx={{
           minHeight: 0,
           minWidth: 0,

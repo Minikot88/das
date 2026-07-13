@@ -6180,7 +6180,7 @@ body,
   left: 0 !important;
   right: 0 !important;
   width: 100% !important;
-  min-width: 100dvw !important;
+  min-width: 0 !important;
   max-width: none !important;
   margin-left: 0 !important;
   margin-right: 0 !important;
@@ -6201,7 +6201,7 @@ body,
   .mini-bi-ribbon-shell .mini-bi-ribbon-area,
   .mini-bi-ribbon-shell .mini-bi-ribbon {
     width: 100% !important;
-    min-width: 100vw !important;
+    min-width: 0 !important;
     max-width: none !important;
     margin-left: 0 !important;
     margin-right: 0 !important;
@@ -6210,12 +6210,12 @@ body,
 
 .mini-bi-ribbon-shell,
 .mini-bi-app-shell {
-  min-width: 100dvw !important;
+  min-width: 0 !important;
 }
 
 .shell.mini-bi-ribbon-shell.mini-bi-app-shell {
   width: 100% !important;
-  min-width: 100dvw !important;
+  min-width: 0 !important;
   max-width: none !important;
   overflow-x: clip !important;
 }
@@ -6224,7 +6224,7 @@ body,
   .mini-bi-ribbon-shell,
   .mini-bi-app-shell,
   .shell.mini-bi-ribbon-shell.mini-bi-app-shell {
-    min-width: 100vw !important;
+    min-width: 0 !important;
   }
 }
 

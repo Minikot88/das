@@ -1,6 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Navigate, useParams } from "react-router-dom";
 import { useStore } from "../store/useStore";
+import { normalizeLocalShareRecord, resolveLocalShare, validateLocalShare } from "../domain/shares/localShareContract";
+import { useWorkspaceSelector } from "../domain/workspace/workspaceSelectors";
+import { findDashboardContextById } from "../utils/dashboardWorkspace";
 import ReadOnlyDashboardHeader from "../components/ui/ReadOnlyDashboardHeader";
 import ReadOnlyChartFrame from "../components/ui/ReadOnlyChartFrame";
 import ReadOnlyStateCard from "../components/ui/ReadOnlyStateCard";
@@ -10,21 +13,33 @@ export default function SharePage() {
   const projects = useStore((state) => state.projects);
   const chartsPool = useStore((state) => state.charts);
   const resolveShareLink = useStore((state) => state.resolveShareLink);
+  const workspaceSnapshot = useWorkspaceSelector((snapshot) => snapshot);
   const [loading, setLoading] = useState(true);
+  const [viewedAt] = useState(() => Date.now());
 
-  const sheet = useMemo(() => {
-    const shareRecord = resolveShareLink(sheetId);
-    const resolvedSheetId = shareRecord?.sheetId;
-    if (!resolvedSheetId) return null;
+  const shareResolution = useMemo(() => {
+    const canonical = resolveLocalShare(workspaceSnapshot, sheetId);
+    if (canonical.status !== "missing") return canonical;
 
-    for (const project of projects ?? []) {
-      if (shareRecord?.projectId && project?.id !== shareRecord.projectId) continue;
-      const foundSheet = project?.sheets?.find((candidate) => candidate?.id === resolvedSheetId);
-      if (foundSheet) return foundSheet;
+    const legacyShare = normalizeLocalShareRecord(resolveShareLink(sheetId));
+    if (!legacyShare) return canonical;
+    const context = findDashboardContextById(projects, chartsPool, legacyShare.dashboardId);
+    const validation = validateLocalShare(legacyShare, {
+      project: context?.project,
+      dashboard: context?.dashboard,
+    });
+    if (!context || !validation.valid) {
+      return { status: "invalid", share: legacyShare, project: context?.project ?? null, dashboard: context?.dashboard ?? null };
     }
+    if (legacyShare.expiresAt && Date.parse(legacyShare.expiresAt) <= viewedAt) {
+      return { status: "expired", share: legacyShare, project: context.project, dashboard: context.dashboard };
+    }
+    return { status: "ready", share: legacyShare, project: context.project, dashboard: context.dashboard };
+  }, [chartsPool, projects, resolveShareLink, sheetId, viewedAt, workspaceSnapshot]);
 
-    return null;
-  }, [projects, resolveShareLink, sheetId]);
+  // The legacy route never renders mutable live Sheet data. Valid records are
+  // handed to the same readonly snapshot route as current share links.
+  const sheet = null;
 
   useEffect(() => {
     const timer = window.setTimeout(() => setLoading(false), 180);
@@ -88,35 +103,54 @@ export default function SharePage() {
 
   const dashboardTitle = activeDashboard?.name ?? "แดชบอร์ดที่แชร์";
 
+  useEffect(() => {
+    document.title = loading
+      ? "Loading Local share | Mini BI"
+      : sheet
+        ? `${dashboardTitle} | Mini BI`
+        : "Local share unavailable | Mini BI";
+  }, [dashboardTitle, loading, sheet]);
+
+  if (shareResolution.status === "ready") {
+    return (
+      <Navigate
+        replace
+        to={`/dashboard/${encodeURIComponent(shareResolution.share.dashboardId)}/view?share=${encodeURIComponent(shareResolution.share.id)}`}
+      />
+    );
+  }
+
   if (loading) {
     return (
-      <div className="share-page share-page-shell">
+      <main className="share-page share-page-shell">
         <ReadOnlyStateCard
+          headingLevel={1}
           loading
           kicker="กำลังเตรียมมุมมองที่แชร์"
           title="กำลังโหลดแดชบอร์ด"
           description="โปรดรอสักครู่"
         />
-      </div>
+      </main>
     );
   }
 
   if (!sheet) {
     return (
-      <div className="share-page share-page-shell">
+      <main className="share-page share-page-shell">
         <ReadOnlyStateCard
+          headingLevel={1}
           kicker="ลิงก์ไม่พร้อมใช้งาน"
           title="ไม่พบแดชบอร์ด"
           description="ลิงก์ที่แชร์นี้อาจหมดอายุหรือถูกลบแล้ว"
           linkTo="/login"
           linkLabel="ไปหน้าเข้าสู่ระบบ"
         />
-      </div>
+      </main>
     );
   }
 
   return (
-    <div className="share-page share-page-shell">
+    <main className="share-page share-page-shell">
       <ReadOnlyDashboardHeader
         title={sheet?.name ?? "ชีตที่แชร์"}
         dashboardName={dashboardTitle}
@@ -150,7 +184,7 @@ export default function SharePage() {
               <div className="readonly-viewer-note-list">
                 <span>ปิดการแก้ไข</span>
                 <span>คงรูปแบบเดิม</span>
-                <span>ไม่ต้องเข้าสู่ระบบ</span>
+                <span>ใช้ข้อมูล Local ในเบราว์เซอร์นี้</span>
               </div>
             </aside>
           </div>
@@ -172,6 +206,6 @@ export default function SharePage() {
           </div>
         )}
       </section>
-    </div>
+    </main>
   );
 }

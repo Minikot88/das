@@ -1,10 +1,13 @@
 ﻿import React, { useEffect, useMemo } from "react";
 import { useLocation, useParams } from "react-router-dom";
+import { useState } from "react";
 import DashboardGrid from "../components/dashboard/DashboardGrid";
 import ReadOnlyStateCard from "../components/ui/ReadOnlyStateCard";
 import { useStore } from "../store/useStore";
 import { findDashboardContextById } from "../utils/dashboardWorkspace";
 import { resolveDashboardViewOptions } from "../utils/dashboardShareUtils";
+import { normalizeLocalShareRecord, resolveLocalShare, validateLocalShare } from "../domain/shares/localShareContract";
+import { useWorkspaceSelector } from "../domain/workspace/workspaceSelectors";
 
 function countChartTypes(widgets = []) {
   return new Set(widgets.map((widget) => widget.type).filter(Boolean)).size;
@@ -15,6 +18,59 @@ function getRouteMode(pathname = "", routeMode = "") {
   return "view";
 }
 
+function CanvasSnapshotWidget({ widget }) {
+  if (widget.type === "kpi") {
+    return (
+      <article className="dashboard-public-snapshot-card is-kpi" aria-label={widget.config?.metricTitle || widget.title || "KPI"}>
+        <span>{widget.config?.metricTitle || widget.title || "KPI"}</span>
+        <strong>{widget.config?.value || "—"}</strong>
+        <small>{widget.config?.comparison || "ไม่มีข้อมูลเปรียบเทียบ"}</small>
+      </article>
+    );
+  }
+  if (widget.type === "text") {
+    return (
+      <article className="dashboard-public-snapshot-card is-text">
+        <strong>{widget.title || "ข้อความ"}</strong>
+        <p>{widget.config?.text || ""}</p>
+      </article>
+    );
+  }
+  if (widget.type === "image") {
+    return (
+      <article className="dashboard-public-snapshot-card is-image">
+        {widget.config?.src ? <img src={widget.config.src} alt={widget.title || widget.config?.fileName || "รูปภาพ"} /> : null}
+        {!widget.config?.src ? <span>รูปภาพเป็น asset เฉพาะเซสชันและไม่อยู่ใน snapshot นี้</span> : null}
+      </article>
+    );
+  }
+  return (
+    <article className="dashboard-public-snapshot-card">
+      <strong>{widget.title || widget.config?.title || widget.type || "วิดเจ็ต"}</strong>
+      <span>{widget.type === "chart" ? "กราฟ snapshot แบบอ่านอย่างเดียว" : "วิดเจ็ตแบบอ่านอย่างเดียว"}</span>
+    </article>
+  );
+}
+
+function CanvasSnapshotView({ widgets }) {
+  return (
+    <div className="dashboard-public-snapshot-grid" role="list" aria-label="วิดเจ็ตใน snapshot">
+      {widgets.map((widget) => (
+        <div
+          key={widget.id}
+          role="listitem"
+          style={{
+            gridColumn: `span ${Math.max(2, Math.min(12, Math.round((Number(widget.w) || 30) / 15)))}`,
+            minHeight: Math.max(120, Math.min(420, (Number(widget.h) || 18) * 6)),
+          }}
+        >
+          <CanvasSnapshotWidget widget={widget} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function DashboardPublicPage() {
   const { dashboardId, mode: routeMode } = useParams();
   const location = useLocation();
@@ -22,16 +78,52 @@ export default function DashboardPublicPage() {
   const charts = useStore((state) => state.charts);
   const storeTheme = useStore((state) => state.theme);
   const resolveShareLink = useStore((state) => state.resolveShareLink);
+  const [viewedAt, setViewedAt] = useState(() => Date.now());
+  const workspaceSnapshot = useWorkspaceSelector((snapshot) => snapshot);
   const mode = getRouteMode(location.pathname, routeMode);
   const shareId = useMemo(() => new URLSearchParams(location.search).get("share") ?? "", [location.search]);
-  const shareRecord = useMemo(() => resolveShareLink(shareId), [resolveShareLink, shareId]);
+  const canonicalShare = useMemo(
+    () => resolveLocalShare(workspaceSnapshot, shareId, { now: new Date(viewedAt).toISOString() }),
+    [shareId, viewedAt, workspaceSnapshot]
+  );
+  const shareRecord = useMemo(() => (
+    canonicalShare.status === "missing"
+      ? normalizeLocalShareRecord(resolveShareLink(shareId))
+      : normalizeLocalShareRecord(canonicalShare.share)
+  ), [canonicalShare, resolveShareLink, shareId]);
+  const legacyDashboardContext = useMemo(() => (
+    canonicalShare.status === "missing" && shareRecord
+      ? findDashboardContextById(projects, charts, shareRecord.dashboardId)
+      : null
+  ), [canonicalShare.status, charts, projects, shareRecord]);
+  const shareState = useMemo(() => {
+    if (canonicalShare.status !== "missing") return canonicalShare.status;
+    if (!shareRecord) return "missing";
+    if (!legacyDashboardContext || !validateLocalShare(shareRecord, {
+      project: legacyDashboardContext.project,
+      dashboard: legacyDashboardContext.dashboard,
+    }).valid) return "invalid";
+    if (shareRecord.expiresAt && Date.parse(shareRecord.expiresAt) <= viewedAt) return "expired";
+    return "ready";
+  }, [canonicalShare.status, legacyDashboardContext, shareRecord, viewedAt]);
+  useEffect(() => {
+    const expiresAt = Date.parse(shareRecord?.expiresAt ?? "");
+    if (!Number.isFinite(expiresAt)) return undefined;
+    const remaining = expiresAt - Date.now();
+    if (remaining <= 0) {
+      setViewedAt(Date.now());
+      return undefined;
+    }
+    const timer = window.setTimeout(() => setViewedAt(Date.now()), remaining + 1);
+    return () => window.clearTimeout(timer);
+  }, [shareRecord?.expiresAt]);
   const viewOptions = useMemo(
     () => resolveDashboardViewOptions(location.search, mode),
     [location.search, mode]
   );
   const dashboardContext = useMemo(
     () => {
-      if (!shareRecord || shareRecord.dashboardId !== dashboardId) return null;
+      if (shareState !== "ready" || shareRecord.dashboardId !== dashboardId) return null;
       if (shareRecord.snapshot?.dashboardId === dashboardId) {
         return {
           project: { name: shareRecord.snapshot.projectName ?? "พื้นที่ทำงานที่แชร์" },
@@ -50,9 +142,15 @@ export default function DashboardPublicPage() {
       if (shareRecord.sheetId && context?.sheet?.id !== shareRecord.sheetId) return null;
       return context;
     },
-    [charts, dashboardId, projects, shareRecord]
+    [charts, dashboardId, projects, shareRecord, shareState]
   );
   const effectiveTheme = viewOptions.theme === "auto" ? storeTheme : viewOptions.theme;
+
+  useEffect(() => {
+    document.title = dashboardContext
+      ? `${dashboardContext.dashboard.name} | Mini BI`
+      : "Local share unavailable | Mini BI";
+  }, [dashboardContext]);
 
   useEffect(() => {
     const body = document.body;
@@ -73,13 +171,18 @@ export default function DashboardPublicPage() {
 
   if (!dashboardContext) {
     return (
-      <div className="dashboard-public-page is-empty">
+      <main className="dashboard-public-page is-empty">
         <ReadOnlyStateCard
+          headingLevel={1}
           kicker="ไม่พร้อมใช้งาน"
           title="ไม่พบแดชบอร์ด"
-          description="ลิงก์สำหรับแชร์หรือฝังนี้ไม่ได้ชี้ไปยังแดชบอร์ดที่ใช้งานได้แล้ว"
+          description={shareState === "expired"
+            ? "ลิงก์ภายในเบราว์เซอร์นี้หมดอายุแล้ว กรุณาสร้างลิงก์ใหม่จากหน้าแดชบอร์ด"
+            : shareState === "invalid"
+              ? "ข้อมูลแชร์ภายในเครื่องไม่สมบูรณ์หรือไม่ผ่านการตรวจสอบ"
+              : "ไม่พบลิงก์นี้ในเบราว์เซอร์ปัจจุบัน ลิงก์แบบ Local ใช้งานได้เฉพาะโปรไฟล์เบราว์เซอร์ที่สร้างลิงก์"}
         />
-      </div>
+      </main>
     );
   }
 
@@ -120,14 +223,14 @@ export default function DashboardPublicPage() {
           }}
         >
           <div className="dashboard-public-header-copy">
-            <span className="dashboard-public-kicker">{isEmbedMode ? "แดชบอร์ดแบบฝังเว็บไซต์" : "แดชบอร์ดสำหรับแชร์"}</span>
+            <span className="dashboard-public-kicker">{isEmbedMode ? "แดชบอร์ด Local แบบฝัง" : "แดชบอร์ด Local แบบอ่านอย่างเดียว"}</span>
             <h1 className="dashboard-public-title">{dashboard.name}</h1>
             <div className="dashboard-public-breadcrumb">
               <span>{project.name}</span>
               <span>/</span>
               <span>{sheet.name}</span>
               <span>/</span>
-              <span>{isEmbedMode ? "ดูอย่างเดียว" : "มุมมองสาธารณะ"}</span>
+              <span>{isEmbedMode ? "ดูอย่างเดียว" : "Local snapshot"}</span>
             </div>
             {snapshot?.contextItems?.length ? (
               <div className="dashboard-public-breadcrumb">
@@ -164,6 +267,7 @@ export default function DashboardPublicPage() {
           flexDirection: "column",
         }}
       >
+        {!showHeader ? <h1 className="sr-only">{dashboard.name}</h1> : null}
         {widgets.length ? (
           <div
             className="dashboard-public-frame"
@@ -189,14 +293,18 @@ export default function DashboardPublicPage() {
                 width: "100%",
               }}
             >
-              <DashboardGrid
-                widgets={widgets}
-                layout={dashboard.layout ?? []}
-                isEditable={false}
-                isSelectable={false}
-                themeMode={viewOptions.theme === "auto" ? undefined : viewOptions.theme}
-                className={isEmbedMode ? "is-embed-mode" : "is-public-mode"}
-              />
+              {snapshot?.canvasSettings ? (
+                <CanvasSnapshotView widgets={widgets} />
+              ) : (
+                <DashboardGrid
+                  widgets={widgets}
+                  layout={dashboard.layout ?? []}
+                  isEditable={false}
+                  isSelectable={false}
+                  themeMode={viewOptions.theme === "auto" ? undefined : viewOptions.theme}
+                  className={isEmbedMode ? "is-embed-mode" : "is-public-mode"}
+                />
+              )}
             </div>
           </div>
         ) : (

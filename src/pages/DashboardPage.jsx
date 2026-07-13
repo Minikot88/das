@@ -1169,6 +1169,7 @@ export default function DashboardPage() {
   return (
     <PageContainer className="dashboard-workspace-page">
       <DashboardNotice notice={notice} onClose={() => setNotice(null)} />
+      <h1 className="sr-only">แดชบอร์ดเดิม: {activeDashboard.name}</h1>
 
       <WorkspaceLayout
         columns="two"

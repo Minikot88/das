@@ -2,11 +2,11 @@
 
 ## Purpose
 
-This guide is for administrators or release owners running DashboardMiniBi v1.0 as a local-first analytics workspace.
+This guide is for administrators or release owners evaluating the DashboardMiniBi local/demo frontend release candidate.
 
 ## Deployment Model
 
-DashboardMiniBi is a frontend React/Vite application. The v1.0 release is feature-complete for local evaluation and local enterprise-style analytics workflows.
+DashboardMiniBi is a frontend React/Vite application hardened for browser-local evaluation and enterprise-style analytics workflows. Container configuration is prepared, but each release environment must complete its own Docker runtime smoke test.
 
 Default behavior:
 - Mock mode enabled.
@@ -17,10 +17,11 @@ Default behavior:
 
 ## Environment Variables
 
-- `VITE_USE_MOCK`: `true` uses local mock APIs and data. `false` calls configured API endpoints.
+- `VITE_USE_MOCK`: `true` uses local mock APIs and data. `false` expects a separately implemented and secured API; none is included in this repository.
 - `VITE_API_BASE_URL`: API origin used when mock mode is disabled.
 - `VITE_API_PROXY_TARGET`: Vite dev proxy target for `/api`.
 - `VITE_API_TIMEOUT_MS`: request timeout in milliseconds.
+- `FRONTEND_HOST`: Docker bind address; defaults to loopback (`127.0.0.1`).
 - `FRONTEND_PORT`: Docker host port.
 
 Vite reads `VITE_*` variables at build time. Rebuild when changing them.
@@ -36,11 +37,15 @@ Mock/local mode does not provide:
 
 Use local mode for evaluation, demos, and browser-local workflows.
 
+Connection testing in this frontend is simulated. It does not execute a real connector or validate network/database credentials.
+
 ## Storage And Recovery
 
-Workspace state is saved under localStorage key `mini-bi-v8-workspace`.
+Canonical workspace state is saved under localStorage key `mini-bi-workspace-v1`. The older `mini-bi-v8-workspace` and `mini-bi-projects` values remain unchanged as migration and rollback inputs.
 
 Builder drafts are saved under localStorage key `mini-bi-v8-builder-draft`.
+
+Sanitized connection-profile metadata remains in the feature-owned `mini-bi-db-connections` compatibility key. It is not migrated into the canonical document; credential fields and credential-bearing URLs are rejected or removed before persistence/export.
 
 Recovery behavior:
 - Invalid JSON falls back to safe defaults.
@@ -58,10 +63,15 @@ Run before release:
 
 ```bash
 npm ci
+npm ls --depth=0
 npm run lint
-npm test
+npm run typecheck
+npm test -- --run
 npm run build
+npm run check
 npm audit
+npm audit --omit=dev
+docker compose config --quiet
 ```
 
 Expected:
@@ -79,7 +89,9 @@ cp .env.example .env
 docker compose up --build
 ```
 
-Default app port is `8080` unless `FRONTEND_PORT` is changed.
+The default binding is `127.0.0.1:8080`. Change it with `FRONTEND_HOST` and `FRONTEND_PORT`. Keep loopback for local/demo mode.
+
+The image serves HTTP only and does not contain an API. Terminate HTTPS at an outer reverse proxy and configure HSTS there only after the complete origin is HTTPS. `/api/` deliberately returns `503` in the standalone image; disabling mock mode requires a separately implemented and secured same-origin backend proxy.
 
 ## Security Notes
 

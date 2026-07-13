@@ -755,18 +755,6 @@ body {
   }
 }
 
-/* User requested removing the dashboard properties panel. Keep behavior intact; hide presentation only. */
-.dashboard-workspace-page .dashboard-sidebar {
-  display: none !important;
-}
-
-.dashboard-workspace-page .dashboard-workspace-shell,
-.dashboard-workspace-page .dashboard-workspace-shell.is-inspector-open,
-.dashboard-workspace-page .dashboard-workspace-shell.is-inspector-collapsed,
-.dashboard-workspace-page .dashboard-workspace-shell.is-rail-collapsed {
-  grid-template-columns: minmax(0, 1fr) !important;
-}
-
 /* Final product QA: keep the legacy dashboard aligned with the flat enterprise shell. */
 .appbar.mini-bi-appbar,
 .mini-bi-ribbon,

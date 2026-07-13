@@ -6,9 +6,11 @@ export default function ReadOnlyStateCard({
   title,
   description,
   loading = false,
+  headingLevel = 2,
   linkTo,
   linkLabel,
 }) {
+  const Heading = headingLevel === 1 ? "h1" : "h2";
   return (
     <div className={`readonly-state-card${loading ? " loading" : ""}`}>
       {loading ? (
@@ -24,7 +26,7 @@ export default function ReadOnlyStateCard({
       )}
       <div className="readonly-state-copy">
         {kicker ? <div className="readonly-state-kicker">{kicker}</div> : null}
-        <h2 className="readonly-state-title">{title}</h2>
+        <Heading className="readonly-state-title">{title}</Heading>
         <p className="readonly-state-description">{description}</p>
       </div>
       {linkTo && linkLabel ? (

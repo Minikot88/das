@@ -189,6 +189,7 @@ export default function BuilderPage() {
         "--builder-sql-panel-height": `${isSqlPanelCollapsed ? SQL_PANEL_COLLAPSED_HEIGHT : sqlPanelHeight}px`,
       }}
     >
+      <h1 className="sr-only">ตัวสร้างกราฟแบบเดิม</h1>
       <WorkspaceLayout columns="three" className="builder-v3-workspace">
         <div className="builder-v3-column builder-v3-column-left">
           <FieldList

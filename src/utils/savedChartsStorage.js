@@ -11,6 +11,7 @@ import {
   upsertChart as upsertProjectChart,
 } from "@/services/projectStorage";
 import { repairMojibakeText, repairObjectText } from "@/utils/textEncodingRepair";
+import { normalizeChartDataContract } from "@/domain/charts/chartDataContract";
 
 function makeId(prefix = "chart") {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -26,7 +27,12 @@ function clone(value) {
 }
 
 function storageAvailable() {
-  return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
+  if (typeof window === "undefined") return false;
+  try {
+    return typeof window.localStorage !== "undefined";
+  } catch {
+    return false;
+  }
 }
 
 function chartTitle(config) {
@@ -69,6 +75,14 @@ function normalizeSavedChartRecord(item, index = 0) {
     updatedAt,
     createdAt,
   };
+  const dataContract = normalizeChartDataContract({
+    ...repairedItem,
+    datasetId: repairedItem.datasetId ?? rawConfig.datasetId ?? null,
+    config: rawConfig,
+  });
+  const datasetId = dataContract.sourceType === "dataset" || dataContract.sourceType === "demo"
+    ? dataContract.datasetId
+    : null;
 
   return {
     id,
@@ -80,10 +94,12 @@ function normalizeSavedChartRecord(item, index = 0) {
     fieldMappings: repairedItem.fieldMappings ?? config.fieldMappings ?? config.mappings ?? [],
     settings: repairedItem.settings ?? config.settings ?? {},
     filters: repairedItem.filters ?? config.filters ?? {},
-    datasetId: repairedItem.datasetId ?? config.datasetId,
-    datasetInfo: repairedItem.datasetInfo ?? {
-      sourceType: config.sourceType ?? "demo",
-      datasetId: config.datasetId ?? "sales_performance",
+    datasetId,
+    dataContract,
+    datasetInfo: {
+      ...(isObject(repairedItem.datasetInfo) ? repairedItem.datasetInfo : {}),
+      sourceType: dataContract.sourceType,
+      datasetId,
     },
     source: repairedItem.source || "dashboard-v2",
     createdAt,
@@ -156,6 +172,7 @@ export function createSavedChartFromConfig(config, options = {}) {
     id,
     title,
     chartType: options.chartType || chartType(config),
+    ...(isObject(options.dataContract) ? { dataContract: clone(options.dataContract) } : {}),
     config: {
       ...(isObject(config) ? clone(config) : {}),
       chartId: id,

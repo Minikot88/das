@@ -12,6 +12,8 @@ import {
   createConnectionProfile,
   deleteDatabaseConnection,
   loadDatabaseConnections,
+  sanitizeConnectionMetadata,
+  sanitizeConnectionUrl,
   upsertDatabaseConnection,
 } from "../utils/databaseConnectionStorage";
 import "../styles/databaseConnection.css";
@@ -75,7 +77,7 @@ function downloadJson(filename, payload) {
 }
 
 function buildPreviewConfig(form, type, status) {
-  return {
+  return sanitizeConnectionMetadata({
     name: form.connectionName,
     type: type.id,
     typeName: type.name,
@@ -96,7 +98,7 @@ function buildPreviewConfig(form, type, status) {
     tags: form.tags,
     status: status?.type ?? "draft",
     note: "Demo mode: ยังไม่ได้เชื่อมต่อ backend จริง",
-  };
+  });
 }
 
 function validateConnection(form, type) {
@@ -149,9 +151,9 @@ function createFormFromProfile(profile) {
     type: type.id,
     connectionName: profile.name,
     password: "",
-    savePassword: Boolean(profile.passwordSaved),
-    ssl: profile.ssl ?? defaults.ssl,
-    ssh: profile.ssh ?? defaults.ssh,
+    savePassword: false,
+    ssl: { ...defaults.ssl, ...(profile.ssl ?? {}) },
+    ssh: { ...defaults.ssh, ...(profile.ssh ?? {}) },
     advanced: profile.advanced ?? defaults.advanced,
   };
 }
@@ -168,7 +170,7 @@ function Field({ label, error, helper, children }) {
 }
 
 function statusLabel(status) {
-  if (status?.type === "success") return "Success";
+  if (status?.type === "success") return "Demo success";
   if (status?.type === "error") return "Failed";
   if (status?.type === "demo") return "Demo";
   return "Not tested";
@@ -197,7 +199,7 @@ export default function DatabaseConnectionPage() {
     () => buildPreviewConfig(form, selectedType, testStatus),
     [form, selectedType, testStatus]
   );
-  const connectionUrl = buildConnectionUrl(form, selectedType);
+  const connectionUrl = sanitizeConnectionUrl(buildConnectionUrl(form, selectedType));
   const groupedDatabaseTypes = useMemo(() => getGroupedDatabaseTypes(), []);
   const profileSummary = useMemo(() => ([
     ["Database type", selectedType.name],
@@ -239,11 +241,11 @@ export default function DatabaseConnectionPage() {
     }
 
     setTestStatus({
-      type: "success",
+      type: "demo",
       title: "เชื่อมต่อสำเร็จ",
-      message: "เชื่อมต่อสำเร็จใน 42ms",
-      latency: "42ms",
-      server: targetType.mode === "host" ? `${targetForm.host}:${targetForm.port}` : buildConnectionUrl(targetForm, targetType),
+      message: "การจำลองการเชื่อมต่อสำเร็จ · 42ms เป็นค่าตัวอย่าง",
+      latency: "42ms (ตัวอย่าง)",
+      server: targetType.mode === "host" ? `${targetForm.host}:${targetForm.port}` : sanitizeConnectionUrl(buildConnectionUrl(targetForm, targetType)),
       database: targetType.name,
       warnings: result.warnings,
     });
@@ -269,6 +271,13 @@ export default function DatabaseConnectionPage() {
       lastTestedAt: testStatus?.type === "success" ? new Date().toISOString() : null,
     });
     const nextConnections = upsertDatabaseConnection(profile);
+    if (!nextConnections) {
+      setNotice({
+        title: "บันทึก connection profile ไม่สำเร็จ",
+        message: "เบราว์เซอร์ไม่อนุญาตให้เข้าถึงพื้นที่จัดเก็บ โปรดลองอีกครั้งหลังเปิดสิทธิ์ site data",
+      });
+      return;
+    }
     setSavedConnections(nextConnections);
     patchForm({ id: profile.id, createdAt: profile.createdAt });
     setNotice({
@@ -286,7 +295,7 @@ export default function DatabaseConnectionPage() {
       type: "success",
       title: "โหลด profile แล้ว",
       message: `${profile.name} พร้อมสำหรับทดสอบแบบ demo`,
-      latency: "42ms",
+      latency: null,
       server: profile.host ? `${profile.host}:${profile.port}` : profile.url || profile.filePath || profile.sheetUrl,
       database: nextType.name,
     });
@@ -300,7 +309,12 @@ export default function DatabaseConnectionPage() {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    setSavedConnections(upsertDatabaseConnection(duplicated));
+    const nextConnections = upsertDatabaseConnection(duplicated);
+    if (!nextConnections) {
+      setNotice({ title: "ทำสำเนาไม่สำเร็จ", message: "ไม่สามารถเขียนข้อมูลลงพื้นที่จัดเก็บของเบราว์เซอร์" });
+      return;
+    }
+    setSavedConnections(nextConnections);
     setNotice({ title: "ทำสำเนา profile แล้ว", message: duplicated.name });
   }
 
@@ -314,7 +328,12 @@ export default function DatabaseConnectionPage() {
   }
 
   function handleDeleteProfile(profileId) {
-    setSavedConnections(deleteDatabaseConnection(profileId));
+    const nextConnections = deleteDatabaseConnection(profileId);
+    if (!nextConnections) {
+      setNotice({ title: "ลบ profile ไม่สำเร็จ", message: "ไม่สามารถเขียนข้อมูลลงพื้นที่จัดเก็บของเบราว์เซอร์" });
+      return;
+    }
+    setSavedConnections(nextConnections);
     setNotice({ title: "ลบ connection profile แล้ว", message: "ลบเฉพาะข้อมูล demo ในเครื่อง" });
   }
 
@@ -422,8 +441,8 @@ export default function DatabaseConnectionPage() {
             </div>
           </Field>
           <label className="db-check-row">
-            <input type="checkbox" checked={form.savePassword} onChange={(event) => patchForm({ savePassword: event.target.checked })} />
-            <span>จำ password แบบ masked สำหรับ demo เท่านั้น</span>
+            <input type="checkbox" checked={false} disabled />
+            <span>ไม่บันทึกรหัสผ่านหรือ Token — ใช้เฉพาะในฟอร์มของเซสชันนี้</span>
           </label>
         </div>
 
@@ -590,7 +609,7 @@ export default function DatabaseConnectionPage() {
             <div><dt>SSH</dt><dd>{form.ssh.enabled ? `${form.ssh.host}:${form.ssh.port}` : "Off"}</dd></div>
           </dl>
         </section>
-        <div className="db-security-note">รหัสผ่านจะไม่ถูกแสดงใน preview</div>
+        <div className="db-security-note">Preview, clipboard และไฟล์ส่งออกมีเฉพาะ metadata ที่ปลอดภัย ไม่รวมรหัสผ่าน Token certificate หรือ private key</div>
         <pre className="db-json-preview">{JSON.stringify(previewConfig, null, 2)}</pre>
         <div className="db-driver-actions">
           <button type="button" onClick={handleCopyConfig}>Copy Config</button>
@@ -614,13 +633,13 @@ export default function DatabaseConnectionPage() {
       <PageHeader
         kicker="Database Connection"
         title="เชื่อมต่อฐานข้อมูล"
-        subtitle="สร้างและทดสอบการเชื่อมต่อฐานข้อมูลสำหรับใช้กับชุดข้อมูลและแดชบอร์ด"
+        subtitle="สร้าง profile และจำลองการทดสอบการเชื่อมต่อสำหรับชุดข้อมูลและแดชบอร์ด"
         className="db-page-header"
         actions={(
           <div className="db-header-actions">
             <button type="button" onClick={() => navigate("/datasets")}>กลับไปชุดข้อมูล</button>
             <button type="button" className="is-primary" onClick={handleSaveProfile}>บันทึกโปรไฟล์</button>
-            <button type="button" onClick={() => runConnectionTest()}>ทดสอบการเชื่อมต่อ</button>
+            <button type="button" onClick={() => runConnectionTest()}>จำลองการทดสอบการเชื่อมต่อ</button>
           </div>
         )}
       >
@@ -689,7 +708,7 @@ export default function DatabaseConnectionPage() {
           </section>
         </aside>
 
-        <main className="db-settings-panel">
+        <section className="db-settings-panel" aria-label="ตั้งค่าการเชื่อมต่อข้อมูล">
           <header className="db-settings-head">
             <div>
               <span>{selectedType.name} connection settings</span>
@@ -744,7 +763,7 @@ export default function DatabaseConnectionPage() {
             <button type="button" className="is-primary" onClick={handleSaveProfile}>Save Profile</button>
             <button type="button" onClick={() => navigate("/datasets")}>Cancel</button>
           </footer>
-        </main>
+        </section>
 
         <aside className="db-summary-panel">
           <header className="db-summary-head">

@@ -4,6 +4,18 @@ import { useLocation, useNavigate } from "react-router-dom";
 import ChartPreview from "@/components/dashboard-v2/components/charts/ChartPreview";
 import { createDefaultConfig, dataFields, defaultChartSettings } from "@/components/dashboard-v2/mockData";
 import { getDatasetRows } from "@/components/dashboard-v2/services/datasetService";
+import { resolveChartData } from "@/domain/charts/chartDataContract";
+import {
+  createBeforeUnloadHandler,
+  createDashboardAutosave,
+  createSessionImageAsset,
+  prepareDashboardForPersistence,
+  runExplicitDashboardSave,
+  shouldWarnAboutUnsavedChanges,
+} from "@/domain/dashboard/dashboardPersistence";
+import { createLocalReadonlyShare, createLocalShareUrl } from "@/domain/shares/localShareContract";
+import { workspaceRepository } from "@/domain/workspace/workspaceRepository";
+import { useWorkspaceSelector } from "@/domain/workspace/workspaceSelectors";
 import useNavigationControls from "@/hooks/useNavigationControls";
 import {
   createSavedChartFromConfig,
@@ -29,6 +41,7 @@ import {
   setActiveProject as setStoredActiveProject,
   upsertDashboard,
 } from "@/services/projectStorage";
+import { CANONICAL_WORKSPACE_KEY } from "@/domain/workspace/workspaceSchema";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import "./DashboardCanvasBuilder.css";
@@ -140,9 +153,18 @@ function safeParse(value, fallback = null) {
   }
 }
 
+function safeGetLocalStorageValue(key) {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
 function loadPanelState() {
   if (typeof window === "undefined") return { leftOpen: true, rightOpen: true };
-  const saved = safeParse(window.localStorage.getItem(PANEL_STATE_STORAGE_KEY), null);
+  const saved = safeParse(safeGetLocalStorageValue(PANEL_STATE_STORAGE_KEY), null);
   return {
     leftOpen: typeof saved?.leftOpen === "boolean" ? saved.leftOpen : true,
     rightOpen: typeof saved?.rightOpen === "boolean" ? saved.rightOpen : true,
@@ -944,7 +966,7 @@ function loadDashboardLayout() {
   const activeDashboard = getActiveDashboard();
   const stored = activeDashboard && typeof activeDashboard === "object"
     ? activeDashboard
-    : safeParse(window.localStorage.getItem(LAYOUT_STORAGE_KEY), null);
+    : safeParse(safeGetLocalStorageValue(LAYOUT_STORAGE_KEY), null);
   if (!stored || typeof stored !== "object") {
     return {
       ...fallback,
@@ -1048,6 +1070,7 @@ function WidgetContent({
   widget,
   rows,
   savedCharts,
+  workspaceSnapshot,
   selected,
   editingTextId,
   setEditingTextId,
@@ -1061,6 +1084,31 @@ function WidgetContent({
         <div className="dcb-chart-compact-placeholder">
           <strong>ไม่พบข้อมูลกราฟ</strong>
           <span>กรุณาเลือกกราฟใหม่จากรายการวิดเจ็ต</span>
+        </div>
+      );
+    }
+
+    const sourceChartId = savedChartIdFromWidget(widget);
+    const savedChart = sourceChartId ? savedCharts.find((chart) => chart.id === sourceChartId) : null;
+    const chartRecord = savedChart ?? {
+      id: sourceChartId || widget.id,
+      projectId: widget.projectId,
+      datasetId: chartConfig.datasetId ?? null,
+      chartType: chartConfig.chartType,
+      config: chartConfig,
+      dataContract: widget.config?.dataContract ?? null,
+    };
+    const chartData = resolveChartData(workspaceSnapshot, chartRecord, {
+      demoResolver: (datasetId) => ({
+        rows: getDatasetRows(datasetId, workspaceSnapshot),
+        fields: dataFields,
+      }),
+    });
+    if (chartData.status !== "ready") {
+      return (
+        <div className="dcb-chart-compact-placeholder" role="status">
+          <strong>{chartData.status === "empty" ? "ชุดข้อมูลยังไม่มีแถวข้อมูล" : "ไม่สามารถแสดงข้อมูลกราฟนี้ได้"}</strong>
+          <span>{chartData.message}</span>
         </div>
       );
     }
@@ -1085,8 +1133,8 @@ function WidgetContent({
       <div className="dcb-chart-widget">
         <ChartPreview
           config={chartConfig}
-          datasetRows={rows}
-          fields={dataFields}
+          datasetRows={chartData.rows}
+          fields={chartData.fields}
           previewMode
           deviceMode="desktop"
           zoom={100}
@@ -1212,6 +1260,7 @@ export default function DashboardCanvasBuilder() {
   const navigation = useNavigationControls();
   const initialState = useMemo(() => loadDashboardLayout(), []);
   const initialPanelState = useMemo(() => loadPanelState(), []);
+  const workspaceSnapshot = useWorkspaceSelector((snapshot) => snapshot);
   const rows = useMemo(() => getDatasetRows("sales_performance"), []);
   const [activeProjectId, setActiveProjectId] = useState(initialState.projectId);
   const [activeProjectName, setActiveProjectName] = useState(initialState.projectName);
@@ -1256,6 +1305,14 @@ export default function DashboardCanvasBuilder() {
   const fileInputRef = useRef(null);
   const focusPulseTimerRef = useRef(null);
   const contextMenuRef = useRef(null);
+  const [autosave] = useState(() => createDashboardAutosave({
+    delay: 700,
+    save: () => {},
+  }));
+  const autosaveReadyRef = useRef(false);
+  const autosaveSuppressedRef = useRef(false);
+  const saveStatusRef = useRef(saveStatus);
+  const sessionAssetUrlsRef = useRef(new Set());
 
   useEffect(() => {
     widgetsRef.current = widgets;
@@ -1272,6 +1329,10 @@ export default function DashboardCanvasBuilder() {
   useEffect(() => {
     activeDashboardIdRef.current = activeDashboardId;
   }, [activeDashboardId]);
+
+  useEffect(() => {
+    saveStatusRef.current = saveStatus;
+  }, [saveStatus]);
 
   useEffect(() => {
     safeSetLocalStorage(PANEL_STATE_STORAGE_KEY, JSON.stringify({
@@ -1301,7 +1362,8 @@ export default function DashboardCanvasBuilder() {
         event.key === V2_SINGLE_CHART_KEY ||
         event.key === PROJECTS_KEY ||
         event.key === ACTIVE_PROJECT_KEY ||
-        event.key === ACTIVE_DASHBOARD_KEY
+        event.key === ACTIVE_DASHBOARD_KEY ||
+        event.key === CANONICAL_WORKSPACE_KEY
       ) {
         refreshSavedCharts();
         setDashboards(getDashboards(activeProjectIdRef.current));
@@ -1644,10 +1706,11 @@ export default function DashboardCanvasBuilder() {
     [dashboardName, theme]
   );
 
-  const persistLayout = useCallback(() => {
-    const payload = buildLayoutPayload();
-    upsertDashboard(payload.projectId, payload);
-    safeSetLocalStorage(LAYOUT_STORAGE_KEY, JSON.stringify(compactDashboardLayoutForStorage(payload)));
+  const persistLayout = useCallback((nextPayload) => {
+    const payload = prepareDashboardForPersistence(nextPayload ?? buildLayoutPayload());
+    const savedDashboard = upsertDashboard(payload.projectId, payload);
+    if (!savedDashboard) throw new Error("Unable to save dashboard");
+    safeSetLocalStorage(LAYOUT_STORAGE_KEY, JSON.stringify(compactDashboardLayoutForStorage(payload)), { removeOnFail: false });
     const storageMessage = consumeStorageRecoveryMessage();
     if (storageMessage) setToast(storageMessage);
     setDashboards(getDashboards(payload.projectId));
@@ -1676,6 +1739,8 @@ export default function DashboardCanvasBuilder() {
   }, [chartDesignerUrl, navigate, persistLayout, preserveActiveContext]);
 
   const applyDashboardState = useCallback((nextState, message) => {
+    autosave.cancel();
+    autosaveSuppressedRef.current = true;
     activeProjectIdRef.current = nextState.projectId;
     activeDashboardIdRef.current = nextState.dashboardId;
     setActiveProjectId(nextState.projectId);
@@ -1698,7 +1763,7 @@ export default function DashboardCanvasBuilder() {
     setLastSavedAt(formatSavedTime());
     setSavedCharts(readSavedCharts());
     if (message) setToast(message);
-  }, []);
+  }, [autosave]);
 
   const loadActiveDashboardState = useCallback((message) => {
     const nextState = loadDashboardLayout();
@@ -1739,12 +1804,34 @@ export default function DashboardCanvasBuilder() {
   }, [dashboardName, dashboards.length, loadActiveDashboardState]);
 
   useEffect(() => {
-    setSaveStatus("saving");
-    const timer = window.setTimeout(() => {
-      persistLayout();
-    }, 500);
-    return () => window.clearTimeout(timer);
-  }, [persistLayout]);
+    autosave.setSave(persistLayout);
+  }, [autosave, persistLayout]);
+
+  useEffect(() => autosave.subscribe((state) => {
+    const nextStatus = state.status === "pending" ? "unsaved" : state.status;
+    setSaveStatus(nextStatus);
+    if (state.status === "saved" && state.lastSavedAt) {
+      setLastSavedAt(formatSavedTime(new Date(state.lastSavedAt)));
+    }
+  }), [autosave]);
+
+  useEffect(() => {
+    if (!autosaveReadyRef.current) {
+      autosaveReadyRef.current = true;
+      return;
+    }
+    if (autosaveSuppressedRef.current) {
+      autosaveSuppressedRef.current = false;
+      return;
+    }
+    autosave.schedule(buildLayoutPayload());
+  }, [autosave, buildLayoutPayload, canvasSettings, dashboardName, theme, widgets]);
+
+  useEffect(() => {
+    const onBeforeUnload = createBeforeUnloadHandler(() => shouldWarnAboutUnsavedChanges(saveStatusRef.current));
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, []);
 
   useEffect(() => {
     if (!toast) return undefined;
@@ -1753,10 +1840,13 @@ export default function DashboardCanvasBuilder() {
   }, [toast]);
 
   useEffect(() => () => {
+    void autosave.dispose().catch(() => {});
+    sessionAssetUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+    sessionAssetUrlsRef.current.clear();
     if (focusPulseTimerRef.current) {
       window.clearTimeout(focusPulseTimerRef.current);
     }
-  }, []);
+  }, [autosave]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -2310,19 +2400,57 @@ export default function DashboardCanvasBuilder() {
   }, [canvasSettings.height, canvasSettings.width, theme, widgets]);
 
   const saveDashboard = useCallback(() => {
-    persistLayout();
-    setToast("บันทึก Dashboard แล้ว");
-  }, [persistLayout]);
+    void runExplicitDashboardSave({
+      autosave,
+      payload: buildLayoutPayload(),
+      onSuccess: () => setToast("บันทึก Dashboard แล้ว"),
+      onError: () => setToast("\u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01 Dashboard \u0e44\u0e21\u0e48\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08 \u0e01\u0e23\u0e38\u0e13\u0e32\u0e25\u0e2d\u0e07\u0e43\u0e2b\u0e21\u0e48"),
+    });
+  }, [autosave, buildLayoutPayload]);
 
+  const localShareId = `local-${activeDashboardId}`;
   const shareLink = useMemo(() => {
-    if (typeof window === "undefined") return "";
-    return `${window.location.origin}/dashboard?share=local-demo`;
-  }, []);
+    if (typeof window === "undefined" || !activeDashboardId) return "";
+    return createLocalShareUrl({
+      origin: window.location.origin,
+      dashboardId: activeDashboardId,
+      shareId: localShareId,
+      mode: "view",
+    });
+  }, [activeDashboardId, localShareId]);
 
   const embedCode = useMemo(
-    () => `<iframe src="${shareLink}" title="Mini BI Dashboard" width="1440" height="900"></iframe>`,
-    [shareLink]
+    () => {
+      if (typeof window === "undefined" || !activeDashboardId) return "";
+      const embedUrl = createLocalShareUrl({
+        origin: window.location.origin,
+        dashboardId: activeDashboardId,
+        shareId: localShareId,
+        mode: "embed",
+        showHeader: false,
+      });
+      return `<iframe src="${embedUrl}" title="Mini BI Dashboard" width="1440" height="900"></iframe>`;
+    },
+    [activeDashboardId, localShareId]
   );
+
+  const openLocalShare = useCallback(async () => {
+    try {
+      const payload = buildLayoutPayload();
+      await autosave.flush(payload);
+      const project = workspaceSnapshot.projects.find((item) => item.id === payload.projectId);
+      if (!project) throw new Error("Project not found");
+      const share = createLocalReadonlyShare({
+        id: localShareId,
+        project,
+        dashboard: prepareDashboardForPersistence(payload),
+      });
+      workspaceRepository.upsertShare(project.id, share);
+      setShareOpen(true);
+    } catch {
+      setToast("ไม่สามารถเตรียมลิงก์ Local ได้ กรุณาลองบันทึกอีกครั้ง");
+    }
+  }, [autosave, buildLayoutPayload, localShareId, workspaceSnapshot.projects]);
 
   const copyShareLink = useCallback(async () => {
     const copied = await copyText(shareLink);
@@ -2523,6 +2651,7 @@ export default function DashboardCanvasBuilder() {
       title: `${chart.title || "กราฟ"} สำเนา`,
       chartType: chart.chartType,
       source: chart.source || "dashboard-v2",
+      dataContract: chart.dataContract,
     });
     setSavedCharts(readSavedCharts());
     setToast("ทำสำเนากราฟแล้ว");
@@ -2663,7 +2792,7 @@ export default function DashboardCanvasBuilder() {
         return;
       }
       if (detail.command === "share") {
-        setShareOpen(true);
+        void openLocalShare();
         return;
       }
       if (detail.command === "export") {
@@ -2675,20 +2804,32 @@ export default function DashboardCanvasBuilder() {
     return () => {
       window.removeEventListener("mini-bi:ribbon-command", onRibbonCommand);
     };
-  }, [arrangeAllWidgets, exportJson, openChartDesignerForCreate, openElementsModal, openTemplateModal, saveDashboard]);
+  }, [arrangeAllWidgets, exportJson, openChartDesignerForCreate, openElementsModal, openLocalShare, openTemplateModal, saveDashboard]);
 
   const handleImageUpload = useCallback((event) => {
     const file = event.target.files?.[0];
     if (!file || !selectedWidget) return;
-    const url = URL.createObjectURL(file);
-    updateWidgetConfig(selectedWidget.id, { src: url, fileName: file.name });
+    const asset = createSessionImageAsset(file);
+    sessionAssetUrlsRef.current.add(asset.src);
+    updateWidgetConfig(selectedWidget.id, {
+      src: asset.src,
+      fileName: file.name,
+      asset: asset.metadata,
+    });
+    event.target.value = "";
     setToast("เพิ่มรูปภาพแล้ว");
   }, [selectedWidget, updateWidgetConfig]);
 
   const canvasScale = canvasSettings.zoom / 100;
   const canvasHeightRows = Math.floor(canvasSettings.height / activeGridUnit);
   const showLegacyChartSections = false;
-  const statusText = saveStatus === "saving" ? "กำลังบันทึก" : saveStatus === "unsaved" ? "ยังไม่บันทึก" : "บันทึกแล้ว";
+  const statusText = saveStatus === "saving"
+    ? "กำลังบันทึก"
+    : saveStatus === "unsaved"
+      ? "รอบันทึกอัตโนมัติ"
+      : saveStatus === "error"
+        ? "บันทึกไม่สำเร็จ"
+        : "บันทึกแล้ว";
   const contextMenuWidget = widgetContextMenu
     ? widgets.find((widget) => widget.id === widgetContextMenu.widgetId)
     : null;
@@ -2741,10 +2882,13 @@ export default function DashboardCanvasBuilder() {
           </div>
         </div>
         <div className="dcb-header-actions">
-          <span className={`dcb-save-indicator ${saveStatus}`}>{statusText} {lastSavedAt}</span>
+          <span className={`dcb-save-indicator ${saveStatus}`} role="status" aria-live="polite">{statusText} {lastSavedAt}</span>
+          {saveStatus === "error" ? (
+            <button type="button" className="dcb-btn" onClick={saveDashboard}>ลองบันทึกอีกครั้ง</button>
+          ) : null}
           <button type="button" className="dcb-btn" onClick={() => navigate("/home")} title="กลับหน้าหลัก">หน้าหลัก</button>
           <button type="button" className="dcb-btn" onClick={openChartDesignerForCreate}>เปิดตัวสร้างกราฟ</button>
-          <button type="button" className="dcb-btn" onClick={() => setShareOpen(true)}>แชร์</button>
+          <button type="button" className="dcb-btn" onClick={openLocalShare}>แชร์</button>
           <button type="button" className="dcb-btn dcb-btn-primary" onClick={saveDashboard}>บันทึก</button>
         </div>
       </header>
@@ -2761,7 +2905,7 @@ export default function DashboardCanvasBuilder() {
             ))}
           </select>
           <button type="button" className="dcb-btn" onClick={exportPng}>PNG</button>
-          <button type="button" className="dcb-btn" onClick={() => setShareOpen(true)}>แชร์</button>
+          <button type="button" className="dcb-btn" onClick={openLocalShare}>แชร์</button>
           <button type="button" className="dcb-btn dcb-btn-primary" onClick={() => setPreviewMode(false)}>ออกจากโหมดนำเสนอ</button>
         </div>
       ) : (
@@ -2828,7 +2972,7 @@ export default function DashboardCanvasBuilder() {
         </nav>
       )}
 
-        <main className={`dcb-main ${leftPanelOpen ? "" : "is-left-collapsed"} ${rightPanelOpen ? "" : "is-right-collapsed"}`}>
+        <section className={`dcb-main ${leftPanelOpen ? "" : "is-left-collapsed"} ${rightPanelOpen ? "" : "is-right-collapsed"}`} aria-label="พื้นที่ออกแบบแดชบอร์ด">
           {!previewMode ? (
             <aside className={`dcb-panel dcb-left-panel ${leftPanelOpen ? "" : "is-collapsed"}`} aria-hidden={!leftPanelOpen}>
               <div className="dcb-panel-header">
@@ -3187,7 +3331,7 @@ export default function DashboardCanvasBuilder() {
         <section className="dcb-canvas-region">
           <div className="dcb-canvas-toolbar">
             <div>
-              <strong>{dashboardName}</strong>
+              <h1>{dashboardName}</h1>
               <span>{canvasSettings.width} × {canvasSettings.height}px · {widgets.length} วิดเจ็ต</span>
             </div>
             <div className="dcb-canvas-actions">
@@ -3357,6 +3501,7 @@ export default function DashboardCanvasBuilder() {
                           widget={widget}
                           rows={rows}
                           savedCharts={savedCharts}
+                          workspaceSnapshot={workspaceSnapshot}
                           selected={selectedWidgetId === widget.id}
                           editingTextId={editingTextId}
                           setEditingTextId={setEditingTextId}
@@ -3568,6 +3713,9 @@ export default function DashboardCanvasBuilder() {
                       <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleImageUpload} />
                       <button type="button" className="dcb-wide-btn" onClick={() => fileInputRef.current?.click()}>เลือกไฟล์รูปภาพ</button>
                       {selectedWidget.config.fileName ? <small>ไฟล์: {selectedWidget.config.fileName}</small> : null}
+                      {selectedWidget.config.asset?.durability === "session-only" ? (
+                        <small className="dcb-session-asset-note">รูปภาพนี้ใช้ได้เฉพาะเซสชันปัจจุบัน และจะต้องเลือกใหม่หลังรีเฟรช</small>
+                      ) : null}
                     </>
                   ) : null}
                   <h3>การทำงาน</h3>
@@ -3597,7 +3745,7 @@ export default function DashboardCanvasBuilder() {
             </div>
           </aside>
         ) : null}
-      </main>
+      </section>
 
       <footer className="dcb-statusbar">
         <span>วิดเจ็ต: {widgets.length}</span>
@@ -3771,31 +3919,25 @@ export default function DashboardCanvasBuilder() {
             <header>
               <div>
                 <h2 id="share-title">แชร์ Dashboard</h2>
-                <p>ลิงก์นี้เป็น mock link สำหรับเดโมจนกว่าจะเชื่อม backend</p>
+                <p>ลิงก์ Local แบบอ่านอย่างเดียว ใช้ได้เฉพาะโปรไฟล์เบราว์เซอร์นี้ ไม่ใช่ลิงก์สาธารณะ</p>
               </div>
               <button type="button" onClick={() => setShareOpen(false)} aria-label="ปิด">×</button>
             </header>
             <label>
-              สิทธิ์การเข้าถึง
-              <select defaultValue="private">
-                <option value="private">Private</option>
-                <option value="link">Anyone with link</option>
-              </select>
-            </label>
-            <label>
-              Share link
+              ลิงก์ Local แบบอ่านอย่างเดียว
               <div className="dcb-copy-row">
                 <input readOnly value={shareLink} />
                 <button type="button" onClick={copyShareLink}>คัดลอก</button>
               </div>
             </label>
             <label>
-              Embed code
+              Embed code สำหรับทดสอบในเบราว์เซอร์เดียวกัน
               <div className="dcb-copy-row">
                 <input readOnly value={embedCode} />
                 <button type="button" onClick={copyEmbed}>คัดลอก</button>
               </div>
             </label>
+            <small>การเผยแพร่ข้ามอุปกรณ์ การกำหนดสิทธิ์ และ embed สำหรับผู้ชมจริงต้องใช้ backend ซึ่งยังไม่ได้เชื่อมต่อ</small>
           </section>
         </div>
       ) : null}

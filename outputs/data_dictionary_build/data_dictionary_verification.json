@@ -1,0 +1,33 @@
+{
+  "workbookPath": "C:\\git\\DashboardMiniBi\\dashboard-mini-bi\\data_dictionary.xlsx",
+  "exists": true,
+  "expectedSheets": 15,
+  "actualSheets": 15,
+  "missingSheets": [],
+  "unexpectedSheets": [],
+  "formulaErrors": 0,
+  "forbiddenTableNameMatches": 0,
+  "previewFiles": 15,
+  "summary": {
+    "outputPath": "C:\\git\\DashboardMiniBi\\dashboard-mini-bi\\data_dictionary.xlsx",
+    "modules": 11,
+    "tables": 104,
+    "columns": 1986,
+    "relationships": 646,
+    "foreignKeys": 635,
+    "indexes": 978,
+    "constraints": 1799,
+    "statusEnumValues": 732,
+    "readinessPercentage": 92,
+    "criticalIssues": 0,
+    "highIssues": 0,
+    "mediumIssues": 0,
+    "lowIssues": 0,
+    "readyForLocalStaging": true,
+    "productionBaselineReady": true,
+    "sheetCount": 15,
+    "forbiddenTables": []
+  },
+  "tableInspectPreviewLines": 1,
+  "passed": true
+}

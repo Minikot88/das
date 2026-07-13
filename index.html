@@ -1,32 +1,12 @@
 <!doctype html>
-<html lang="en">
+<html lang="th">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E" />
-    <link rel="shortcut icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Mini BI Analytics Platform" />
     <title>Mini BI Analytics Platform</title>
-    <script>
-      (function () {
-        try {
-          var storedTheme = localStorage.getItem("mini-bi-theme") || "light";
-          if (["light", "dark", "system"].indexOf(storedTheme) === -1) storedTheme = "light";
-          var resolvedTheme = storedTheme === "system"
-            ? (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
-            : storedTheme;
-          if (resolvedTheme !== "dark" && resolvedTheme !== "light") resolvedTheme = "light";
-          document.documentElement.dataset.theme = resolvedTheme;
-          document.documentElement.dataset.themePreference = storedTheme;
-          document.documentElement.style.colorScheme = resolvedTheme;
-        } catch (error) {
-          document.documentElement.dataset.theme = "light";
-        }
-      })();
-    </script>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600&display=swap" rel="stylesheet" />
+    <script src="/theme-init.js"></script>
   </head>
   <body>
     <div id="root"></div>

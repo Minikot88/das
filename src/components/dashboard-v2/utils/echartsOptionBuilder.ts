@@ -1,5 +1,5 @@
 import type { EChartsOption } from "echarts/types/dist/shared";
-import type { ChartConfig, ChartType, DataField, TransformedChartData, ValidationResult } from "../types";
+import type { ChartConfig, ChartType, TransformedChartData, ValidationResult } from "../types";
 import { chartPalettes, enterpriseChartTheme, formatValue } from "./chartFormatters";
 
 type ChartTheme = {
@@ -21,6 +21,12 @@ type OptionObject = Record<string, unknown>;
 type SeriesObject = Record<string, unknown>;
 
 const chartFontFamily = "IBM Plex Sans Thai";
+const animationEasing = {
+  ease: "cubicOut",
+  "ease-in": "cubicIn",
+  "ease-out": "cubicOut",
+  "ease-in-out": "cubicInOut",
+} as const;
 
 const darkChartTheme: ChartVisualTheme = {
   axisLabel: "#D1D5DB",
@@ -123,14 +129,15 @@ function titleOption(settings: ChartConfig["settings"]): OptionObject | undefine
   };
 }
 
-function gridOption(settings: ChartConfig["settings"]): OptionObject {
+export function buildCartesianGridOption(settings: ChartConfig["settings"]): OptionObject {
   const top = settings.general.showTitle || settings.general.showSubtitle ? 48 : 16;
   return {
     top,
     left: 50,
     right: 18,
     bottom: settings.legend.showLegend && settings.legend.position === "bottom" ? 50 : 32,
-    containLabel: true,
+    outerBoundsMode: "same",
+    outerBoundsContain: "axisLabel",
   };
 }
 
@@ -191,7 +198,7 @@ function baseOption(input: BuilderInput): EChartsOption {
     tooltip: tooltipOption(settings),
     animation: settings.animation.enabled,
     animationDuration: settings.animation.duration,
-    animationEasing: settings.animation.easing,
+    animationEasing: animationEasing[settings.animation.easing],
     textStyle: {
       fontFamily: chartFontFamily,
       color: theme.title,
@@ -259,7 +266,7 @@ function categoryAxis(settings: ChartConfig["settings"], categories: string[], n
 function labelOption(settings: ChartConfig["settings"]) {
   return {
     show: settings.labels.showDataLabels,
-    position: settings.labels.position,
+    position: settings.labels.position === "outside" ? "top" : settings.labels.position,
     color: readableLabelColor(settings),
     fontSize: settings.labels.fontSize,
     lineHeight: Math.round(settings.labels.fontSize * 1.35),
@@ -338,7 +345,7 @@ function buildCartesianOption(input: BuilderInput, chartKind: "bar" | "line" | "
 
   return {
     ...option,
-    grid: gridOption(settings),
+    grid: buildCartesianGridOption(settings),
     xAxis: horizontal ? valueAxis(settings, data.yField?.name) : categoryAxis(settings, names, data.xField?.name),
     yAxis: horizontal ? categoryAxis(settings, names, data.xField?.name) : valueAxis(settings, data.yField?.name),
     series,
@@ -402,7 +409,7 @@ function buildScatterOption(input: BuilderInput, bubble = false): EChartsOption 
 
   return {
     ...option,
-    grid: gridOption(settings),
+    grid: buildCartesianGridOption(settings),
     xAxis: valueAxis(settings, xField?.name),
     yAxis: valueAxis(settings, yField?.name),
     series: [
@@ -531,7 +538,7 @@ function buildHeatmapOption(input: BuilderInput): EChartsOption {
   const max = Math.max(...input.transformedData.heatmapRows.map((row) => row.value), 1);
   return {
     ...option,
-    grid: gridOption(settings),
+    grid: buildCartesianGridOption(settings),
     xAxis: categoryAxis(settings, xs, input.transformedData.xField?.name),
     yAxis: categoryAxis(settings, ys, input.transformedData.legendField?.name),
     visualMap: {
@@ -604,7 +611,7 @@ function buildCandlestickOption(input: BuilderInput): EChartsOption {
   const theme = chartVisualTheme(settings);
   return {
     ...option,
-    grid: gridOption(settings),
+    grid: buildCartesianGridOption(settings),
     xAxis: categoryAxis(settings, input.transformedData.candlestickRows.map((row) => row.name), input.transformedData.xField?.name),
     yAxis: valueAxis(settings, "OHLC"),
     dataZoom: [{ type: "inside" }, { type: "slider", height: 18, bottom: 4 }],
@@ -629,7 +636,7 @@ function buildBoxplotOption(input: BuilderInput): EChartsOption {
   const settings = input.chartSettings;
   return {
     ...option,
-    grid: gridOption(settings),
+    grid: buildCartesianGridOption(settings),
     xAxis: categoryAxis(settings, input.transformedData.boxplotRows.map((row) => row.name), input.transformedData.xField?.name),
     yAxis: valueAxis(settings, input.transformedData.yField?.name),
     series: [

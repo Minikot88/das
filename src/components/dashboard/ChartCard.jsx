@@ -5,6 +5,18 @@ import CardActions from "./CardActions";
 import { pickChartColor } from "../../utils/chartPalette";
 import { getResponsiveChartKind } from "../../utils/layoutUtils";
 
+function accessibleCellValue(value) {
+  if (value === null || typeof value === "undefined") return "";
+  if (typeof value === "object") {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
+  }
+  return String(value);
+}
+
 const ChartCard = memo(function ChartCard({
   chart,
   pixelHeight,
@@ -35,6 +47,20 @@ const ChartCard = memo(function ChartCard({
           : [],
     [chart]
   );
+  const accessibleColumns = useMemo(() => {
+    const columns = [];
+    const seen = new Set();
+    rows.slice(0, 20).forEach((row) => {
+      if (!row || typeof row !== "object" || Array.isArray(row)) return;
+      Object.keys(row).forEach((key) => {
+        if (!seen.has(key) && columns.length < 12) {
+          seen.add(key);
+          columns.push(key);
+        }
+      });
+    });
+    return columns;
+  }, [rows]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setLoaded(true), 80);
@@ -136,6 +162,24 @@ const ChartCard = memo(function ChartCard({
       tabIndex={0}
     >
       <p id={`chart-summary-${chart.id}`} className="sr-only">{chartSummary}</p>
+      {rows.length && accessibleColumns.length ? (
+        <div className="sr-only">
+          <table>
+            <caption>{`Data preview for ${safeTitle || "Untitled chart"}`}</caption>
+            <thead>
+              <tr>{accessibleColumns.map((column) => <th key={column} scope="col">{column}</th>)}</tr>
+            </thead>
+            <tbody>
+              {rows.slice(0, 20).map((row, rowIndex) => (
+                <tr key={row?.id ?? rowIndex}>
+                  {accessibleColumns.map((column) => <td key={column}>{accessibleCellValue(row?.[column])}</td>)}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {rows.length > 20 ? <p>{`Showing the first 20 of ${rows.length} rows.`}</p> : null}
+        </div>
+      ) : null}
       <div className="chart-card-accent-bar" style={{ background: accent }} />
 
       {shouldRenderHeader ? (

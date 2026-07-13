@@ -5,7 +5,9 @@ import { demoTemplates } from "@/components/dashboard-v2/demo/demoTemplates";
 import { applyThemeToSettings, demoThemes } from "@/components/dashboard-v2/demo/demoThemes";
 import type { ChartPreset, DemoMappingPreset, DemoSettingsPatch, DemoTemplate, DemoThemeId } from "@/components/dashboard-v2/demo/demoTypes";
 import { chartCatalog, createDefaultConfig, dataFields, defaultChartSettings } from "@/components/dashboard-v2/mockData";
-import { getDatasetRows, getDatasources, refreshDataset as refreshDatasetRows, type DemoDatasource, type DemoDatasetRow } from "@/components/dashboard-v2/services/datasetService";
+import { getDatasetRows, getDatasetSchema, getDatasources, refreshDataset as refreshDatasetRows, type DemoDatasource, type DemoDatasetRow } from "@/components/dashboard-v2/services/datasetService";
+import { useWorkspaceSelector } from "@/domain/workspace/workspaceSelectors";
+import { scanForSecretMaterial } from "@/domain/workspace/workspaceSchema";
 import {
   defaultSavedSqlQueries,
   formatSql,
@@ -49,6 +51,9 @@ const DEFAULT_DATASET_ID = "sales_performance";
 const INITIAL_DATASOURCES = getDatasources();
 const SQL_DATASOURCE_ID = "demo-sql";
 const SQL_TABLE_NAME = "SQL Result";
+const SQL_CREDENTIAL_ASSIGNMENT_PATTERN = /\b(?:password|passwd|passphrase|api[_\s-]?key|access[_\s-]?token|refresh[_\s-]?token|id[_\s-]?token|client[_\s-]?secret|private[_\s-]?key|secret)\b\s*(?:=|:=|=>)\s*(?:N?'[^']*'|"[^"]*"|[^\s,;]+)/i;
+const SQL_PASSWORD_CLAUSE_PATTERN = /\b(?:(?:identified\s+by|with\s+password|set\s+password)\s+|password\s+)(?:N?'[^']*'|"[^"]*"|\$\$[\s\S]*?\$\$)/i;
+const EMBEDDED_URL_PATTERN = /[a-z][a-z\d+.-]*:\/\/[^\s'"<>]+/gi;
 
 const DEMO_SQL_DATASOURCE: DemoDatasource = {
   id: SQL_DATASOURCE_ID,
@@ -66,6 +71,16 @@ type ManualCopyFallback = {
   text: string;
 } | null;
 
+function containsSqlCredentialMaterial(query: string) {
+  if (SQL_CREDENTIAL_ASSIGNMENT_PATTERN.test(query) || SQL_PASSWORD_CLAUSE_PATTERN.test(query)) return true;
+  const embeddedUrls = query.match(EMBEDDED_URL_PATTERN) ?? [];
+  return embeddedUrls.some((url) => scanForSecretMaterial({ sqlUrl: url }).length > 0);
+}
+
+function safeSqlForPersistence(query: string) {
+  return containsSqlCredentialMaterial(query) ? "" : query;
+}
+
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
@@ -74,33 +89,17 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-function cloneConfig(config: ChartConfig): ChartConfig {
-  return structuredClone(config);
+function safeGetLocalStorageValue(key: string) {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
 }
 
-const mappingSlotIds: MappingSlotId[] = [
-  "xAxis",
-  "yAxis",
-  "legend",
-  "tooltip",
-  "filter",
-  "color",
-  "size",
-  "value",
-  "category",
-  "series",
-  "rows",
-  "columns",
-  "source",
-  "target",
-  "open",
-  "high",
-  "low",
-  "close",
-];
-
-function isMappingSlotId(value: unknown): value is MappingSlotId {
-  return typeof value === "string" && mappingSlotIds.includes(value as MappingSlotId);
+function cloneConfig(config: ChartConfig): ChartConfig {
+  return structuredClone(config);
 }
 
 function resolveSavedFields(savedSlot: Record<string, unknown>, fallbackFields: DataField[], availableFields = dataFields) {
@@ -143,8 +142,9 @@ function serializeChartConfig(config: ChartConfig, sqlSnapshot?: { query: string
     sourceType: config.sourceType,
     datasetId: config.datasetId,
     sqlModeEnabled: config.sourceType === "demo-sql",
-    sqlQuery: sqlSnapshot?.query ?? "",
+    sqlQuery: safeSqlForPersistence(sqlSnapshot?.query ?? ""),
     sqlResultSchema: sqlSnapshot?.result?.fields ?? [],
+    sqlResultRows: sqlSnapshot?.result?.rows ?? [],
     createdAt: config.createdAt,
     updatedAt: config.updatedAt,
   };
@@ -273,7 +273,7 @@ function normalizeConfig(value: unknown, availableFields = dataFields): ChartCon
     imageName: typeof value.imageName === "string" ? value.imageName : null,
     dashboardId: typeof value.dashboardId === "string" ? value.dashboardId : fallback.dashboardId,
     chartId: typeof value.chartId === "string" ? value.chartId : fallback.chartId,
-    sourceType: value.sourceType === "api" || value.sourceType === "demo" || value.sourceType === "demo-sql" ? value.sourceType : fallback.sourceType,
+    sourceType: value.sourceType === "api" || value.sourceType === "dataset" || value.sourceType === "demo" || value.sourceType === "demo-sql" ? value.sourceType : fallback.sourceType,
     datasetId: typeof value.datasetId === "string" ? value.datasetId : fallback.datasetId,
     schemaVersion: typeof value.schemaVersion === "number" ? value.schemaVersion : CONFIG_SCHEMA_VERSION,
     version: typeof value.version === "number" ? value.version : fallback.version,
@@ -283,8 +283,7 @@ function normalizeConfig(value: unknown, availableFields = dataFields): ChartCon
 }
 
 function loadStoredConfigValue() {
-  if (typeof window === "undefined") return null;
-  const saved = window.localStorage.getItem(STORAGE_KEY);
+  const saved = safeGetLocalStorageValue(STORAGE_KEY);
   if (!saved) return null;
   try {
     return JSON.parse(saved) as unknown;
@@ -303,8 +302,7 @@ function createSqlDatasource(result: SqlQueryResult | null): DemoDatasource {
 }
 
 function loadSavedSqlQueries(): SqlSavedQuery[] {
-  if (typeof window === "undefined") return defaultSavedSqlQueries;
-  const saved = window.localStorage.getItem(SQL_SAVED_QUERIES_KEY);
+  const saved = safeGetLocalStorageValue(SQL_SAVED_QUERIES_KEY);
   if (!saved) return defaultSavedSqlQueries;
 
   try {
@@ -317,7 +315,8 @@ function loadSavedSqlQueries(): SqlSavedQuery[] {
       typeof item.description === "string" &&
       typeof item.sql === "string" &&
       typeof item.createdAt === "string" &&
-      typeof item.updatedAt === "string"
+      typeof item.updatedAt === "string" &&
+      !containsSqlCredentialMaterial(item.sql)
     );
     return queries.length ? queries : defaultSavedSqlQueries;
   } catch {
@@ -342,13 +341,37 @@ function loadInitialDesignerSnapshot(chartId?: string | null) {
     };
   }
 
-  const sqlQuery = isObject(parsed) && typeof parsed.sqlQuery === "string" ? parsed.sqlQuery : sqlExamples[0]?.sql ?? "";
+  const sqlQuery = isObject(parsed) && typeof parsed.sqlQuery === "string"
+    ? safeSqlForPersistence(parsed.sqlQuery)
+    : sqlExamples[0]?.sql ?? "";
+  const persistedContract = isObject(savedChart?.dataContract) ? savedChart.dataContract : null;
+  const persistedSqlRows = Array.isArray(persistedContract?.rows) ? persistedContract.rows : [];
+  const persistedSqlFields = Array.isArray(persistedContract?.fields) ? persistedContract.fields : [];
+  const persistedSqlResult: SqlQueryResult | null = persistedContract?.sourceType === "sql-result"
+    ? {
+        sql: typeof persistedContract.queryText === "string" ? persistedContract.queryText : sqlQuery,
+        rows: persistedSqlRows as SqlQueryResult["rows"],
+        previewRows: persistedSqlRows.slice(0, 100) as SqlQueryResult["rows"],
+        fields: persistedSqlFields as DataField[],
+        columns: persistedSqlFields.map((field: unknown) => String((field as { id?: string }).id ?? "")).filter(Boolean),
+        rowCount: persistedSqlRows.length,
+        executionMs: 0,
+      }
+    : null;
   const sqlExecution =
-    isObject(parsed) && parsed.sourceType === "demo-sql" && sqlQuery
+    !persistedSqlResult && isObject(parsed) && parsed.sourceType === "demo-sql" && sqlQuery
       ? runDemoSqlQuery(sqlQuery, getDatasetRows(DEFAULT_DATASET_ID), dataFields)
       : null;
-  const sqlResult = sqlExecution?.ok ? sqlExecution.result : null;
-  const activeFields = sqlResult ? sqlResult.fields : dataFields;
+  const sqlResult = persistedSqlResult ?? (sqlExecution?.ok ? sqlExecution.result : null);
+  const requestedDatasetId = isObject(parsed) && typeof parsed.datasetId === "string" ? parsed.datasetId : DEFAULT_DATASET_ID;
+  const savedDatasetSchema = isObject(parsed) && parsed.sourceType === "dataset"
+    ? getDatasetSchema(requestedDatasetId)
+    : null;
+  const activeFields = sqlResult
+    ? sqlResult.fields
+    : savedDatasetSchema?.available
+      ? savedDatasetSchema.fields
+      : dataFields;
   const normalizedConfig = normalizeConfig(parsed, activeFields);
   const config = savedChart ? { ...normalizedConfig, chartId: savedChart.id } : normalizedConfig;
   const sqlActive = config.sourceType === "demo-sql" && Boolean(sqlResult);
@@ -360,6 +383,21 @@ function loadInitialDesignerSnapshot(chartId?: string | null) {
       fields: sqlResult.fields,
       activeDatasourceId: SQL_DATASOURCE_ID,
       selectedTable: SQL_TABLE_NAME,
+      sqlQuery,
+      sqlResult,
+      loadedSavedChartId: savedChart?.id ?? null,
+      requestedChartMissing: Boolean(chartId && !savedChart),
+    };
+  }
+
+  if (config.sourceType === "dataset") {
+    const datasetSchema = getDatasetSchema(config.datasetId);
+    return {
+      config,
+      rows: datasetSchema.available ? getDatasetRows(config.datasetId) : [],
+      fields: datasetSchema.available ? datasetSchema.fields : [],
+      activeDatasourceId: config.datasetId,
+      selectedTable: config.datasetId,
       sqlQuery,
       sqlResult,
       loadedSavedChartId: savedChart?.id ?? null,
@@ -733,18 +771,18 @@ async function downloadElementAsPng(element: HTMLElement, filename: string, requ
 
 export function useDashboardDesignerState() {
   const location = useLocation();
+  const workspaceSnapshot = useWorkspaceSelector((snapshot: Parameters<typeof getDatasources>[0]) => snapshot);
+  const availableDatasources = useMemo(() => getDatasources(workspaceSnapshot), [workspaceSnapshot]);
   const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const requestedChartId = queryParams.get("chartId");
   const returnToDashboard = queryParams.get("from") === "dashboard";
   const returnProjectId = queryParams.get("projectId");
   const returnDashboardId = queryParams.get("dashboardId");
   const createMode = queryParams.get("mode") === "create";
-  const initialSnapshotRef = useRef<ReturnType<typeof loadInitialDesignerSnapshot> | null>(null);
-  if (!initialSnapshotRef.current) {
+  const [initialSnapshot] = useState(() => {
     restoreDashboardContext(returnProjectId, returnDashboardId);
-    initialSnapshotRef.current = loadInitialDesignerSnapshot(createMode ? null : requestedChartId);
-  }
-  const initialSnapshot = initialSnapshotRef.current;
+    return loadInitialDesignerSnapshot(createMode ? null : requestedChartId);
+  });
   const [config, setConfig] = useState<ChartConfig>(() => initialSnapshot.config);
   const [rows, setRows] = useState<DemoDatasetRow[]>(() => initialSnapshot.rows);
   const [fields, setFields] = useState<DataField[]>(() => initialSnapshot.fields);
@@ -780,6 +818,7 @@ export function useDashboardDesignerState() {
   const [lastSavedAt, setLastSavedAt] = useState(formatSavedTime());
   const [activeSavedChartId, setActiveSavedChartId] = useState<string | null>(() => initialSnapshot.loadedSavedChartId);
   const loadedQueryChartIdRef = useRef<string | null>(initialSnapshot.loadedSavedChartId);
+  const pendingPersistenceRef = useRef({ config, sqlQuery, sqlResult, activeSavedChartId });
   const previewRef = useRef<HTMLDivElement | null>(null);
 
   const selectedChart = useMemo(
@@ -793,8 +832,8 @@ export function useDashboardDesignerState() {
 
   const transformedData = useMemo(() => transformChartData(rows, config, fields), [rows, config, fields]);
   const datasources = useMemo(
-    () => (config.sourceType === "demo-sql" ? [createSqlDatasource(sqlResult), ...INITIAL_DATASOURCES] : INITIAL_DATASOURCES),
-    [config.sourceType, sqlResult]
+    () => (config.sourceType === "demo-sql" ? [createSqlDatasource(sqlResult), ...availableDatasources] : availableDatasources),
+    [availableDatasources, config.sourceType, sqlResult]
   );
   const validation = useMemo(() => validateChartConfig(config), [config]);
   const activeTemplate = useMemo(
@@ -805,6 +844,10 @@ export function useDashboardDesignerState() {
     () => createDemoInsights(transformedData, config, activeTemplate?.insights ?? []),
     [activeTemplate, config, transformedData]
   );
+
+  useEffect(() => {
+    pendingPersistenceRef.current = { config, sqlQuery, sqlResult, activeSavedChartId };
+  }, [activeSavedChartId, config, sqlQuery, sqlResult]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setIsLoading(false), 320);
@@ -857,15 +900,27 @@ export function useDashboardDesignerState() {
     return () => window.clearTimeout(timer);
   }, [activeSavedChartId, config, sqlQuery, sqlResult]);
 
+  useEffect(() => () => {
+    const pending = pendingPersistenceRef.current;
+    persistDesignerChartConfig(
+      pending.config,
+      { query: pending.sqlQuery, result: pending.sqlResult },
+      pending.activeSavedChartId,
+    );
+  }, []);
+
   useEffect(() => {
-    const compactQueries = savedSqlQueries.slice(-20).map((query) => ({
-      id: query.id,
-      name: query.name,
-      description: query.description,
-      sql: query.sql,
-      createdAt: query.createdAt,
-      updatedAt: query.updatedAt,
-    }));
+    const compactQueries = savedSqlQueries
+      .filter((query) => !containsSqlCredentialMaterial(query.sql))
+      .slice(-20)
+      .map((query) => ({
+        id: query.id,
+        name: query.name,
+        description: query.description,
+        sql: query.sql,
+        createdAt: query.createdAt,
+        updatedAt: query.updatedAt,
+      }));
     safeSetLocalStorage(SQL_SAVED_QUERIES_KEY, JSON.stringify(compactQueries));
   }, [savedSqlQueries]);
 
@@ -928,10 +983,37 @@ export function useDashboardDesignerState() {
       return;
     }
 
-    const datasource = INITIAL_DATASOURCES.find((item) => item.id === datasourceId) ?? INITIAL_DATASOURCES[0];
+    const datasource = availableDatasources.find((item) => item.id === datasourceId) ?? availableDatasources[0];
+    if (!datasource) {
+      setSnackbar("ไม่พบชุดข้อมูลที่เลือก");
+      return;
+    }
+    const schema = getDatasetSchema(datasource.id, workspaceSnapshot);
+    if (!schema.available) {
+      setRows([]);
+      setFields([]);
+      setSnackbar(schema.message ?? "ชุดข้อมูลนี้ไม่พร้อมใช้งาน");
+      return;
+    }
     setActiveDatasourceId(datasource?.id ?? "researchdb");
     setSelectedTable(datasource?.table ?? DEFAULT_DATASET_ID);
-  }, [activateDemoDataset, config.sourceType, sqlResult]);
+    setRows(getDatasetRows(schema.datasetId, workspaceSnapshot));
+    setFields(schema.fields);
+    setSelectedFieldId(null);
+    setSearchValue("");
+    setActiveTemplateId(null);
+    const availableFieldIds = new Set(schema.fields.map((field) => field.id));
+    commitConfig((current) => ({
+      ...current,
+      sourceType: datasource.sourceType === "local" ? "dataset" : "demo",
+      datasetId: schema.datasetId,
+      mappings: current.mappings.map((slot) => ({
+        ...slot,
+        fields: slot.fields.filter((field) => availableFieldIds.has(field.id)),
+      })),
+      filters: {},
+    }));
+  }, [activateDemoDataset, availableDatasources, commitConfig, config.sourceType, sqlResult, workspaceSnapshot]);
 
   const executeSqlQuery = useCallback((query: string, message = "รัน SQL Query แล้ว") => {
     const execution = runDemoSqlQuery(query, getDatasetRows(DEFAULT_DATASET_ID), dataFields);
@@ -1008,6 +1090,10 @@ export function useDashboardDesignerState() {
   }, [sqlResult]);
 
   const copySqlQuery = useCallback(async () => {
+    if (containsSqlCredentialMaterial(sqlQuery)) {
+      setSnackbar("ไม่สามารถคัดลอก SQL ที่มี credential material ได้");
+      return;
+    }
     const copied = await copyTextToClipboard(sqlQuery);
     setSnackbar(copied ? "คัดลอก SQL Query แล้ว" : "คัดลอก SQL Query ไม่สำเร็จ");
   }, [sqlQuery]);
@@ -1016,6 +1102,10 @@ export function useDashboardDesignerState() {
     const trimmedName = name.trim();
     if (!trimmedName || !sqlQuery.trim()) {
       setSnackbar("กรุณาใส่ชื่อและ SQL Query ก่อนบันทึก");
+      return;
+    }
+    if (containsSqlCredentialMaterial(sqlQuery)) {
+      setSnackbar("ไม่สามารถบันทึก SQL ที่มี credential material ได้");
       return;
     }
     const now = new Date().toISOString();
@@ -1306,9 +1396,11 @@ export function useDashboardDesignerState() {
       setSnackbar(execution.error.message);
       return;
     }
-    setRows(refreshDatasetRows(config.datasetId));
+    const schema = getDatasetSchema(config.datasetId, workspaceSnapshot);
+    setRows(refreshDatasetRows(config.datasetId, workspaceSnapshot));
+    if (schema.available) setFields(schema.fields);
     setSnackbar("รีเฟรชข้อมูลแล้ว");
-  }, [config.datasetId, config.sourceType, sqlQuery]);
+  }, [config.datasetId, config.sourceType, sqlQuery, workspaceSnapshot]);
 
   const addTextElement = useCallback(() => {
     commitConfig((current) => ({
@@ -1377,32 +1469,22 @@ export function useDashboardDesignerState() {
   }, [activeTemplate, config, demoInsights, sqlQuery, sqlResult, transformedData]);
 
   const copyConfig = useCallback(async () => {
+    if (containsSqlCredentialMaterial(sqlQuery)) {
+      setSnackbar("ไม่สามารถคัดลอก config ที่มี SQL credential material ได้");
+      return;
+    }
     const copied = await copyTextToClipboard(JSON.stringify(serializeChartConfig(config, { query: sqlQuery, result: sqlResult }), null, 2));
     setSnackbar(copied ? "คัดลอก config แล้ว" : "คัดลอก config ไม่สำเร็จ");
   }, [config, sqlQuery, sqlResult]);
 
   const copyShareLink = useCallback(async () => {
-    const link = window.location.href;
-    const copied = await copyTextToClipboard(link);
-    if (copied) {
-      setShareCopyFallback(null);
-      setSnackbar("คัดลอกลิงก์แชร์แล้ว");
-      return;
-    }
-    setShareCopyFallback({ label: "Share link", text: link });
-    setSnackbar("เบราว์เซอร์บล็อกการคัดลอกอัตโนมัติ กรุณาคัดลอกลิงก์ด้วยตนเอง");
+    setShareCopyFallback(null);
+    setSnackbar("Share ใช้งานได้จากหน้า Dashboard หลังสร้าง Local snapshot แบบอ่านอย่างเดียว");
   }, []);
 
   const copyShareEmbed = useCallback(async () => {
-    const embedCode = `<iframe src="${window.location.href}" title="Mini BI Dashboard Designer" width="1200" height="720" loading="lazy"></iframe>`;
-    const copied = await copyTextToClipboard(embedCode);
-    if (copied) {
-      setShareCopyFallback(null);
-      setSnackbar("คัดลอก Embed code แล้ว");
-      return;
-    }
-    setShareCopyFallback({ label: "Embed code", text: embedCode });
-    setSnackbar("เบราว์เซอร์บล็อกการคัดลอกอัตโนมัติ กรุณาคัดลอกโค้ดด้วยตนเอง");
+    setShareCopyFallback(null);
+    setSnackbar("Embed ใช้งานได้จากหน้า Dashboard หลังสร้าง Local snapshot แบบอ่านอย่างเดียว");
   }, []);
 
   const togglePreviewMode = useCallback(() => {

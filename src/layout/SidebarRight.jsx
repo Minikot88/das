@@ -1,5 +1,4 @@
 import React, { useMemo, useState } from "react";
-import { InspectorLayout } from "../components/layout/Layout";
 import { useStore } from "../store/useStore";
 
 const WIDGET_LIBRARY_ITEMS = [
@@ -358,13 +357,27 @@ export default function SidebarRight({
     setActiveDashboard(dashboardId);
   }
 
+  function handleInspectorTabKeyDown(event, currentIndex) {
+    let nextIndex = currentIndex;
+    if (event.key === "ArrowRight") nextIndex = (currentIndex + 1) % INSPECTOR_TABS.length;
+    else if (event.key === "ArrowLeft") nextIndex = (currentIndex - 1 + INSPECTOR_TABS.length) % INSPECTOR_TABS.length;
+    else if (event.key === "Home") nextIndex = 0;
+    else if (event.key === "End") nextIndex = INSPECTOR_TABS.length - 1;
+    else return;
+
+    event.preventDefault();
+    const nextTab = INSPECTOR_TABS[nextIndex];
+    setActiveInspectorTab(nextTab.id);
+    document.getElementById(`dashboard-inspector-tab-${nextTab.id}`)?.focus();
+  }
+
   const selectedWidgetTitle = selectedWidget?.name ?? "ยังไม่ได้เลือกวิดเจ็ต";
   const selectedWidgetType = selectedWidget?.typeLabel ?? "พื้นที่วิเคราะห์";
   const selectedWidgetMeta = selectedWidget?.metaLabel ?? "เลือกวิดเจ็ตเพื่อตรวจการตั้งค่าภาพ ข้อมูล และการโต้ตอบ";
 
   if (!isWorkspaceInspector) {
     return (
-      <InspectorLayout className="dashboard-sidebar dashboard-sidebar-home" aria-label="แถบพื้นที่ทำงาน">
+      <aside className="ui-inspector dashboard-sidebar dashboard-sidebar-home" aria-label="แถบพื้นที่ทำงาน">
         <div className="dashboard-sidebar-header dashboard-sidebar-home-header">
           <div className="dashboard-sidebar-header-copy">
             <div className="dashboard-sidebar-kicker">พื้นที่ทำงาน</div>
@@ -407,13 +420,13 @@ export default function SidebarRight({
             {activeProject ? "พื้นที่ทำงานพร้อมแล้ว เปิดแดชบอร์ดเพื่อทำงานต่อ" : "สร้างหรือเปิดโปรเจกต์เพื่อเริ่มพื้นที่ทำงาน"}
           </div>
         </SidebarSection>
-      </InspectorLayout>
+      </aside>
     );
   }
 
   return (
-    <InspectorLayout
-      className={`dashboard-sidebar${isCollapsed ? " is-collapsed" : ""}`}
+    <aside
+      className={`ui-inspector dashboard-sidebar${isCollapsed ? " is-collapsed" : ""}`}
       aria-label="แผงตรวจแดชบอร์ด"
     >
       <div className="dashboard-sidebar-header dashboard-sidebar-header-inspector">
@@ -440,14 +453,18 @@ export default function SidebarRight({
       </div>
       <div className="dashboard-sidebar-body dashboard-inspector-body" id="dashboard-sidebar-content">
         <div className="dashboard-inspector-tabs" role="tablist" aria-label="ส่วนของแผงตรวจ">
-          {INSPECTOR_TABS.map((tab) => (
+          {INSPECTOR_TABS.map((tab, index) => (
             <button
               key={tab.id}
+              id={`dashboard-inspector-tab-${tab.id}`}
               type="button"
               role="tab"
               aria-selected={activeInspectorTab === tab.id}
+              aria-controls={`dashboard-inspector-panel-${tab.id}`}
+              tabIndex={activeInspectorTab === tab.id ? 0 : -1}
               className={`dashboard-inspector-tab${activeInspectorTab === tab.id ? " is-active" : ""}`}
               onClick={() => setActiveInspectorTab(tab.id)}
+              onKeyDown={(event) => handleInspectorTabKeyDown(event, index)}
             >
               {tab.label}
             </button>
@@ -466,7 +483,12 @@ export default function SidebarRight({
         </div>
 
         {activeInspectorTab === "properties" ? (
-          <div className="dashboard-inspector-tab-panel" role="tabpanel">
+          <div
+            className="dashboard-inspector-tab-panel"
+            role="tabpanel"
+            id="dashboard-inspector-panel-properties"
+            aria-labelledby="dashboard-inspector-tab-properties"
+          >
             <InspectorAccordion title="ชื่อวิดเจ็ต" meta={selectedWidgetType}>
               <InspectorControlPreview label="ชื่อ" value={selectedWidgetTitle} helper="ใช้รายการที่เลือกในแดชบอร์ดปัจจุบัน" />
               <InspectorControlPreview label="คำอธิบาย" value={selectedWidget ? selectedWidgetMeta : "ไม่มีคำอธิบายวิดเจ็ต"} />
@@ -490,7 +512,12 @@ export default function SidebarRight({
         ) : null}
 
         {activeInspectorTab === "visual" ? (
-          <div className="dashboard-inspector-tab-panel" role="tabpanel">
+          <div
+            className="dashboard-inspector-tab-panel"
+            role="tabpanel"
+            id="dashboard-inspector-panel-visual"
+            aria-labelledby="dashboard-inspector-tab-visual"
+          >
             <InspectorAccordion title="สี" meta="ธีม">
               <div className="dashboard-inspector-swatch-row">
                 <InspectorSwatch label="หลัก" color="#2563eb" />
@@ -545,7 +572,12 @@ export default function SidebarRight({
         ) : null}
 
         {activeInspectorTab === "data" ? (
-          <div className="dashboard-inspector-tab-panel" role="tabpanel">
+          <div
+            className="dashboard-inspector-tab-panel"
+            role="tabpanel"
+            id="dashboard-inspector-panel-data"
+            aria-labelledby="dashboard-inspector-tab-data"
+          >
             <InspectorAccordion title="ฟิลด์" meta={selectedWidget ? "เลือกแล้ว" : "ไม่มี"}>
               {selectedWidget ? (
                 <div className="dashboard-sidebar-selection-card dashboard-sidebar-selection-card-premium">
@@ -591,7 +623,12 @@ export default function SidebarRight({
         ) : null}
 
         {activeInspectorTab === "interactions" ? (
-          <div className="dashboard-inspector-tab-panel" role="tabpanel">
+          <div
+            className="dashboard-inspector-tab-panel"
+            role="tabpanel"
+            id="dashboard-inspector-panel-interactions"
+            aria-labelledby="dashboard-inspector-tab-interactions"
+          >
             <InspectorAccordion title="เจาะดูข้อมูล" meta="การนำทาง">
               <InspectorTogglePreview label="เปิดการเจาะดูข้อมูล" checked={Boolean(selectedWidget)} helper="พร้อมใช้เมื่อเลือกภาพ" />
               <InspectorTogglePreview label="คงบริบทตัวกรอง" checked helper="รักษาสถานะตัวกรองรวมระหว่างการกระทำ" />
@@ -671,6 +708,6 @@ export default function SidebarRight({
           </div>
         ) : null}
       </div>
-    </InspectorLayout>
+    </aside>
   );
 }

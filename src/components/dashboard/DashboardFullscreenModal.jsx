@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import ChartCard from "./ChartCard";
+import useFocusTrap from "../../hooks/useFocusTrap";
 
 function getFullscreenHeight() {
   if (typeof window === "undefined") return 640;
@@ -19,6 +20,7 @@ export default function DashboardFullscreenModal({
   onClose,
 }) {
   const [pixelHeight, setPixelHeight] = useState(getFullscreenHeight);
+  const dialogRef = useFocusTrap(Boolean(chart), onClose);
 
   useEffect(() => {
     const handleResize = () => setPixelHeight(getFullscreenHeight());
@@ -29,20 +31,12 @@ export default function DashboardFullscreenModal({
   }, []);
 
   useEffect(() => {
-    const handleKeyDown = (event) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    };
-
     document.body.classList.add("dashboard-fullscreen-open");
-    window.addEventListener("keydown", handleKeyDown);
 
     return () => {
       document.body.classList.remove("dashboard-fullscreen-open");
-      window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [onClose]);
+  }, []);
 
   const modalTitle = useMemo(() => chart?.title ?? "วิดเจ็ต", [chart?.title]);
   const chartType = chart?.chartType ?? chart?.type ?? "chart";
@@ -52,10 +46,12 @@ export default function DashboardFullscreenModal({
 
   return (
     <div
+      ref={dialogRef}
       className="dashboard-fullscreen-modal"
       role="dialog"
       aria-modal="true"
       aria-labelledby="dashboard-fullscreen-title"
+      tabIndex={-1}
       onClick={onClose}
     >
       <div

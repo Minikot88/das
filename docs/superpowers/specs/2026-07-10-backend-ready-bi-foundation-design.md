@@ -1,8 +1,12 @@
 # Backend-ready BI Foundation Design
 
-**Status:** Approved by the explicit Goal Mode requirements
+**Status:** Historical design input - not approved for implementation
 **Date:** 2026-07-10
 **Project:** DashboardMiniBi
+
+> Execution is governed by `docs/audit-remediation-plan.md`. The architecture
+> and phase boundaries below predate the authoritative 2026-07-11 Phase 1-8
+> objective and are retained only as design context.
 
 ## Purpose
 
@@ -78,4 +82,3 @@ Each step must disclose whether it is local demo behavior, an available read-onl
 ## Completion contract
 
 The goal is complete only when all 22 audit roadmap items are fixed, safely disabled, tested, or explicitly assigned to backend work; Phase 1–8 verification documents exist; `npm run check` and `npm run build` pass; no unresolved high audit finding remains without a safe documented exception; and the local primary journey reaches either a working safe read-only view or an honest backend-required state.
-

@@ -224,9 +224,11 @@ function getChartKind(config = {}) {
 function applyResponsiveOptions(config, chartKind, density = "normal") {
   const nextConfig = config;
   nextConfig.options = nextConfig.options ?? {};
-  nextConfig.options.responsive = true;
+  // This renderer owns resize scheduling below. Keeping Chart.js responsive mode
+  // enabled installs a second observer that can fire after React detaches the
+  // canvas during fast route transitions.
+  nextConfig.options.responsive = false;
   nextConfig.options.maintainAspectRatio = false;
-  nextConfig.options.resizeDelay = nextConfig.options.resizeDelay ?? 80;
 
   nextConfig.options.layout = {
     ...(nextConfig.options.layout ?? {}),
@@ -398,28 +400,6 @@ function destroyChart(chartInstance) {
     }
   }
 }
-
-let chartJsDetachedCanvasErrorGuardInstalled = false;
-
-function installChartJsDetachedCanvasErrorGuard() {
-  if (chartJsDetachedCanvasErrorGuardInstalled || typeof window === "undefined") return;
-  chartJsDetachedCanvasErrorGuardInstalled = true;
-
-  window.addEventListener("error", (event) => {
-    const message = String(event.message ?? event.error?.message ?? "");
-    const stack = String(event.error?.stack ?? "");
-    const isChartJsDetachedCanvasResize =
-      message.includes("ownerDocument") &&
-      stack.includes("chart__js_auto");
-
-    if (isChartJsDetachedCanvasResize) {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-    }
-  }, true);
-}
-
-installChartJsDetachedCanvasErrorGuard();
 
 export default function ChartJsRenderer({
   chart = {},

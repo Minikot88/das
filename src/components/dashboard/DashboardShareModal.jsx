@@ -115,7 +115,7 @@ export default function DashboardShareModal({
             <span className="dashboard-share-kicker">แชร์แดชบอร์ด</span>
             <h2 className="dashboard-share-title" id="dashboard-share-title">{dashboardName}</h2>
             <p className="dashboard-share-description">
-              ส่งออกเป็นรูปภาพ คัดลอกลิงก์สาธารณะ หรือสร้างโค้ดฝัง iframe
+              ส่งออกเป็นรูปภาพ หรือสร้างลิงก์อ่านอย่างเดียวสำหรับเบราว์เซอร์เครื่องนี้
             </p>
           </div>
           <button type="button" className="dashboard-share-close" onClick={onClose} aria-label="ปิดหน้าต่างแชร์">
@@ -174,11 +174,11 @@ export default function DashboardShareModal({
           {activeTab === "share" ? (
             <section className="dashboard-share-panel">
               <div className="dashboard-share-panel-copy">
-                <strong>ลิงก์สาธารณะ</strong>
-                <p>เปิดแดชบอร์ดแบบอ่านอย่างเดียวโดยซ่อนเครื่องมือแก้ไข</p>
+                <strong>ลิงก์ Local แบบอ่านอย่างเดียว</strong>
+                <p>เปิดได้เฉพาะโปรไฟล์เบราว์เซอร์ที่มีข้อมูลนี้ ไม่ใช่ลิงก์สาธารณะหรือการกำหนดสิทธิ์จากเซิร์ฟเวอร์</p>
               </div>
               <label className="dashboard-share-field">
-                <span>URL สาธารณะ</span>
+                <span>URL ภายในเบราว์เซอร์</span>
                 <textarea readOnly value={publicUrl} className="dashboard-share-textarea" />
               </label>
               <div className="dashboard-share-action-row">
@@ -196,7 +196,7 @@ export default function DashboardShareModal({
             <section className="dashboard-share-panel">
               <div className="dashboard-share-panel-copy">
                 <strong>ฝังด้วย iframe</strong>
-                <p>ฝังในหน้าภายนอกด้วยโหมดดูข้อมูลที่สะอาดตา</p>
+                <p>ตัวอย่าง iframe แบบ Local เท่านั้น ผู้ชมต้องใช้เบราว์เซอร์โปรไฟล์เดียวกัน การเผยแพร่จริงต้องมี backend</p>
               </div>
 
               <div className="dashboard-share-form-grid">

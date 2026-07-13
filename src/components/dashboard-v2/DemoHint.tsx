@@ -1,4 +1,4 @@
-import React, { memo, useEffect, useState } from "react";
+import React, { memo, useState } from "react";
 import TipsAndUpdatesRoundedIcon from "@mui/icons-material/TipsAndUpdatesRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import { Box, IconButton, Stack, Typography } from "@mui/material";
@@ -10,13 +10,18 @@ type DemoHintProps = {
   description: string;
 };
 
+function isHintVisible(storageKey: string) {
+  if (typeof window === "undefined") return true;
+  try {
+    return window.localStorage.getItem(storageKey) !== "hidden";
+  } catch {
+    return true;
+  }
+}
+
 function DemoHint({ id, title, description }: DemoHintProps) {
   const storageKey = `dashboard-v2-demo-hint-${id}`;
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    setVisible(window.localStorage.getItem(storageKey) !== "hidden");
-  }, [storageKey]);
+  const [visible, setVisible] = useState(() => isHintVisible(storageKey));
 
   if (!visible) return null;
 
@@ -43,7 +48,11 @@ function DemoHint({ id, title, description }: DemoHintProps) {
         <IconButton
           aria-label="ซ่อนคำแนะนำ"
           onClick={() => {
-            window.localStorage.setItem(storageKey, "hidden");
+            try {
+              window.localStorage.setItem(storageKey, "hidden");
+            } catch {
+              // Keep the hint dismissible for this session when storage is blocked.
+            }
             setVisible(false);
           }}
           sx={{ width: 22, height: 22 }}

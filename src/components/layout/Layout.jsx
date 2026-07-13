@@ -1,9 +1,21 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import AppHeader from "../../layout/AppHeader";
 import SidebarRight from "../../layout/SidebarRight";
 import { useStore } from "../../store/useStore";
 import { applyThemeMode } from "../../utils/themeMode";
+
+const ROUTE_TITLES = {
+  "/": "Home",
+  "/home": "Home",
+  "/dashboard": "Dashboard",
+  "/dashboard-v2": "Chart Designer",
+  "/dashboard-legacy": "Dashboard workspace",
+  "/builder": "Chart Builder",
+  "/connections": "Connections",
+  "/datasets": "Datasets",
+  "/settings": "Settings",
+};
 
 function joinClassNames(...values) {
   return values.filter(Boolean).join(" ");
@@ -73,6 +85,7 @@ export function MainLayout() {
   const sidebarCollapsed = useStore((state) => state.sidebarCollapsed);
   const setMobileMenuOpen = useStore((state) => state.setMobileMenuOpen);
   const location = useLocation();
+  const mainRef = useRef(null);
 
   useEffect(() => {
     applyThemeMode(theme);
@@ -95,6 +108,15 @@ export function MainLayout() {
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [location.pathname, setMobileMenuOpen]);
+
+  useEffect(() => {
+    const routeTitle = ROUTE_TITLES[location.pathname] ?? "Workspace";
+    document.title = `${routeTitle} | Mini BI`;
+    const frameId = window.requestAnimationFrame(() => {
+      mainRef.current?.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frameId);
+  }, [location.pathname]);
 
   const isDashboardCanvasRoute = location.pathname === "/dashboard";
   const isChartDesignerRoute = location.pathname === "/dashboard-v2";
@@ -128,9 +150,10 @@ export function MainLayout() {
 
   return (
     <div className={shellClassName}>
+      <a className="skip-link" href="#main-content">ข้ามไปยังเนื้อหาหลัก</a>
       <AppHeader />
       <div className="body-row">
-        <main className={mainClassName} id="main-content" role="main">
+        <main ref={mainRef} className={mainClassName} id="main-content" role="main" tabIndex={-1}>
           <Outlet />
         </main>
         {!isWorkspaceRoute && !isHomeRoute && !isConnectionRoute ? <SidebarRight /> : null}

@@ -37,11 +37,11 @@ function DraggableField({
 
   return (
     <Box
-      ref={dragRef}
+      ref={(node: HTMLDivElement | null) => { dragRef(node); }}
       role="treeitem"
       tabIndex={0}
       onClick={() => onSelect?.(field)}
-      onKeyDown={(event) => {
+      onKeyDown={(event: React.KeyboardEvent<HTMLDivElement>) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
           onSelect?.(field);

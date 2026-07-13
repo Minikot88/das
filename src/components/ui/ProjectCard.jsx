@@ -39,15 +39,6 @@ export default function ProjectCard({
     <div
       className={`project-card${isActive ? " active" : ""}`}
       onClick={() => onOpen(project.id)}
-      role="button"
-      aria-label={`เปิดโปรเจกต์ ${project.name}`}
-      tabIndex={0}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          onOpen(project.id);
-        }
-      }}
     >
       <div className="project-card-accent" />
       <div className="project-card-body">
@@ -145,11 +136,13 @@ export default function ProjectCard({
               title="จัดการ"
               aria-label="จัดการ"
               aria-expanded={menuOpen}
+              aria-haspopup="menu"
+              aria-controls={menuOpen ? `project-card-menu-${project.id}` : undefined}
             >
               จัดการ
             </button>
             {menuOpen ? (
-              <div className="project-card-menu" role="menu">
+              <div className="project-card-menu" role="menu" id={`project-card-menu-${project.id}`}>
                 <button type="button" role="menuitem" onClick={() => setRenamingOpen(true)}>
                   เปลี่ยนชื่อโปรเจกต์
                 </button>

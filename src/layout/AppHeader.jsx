@@ -5,7 +5,11 @@ import CommandPaletteModal from "../components/bi/CommandPaletteModal";
 import DatasetExplorerModal from "../components/bi/DatasetExplorerModal";
 import { TEMPLATE_GALLERY_CATALOG } from "../data/templateGalleryCatalog";
 import useNavigationControls from "../hooks/useNavigationControls";
-import { getActiveDashboard as getStoredActiveDashboard, getActiveProject as getStoredActiveProject } from "../services/projectStorage";
+import {
+  getActiveDashboard as getStoredActiveDashboard,
+  getActiveProject as getStoredActiveProject,
+  setActiveProject as setStoredActiveProject,
+} from "../services/projectStorage";
 import { createBuilderContextForDashboard } from "../utils/dashboardWorkspace";
 import { getStorageHealth, subscribeStorageHealth } from "../utils/storage";
 
@@ -504,7 +508,9 @@ export default function AppHeader() {
   const activeProjectId = useStore((s) => s.activeProjectId);
   const activeSheetId = useStore((s) => s.activeSheetId);
   const activeDashboardId = useStore((s) => s.activeDashboardId);
-  const setActiveProject = useStore((s) => s.setActiveProject);
+  const setActiveProject = useCallback((projectId) => {
+    setStoredActiveProject(projectId);
+  }, []);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [datasetExplorerOpen, setDatasetExplorerOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);

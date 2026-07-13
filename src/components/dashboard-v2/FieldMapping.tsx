@@ -103,7 +103,7 @@ function MappingChip({
 
   return (
     <Chip
-      ref={dragRef}
+      ref={(node) => { dragRef(node); }}
       icon={<DragIndicatorRoundedIcon />}
       label={label}
       onDelete={onRemove}
@@ -147,7 +147,7 @@ function FilterControl({
   const values = useMemo(() => getDistinctFieldValues(rows, field.id), [field.id, rows]);
 
   if (field.type === "number" || field.type === "currency" || field.type === "percentage") {
-    const numberValue = value?.type === "number" ? value : { type: "number", min: "", max: "" };
+    const numberValue: Extract<FilterValue, { type: "number" }> = value?.type === "number" ? value : { type: "number", min: "", max: "" };
     return (
       <Stack direction="row" spacing={0.75}>
         <TextField
@@ -169,7 +169,7 @@ function FilterControl({
   }
 
   if (field.type === "date") {
-    const dateValue = value?.type === "date" ? value : { type: "date", start: "", end: "" };
+    const dateValue: Extract<FilterValue, { type: "date" }> = value?.type === "date" ? value : { type: "date", start: "", end: "" };
     return (
       <Stack direction="row" spacing={0.75}>
         <TextField
@@ -283,8 +283,8 @@ function MappingDropZone({
 
   return (
     <Box
-      ref={dropRef}
-      onClick={(event) => {
+      ref={(node: HTMLDivElement | null) => { dropRef(node); }}
+      onClick={(event: React.MouseEvent<HTMLDivElement>) => {
         if (!selectedField || isInteractiveTarget(event.target)) return;
         onDropField(slot.id, selectedField);
       }}
@@ -357,6 +357,12 @@ function MappingDropZone({
             ))
           ) : (
             <Box
+              component="button"
+              type="button"
+              disabled={!selectedFieldCompatible}
+              onClick={() => {
+                if (selectedFieldCompatible && selectedField) onDropField(slot.id, selectedField);
+              }}
               aria-label={selectedField ? `คลิกเพื่อใส่ ${selectedField.name} ใน ${slot.label}` : `ลากฟิลด์มาที่ ${slot.label}`}
               sx={{
                 width: "100%",
@@ -371,7 +377,13 @@ function MappingDropZone({
                 fontSize: 10,
                 lineHeight: 1.35,
                 fontWeight: 400,
+                fontFamily: "inherit",
                 cursor: selectedFieldCompatible ? "copy" : "default",
+                appearance: "none",
+                "&:focus-visible": {
+                  outline: `2px solid ${tokens.color.focusRing}`,
+                  outlineOffset: 2,
+                },
               }}
             >
               ลากฟิลด์มาที่นี่
