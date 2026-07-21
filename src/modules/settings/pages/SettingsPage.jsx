@@ -94,7 +94,7 @@ export default function SettingsPage() {
         if (!active) return;
         setServerPreferences(saved);
         updateAppSettings({
-          ...(saved.theme ? { theme: saved.theme } : {}),
+          theme: SETTINGS_OPTIONS.theme.some((option) => option.value === saved.theme) ? saved.theme : "light",
           ...(saved.density ? { density: saved.density } : {}),
           ...(SETTINGS_OPTIONS.dateFormat.some((option) => option.value === saved.dateFormat) ? { dateFormat: saved.dateFormat } : {}),
           ...(SETTINGS_OPTIONS.numberFormat.some((option) => option.value === saved.numberFormat) ? { numberFormat: saved.numberFormat } : {}),

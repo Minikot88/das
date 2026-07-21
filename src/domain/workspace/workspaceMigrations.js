@@ -389,7 +389,7 @@ function convertZustand(source, clock, warnings = []) {
     projects,
     settings: {
       ...(isObject(source.appSettings) ? source.appSettings : {}),
-      theme: asString(source.appSettings?.theme ?? source.theme, "system"),
+      theme: asString(source.appSettings?.theme ?? source.theme, "light"),
       locale: asString(source.locale, "th"),
     },
     activeProjectId,

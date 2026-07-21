@@ -81,7 +81,7 @@ describe("workspace compatibility projections", () => {
       activeProjectId: "project-1",
       activeSheetId: "sheet-1",
       activeDashboardId: "dashboard-1",
-      theme: "system",
+      theme: "light",
       locale: "th",
       user: { id: "demo-user" },
       isAuthenticated: true,

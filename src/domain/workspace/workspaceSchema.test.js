@@ -24,7 +24,7 @@ describe("workspace schema", () => {
       active: { projectId: null, dashboardId: null },
       projects: [],
       settings: {
-        theme: "system",
+        theme: "light",
         locale: "th",
         density: "comfortable",
         dateFormat: "MMM d, yyyy",
@@ -167,7 +167,7 @@ describe("workspace schema", () => {
 
     const normalized = normalizeWorkspaceDocument(input, { clock: fixedClock });
 
-    expect(normalized.settings.theme).toBe("system");
+    expect(normalized.settings.theme).toBe("light");
     expect(normalized.settings.locale).toBe("th");
     expect(input).toEqual(original);
   });

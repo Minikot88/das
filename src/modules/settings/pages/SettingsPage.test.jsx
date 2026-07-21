@@ -74,7 +74,7 @@ describe("SettingsPage feature honesty", () => {
     runtimeMode.mock = false;
     preferencesApi.load.mockResolvedValue({
       revision: 4,
-      theme: "dark",
+      theme: "system",
       density: "compact",
       dateFormat: "yyyy-MM-dd",
       numberFormat: "standard",
@@ -86,7 +86,7 @@ describe("SettingsPage feature honesty", () => {
 
     expect(await screen.findByRole("status")).toHaveTextContent("บันทึกการตั้งค่าแล้ว");
     expect(updateAppSettings).toHaveBeenCalledWith(expect.objectContaining({
-      theme: "dark",
+      theme: "light",
       density: "compact",
       dateFormat: "yyyy-MM-dd",
       numberFormat: "standard",
