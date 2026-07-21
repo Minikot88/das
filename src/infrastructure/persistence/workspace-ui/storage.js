@@ -1,4 +1,4 @@
-import { workspaceRepository } from "@domain/workspace/workspaceRepository";
+import { workspaceRepository } from "@infrastructure/persistence/workspace-repository/workspaceRepository";
 import {
   mergeZustandWorkspaceSnapshot,
   toZustandWorkspaceSnapshot,

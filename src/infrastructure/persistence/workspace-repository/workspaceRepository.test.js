@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { CANONICAL_WORKSPACE_KEY, MIGRATION_MARKER_KEY } from "@domain/workspace/workspaceSchema";
-import { createLocalWorkspaceRepository } from "@domain/workspace/workspaceRepository";
+import { createLocalWorkspaceRepository } from "@infrastructure/persistence/workspace-repository/workspaceRepository";
 import {
   createProjectStorageLegacyFixture,
   createZustandLegacyFixture,

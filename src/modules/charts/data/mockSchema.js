@@ -1,4 +1,4 @@
-import { mockDataset } from "@/data/mockData.js";
+import { mockDataset } from "@infrastructure/mock/mockData.js";
 
 export const mockSchema = {
   datasetId: mockDataset.id,

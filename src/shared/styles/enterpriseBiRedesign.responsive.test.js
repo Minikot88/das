@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import appStylesheet from "@/styles.css?raw";
-import stylesheet from "@/styles/enterpriseBiRedesign.css?raw";
-import darkModeStylesheet from "@/styles/realDarkMode.css?raw";
+import appStylesheet from "@shared/styles/index.css?raw";
+import stylesheet from "@shared/styles/enterpriseBiRedesign.css?raw";
+import darkModeStylesheet from "@shared/styles/realDarkMode.css?raw";
 
 describe("dashboard inspector responsive styles", () => {
   it("does not hide the inspector that contains the properties controls", () => {

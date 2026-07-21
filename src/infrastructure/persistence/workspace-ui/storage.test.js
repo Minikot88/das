@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { getStorageHealth, saveWorkspaceState, subscribeStorageHealth } from "@/utils/storage";
+import { getStorageHealth, saveWorkspaceState, subscribeStorageHealth } from "@infrastructure/persistence/workspace-ui/storage";
 
 describe("storage reliability", () => {
   it("notifies subscribers when workspace persistence fails", () => {

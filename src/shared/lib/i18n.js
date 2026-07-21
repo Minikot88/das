@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useStore } from "@/store/useStore";
+import { useStore } from "@app/store/useStore";
 
 const translations = {
   en: {

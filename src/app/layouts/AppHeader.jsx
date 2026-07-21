@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useStore } from "@/store/useStore";
-import CommandPaletteModal from "@/components/bi/CommandPaletteModal";
+import { useStore } from "@app/store/useStore";
+import CommandPaletteModal from "@app/components/command-palette/CommandPaletteModal";
 import DatasetExplorerModal from "@modules/datasets/components/DatasetExplorerModal";
 import { TEMPLATE_GALLERY_CATALOG } from "@modules/charts/data/templateGalleryCatalog";
 import useNavigationControls from "@shared/hooks/useNavigationControls";
@@ -9,9 +9,9 @@ import {
   getActiveDashboard as getStoredActiveDashboard,
   getActiveProject as getStoredActiveProject,
   setActiveProject as setStoredActiveProject,
-} from "@/services/projectStorage";
+} from "@infrastructure/persistence/project-storage/projectStorage";
 import { createBuilderContextForDashboard } from "@modules/dashboards/lib/dashboardWorkspace";
-import { getStorageHealth, subscribeStorageHealth } from "@/utils/storage";
+import { getStorageHealth, subscribeStorageHealth } from "@infrastructure/persistence/workspace-ui/storage";
 
 const RIBBON_TABS = [
   { id: "home", label: "หน้าหลัก", routes: ["/", "/home"] },

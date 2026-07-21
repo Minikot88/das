@@ -13,15 +13,15 @@ const storeState = {
   resolveShareLink: () => null,
 };
 
-vi.mock("@/domain/workspace/workspaceSelectors", () => ({
+vi.mock("@app/store/useWorkspaceSelector", () => ({
   useWorkspaceSelector: (selector) => selector(workspace),
 }));
 
-vi.mock("@/store/useStore", () => ({
+vi.mock("@app/store/useStore", () => ({
   useStore: (selector) => selector(storeState),
 }));
 
-vi.mock("@/components/dashboard/DashboardGrid", () => ({
+vi.mock("@modules/dashboards/legacy/components/DashboardGrid", () => ({
   default: ({ widgets, isEditable }) => (
     <div data-testid="readonly-grid" data-editable={String(isEditable)}>
       {widgets.map((widget) => <span key={widget.id}>{widget.title}</span>)}

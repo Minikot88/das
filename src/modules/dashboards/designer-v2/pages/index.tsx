@@ -21,7 +21,7 @@ import type { ChartType } from "@modules/dashboards/designer-v2/components/types
 import {
   setActiveDashboard as setStoredActiveDashboard,
   setActiveProject as setStoredActiveProject,
-} from "@/services/projectStorage";
+} from "@infrastructure/persistence/project-storage/projectStorage";
 
 const PreviewCanvas = lazy(() => import("@modules/dashboards/designer-v2/components/PreviewCanvas"));
 const PropertyPanel = lazy(() => import("@modules/dashboards/designer-v2/components/PropertyPanel"));

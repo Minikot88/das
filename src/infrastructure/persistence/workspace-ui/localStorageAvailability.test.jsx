@@ -1,9 +1,9 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import DemoHint from "@modules/dashboards/designer-v2/components/DemoHint";
-import { safeSetLocalStorage } from "@/services/projectStorage";
+import { safeSetLocalStorage } from "@infrastructure/persistence/project-storage/projectStorage";
 import { deleteSavedChart } from "@modules/charts/persistence/savedChartsStorage";
-import { loadBuilderDraft } from "@/utils/storage";
+import { loadBuilderDraft } from "@infrastructure/persistence/workspace-ui/storage";
 import { readStoredThemeMode, writeStoredThemeMode } from "@shared/lib/themeMode";
 
 const originalLocalStorageDescriptor = Object.getOwnPropertyDescriptor(window, "localStorage");

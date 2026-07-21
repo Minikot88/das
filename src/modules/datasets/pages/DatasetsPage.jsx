@@ -2,9 +2,10 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageContainer, PageHeader } from "@app/layouts/Layout";
 import EnterpriseDataTable from "@shared/components/ui/EnterpriseDataTable";
-import { mockDataset } from "@/data/mockData";
-import { selectProjectDatasets, useWorkspaceSelector } from "@domain/workspace/workspaceSelectors";
-import { useStore } from "@/store/useStore";
+import { mockDataset } from "@infrastructure/mock/mockData";
+import { selectProjectDatasets } from "@domain/workspace/workspaceSelectors";
+import { useWorkspaceSelector } from "@app/store/useWorkspaceSelector";
+import { useStore } from "@app/store/useStore";
 import { createDatasetFromCsv, parseCsvTextAsync, validateCsvFile } from "@modules/datasets/lib/csvImport";
 
 function datasetColumns(dataset) {

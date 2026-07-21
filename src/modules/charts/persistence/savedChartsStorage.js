@@ -9,7 +9,7 @@ import {
   replaceCharts as replaceProjectCharts,
   safeSetLocalStorage,
   upsertChart as upsertProjectChart,
-} from "@/services/projectStorage";
+} from "@infrastructure/persistence/project-storage/projectStorage";
 import { repairMojibakeText, repairObjectText } from "@shared/lib/textEncodingRepair";
 import { normalizeChartDataContract } from "@domain/charts/chartDataContract";
 

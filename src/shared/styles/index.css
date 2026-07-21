@@ -1,21 +1,21 @@
 /* src/styles.css */
 
-@import "./styles/tokens.css";
-@import "./styles/theme.css";
-@import "./styles/globals.css";
-@import "./styles/layout.css";
-@import "./styles/components.css";
-@import "./styles/auth.css";
-@import "./styles/charts.css";
-@import "./styles/builder.css";
-@import "./styles/dashboard.css";
-@import "./styles/workspacePolish.css";
-@import "./styles/homeWorkspaceCompact.css";
-@import "./styles/builderDocs.css";
-@import "./styles/themeModes.css";
-@import "./styles/dashboardSquareTiles.css";
-@import "./styles/enterprisePolish.css";
-@import "./styles/layoutArchitecturePass.css";
+@import "./tokens.css";
+@import "./theme.css";
+@import "./globals.css";
+@import "./layout.css";
+@import "./components.css";
+@import "./auth.css";
+@import "./charts.css";
+@import "./builder.css";
+@import "./dashboard.css";
+@import "./workspacePolish.css";
+@import "./homeWorkspaceCompact.css";
+@import "./builderDocs.css";
+@import "./themeModes.css";
+@import "./dashboardSquareTiles.css";
+@import "./enterprisePolish.css";
+@import "./layoutArchitecturePass.css";
 
 .sr-only {
   position: absolute;

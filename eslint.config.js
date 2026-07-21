@@ -29,7 +29,7 @@ export default defineConfig([
   },
   {
     files: [
-      'src/components/bi/CommandPaletteModal.jsx',
+      'src/app/components/command-palette/CommandPaletteModal.jsx',
       'src/modules/charts/components/ChartJsRenderer.jsx',
       'src/modules/charts/builder/ChartTypePicker.jsx',
       'src/modules/charts/builder/FieldList.jsx',

@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { createLocalWorkspaceRepository } from "@domain/workspace/workspaceRepository";
+import { createLocalWorkspaceRepository } from "@infrastructure/persistence/workspace-repository/workspaceRepository";
 import {
   selectActiveDashboard,
   selectActiveProject,
@@ -10,8 +10,8 @@ import {
   selectProjectDatasets,
   selectProjects,
   selectShareById,
-  useWorkspaceSelector,
 } from "@domain/workspace/workspaceSelectors";
+import { useWorkspaceSelector } from "@app/store/useWorkspaceSelector";
 import { createProjectStorageLegacyFixture, createZustandLegacyFixture, fixedClock } from "@domain/workspace/__fixtures__/workspaceFixtures";
 
 function createRepository() {

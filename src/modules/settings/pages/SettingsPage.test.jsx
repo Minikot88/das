@@ -20,7 +20,7 @@ const storeState = {
   updateAppSettings,
 };
 
-vi.mock("../store/useStore", () => ({
+vi.mock("@app/store/useStore", () => ({
   useStore: (selector) => selector(storeState),
 }));
 

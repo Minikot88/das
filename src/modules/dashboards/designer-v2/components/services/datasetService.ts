@@ -1,4 +1,4 @@
-import { workspaceRepository } from "@domain/workspace/workspaceRepository";
+import { workspaceRepository } from "@infrastructure/persistence/workspace-repository/workspaceRepository";
 import { demoDataFields, demoDatasources, demoRows, type DemoDatasource, type DemoDatasetRow } from "@modules/dashboards/designer-v2/components/data/demoDataset";
 import type { Aggregation, DataField, FieldType, SemanticType } from "@modules/dashboards/designer-v2/components/types";
 

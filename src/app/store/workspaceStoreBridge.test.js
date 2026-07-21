@@ -17,8 +17,8 @@ describe("Zustand workspace compatibility subscription", () => {
 
   it("updates Zustand workspace state after a same-tab repository mutation", async () => {
     const [{ useStore }, projectStorage] = await Promise.all([
-      import("@/store/useStore"),
-      import("@/services/projectStorage"),
+      import("@app/store/useStore"),
+      import("@infrastructure/persistence/project-storage/projectStorage"),
     ]);
 
     const created = projectStorage.createProject("Repository-created project");
@@ -29,7 +29,7 @@ describe("Zustand workspace compatibility subscription", () => {
   });
 
   it("projects canonical dataset rows into legacy chart replay", async () => {
-    const { useStore } = await import("@/store/useStore");
+    const { useStore } = await import("@app/store/useStore");
 
     const chart = useStore.getState().charts.find((item) => item.id === "chart-shared");
 
@@ -38,7 +38,7 @@ describe("Zustand workspace compatibility subscription", () => {
   });
 
   it("assigns imported datasets to the active project immediately", async () => {
-    const { useStore } = await import("@/store/useStore");
+    const { useStore } = await import("@app/store/useStore");
 
     useStore.getState().importDataset({
       id: "dataset-imported",
@@ -54,8 +54,8 @@ describe("Zustand workspace compatibility subscription", () => {
 
   it("preserves imported field identifiers and semantic metadata across canonical persistence", async () => {
     const [{ useStore }, { workspaceRepository }] = await Promise.all([
-      import("@/store/useStore"),
-      import("@domain/workspace/workspaceRepository"),
+      import("@app/store/useStore"),
+      import("@infrastructure/persistence/workspace-repository/workspaceRepository"),
     ]);
 
     useStore.getState().importDataset({
@@ -86,8 +86,8 @@ describe("Zustand workspace compatibility subscription", () => {
     vi.useFakeTimers();
     try {
       const [{ useStore }, { workspaceRepository }] = await Promise.all([
-        import("@/store/useStore"),
-        import("@domain/workspace/workspaceRepository"),
+        import("@app/store/useStore"),
+        import("@infrastructure/persistence/workspace-repository/workspaceRepository"),
       ]);
       useStore.getState().importDataset({
         id: "dataset-delete-me",
@@ -112,8 +112,8 @@ describe("Zustand workspace compatibility subscription", () => {
     vi.useFakeTimers();
     try {
       const [{ useStore }, { workspaceRepository }] = await Promise.all([
-        import("@/store/useStore"),
-        import("@domain/workspace/workspaceRepository"),
+        import("@app/store/useStore"),
+        import("@infrastructure/persistence/workspace-repository/workspaceRepository"),
       ]);
 
       useStore.getState().deleteChart("chart-shared");
@@ -131,8 +131,8 @@ describe("Zustand workspace compatibility subscription", () => {
     vi.useFakeTimers();
     try {
       const [{ useStore }, { workspaceRepository }] = await Promise.all([
-        import("@/store/useStore"),
-        import("@domain/workspace/workspaceRepository"),
+        import("@app/store/useStore"),
+        import("@infrastructure/persistence/workspace-repository/workspaceRepository"),
       ]);
 
       useStore.getState().clearDashboard("sheet-1", "dashboard-1");
@@ -149,8 +149,8 @@ describe("Zustand workspace compatibility subscription", () => {
     vi.useFakeTimers();
     try {
       const [{ useStore }, { workspaceRepository }] = await Promise.all([
-        import("@/store/useStore"),
-        import("@domain/workspace/workspaceRepository"),
+        import("@app/store/useStore"),
+        import("@infrastructure/persistence/workspace-repository/workspaceRepository"),
       ]);
       workspaceRepository.upsertProject({ id: "project-delete-me", name: "Temporary project" });
       expect(useStore.getState().projects.some((project) => project.id === "project-delete-me")).toBe(true);
@@ -169,8 +169,8 @@ describe("Zustand workspace compatibility subscription", () => {
     vi.useFakeTimers();
     try {
       const [{ useStore }, { workspaceRepository }] = await Promise.all([
-        import("@/store/useStore"),
-        import("@domain/workspace/workspaceRepository"),
+        import("@app/store/useStore"),
+        import("@infrastructure/persistence/workspace-repository/workspaceRepository"),
       ]);
       workspaceRepository.update((workspace) => ({
         ...workspace,
@@ -206,8 +206,8 @@ describe("Zustand workspace compatibility subscription", () => {
     vi.useFakeTimers();
     try {
       const [{ useStore }, { workspaceRepository }] = await Promise.all([
-        import("@/store/useStore"),
-        import("@domain/workspace/workspaceRepository"),
+        import("@app/store/useStore"),
+        import("@infrastructure/persistence/workspace-repository/workspaceRepository"),
       ]);
       workspaceRepository.update((workspace) => ({
         ...workspace,
@@ -240,8 +240,8 @@ describe("Zustand workspace compatibility subscription", () => {
     vi.useFakeTimers();
     try {
       const [{ useStore }, { workspaceRepository }] = await Promise.all([
-        import("@/store/useStore"),
-        import("@domain/workspace/workspaceRepository"),
+        import("@app/store/useStore"),
+        import("@infrastructure/persistence/workspace-repository/workspaceRepository"),
       ]);
       const widgetId = workspaceRepository.getSnapshot().projects[0].dashboards[0].widgets[0].id;
 
@@ -256,7 +256,7 @@ describe("Zustand workspace compatibility subscription", () => {
   });
 
   it("ignores chart saves without an active project without writing console noise", async () => {
-    const { useStore } = await import("@/store/useStore");
+    const { useStore } = await import("@app/store/useStore");
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     const chartsBefore = useStore.getState().charts;
     useStore.setState({ activeProjectId: null });
@@ -273,8 +273,8 @@ describe("Zustand workspace compatibility subscription", () => {
     vi.resetModules();
 
     const [{ useStore }, { workspaceRepository }] = await Promise.all([
-      import("@/store/useStore"),
-      import("@domain/workspace/workspaceRepository"),
+      import("@app/store/useStore"),
+      import("@infrastructure/persistence/workspace-repository/workspaceRepository"),
     ]);
     const state = useStore.getState();
     const snapshot = workspaceRepository.getSnapshot();
@@ -289,8 +289,8 @@ describe("Zustand workspace compatibility subscription", () => {
 
   it("projects same-tab canonical shares into the readonly resolver", async () => {
     const [{ useStore }, { workspaceRepository }] = await Promise.all([
-      import("@/store/useStore"),
-      import("@domain/workspace/workspaceRepository"),
+      import("@app/store/useStore"),
+      import("@infrastructure/persistence/workspace-repository/workspaceRepository"),
     ]);
     workspaceRepository.upsertShare("project-1", {
       id: "share-browser",
@@ -308,11 +308,11 @@ describe("Zustand workspace compatibility subscription", () => {
 
   it("replays exact imported data through designer chart save dashboard placement and refresh", async () => {
     const [{ useStore }, savedCharts, projectStorage, datasetService, { workspaceRepository: initialRepository }] = await Promise.all([
-      import("@/store/useStore"),
+      import("@app/store/useStore"),
       import("@modules/charts/persistence/savedChartsStorage"),
-      import("@/services/projectStorage"),
+      import("@infrastructure/persistence/project-storage/projectStorage"),
       import("@modules/dashboards/designer-v2/components/services/datasetService"),
-      import("@domain/workspace/workspaceRepository"),
+      import("@infrastructure/persistence/workspace-repository/workspaceRepository"),
     ]);
     const rows = [
       { region: "North", revenue: 12800000 },
@@ -353,8 +353,8 @@ describe("Zustand workspace compatibility subscription", () => {
 
     vi.resetModules();
     const [{ workspaceRepository }, refreshedProjectStorage, refreshedSavedCharts, refreshedChartContract] = await Promise.all([
-      import("@domain/workspace/workspaceRepository"),
-      import("@/services/projectStorage"),
+      import("@infrastructure/persistence/workspace-repository/workspaceRepository"),
+      import("@infrastructure/persistence/project-storage/projectStorage"),
       import("@modules/charts/persistence/savedChartsStorage"),
       import("@domain/charts/chartDataContract"),
     ]);
@@ -377,7 +377,7 @@ describe("Zustand workspace compatibility subscription", () => {
   it("replays a built-in demo chart through dashboard placement and refresh", async () => {
     const [savedCharts, projectStorage] = await Promise.all([
       import("@modules/charts/persistence/savedChartsStorage"),
-      import("@/services/projectStorage"),
+      import("@infrastructure/persistence/project-storage/projectStorage"),
     ]);
     const rows = [{ region: "North", revenue: 12800000 }];
     const fields = [
@@ -407,8 +407,8 @@ describe("Zustand workspace compatibility subscription", () => {
 
     vi.resetModules();
     const [{ workspaceRepository }, refreshedProjectStorage, refreshedSavedCharts, refreshedChartContract] = await Promise.all([
-      import("@domain/workspace/workspaceRepository"),
-      import("@/services/projectStorage"),
+      import("@infrastructure/persistence/workspace-repository/workspaceRepository"),
+      import("@infrastructure/persistence/project-storage/projectStorage"),
       import("@modules/charts/persistence/savedChartsStorage"),
       import("@domain/charts/chartDataContract"),
     ]);

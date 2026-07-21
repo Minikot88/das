@@ -6,7 +6,7 @@ import { applyThemeToSettings, demoThemes } from "@modules/dashboards/designer-v
 import type { ChartPreset, DemoMappingPreset, DemoSettingsPatch, DemoTemplate, DemoThemeId } from "@modules/dashboards/designer-v2/components/demo/demoTypes";
 import { chartCatalog, createDefaultConfig, dataFields, defaultChartSettings } from "@modules/dashboards/designer-v2/components/mockData";
 import { getDatasetRows, getDatasetSchema, getDatasources, refreshDataset as refreshDatasetRows, type DemoDatasource, type DemoDatasetRow } from "@modules/dashboards/designer-v2/components/services/datasetService";
-import { useWorkspaceSelector } from "@domain/workspace/workspaceSelectors";
+import { useWorkspaceSelector } from "@app/store/useWorkspaceSelector";
 import { scanForSecretMaterial } from "@domain/workspace/workspaceSchema";
 import {
   defaultSavedSqlQueries,
@@ -28,7 +28,7 @@ import {
   safeSetLocalStorage,
   setActiveDashboard as setStoredActiveDashboard,
   setActiveProject as setStoredActiveProject,
-} from "@/services/projectStorage";
+} from "@infrastructure/persistence/project-storage/projectStorage";
 import { useLocation } from "react-router-dom";
 import type {
   Aggregation,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveLoginRedirect } from "@/utils/loginRedirect";
+import { resolveLoginRedirect } from "@modules/auth/lib/loginRedirect";
 
 describe("login redirect target", () => {
   it("preserves the protected route query and hash", () => {

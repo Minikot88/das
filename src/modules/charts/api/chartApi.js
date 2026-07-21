@@ -1,5 +1,5 @@
-import { apiRequest, isMockMode } from "@/api/client";
-import { mockData, mockRows } from "@/data/mockData";
+import { apiRequest, isMockMode } from "@infrastructure/http/client";
+import { mockData, mockRows } from "@infrastructure/mock/mockData";
 import { mockSchema } from "@modules/charts/data/mockSchema";
 import {
   chartJsTemplates,
@@ -16,7 +16,7 @@ import {
   generateVisualSql as generateVisualSqlInternal,
 } from "@modules/charts/lib/mockSqlEngine";
 import { createEntityId } from "@shared/lib/id";
-import { useStore } from "@/store/useStore";
+import { useStore } from "@app/store/useStore";
 
 function getActiveStoreContext() {
   const state = useStore.getState();

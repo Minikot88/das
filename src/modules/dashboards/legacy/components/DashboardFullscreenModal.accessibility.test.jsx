@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import DashboardFullscreenModal from "@modules/dashboards/legacy/components/DashboardFullscreenModal";
 
-vi.mock("./ChartCard", () => ({
+vi.mock("@modules/dashboards/legacy/components/ChartCard", () => ({
   default: () => <button type="button">Chart action</button>,
 }));
 

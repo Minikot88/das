@@ -26,7 +26,7 @@ describe("projectStorage canonical facade", () => {
       activeProject: window.localStorage.getItem("mini-bi-active-project-id"),
       activeDashboard: window.localStorage.getItem("mini-bi-active-dashboard-id"),
     };
-    const projectStorage = await import("@/services/projectStorage");
+    const projectStorage = await import("@infrastructure/persistence/project-storage/projectStorage");
 
     const projects = projectStorage.getProjects();
 
@@ -42,7 +42,7 @@ describe("projectStorage canonical facade", () => {
   it("creates projects in the canonical repository without rewriting legacy project keys", async () => {
     const legacyProjects = window.localStorage.getItem("mini-bi-projects");
     const legacyActive = window.localStorage.getItem("mini-bi-active-project-id");
-    const projectStorage = await import("@/services/projectStorage");
+    const projectStorage = await import("@infrastructure/persistence/project-storage/projectStorage");
     projectStorage.getProjects();
 
     const created = projectStorage.createProject("New canonical project");
@@ -55,7 +55,7 @@ describe("projectStorage canonical facade", () => {
   });
 
   it("updates charts and dashboards through canonical project ownership", async () => {
-    const projectStorage = await import("@/services/projectStorage");
+    const projectStorage = await import("@infrastructure/persistence/project-storage/projectStorage");
     const project = projectStorage.getActiveProject();
 
     const chart = projectStorage.upsertChart(project.id, {
@@ -81,7 +81,7 @@ describe("projectStorage canonical facade", () => {
   });
 
   it("switches active context in canonical state without touching compatibility keys", async () => {
-    const projectStorage = await import("@/services/projectStorage");
+    const projectStorage = await import("@infrastructure/persistence/project-storage/projectStorage");
     projectStorage.getProjects();
     const created = projectStorage.createProject("Second project");
     projectStorage.setActiveProject("project-1", "dashboard-1");
@@ -93,7 +93,7 @@ describe("projectStorage canonical facade", () => {
   });
 
   it("persists canonical replacement and deletion semantics for charts, dashboards, and widgets", async () => {
-    const projectStorage = await import("@/services/projectStorage");
+    const projectStorage = await import("@infrastructure/persistence/project-storage/projectStorage");
     const project = projectStorage.getActiveProject();
     const dashboard = project.dashboards[0];
     const addedWidget = projectStorage.addWidgetToDashboard(project.id, dashboard.id, {
@@ -116,7 +116,7 @@ describe("projectStorage canonical facade", () => {
   });
 
   it("removes dashboard widgets that depend on a deleted saved chart", async () => {
-    const projectStorage = await import("@/services/projectStorage");
+    const projectStorage = await import("@infrastructure/persistence/project-storage/projectStorage");
     const project = projectStorage.getActiveProject();
     const dashboard = project.dashboards[0];
     const chart = projectStorage.upsertChart(project.id, {
@@ -148,7 +148,7 @@ describe("projectStorage canonical facade", () => {
   });
 
   it("deletes the active dashboard and selects its replacement atomically", async () => {
-    const projectStorage = await import("@/services/projectStorage");
+    const projectStorage = await import("@infrastructure/persistence/project-storage/projectStorage");
     const project = projectStorage.getActiveProject();
     const activeDashboard = projectStorage.getActiveDashboard();
     const replacement = projectStorage.createDashboard(project.id, "Replacement dashboard");
@@ -162,7 +162,7 @@ describe("projectStorage canonical facade", () => {
   });
 
   it("does not compact or delete legacy migration sources when a compatibility write exceeds quota", async () => {
-    const projectStorage = await import("@/services/projectStorage");
+    const projectStorage = await import("@infrastructure/persistence/project-storage/projectStorage");
     projectStorage.getProjects();
     const sourceKeys = [
       "mini-bi-v8-workspace",
@@ -188,8 +188,8 @@ describe("projectStorage canonical facade", () => {
   });
 
   it("keeps complete dataset metadata unchanged during an unrelated dashboard save", async () => {
-    const projectStorage = await import("@/services/projectStorage");
-    const { workspaceRepository } = await import("@domain/workspace/workspaceRepository");
+    const projectStorage = await import("@infrastructure/persistence/project-storage/projectStorage");
+    const { workspaceRepository } = await import("@infrastructure/persistence/workspace-repository/workspaceRepository");
     const project = projectStorage.getActiveProject();
     const before = structuredClone(workspaceRepository.getSnapshot().projects[0].datasets[0]);
 
@@ -203,7 +203,7 @@ describe("projectStorage canonical facade", () => {
   });
 
   it("round-trips dashboard theme and widget presentation without resetting them", async () => {
-    const projectStorage = await import("@/services/projectStorage");
+    const projectStorage = await import("@infrastructure/persistence/project-storage/projectStorage");
     const project = projectStorage.getActiveProject();
     const dashboard = project.dashboards[0];
 

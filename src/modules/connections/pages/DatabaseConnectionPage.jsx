@@ -16,7 +16,7 @@ import {
   sanitizeConnectionUrl,
   upsertDatabaseConnection,
 } from "@modules/connections/persistence/databaseConnectionStorage";
-import "@/styles/databaseConnection.css";
+import "@shared/styles/databaseConnection.css";
 
 const AUTH_OPTIONS = [
   { value: "username-password", label: "Username / Password" },

@@ -1,13 +1,13 @@
 ﻿import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useStore } from "@/store/useStore";
+import { useStore } from "@app/store/useStore";
 import { PageContainer, WorkspaceLayout } from "@app/layouts/Layout";
 import { autoArrangeDashboardLayout, DASHBOARD_GRID_MARGIN, DASHBOARD_ROW_HEIGHT } from "@modules/dashboards/lib/layoutUtils";
 import ChartPicker from "@modules/dashboards/legacy/components/ChartPicker";
 import DashboardGrid from "@modules/dashboards/legacy/components/DashboardGrid";
 import DashboardFullscreenModal from "@modules/dashboards/legacy/components/DashboardFullscreenModal";
 import DashboardShareModal from "@modules/dashboards/legacy/components/DashboardShareModal";
-import CommandPaletteModal from "@/components/bi/CommandPaletteModal";
+import CommandPaletteModal from "@app/components/command-palette/CommandPaletteModal";
 import DatasetExplorerModal from "@modules/datasets/components/DatasetExplorerModal";
 import SidebarRight from "@app/layouts/SidebarRight";
 import useDashboard from "@modules/dashboards/legacy/features/hooks/useDashboard";
@@ -33,7 +33,7 @@ import {
 } from "@modules/dashboards/lib/dashboardFilters";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
-import "@/styles/enterpriseBiRedesign.css";
+import "@shared/styles/enterpriseBiRedesign.css";
 
 const GLOBAL_FILTER_PRESETS = [
   {

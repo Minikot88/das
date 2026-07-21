@@ -1,7 +1,7 @@
 
 import { create } from "zustand";
 import { normalizeChartConfig } from "@modules/charts/lib/normalizeChartConfig";
-import { schema } from "@/data/mockData";
+import { schema } from "@infrastructure/mock/mockData";
 import {
   clearBuilderDraft,
   createWorkspaceUiSnapshot,
@@ -11,9 +11,9 @@ import {
   loadWorkspaceState,
   queueWorkspaceSave,
   saveBuilderDraft,
-} from "@/utils/storage";
+} from "@infrastructure/persistence/workspace-ui/storage";
 import { toZustandWorkspaceSnapshot } from "@domain/workspace/workspaceCompatibility";
-import { workspaceRepository } from "@domain/workspace/workspaceRepository";
+import { workspaceRepository } from "@infrastructure/persistence/workspace-repository/workspaceRepository";
 import { sanitizeLocalShareSnapshot } from "@domain/shares/localShareContract";
 import {
   createLayoutItem,

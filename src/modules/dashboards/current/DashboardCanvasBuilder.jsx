@@ -14,8 +14,8 @@ import {
   shouldWarnAboutUnsavedChanges,
 } from "@domain/dashboard/dashboardPersistence";
 import { createLocalReadonlyShare, createLocalShareUrl } from "@domain/shares/localShareContract";
-import { workspaceRepository } from "@domain/workspace/workspaceRepository";
-import { useWorkspaceSelector } from "@domain/workspace/workspaceSelectors";
+import { workspaceRepository } from "@infrastructure/persistence/workspace-repository/workspaceRepository";
+import { useWorkspaceSelector } from "@app/store/useWorkspaceSelector";
 import useNavigationControls from "@shared/hooks/useNavigationControls";
 import {
   createSavedChartFromConfig,
@@ -40,7 +40,7 @@ import {
   setActiveDashboard as setStoredActiveDashboard,
   setActiveProject as setStoredActiveProject,
   upsertDashboard,
-} from "@/services/projectStorage";
+} from "@infrastructure/persistence/project-storage/projectStorage";
 import { CANONICAL_WORKSPACE_KEY } from "@domain/workspace/workspaceSchema";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";

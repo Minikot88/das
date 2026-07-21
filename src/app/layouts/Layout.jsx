@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import AppHeader from "@app/layouts/AppHeader";
 import SidebarRight from "@app/layouts/SidebarRight";
-import { useStore } from "@/store/useStore";
+import { useStore } from "@app/store/useStore";
 import { applyThemeMode } from "@shared/lib/themeMode";
 
 const ROUTE_TITLES = {

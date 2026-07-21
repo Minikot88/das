@@ -1,6 +1,3 @@
-import { useSyncExternalStore } from "react";
-import { workspaceRepository } from "@domain/workspace/workspaceRepository";
-
 export function selectProjects(snapshot) {
   return Array.isArray(snapshot?.projects) ? snapshot.projects : [];
 }
@@ -48,13 +45,4 @@ export function selectLegacySheetAlias(snapshot, sheetId) {
     if (alias) return { projectId: project.id, ...alias };
   }
   return null;
-}
-
-export function useWorkspaceSelector(selector, repository = workspaceRepository) {
-  const snapshot = useSyncExternalStore(
-    repository.subscribe,
-    repository.getSnapshot,
-    repository.getSnapshot,
-  );
-  return selector(snapshot);
 }

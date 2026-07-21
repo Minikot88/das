@@ -8,11 +8,11 @@ import SharePage from "@modules/sharing/pages/SharePage";
 let workspace;
 let storeState;
 
-vi.mock("@/domain/workspace/workspaceSelectors", () => ({
+vi.mock("@app/store/useWorkspaceSelector", () => ({
   useWorkspaceSelector: (selector) => selector(workspace),
 }));
 
-vi.mock("@/store/useStore", () => ({
+vi.mock("@app/store/useStore", () => ({
   useStore: (selector) => selector(storeState),
 }));
 

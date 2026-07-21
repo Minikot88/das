@@ -23,12 +23,15 @@ const storeState = {
   appSettings: { density: "comfortable" },
 };
 
-vi.mock("@/store/useStore", () => ({
+vi.mock("@app/store/useStore", () => ({
   useStore: (selector) => selector(storeState),
 }));
 
-vi.mock("@/domain/workspace/workspaceSelectors", () => ({
+vi.mock("@domain/workspace/workspaceSelectors", () => ({
   selectProjectDatasets: (snapshot, projectId) => snapshot.projects.find((project) => project.id === projectId)?.datasets ?? [],
+}));
+
+vi.mock("@app/store/useWorkspaceSelector", () => ({
   useWorkspaceSelector: (selector) => selector(workspace),
 }));
 

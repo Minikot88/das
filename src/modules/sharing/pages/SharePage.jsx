@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Navigate, useParams } from "react-router-dom";
-import { useStore } from "@/store/useStore";
+import { useStore } from "@app/store/useStore";
 import { normalizeLocalShareRecord, resolveLocalShare, validateLocalShare } from "@domain/shares/localShareContract";
-import { useWorkspaceSelector } from "@domain/workspace/workspaceSelectors";
+import { useWorkspaceSelector } from "@app/store/useWorkspaceSelector";
 import { findDashboardContextById } from "@modules/dashboards/lib/dashboardWorkspace";
 import ReadOnlyDashboardHeader from "@modules/sharing/components/ReadOnlyDashboardHeader";
 import ReadOnlyChartFrame from "@modules/sharing/components/ReadOnlyChartFrame";

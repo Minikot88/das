@@ -27,7 +27,7 @@ describe("useDashboardDesignerState canonical datasets", () => {
   it("adds datasets created after the designer hook mounts", async () => {
     const [{ useDashboardDesignerState }, { workspaceRepository }] = await Promise.all([
       import("@modules/dashboards/designer-v2/hooks/useDashboardDesignerState"),
-      import("@domain/workspace/workspaceRepository"),
+      import("@infrastructure/persistence/workspace-repository/workspaceRepository"),
     ]);
     const { result } = renderHook(() => useDashboardDesignerState(), { wrapper: Wrapper });
 

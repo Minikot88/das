@@ -16,7 +16,7 @@ import {
   DEFAULT_SQL_CONNECTION_NAME,
   DEFAULT_SQL_NAMESPACE,
 } from "@modules/charts/lib/mockSqlEngine";
-import { loadBuilderDraft, saveBuilderDraft } from "@/utils/storage";
+import { loadBuilderDraft, saveBuilderDraft } from "@infrastructure/persistence/workspace-ui/storage";
 
 const BASE_SETTINGS = {
   title: "",

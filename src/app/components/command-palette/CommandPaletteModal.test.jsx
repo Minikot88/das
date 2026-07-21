@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import CommandPaletteModal from "@/components/bi/CommandPaletteModal";
+import CommandPaletteModal from "@app/components/command-palette/CommandPaletteModal";
 
 describe("CommandPaletteModal accessibility", () => {
   it("focuses search, traps tab focus, activates actions, and restores focus", async () => {

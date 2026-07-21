@@ -3,7 +3,7 @@ import {
   mergeProjectStorageProjects,
   toProjectStorageProjects,
 } from "@domain/workspace/workspaceCompatibility";
-import { workspaceRepository } from "@domain/workspace/workspaceRepository";
+import { workspaceRepository } from "@infrastructure/persistence/workspace-repository/workspaceRepository";
 import { cloneWorkspace } from "@domain/workspace/workspaceSchema";
 
 const PROJECTS_KEY = "mini-bi-projects";

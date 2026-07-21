@@ -2,8 +2,8 @@ import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import ChartCard from "@modules/dashboards/legacy/components/ChartCard";
 
-vi.mock("../charts/ChartRenderer", () => ({ default: () => <div>chart canvas</div> }));
-vi.mock("../charts/ChartSkeleton", () => ({ default: () => <div>loading chart</div> }));
+vi.mock("@modules/charts/components/ChartRenderer", () => ({ default: () => <div>chart canvas</div> }));
+vi.mock("@modules/charts/components/ChartSkeleton", () => ({ default: () => <div>loading chart</div> }));
 
 describe("ChartCard accessible data", () => {
   it("provides a compact table equivalent for graphical rows", () => {

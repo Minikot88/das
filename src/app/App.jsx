@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import { BrowserRouter } from "react-router-dom";
 import AppRoutes from "@app/router/AppRoutes";
-import { useStore } from "@/store/useStore";
+import { useStore } from "@app/store/useStore";
 import { applyThemeMode } from "@shared/lib/themeMode";
 
 export default function App() {

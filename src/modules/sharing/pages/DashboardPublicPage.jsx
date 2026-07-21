@@ -3,11 +3,11 @@ import { useLocation, useParams } from "react-router-dom";
 import { useState } from "react";
 import DashboardGrid from "@modules/dashboards/legacy/components/DashboardGrid";
 import ReadOnlyStateCard from "@modules/sharing/components/ReadOnlyStateCard";
-import { useStore } from "@/store/useStore";
+import { useStore } from "@app/store/useStore";
 import { findDashboardContextById } from "@modules/dashboards/lib/dashboardWorkspace";
 import { resolveDashboardViewOptions } from "@modules/sharing/lib/dashboardShareUtils";
 import { normalizeLocalShareRecord, resolveLocalShare, validateLocalShare } from "@domain/shares/localShareContract";
-import { useWorkspaceSelector } from "@domain/workspace/workspaceSelectors";
+import { useWorkspaceSelector } from "@app/store/useWorkspaceSelector";
 
 function countChartTypes(widgets = []) {
   return new Set(widgets.map((widget) => widget.type).filter(Boolean)).size;

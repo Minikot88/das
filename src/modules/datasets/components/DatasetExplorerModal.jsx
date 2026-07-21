@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { TYPE_BADGE, mockDataset, TYPE_COLOR } from "@/data/mockData";
+import { TYPE_BADGE, mockDataset, TYPE_COLOR } from "@infrastructure/mock/mockData";
 import useFocusTrap from "@shared/hooks/useFocusTrap";
 
 const DATASET_FIELDS = mockDataset?.fields ?? [];

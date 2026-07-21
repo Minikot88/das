@@ -1,5 +1,5 @@
-import { apiRequest, isMockMode } from "@/api/client";
-import { useStore } from "@/store/useStore";
+import { apiRequest, isMockMode } from "@infrastructure/http/client";
+import { useStore } from "@app/store/useStore";
 import { getChartsByDashboardId } from "@modules/charts/api/chartApi";
 import { resolveDashboardWidgets } from "@modules/dashboards/lib/dashboardWorkspace";
 

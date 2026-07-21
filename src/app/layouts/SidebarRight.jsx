@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { useStore } from "@/store/useStore";
+import { useStore } from "@app/store/useStore";
 
 const WIDGET_LIBRARY_ITEMS = [
   {
