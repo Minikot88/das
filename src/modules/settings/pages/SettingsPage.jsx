@@ -1,6 +1,8 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { PageContainer, PageHeader } from "@app/layouts/Layout";
 import { useStore } from "@app/store/useStore";
+import { isMockMode } from "@infrastructure/http/client";
+import { loadPreferences, savePreferences } from "@modules/settings/api/settingsApi";
 
 const SETTINGS_OPTIONS = {
   theme: [
@@ -76,8 +78,66 @@ function SettingToggle({ label, description, checked, onChange, disabled = false
 
 export default function SettingsPage() {
   const appSettings = useStore((state) => state.appSettings);
+  const locale = useStore((state) => state.locale);
+  const setLanguage = useStore((state) => state.setLanguage);
   const updateAppSettings = useStore((state) => state.updateAppSettings);
   const preferences = appSettings.dashboardPreferences;
+  const [serverPreferences, setServerPreferences] = useState(null);
+  const [syncState, setSyncState] = useState(isMockMode() ? "local" : "loading");
+  const [syncError, setSyncError] = useState("");
+
+  useEffect(() => {
+    if (isMockMode()) return undefined;
+    let active = true;
+    loadPreferences()
+      .then((saved) => {
+        if (!active) return;
+        setServerPreferences(saved);
+        updateAppSettings({
+          ...(saved.theme ? { theme: saved.theme } : {}),
+          ...(saved.density ? { density: saved.density } : {}),
+          ...(SETTINGS_OPTIONS.dateFormat.some((option) => option.value === saved.dateFormat) ? { dateFormat: saved.dateFormat } : {}),
+          ...(SETTINGS_OPTIONS.numberFormat.some((option) => option.value === saved.numberFormat) ? { numberFormat: saved.numberFormat } : {}),
+        });
+        if (saved.locale) setLanguage(saved.locale);
+        setSyncState("ready");
+      })
+      .catch(() => {
+        if (!active) return;
+        setSyncError("ไม่สามารถโหลดการตั้งค่าจากเซิร์ฟเวอร์ได้");
+        setSyncState("error");
+      });
+    return () => { active = false; };
+  }, [setLanguage, updateAppSettings]);
+
+  const updatePreference = async (updates) => {
+    if (isMockMode()) {
+      updateAppSettings(updates);
+      return;
+    }
+    if (!serverPreferences || syncState === "saving") return;
+    setSyncError("");
+    setSyncState("saving");
+    const nextSettings = { ...appSettings, ...updates };
+    try {
+      const saved = await savePreferences({
+        revision: serverPreferences.revision,
+        theme: nextSettings.theme,
+        density: nextSettings.density,
+        dateFormat: nextSettings.dateFormat,
+        numberFormat: nextSettings.numberFormat,
+        locale,
+      });
+      setServerPreferences(saved);
+      updateAppSettings(updates);
+      setSyncState("ready");
+    } catch (error) {
+      setSyncError(error?.status === 409 ? "การตั้งค่าถูกแก้ไขจากหน้าต่างอื่น กรุณารีเฟรชหน้า" : "บันทึกการตั้งค่าไม่สำเร็จ");
+      setSyncState("error");
+    }
+  };
+
+  const syncing = syncState === "loading" || syncState === "saving";
 
   return (
     <PageContainer className="settings-page">
@@ -98,13 +158,15 @@ export default function SettingsPage() {
               label="ธีม"
               value={appSettings.theme}
               options={SETTINGS_OPTIONS.theme}
-              onChange={(theme) => updateAppSettings({ theme })}
+              disabled={syncing}
+              onChange={(theme) => updatePreference({ theme })}
             />
             <SettingSelect
               label="ความหนาแน่น"
               value={appSettings.density}
               options={SETTINGS_OPTIONS.density}
-              onChange={(density) => updateAppSettings({ density })}
+              disabled={syncing}
+              onChange={(density) => updatePreference({ density })}
             />
           </div>
         </section>
@@ -119,13 +181,15 @@ export default function SettingsPage() {
               label="รูปแบบวันที่"
               value={appSettings.dateFormat}
               options={SETTINGS_OPTIONS.dateFormat}
-              disabled
+              disabled={syncing}
+              onChange={(dateFormat) => updatePreference({ dateFormat })}
             />
             <SettingSelect
               label="รูปแบบตัวเลข"
               value={appSettings.numberFormat}
               options={SETTINGS_OPTIONS.numberFormat}
-              disabled
+              disabled={syncing}
+              onChange={(numberFormat) => updatePreference({ numberFormat })}
             />
           </div>
         </section>
@@ -165,6 +229,11 @@ export default function SettingsPage() {
           </div>
         </section>
       </div>
+      {!isMockMode() ? (
+        <p className="settings-sync-status" role="status" aria-live="polite">
+          {syncError || (syncState === "saving" ? "กำลังบันทึกการตั้งค่า..." : syncState === "ready" ? "บันทึกการตั้งค่าแล้ว" : "กำลังโหลดการตั้งค่า...")}
+        </p>
+      ) : null}
     </PageContainer>
   );
 }
