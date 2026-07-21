@@ -7,7 +7,7 @@ import {
   buildConnectionUrl,
   createDefaultConnectionForm,
   getDatabaseType,
-} from "@/data/databaseConnectionDefaults";
+} from "@modules/connections/config/databaseConnectionDefaults";
 import {
   createConnectionProfile,
   deleteDatabaseConnection,
@@ -15,7 +15,7 @@ import {
   sanitizeConnectionMetadata,
   sanitizeConnectionUrl,
   upsertDatabaseConnection,
-} from "@/utils/databaseConnectionStorage";
+} from "@modules/connections/persistence/databaseConnectionStorage";
 import "@/styles/databaseConnection.css";
 
 const AUTH_OPTIONS = [

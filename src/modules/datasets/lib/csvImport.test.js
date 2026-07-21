@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CSV_IMPORT_LIMITS, createDatasetFromCsv, parseCsvText, parseCsvTextAsync, validateCsvFile } from "@/utils/csvImport";
+import { CSV_IMPORT_LIMITS, createDatasetFromCsv, parseCsvText, parseCsvTextAsync, validateCsvFile } from "@modules/datasets/lib/csvImport";
 
 describe("CSV import utilities", () => {
   it("parses quoted CSV values, infers types, and creates datasets", () => {

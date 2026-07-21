@@ -2,7 +2,7 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
-import DatasetsPage from "@/pages/DatasetsPage";
+import DatasetsPage from "@modules/datasets/pages/DatasetsPage";
 
 const datasets = [
   { id: "dataset-a", projectId: "project-a", name: "Project A dataset", fields: [], rows: [] },

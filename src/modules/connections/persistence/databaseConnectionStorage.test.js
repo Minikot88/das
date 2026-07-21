@@ -9,8 +9,8 @@ import {
   sanitizeConnectionUrl,
   saveDatabaseConnections,
   upsertDatabaseConnection,
-} from "@/utils/databaseConnectionStorage";
-import { DATABASE_TYPE_OPTIONS } from "@/data/databaseConnectionDefaults";
+} from "@modules/connections/persistence/databaseConnectionStorage";
+import { DATABASE_TYPE_OPTIONS } from "@modules/connections/config/databaseConnectionDefaults";
 
 const sentinel = "synthetic-secret-never-store";
 

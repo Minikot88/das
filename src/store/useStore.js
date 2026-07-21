@@ -22,7 +22,7 @@ import {
   tryCreateAdjacentLayoutItem,
 } from "@/utils/layoutUtils";
 import { createCopyName, createEntityId, createTimestampId } from "@shared/lib/id";
-import { createShareToken } from "@/utils/shareTokens";
+import { createShareToken } from "@modules/sharing/lib/shareTokens";
 import {
   normalizeThemeMode,
   readStoredThemeMode,

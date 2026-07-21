@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useStore } from "@/store/useStore";
 import CommandPaletteModal from "@/components/bi/CommandPaletteModal";
-import DatasetExplorerModal from "@/components/bi/DatasetExplorerModal";
+import DatasetExplorerModal from "@modules/datasets/components/DatasetExplorerModal";
 import { TEMPLATE_GALLERY_CATALOG } from "@/data/templateGalleryCatalog";
 import useNavigationControls from "@shared/hooks/useNavigationControls";
 import {

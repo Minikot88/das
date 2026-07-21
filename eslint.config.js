@@ -35,7 +35,7 @@ export default defineConfig([
       'src/features/builder/FieldList.jsx',
       'src/shared/hooks/useNavigationControls.js',
       'src/app/layouts/AppHeader.jsx',
-      'src/pages/DashboardPublicPage.jsx',
+      'src/modules/sharing/pages/DashboardPublicPage.jsx',
     ],
     rules: {
       'react-hooks/set-state-in-effect': 'off',

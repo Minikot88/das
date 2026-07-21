@@ -3,7 +3,7 @@ import { act, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createLocalReadonlyShare } from "@domain/shares/localShareContract";
-import DashboardPublicPage from "@/pages/DashboardPublicPage";
+import DashboardPublicPage from "@modules/sharing/pages/DashboardPublicPage";
 
 let workspace;
 const storeState = {

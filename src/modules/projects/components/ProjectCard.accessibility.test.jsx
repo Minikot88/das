@@ -1,7 +1,7 @@
 import { render } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import ProjectCard from "@shared/components/ui/ProjectCard";
+import ProjectCard from "@modules/projects/components/ProjectCard";
 
 const project = {
   id: "project-1",

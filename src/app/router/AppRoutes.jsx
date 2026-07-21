@@ -8,14 +8,14 @@ const BuilderPage = lazy(() => import("@/pages/Builder.jsx"));
 const DashboardCanvasBuilder = lazy(() => import("@/pages/DashboardCanvasBuilder.jsx"));
 const DashboardDesignerV2 = lazy(() => import("@/pages/DashboardDesignerV2"));
 const DashboardPage = lazy(() => import("@/pages/DashboardPage.jsx"));
-const DashboardPublicPage = lazy(() => import("@/pages/DashboardPublicPage.jsx"));
-const DatabaseConnectionPage = lazy(() => import("@/pages/DatabaseConnectionPage.jsx"));
-const DatasetsPage = lazy(() => import("@/pages/DatasetsPage.jsx"));
-const HomePage = lazy(() => import("@/pages/HomePage.jsx"));
-const LoginPage = lazy(() => import("@/pages/LoginPage"));
-const RegisterPage = lazy(() => import("@/pages/RegisterPage"));
-const SettingsPage = lazy(() => import("@/pages/SettingsPage.jsx"));
-const SharePage = lazy(() => import("@/pages/SharePage"));
+const DashboardPublicPage = lazy(() => import("@modules/sharing/pages/DashboardPublicPage.jsx"));
+const DatabaseConnectionPage = lazy(() => import("@modules/connections/pages/DatabaseConnectionPage.jsx"));
+const DatasetsPage = lazy(() => import("@modules/datasets/pages/DatasetsPage.jsx"));
+const HomePage = lazy(() => import("@modules/projects/pages/HomePage.jsx"));
+const LoginPage = lazy(() => import("@modules/auth/pages/LoginPage"));
+const RegisterPage = lazy(() => import("@modules/auth/pages/RegisterPage"));
+const SettingsPage = lazy(() => import("@modules/settings/pages/SettingsPage.jsx"));
+const SharePage = lazy(() => import("@modules/sharing/pages/SharePage"));
 
 function RouteFallback() {
   return (

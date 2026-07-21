@@ -5,7 +5,7 @@ import EnterpriseDataTable from "@shared/components/ui/EnterpriseDataTable";
 import { mockDataset } from "@/data/mockData";
 import { selectProjectDatasets, useWorkspaceSelector } from "@domain/workspace/workspaceSelectors";
 import { useStore } from "@/store/useStore";
-import { createDatasetFromCsv, parseCsvTextAsync, validateCsvFile } from "@/utils/csvImport";
+import { createDatasetFromCsv, parseCsvTextAsync, validateCsvFile } from "@modules/datasets/lib/csvImport";
 
 function datasetColumns(dataset) {
   return (dataset?.fields ?? []).map((field) => ({

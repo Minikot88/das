@@ -1,6 +1,6 @@
 ﻿import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { register as registerApi } from "@/api/authApi";
+import { register as registerApi } from "@modules/auth/api/authApi";
 import { useI18n } from "@shared/lib/i18n";
 
 export default function RegisterPage() {
