@@ -15,6 +15,8 @@ services:
       timeout: 5s
       retries: 10
     restart: unless-stopped
+    networks:
+      - backend_database
 
   backend:
     build:
@@ -51,6 +53,9 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    networks:
+      - frontend_api
+      - backend_database
 
   migration:
     build:
@@ -63,6 +68,8 @@ services:
       database:
         condition: service_healthy
     restart: "no"
+    networks:
+      - backend_database
 
   frontend:
     build:
@@ -83,9 +90,16 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+    networks:
+      - frontend_api
 
 volumes:
   dashboard_mini_bi_database:
   dashboard_mini_bi_uploads:
   dashboard_mini_bi_exports:
   dashboard_mini_bi_backups:
+
+networks:
+  frontend_api:
+  backend_database:
+    internal: true

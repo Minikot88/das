@@ -26,6 +26,13 @@ describe('parseEnvironment', () => {
       SESSION_SIGNING_KEY: Buffer.alloc(32, 98).toString('base64'),
     };
     expect(() => parseEnvironment(base)).toThrow(/development SECRET_MASTER_KEY/i);
+    expect(() => parseEnvironment({ ...base, SECRET_MASTER_KEY: `${base.SECRET_MASTER_KEY}\n` }))
+      .toThrow(/development SECRET_MASTER_KEY/i);
+    expect(() => parseEnvironment({
+      ...base,
+      SECRET_MASTER_KEY: Buffer.alloc(32, 99).toString('base64'),
+      SESSION_SIGNING_KEY: `${base.SESSION_SIGNING_KEY}\n`,
+    })).toThrow(/development SESSION_SIGNING_KEY/i);
     expect(() => parseEnvironment({ ...base, SECRET_MASTER_KEY: Buffer.alloc(32, 99).toString('base64'), DEBUG: 'true' }))
       .toThrow(/DEBUG/i);
     expect(() => parseEnvironment({ ...base, SECRET_MASTER_KEY: Buffer.alloc(32, 99).toString('base64'), DEMO_CONNECTOR_ENABLED: 'true' }))

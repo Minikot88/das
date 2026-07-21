@@ -59,7 +59,6 @@ export function parseEnvironment(input: NodeJS.ProcessEnv | Record<string, strin
   if (nodeEnv === 'production' && !input.SESSION_SIGNING_KEY) throw new Error('SESSION_SIGNING_KEY is required in production');
 
   const secretMasterKey = input.SECRET_MASTER_KEY;
-  if (nodeEnv === 'production' && secretMasterKey === DEVELOPMENT_MASTER_KEY) throw new Error('The development SECRET_MASTER_KEY is forbidden in production');
   if (secretMasterKey) {
     let decoded: Buffer;
     try {
@@ -68,12 +67,18 @@ export function parseEnvironment(input: NodeJS.ProcessEnv | Record<string, strin
       throw new Error('SECRET_MASTER_KEY must be base64 encoded');
     }
     if (decoded.length !== REQUIRED_KEY_BYTES) throw new Error('SECRET_MASTER_KEY must decode to exactly 32 bytes');
+    if (nodeEnv === 'production' && decoded.equals(Buffer.from(DEVELOPMENT_MASTER_KEY, 'base64'))) {
+      throw new Error('The development SECRET_MASTER_KEY is forbidden in production');
+    }
   }
 
   const sessionSigningKey = input.SESSION_SIGNING_KEY;
-  if (nodeEnv === 'production' && sessionSigningKey === DEVELOPMENT_SESSION_KEY) throw new Error('The development SESSION_SIGNING_KEY is forbidden in production');
-  if (sessionSigningKey && Buffer.from(sessionSigningKey, 'base64').length < 32) {
-    throw new Error('SESSION_SIGNING_KEY must decode to at least 32 bytes');
+  if (sessionSigningKey) {
+    const decoded = Buffer.from(sessionSigningKey, 'base64');
+    if (decoded.length < 32) throw new Error('SESSION_SIGNING_KEY must decode to at least 32 bytes');
+    if (nodeEnv === 'production' && decoded.equals(Buffer.from(DEVELOPMENT_SESSION_KEY, 'base64'))) {
+      throw new Error('The development SESSION_SIGNING_KEY is forbidden in production');
+    }
   }
   const port = Number(input.PORT || 3000);
   if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('PORT must be a valid TCP port');
