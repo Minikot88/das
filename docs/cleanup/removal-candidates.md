@@ -2,10 +2,11 @@
 
 | Candidate | Initial class | Evidence still required |
 | --- | --- | --- |
-| `framer-motion` | LIKELY_UNUSED | zero static/dynamic/config references; clean install/test/build after removal |
-| `recharts` | LIKELY_UNUSED | zero static/dynamic/chart registration references; clean install/test/build after removal |
-| 22 Knip file hits | UNKNOWN/MIXED | entrypoint, lazy route, CLI, decorator, worker, public export and build-path checks |
-| Empty untracked directories | CONFIRMED_UNUSED | verify they contain no hidden runtime/config files |
+| `framer-motion` | CONFIRMED_UNUSED / REMOVED | zero static/dynamic/config references; 54-file baseline and post-removal gates passed |
+| `recharts` | CONFIRMED_UNUSED / REMOVED | zero static/dynamic/chart registration references; 54-file baseline and post-removal gates passed |
+| Five legacy UI/hook files | CONFIRMED_UNUSED / REMOVED | zero incoming imports, route registrations and build entries; full post-removal gate passed |
+| Remaining Knip file hits | RETAINED or UNKNOWN | entrypoint, config, seed, generated evidence, CLI and documented public barrels |
+| Empty untracked directories | PARTIALLY_REMOVED | two nested empty chart directories removed; `.agents` retained because workspace policy denied deletion |
 | `outputs/data_dictionary_build/*` | RUNTIME/PROVENANCE_UNKNOWN | determine whether generated evidence is intentionally retained before any deletion |
 
-No candidate is approved for deletion until its classification becomes `CONFIRMED_UNUSED`.
+No remaining candidate is approved for deletion until its classification becomes `CONFIRMED_UNUSED`.
