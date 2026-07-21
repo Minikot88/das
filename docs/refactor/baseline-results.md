@@ -1,7 +1,7 @@
 # Baseline Results
 
-Date: 2026-07-21  
-Commit: `e6f6be1`  
+Date: 2026-07-21
+Commit: `e6f6be1`
 Branch created before edits: `refactor/production-folder-structure`
 
 ## Environment
@@ -44,14 +44,14 @@ Branch: `refactor/production-folder-structure`
 | --- | --- | --- |
 | `npm.cmd run lint` | PASS | ESLint exit 0 |
 | `npm.cmd run typecheck` | PASS | `tsc --noEmit` exit 0 |
-| `npm.cmd test -- --run` | PASS | Same 44 files and 247 tests |
-| `npm.cmd run build` | PASS with baseline warning | 1,871 modules transformed; large chunk warning remains |
+| `npm.cmd test -- --run` | PASS | 44 files and 251 tests; all 247 baseline tests remain and 4 architecture guards were added |
+| `npm.cmd run build` | PASS with baseline warning | 1,880 modules transformed; application and ChartPreview chunk sizes remain effectively at baseline |
 | `npm.cmd run audit:prod` | PASS | 0 production vulnerabilities |
 | `npm.cmd run check` | FAIL at unchanged baseline audit | All preceding lint, typecheck, test, and build stages passed; same `brace-expansion` dev advisory |
-| Static dependency graph | PASS | 235 source files, 501 imports, 0 cycles, 0 unresolved imports, 0 deep relative imports |
+| Static dependency graph | PASS | 244 source files; 0 cycles, 0 unresolved imports, 0 deep relative imports, 0 cross-module public-boundary violations, and 0 production domain-boundary violations |
 | Route set comparison | PASS | All 14 explicit path declarations match baseline, including public and legacy paths |
 | Storage/environment/deployment contracts | PASS | Required keys and variables present; root deployment files have no content diff |
 | Workspace migration comparison | PASS | Migration logic unchanged; only its internal schema import path changed |
-| Docker image build | ENVIRONMENT BLOCKED | Docker Desktop Linux daemon pipe is unavailable |
+| Docker image build | ENVIRONMENT BLOCKED | `docker build --tag dashboard-mini-bi:refactor-verification .` was attempted outside the sandbox; Docker Desktop Linux daemon pipe is unavailable |
 
 The aggregate gate is not reported as fully passing because the pre-existing development audit remains. Dependency remediation and bundle splitting are intentionally outside this behavior-preserving organization change.

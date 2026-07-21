@@ -8,7 +8,7 @@ import DashboardGrid from "@modules/dashboards/legacy/components/DashboardGrid";
 import DashboardFullscreenModal from "@modules/dashboards/legacy/components/DashboardFullscreenModal";
 import DashboardShareModal from "@modules/dashboards/legacy/components/DashboardShareModal";
 import CommandPaletteModal from "@app/components/command-palette/CommandPaletteModal";
-import DatasetExplorerModal from "@modules/datasets/components/DatasetExplorerModal";
+import { DatasetExplorerModal } from "@modules/datasets/public/components";
 import SidebarRight from "@app/layouts/SidebarRight";
 import useDashboard from "@modules/dashboards/legacy/features/hooks/useDashboard";
 import {
@@ -23,7 +23,7 @@ import {
   exportNodeAsImage,
   exportNodeAsPdf,
   sanitizeFileName,
-} from "@modules/sharing/lib/dashboardShareUtils";
+} from "@modules/sharing/public/dashboardExport";
 import {
   applyDashboardFiltersToWidget,
   getActiveDashboardFilterChips,

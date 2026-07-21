@@ -89,11 +89,12 @@ Infrastructure may import domain contracts and implement persistence/HTTP behavi
 
 ## Final graph
 
-After the move, the graph contains 235 source files and 501 resolved internal imports. Static analysis reports:
+After the move and public-boundary hardening, the graph contains 244 JavaScript/TypeScript source files. Automated static analysis reports:
 
 - 0 circular dependency cycles;
 - 0 unresolved internal imports;
 - 0 deep relative imports, reduced from 42;
-- no React, HTTP client, or browser storage import in production domain files.
+- no React, application adapter, infrastructure adapter, or browser storage dependency in production domain files;
+- no production cross-module import that bypasses the target module's capability-specific `public/` surface.
 
-The increased file count comes from module public APIs and the extracted React workspace selector adapter; no test or behavior implementation was removed.
+The increased file count comes from module public APIs, capability-specific public entries, and the extracted React workspace selector adapter; no test or behavior implementation was removed.

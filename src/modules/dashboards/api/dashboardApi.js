@@ -1,6 +1,6 @@
 import { apiRequest, isMockMode } from "@infrastructure/http/client";
 import { useStore } from "@app/store/useStore";
-import { getChartsByDashboardId } from "@modules/charts/api/chartApi";
+import { getChartsByDashboardId } from "@modules/charts/public/api";
 import { resolveDashboardWidgets } from "@modules/dashboards/lib/dashboardWorkspace";
 
 function getDashboardContext(state, dashboardId, context = {}) {

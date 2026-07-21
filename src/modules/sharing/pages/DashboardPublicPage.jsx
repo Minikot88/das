@@ -1,10 +1,10 @@
 ﻿import React, { useEffect, useMemo } from "react";
 import { useLocation, useParams } from "react-router-dom";
 import { useState } from "react";
-import DashboardGrid from "@modules/dashboards/legacy/components/DashboardGrid";
+import { DashboardGrid } from "@modules/dashboards/public/legacyDashboard";
+import { findDashboardContextById } from "@modules/dashboards/public/workspace";
 import ReadOnlyStateCard from "@modules/sharing/components/ReadOnlyStateCard";
 import { useStore } from "@app/store/useStore";
-import { findDashboardContextById } from "@modules/dashboards/lib/dashboardWorkspace";
 import { resolveDashboardViewOptions } from "@modules/sharing/lib/dashboardShareUtils";
 import { normalizeLocalShareRecord, resolveLocalShare, validateLocalShare } from "@domain/shares/localShareContract";
 import { useWorkspaceSelector } from "@app/store/useWorkspaceSelector";

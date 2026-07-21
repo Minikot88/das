@@ -1,7 +1,7 @@
 # Repository Inventory
 
-Date: 2026-07-21  
-Branch: `refactor/production-folder-structure`  
+Date: 2026-07-21
+Branch: `refactor/production-folder-structure`
 Baseline commit: `e6f6be1`
 
 ## Repository profile

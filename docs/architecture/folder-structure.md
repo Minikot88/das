@@ -41,6 +41,7 @@ src/
 
 - Put application composition and global wiring in `app`.
 - Put feature pages, feature-specific UI, adapters, hooks, persistence, and tests in the owning `modules/<name>` directory.
+- Use capability-specific files under `modules/<name>/public/` for narrow cross-module exports and `modules/<name>/index.js` for the complete application-composition entry.
 - Put pure rules and transformations in `domain`; production domain files must not import React, browser storage, or HTTP clients.
 - Put integrations with the browser or network in `infrastructure`.
 - Put code in `shared` only when at least two modules use it.

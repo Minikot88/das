@@ -9,8 +9,8 @@ import SectionHeader from "@shared/components/ui/SectionHeader";
 import CreateProjectModal from "@modules/projects/components/CreateProjectModal";
 import { useStore } from "@app/store/useStore";
 import { useI18n } from "@shared/lib/i18n";
-import { createBuilderContextForDashboard } from "@modules/dashboards/lib/dashboardWorkspace";
-import { TEMPLATE_GALLERY_CATALOG } from "@modules/charts/data/templateGalleryCatalog";
+import { createBuilderContextForDashboard } from "@modules/dashboards/public/workspace";
+import { TEMPLATE_GALLERY_CATALOG } from "@modules/charts/public/catalog";
 import {
   ACTIVE_DASHBOARD_KEY,
   ACTIVE_PROJECT_KEY,

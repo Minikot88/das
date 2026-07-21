@@ -11,7 +11,7 @@ import {
   updateChart,
   validateChartMapping,
 } from "@modules/charts/api/chartApi";
-import { addSavedChartToDashboard } from "@modules/dashboards/api/dashboardApi";
+import { addSavedChartToDashboard } from "@modules/dashboards/public/api";
 import {
   DEFAULT_SQL_CONNECTION_NAME,
   DEFAULT_SQL_NAMESPACE,

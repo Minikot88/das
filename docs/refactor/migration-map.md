@@ -243,6 +243,6 @@ Generated from Git rename detection between the pre-refactor baseline `e6f6be1` 
 - `src/pages/Builder.jsx` was a one-line compatibility re-export; its route now imports `src/modules/charts/pages/Builder.jsx`, which re-exports the same `BuilderPage` default.
 - `src/utils/chartFamilies/index.js` was replaced by `src/modules/charts/lib/chartFamilies/index.js` with the same chart-family aggregation role.
 - `src/app/store/useWorkspaceSelector.js` is the React adapter extracted from the pure workspace selectors. The selector behavior and repository subscription contract are unchanged.
+- Capability-specific files under `src/modules/*/public/` are narrow cross-module surfaces. They only re-export existing symbols and avoid wide-barrel dependency cycles and lazy-chunk merging.
 
 No database migration, API endpoint, route URL, storage key, or environment variable was renamed.
-

@@ -23,7 +23,7 @@ import {
   getSavedCharts,
   SAVED_CHARTS_KEY,
   SINGLE_CHART_KEY as V2_SINGLE_CHART_KEY,
-} from "@modules/charts/persistence/savedChartsStorage";
+} from "@modules/charts/public/savedCharts";
 import {
   ACTIVE_DASHBOARD_KEY,
   compactDashboardLayoutForStorage,

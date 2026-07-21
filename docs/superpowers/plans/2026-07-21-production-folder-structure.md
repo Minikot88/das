@@ -186,4 +186,3 @@
 - [ ] Verify exact route strings, storage keys, environment names, API paths, and migration file hashes against baseline Git content.
 - [ ] Run `docker build` and Compose/health smoke tests if the Docker daemon is available; otherwise record the unchanged environment blocker without claiming deployment passed.
 - [ ] Confirm `git status`, commit history, moved-file map, unremoved dead-code candidates, and unresolved risks for the final report.
-
