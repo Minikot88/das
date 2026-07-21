@@ -8,6 +8,7 @@ services:
       MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:-root-local-only}
     volumes:
       - dashboard_mini_bi_database:/var/lib/mysql
+      - dashboard_mini_bi_backups:/backups
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 10s
@@ -30,14 +31,29 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}
       PORT: 3000
     depends_on:
-      database:
-        condition: service_healthy
+      migration:
+        condition: service_completed_successfully
+    volumes:
+      - dashboard_mini_bi_uploads:/data/uploads
+      - dashboard_mini_bi_exports:/data/exports
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/v1/health"]
       interval: 15s
       timeout: 5s
       retries: 5
     restart: unless-stopped
+
+  migration:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    command: ["npx", "prisma", "migrate", "deploy"]
+    environment:
+      DATABASE_URL: mysql://${MARIADB_USER:-dashboard}:${MARIADB_PASSWORD:-dashboard-local-only}@database:3306/${MARIADB_DATABASE:-dashboard_mini_bi}
+    depends_on:
+      database:
+        condition: service_healthy
+    restart: "no"
 
   frontend:
     build:
@@ -61,3 +77,6 @@ services:
 
 volumes:
   dashboard_mini_bi_database:
+  dashboard_mini_bi_uploads:
+  dashboard_mini_bi_exports:
+  dashboard_mini_bi_backups:
