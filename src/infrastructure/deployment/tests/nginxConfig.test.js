@@ -11,6 +11,7 @@ const workflowPath = path.resolve(process.cwd(), ".github/workflows/frontend-che
 const dockerfilePath = path.resolve(process.cwd(), "Dockerfile");
 const dockerignorePath = path.resolve(process.cwd(), ".dockerignore");
 const envExamplePath = path.resolve(process.cwd(), ".env.example");
+const apiDockerfilePath = path.resolve(process.cwd(), "apps/api/Dockerfile");
 
 describe("nginx static frontend configuration", () => {
   it("applies security and cache headers from one inheritable server scope", () => {
@@ -40,7 +41,7 @@ describe("nginx static frontend configuration", () => {
   it("keeps the default container binding local and requires an explicit host override", () => {
     const compose = readFileSync(composePath, "utf8");
 
-    expect(compose).toContain('"${FRONTEND_HOST:-127.0.0.1}:${FRONTEND_PORT:-8080}:80"');
+    expect(compose).toContain('"${FRONTEND_HOST:-127.0.0.1}:${FRONTEND_PORT:-8080}:8080"');
   });
 
   it("serves only self-hosted scripts and fonts under the production CSP", () => {
@@ -87,5 +88,22 @@ describe("nginx static frontend configuration", () => {
 
     expect(fromLines).toHaveLength(2);
     fromLines.forEach((line) => expect(line).toMatch(/@sha256:[a-f0-9]{64}\s+AS\s+/));
+  });
+
+  it("bounds proxied requests and blocks sensitive file namespaces", () => {
+    const config = readFileSync(configPath, "utf8");
+
+    expect(config).toMatch(/client_max_body_size\s+6m;/);
+    expect(config).toMatch(/proxy_connect_timeout\s+\d+s;/);
+    expect(config).toMatch(/location\s+~\s+\/\\\./);
+    expect(config).toContain("location ~* \\.(?:bak|old|tmp|sql|map)$");
+  });
+
+  it("runs application containers as non-root users", () => {
+    const frontendDockerfile = readFileSync(dockerfilePath, "utf8");
+    const apiDockerfile = readFileSync(apiDockerfilePath, "utf8");
+
+    expect(frontendDockerfile).toMatch(/USER\s+nginx/);
+    expect(apiDockerfile).toMatch(/USER\s+node/);
   });
 });

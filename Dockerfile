@@ -17,12 +17,16 @@ RUN npm run check
 
 FROM nginx:stable-alpine@sha256:0d3b80406a13a767339fbe2f41406d6c7da727ab89cf8fae399e81f780f814d1 AS production
 
-RUN rm -rf /usr/share/nginx/html/* /etc/nginx/conf.d/default.conf
-COPY --from=builder /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+RUN rm -rf /usr/share/nginx/html/* /etc/nginx/conf.d/default.conf \
+    && touch /var/run/nginx.pid \
+    && chown -R nginx:nginx /usr/share/nginx/html /var/cache/nginx /var/run/nginx.pid /etc/nginx/conf.d
+COPY --chown=nginx:nginx --from=builder /app/dist /usr/share/nginx/html
+COPY --chown=nginx:nginx nginx.conf /etc/nginx/conf.d/default.conf
 
-EXPOSE 80
+USER nginx
 
-HEALTHCHECK --interval=30s --timeout=3s --retries=3 CMD wget -qO- http://127.0.0.1/healthz || exit 1
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=3s --retries=3 CMD wget -qO- http://127.0.0.1:8080/healthz || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]
