@@ -1,4 +1,4 @@
-import { apiRequest, isMockMode } from "@infrastructure/http/client";
+import { apiRequest, encodeApiPathSegment, isMockMode } from "@infrastructure/http/client";
 import { useStore } from "@app/store/useStore";
 import { getChartsByDashboardId } from "@modules/charts/public/api";
 import { resolveDashboardWidgets } from "@modules/dashboards/lib/dashboardWorkspace";
@@ -57,7 +57,7 @@ export async function addSavedChartToDashboard({ chartId, projectId, sheetId, da
     return { layoutItem };
   }
 
-  return apiRequest(`/api/dashboards/${dashboardId}/charts`, {
+  return apiRequest(`/api/dashboards/${encodeApiPathSegment(dashboardId)}/charts`, {
     method: "POST",
     body: JSON.stringify({ chartId }),
   });
@@ -68,5 +68,5 @@ export async function loadDashboardContext(dashboardId, context = {}) {
     return getDashboardContext(useStore.getState(), dashboardId, context);
   }
 
-  return apiRequest(`/api/dashboards/${dashboardId}`);
+  return apiRequest(`/api/dashboards/${encodeApiPathSegment(dashboardId)}`);
 }

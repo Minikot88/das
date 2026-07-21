@@ -1,4 +1,4 @@
-import { apiRequest, isMockMode } from "@infrastructure/http/client";
+import { apiRequest, encodeApiPathSegment, isMockMode } from "@infrastructure/http/client";
 import { mockData, mockRows } from "@infrastructure/mock/mockData";
 import { mockSchema } from "@modules/charts/data/mockSchema";
 import {
@@ -111,7 +111,7 @@ export async function getChartTemplates() {
 
 export async function getChartTemplateById(id) {
   if (isMockMode()) return getChartJsTemplateById(id);
-  return apiRequest(`/api/chart-templates/${id}`);
+  return apiRequest(`/api/chart-templates/${encodeApiPathSegment(id)}`);
 }
 
 export async function validateChartMapping(payload) {
@@ -194,7 +194,7 @@ export async function getChartById(id) {
     return useStore.getState().charts.find((chart) => chart.id === id) ?? null;
   }
 
-  return apiRequest(`/api/charts/${id}`);
+  return apiRequest(`/api/charts/${encodeApiPathSegment(id)}`);
 }
 
 export async function getChartsByDashboardId(dashboardId, context = {}) {
@@ -233,7 +233,7 @@ export async function getChartsByDashboardId(dashboardId, context = {}) {
     return [];
   }
 
-  return apiRequest(`/api/dashboards/${dashboardId}/charts`);
+  return apiRequest(`/api/dashboards/${encodeApiPathSegment(dashboardId)}/charts`);
 }
 
 export async function createChart(payload) {
@@ -266,7 +266,7 @@ export async function updateChart(id, payload) {
     return nextChart;
   }
 
-  return apiRequest(`/api/charts/${id}`, {
+  return apiRequest(`/api/charts/${encodeApiPathSegment(id)}`, {
     method: "PUT",
     body: JSON.stringify(payload),
   });
@@ -279,7 +279,7 @@ export async function deleteChart(id) {
     return { success: true };
   }
 
-  return apiRequest(`/api/charts/${id}`, {
+  return apiRequest(`/api/charts/${encodeApiPathSegment(id)}`, {
     method: "DELETE",
   });
 }

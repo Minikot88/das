@@ -6,6 +6,10 @@ export function isMockMode() {
   return USE_MOCK;
 }
 
+export function encodeApiPathSegment(value) {
+  return encodeURIComponent(String(value));
+}
+
 async function parseResponseBody(response) {
   const text = await response.text();
   if (!text) return null;
