@@ -1,0 +1,664 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/infrastructure/database/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model Organization {
+  id        String   @id @db.VarChar(64)
+  code      String   @unique @db.VarChar(80)
+  name      String   @db.VarChar(180)
+  status    String   @default("active") @db.VarChar(32)
+  revision  Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.DateTime(3)
+  deletedAt DateTime? @map("deleted_at") @db.DateTime(3)
+  @@map("organizations")
+}
+
+model UserProfile {
+  id                   String   @id @db.VarChar(64)
+  organizationId       String   @map("organization_id") @db.VarChar(64)
+  externalUserId       String   @map("external_user_id") @db.VarChar(191)
+  externalAuthProvider String   @map("external_auth_provider") @db.VarChar(80)
+  email                String   @db.VarChar(191)
+  displayName          String   @map("display_name") @db.VarChar(180)
+  status               String   @default("active") @db.VarChar(32)
+  revision             Int      @default(0)
+  createdAt            DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt            DateTime @updatedAt @map("updated_at") @db.DateTime(3)
+  @@unique([organizationId, externalAuthProvider, externalUserId], map: "uq_user_profiles_external")
+  @@index([organizationId, email], map: "idx_user_profiles_org_email")
+  @@map("user_profiles")
+}
+
+model Role {
+  id             String @id @db.VarChar(64)
+  organizationId String @map("organization_id") @db.VarChar(64)
+  code           String @db.VarChar(80)
+  name           String @db.VarChar(180)
+  isSystem       Boolean @default(false) @map("is_system")
+  @@unique([organizationId, code], map: "uq_roles_org_code")
+  @@map("roles")
+}
+
+model Permission {
+  id          String @id @db.VarChar(64)
+  code        String @unique @db.VarChar(120)
+  description String? @db.VarChar(255)
+  @@map("permissions")
+}
+
+model RolePermission {
+  id           String @id @db.VarChar(64)
+  roleId       String @map("role_id") @db.VarChar(64)
+  permissionId String @map("permission_id") @db.VarChar(64)
+  @@unique([roleId, permissionId], map: "uq_role_permissions")
+  @@index([permissionId], map: "idx_role_permissions_permission")
+  @@map("role_permissions")
+}
+
+model UserRole {
+  id        String   @id @db.VarChar(64)
+  userId    String   @map("user_id") @db.VarChar(64)
+  roleId    String   @map("role_id") @db.VarChar(64)
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  @@unique([userId, roleId], map: "uq_user_roles")
+  @@index([roleId], map: "idx_user_roles_role")
+  @@map("user_roles")
+}
+
+model BiProject {
+  id             String   @id @db.VarChar(64)
+  organizationId String   @map("organization_id") @db.VarChar(64)
+  ownerUserId    String   @map("owner_user_id") @db.VarChar(64)
+  name           String   @db.VarChar(180)
+  status         String   @default("active") @db.VarChar(32)
+  revision       Int      @default(0)
+  createdAt      DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.DateTime(3)
+  deletedAt      DateTime? @map("deleted_at") @db.DateTime(3)
+  @@unique([organizationId, name], map: "uq_bi_projects_org_name")
+  @@index([organizationId, updatedAt, id], map: "idx_bi_projects_org_updated")
+  @@map("bi_projects")
+}
+
+model BiProjectMember {
+  id             String @id @db.VarChar(64)
+  organizationId String @map("organization_id") @db.VarChar(64)
+  projectId      String @map("project_id") @db.VarChar(64)
+  userId         String @map("user_id") @db.VarChar(64)
+  role           String @default("viewer") @db.VarChar(32)
+  @@unique([projectId, userId], map: "uq_bi_project_members")
+  @@index([organizationId, userId], map: "idx_bi_project_members_org_user")
+  @@map("bi_project_members")
+}
+
+model BiSheet {
+  id             String   @id @db.VarChar(64)
+  organizationId String   @map("organization_id") @db.VarChar(64)
+  projectId      String   @map("project_id") @db.VarChar(64)
+  name           String   @db.VarChar(180)
+  position       Int      @default(0)
+  revision       Int      @default(0)
+  createdAt      DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.DateTime(3)
+  @@unique([projectId, name], map: "uq_bi_sheets_project_name")
+  @@index([projectId, position, id], map: "idx_bi_sheets_project_position")
+  @@map("bi_sheets")
+}
+
+model WorkspaceContext {
+  id                String   @id @db.VarChar(64)
+  organizationId    String   @map("organization_id") @db.VarChar(64)
+  userId            String   @map("user_id") @db.VarChar(64)
+  activeProjectId   String?  @map("active_project_id") @db.VarChar(64)
+  activeSheetId     String?  @map("active_sheet_id") @db.VarChar(64)
+  activeDashboardId String?  @map("active_dashboard_id") @db.VarChar(64)
+  revision          Int      @default(0)
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.DateTime(3)
+  @@unique([organizationId, userId], map: "uq_workspace_contexts_org_user")
+  @@map("workspace_contexts")
+}
+
+model BiDashboard {
+  id                 String   @id @db.VarChar(64)
+  organizationId     String   @map("organization_id") @db.VarChar(64)
+  projectId          String   @map("project_id") @db.VarChar(64)
+  sheetId            String?  @map("sheet_id") @db.VarChar(64)
+  name               String   @db.VarChar(180)
+  canvasSettingsJson Json?    @map("canvas_settings_json")
+  status             String   @default("draft") @db.VarChar(32)
+  revision           Int      @default(0)
+  createdAt          DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.DateTime(3)
+  deletedAt          DateTime? @map("deleted_at") @db.DateTime(3)
+  @@index([projectId, updatedAt, id], map: "idx_bi_dashboards_project_updated")
+  @@map("bi_dashboards")
+}
+
+model DashboardVersion {
+  id             String   @id @db.VarChar(64)
+  organizationId String   @map("organization_id") @db.VarChar(64)
+  dashboardId    String   @map("dashboard_id") @db.VarChar(64)
+  revision       Int
+  snapshotJson   Json     @map("snapshot_json")
+  createdBy      String?  @map("created_by") @db.VarChar(64)
+  createdAt      DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  @@unique([dashboardId, revision], map: "uq_dashboard_versions_revision")
+  @@map("dashboard_versions")
+}
+
+model DashboardWidget {
+  id             String   @id @db.VarChar(64)
+  organizationId String   @map("organization_id") @db.VarChar(64)
+  dashboardId    String   @map("dashboard_id") @db.VarChar(64)
+  chartId        String?  @map("chart_id") @db.VarChar(64)
+  type           String   @db.VarChar(40)
+  x              Int
+  y              Int
+  width          Int
+  height         Int
+  zIndex         Int      @default(0) @map("z_index")
+  configJson     Json?    @map("config_json")
+  revision       Int      @default(0)
+  createdAt      DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.DateTime(3)
+  @@index([dashboardId, zIndex, id], map: "idx_dashboard_widgets_order")
+  @@index([chartId], map: "idx_dashboard_widgets_chart")
+  @@map("dashboard_widgets")
+}
+
+model SavedView {
+  id             String   @id @db.VarChar(64)
+  organizationId String   @map("organization_id") @db.VarChar(64)
+  projectId      String   @map("project_id") @db.VarChar(64)
+  dashboardId    String?  @map("dashboard_id") @db.VarChar(64)
+  userId         String   @map("user_id") @db.VarChar(64)
+  name           String   @db.VarChar(180)
+  stateJson      Json     @map("state_json")
+  revision       Int      @default(0)
+  createdAt      DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.DateTime(3)
+  @@index([projectId, userId, updatedAt], map: "idx_saved_views_project_user")
+  @@map("saved_views")
+}
+
+model ChartType {
+  id           String @id @db.VarChar(64)
+  code         String @unique @db.VarChar(100)
+  name         String @db.VarChar(180)
+  renderer     String @db.VarChar(40)
+  metadataJson Json?  @map("metadata_json")
+  @@map("chart_types")
+}
+
+model ChartTypeRequirement {
+  id          String @id @db.VarChar(64)
+  chartTypeId String @map("chart_type_id") @db.VarChar(64)
+  slot        String @db.VarChar(80)
+  minFields   Int    @default(0) @map("min_fields")
+  maxFields   Int?   @map("max_fields")
+  rulesJson   Json?  @map("rules_json")
+  @@unique([chartTypeId, slot], map: "uq_chart_type_requirements_slot")
+  @@map("chart_type_requirements")
+}
+
+model ChartTemplate {
+  id                 String @id @db.VarChar(64)
+  chartTypeId        String @map("chart_type_id") @db.VarChar(64)
+  code               String @unique @db.VarChar(100)
+  name               String @db.VarChar(180)
+  defaultMappingJson Json?  @map("default_mapping_json")
+  defaultSettingsJson Json? @map("default_settings_json")
+  @@index([chartTypeId], map: "idx_chart_templates_type")
+  @@map("chart_templates")
+}
+
+model Chart {
+  id                  String   @id @db.VarChar(64)
+  organizationId      String   @map("organization_id") @db.VarChar(64)
+  projectId           String   @map("project_id") @db.VarChar(64)
+  datasetId           String?  @map("dataset_id") @db.VarChar(64)
+  chartTypeId         String?  @map("chart_type_id") @db.VarChar(64)
+  name                String   @db.VarChar(180)
+  engine              String   @default("chartjs") @db.VarChar(40)
+  mappingJson         Json?    @map("mapping_json")
+  settingsJson        Json?    @map("settings_json")
+  filtersJson         Json?    @map("filters_json")
+  configJson          Json?    @map("config_json")
+  queryDefinitionJson Json?    @map("query_definition_json")
+  dataContractJson    Json?    @map("data_contract_json")
+  revision            Int      @default(0)
+  createdAt           DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.DateTime(3)
+  deletedAt           DateTime? @map("deleted_at") @db.DateTime(3)
+  @@index([projectId, updatedAt, id], map: "idx_charts_project_updated")
+  @@index([datasetId], map: "idx_charts_dataset")
+  @@map("charts")
+}
+
+model ChartVersion {
+  id           String   @id @db.VarChar(64)
+  chartId      String   @map("chart_id") @db.VarChar(64)
+  revision     Int
+  snapshotJson Json     @map("snapshot_json")
+  createdAt    DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  @@unique([chartId, revision], map: "uq_chart_versions_revision")
+  @@map("chart_versions")
+}
+
+model DataSourceType {
+  id               String @id @db.VarChar(64)
+  code             String @unique @db.VarChar(80)
+  name             String @db.VarChar(120)
+  implementation   String @default("not_implemented") @db.VarChar(40)
+  capabilitiesJson Json?  @map("capabilities_json")
+  @@map("data_source_types")
+}
+
+model DataSourceConnection {
+  id             String   @id @db.VarChar(64)
+  organizationId String   @map("organization_id") @db.VarChar(64)
+  projectId      String   @map("project_id") @db.VarChar(64)
+  typeId         String   @map("type_id") @db.VarChar(64)
+  name           String   @db.VarChar(180)
+  metadataJson   Json?    @map("metadata_json")
+  status         String   @default("untested") @db.VarChar(32)
+  revision       Int      @default(0)
+  createdAt      DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.DateTime(3)
+  deletedAt      DateTime? @map("deleted_at") @db.DateTime(3)
+  @@index([projectId, updatedAt, id], map: "idx_data_source_connections_project")
+  @@map("data_source_connections")
+}
+
+model DataSourceSecretReference {
+  id             String   @id @db.VarChar(64)
+  organizationId String   @map("organization_id") @db.VarChar(64)
+  connectionId   String   @map("connection_id") @db.VarChar(64)
+  provider       String   @db.VarChar(40)
+  keyVersion     Int      @default(1) @map("key_version")
+  encryptedJson  String   @map("encrypted_json") @db.LongText
+  createdAt      DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  rotatedAt      DateTime? @map("rotated_at") @db.DateTime(3)
+  @@unique([connectionId], map: "uq_data_source_secret_connection")
+  @@map("data_source_secret_references")
+}
+
+model DataSourceTestRun {
+  id             String   @id @db.VarChar(64)
+  organizationId String   @map("organization_id") @db.VarChar(64)
+  connectionId   String   @map("connection_id") @db.VarChar(64)
+  status         String   @db.VarChar(32)
+  durationMs     Int?     @map("duration_ms")
+  errorCode      String?  @map("error_code") @db.VarChar(80)
+  safeMessage    String?  @map("safe_message") @db.VarChar(500)
+  createdAt      DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  @@index([connectionId, createdAt], map: "idx_data_source_test_runs_connection")
+  @@map("data_source_test_runs")
+}
+
+model DataSourceSchema {
+  id           String   @id @db.VarChar(64)
+  connectionId String   @map("connection_id") @db.VarChar(64)
+  name         String   @db.VarChar(191)
+  discoveredAt DateTime @default(now()) @map("discovered_at") @db.DateTime(3)
+  @@unique([connectionId, name], map: "uq_data_source_schemas")
+  @@map("data_source_schemas")
+}
+
+model DataSourceTable {
+  id           String @id @db.VarChar(64)
+  connectionId String @map("connection_id") @db.VarChar(64)
+  schemaId     String @map("schema_id") @db.VarChar(64)
+  name         String @db.VarChar(191)
+  tableType    String @map("table_type") @db.VarChar(40)
+  @@unique([schemaId, name], map: "uq_data_source_tables")
+  @@index([connectionId], map: "idx_data_source_tables_connection")
+  @@map("data_source_tables")
+}
+
+model DataSourceColumn {
+  id        String @id @db.VarChar(64)
+  tableId   String @map("table_id") @db.VarChar(64)
+  name      String @db.VarChar(191)
+  dataType  String @map("data_type") @db.VarChar(100)
+  nullable  Boolean @default(true)
+  ordinal   Int
+  @@unique([tableId, name], map: "uq_data_source_columns")
+  @@index([tableId, ordinal], map: "idx_data_source_columns_order")
+  @@map("data_source_columns")
+}
+
+model Dataset {
+  id             String   @id @db.VarChar(64)
+  organizationId String   @map("organization_id") @db.VarChar(64)
+  projectId      String   @map("project_id") @db.VarChar(64)
+  name           String   @db.VarChar(180)
+  sourceType     String   @map("source_type") @db.VarChar(40)
+  status         String   @default("processing") @db.VarChar(32)
+  rowCount       Int      @default(0) @map("row_count")
+  fieldCount     Int      @default(0) @map("field_count")
+  sourceFileId   String?  @map("source_file_id") @db.VarChar(64)
+  statisticsJson Json?    @map("statistics_json")
+  revision       Int      @default(0)
+  createdAt      DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.DateTime(3)
+  deletedAt      DateTime? @map("deleted_at") @db.DateTime(3)
+  @@index([projectId, updatedAt, id], map: "idx_datasets_project_updated")
+  @@map("datasets")
+}
+
+model DatasetVersion {
+  id           String   @id @db.VarChar(64)
+  datasetId    String   @map("dataset_id") @db.VarChar(64)
+  version      Int
+  schemaJson   Json     @map("schema_json")
+  rowCount     Int      @map("row_count")
+  createdAt    DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  @@unique([datasetId, version], map: "uq_dataset_versions")
+  @@map("dataset_versions")
+}
+
+model DatasetField {
+  id           String @id @db.VarChar(64)
+  datasetId    String @map("dataset_id") @db.VarChar(64)
+  fieldKey     String @map("field_key") @db.VarChar(191)
+  name         String @db.VarChar(191)
+  label        String? @db.VarChar(191)
+  dataType     String @map("data_type") @db.VarChar(40)
+  nullable     Boolean @default(true)
+  ordinal      Int
+  semanticType String? @map("semantic_type") @db.VarChar(80)
+  @@unique([datasetId, fieldKey], map: "uq_dataset_fields_key")
+  @@index([datasetId, ordinal], map: "idx_dataset_fields_order")
+  @@map("dataset_fields")
+}
+
+model DatasetRow {
+  id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  datasetId String   @map("dataset_id") @db.VarChar(64)
+  rowNumber Int      @map("row_number")
+  rowJson   Json     @map("row_json")
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  @@unique([datasetId, rowNumber], map: "uq_dataset_rows_number")
+  @@map("dataset_rows")
+}
+
+model DatasetStatistic {
+  id         String   @id @db.VarChar(64)
+  datasetId  String   @map("dataset_id") @db.VarChar(64)
+  fieldId    String?  @map("field_id") @db.VarChar(64)
+  statistic  String   @db.VarChar(80)
+  valueJson  Json?    @map("value_json")
+  computedAt DateTime @default(now()) @map("computed_at") @db.DateTime(3)
+  @@index([datasetId, fieldId], map: "idx_dataset_statistics_field")
+  @@map("dataset_statistics")
+}
+
+model DatasetValidationResult {
+  id          String   @id @db.VarChar(64)
+  datasetId   String   @map("dataset_id") @db.VarChar(64)
+  fieldId     String?  @map("field_id") @db.VarChar(64)
+  severity    String   @db.VarChar(20)
+  code        String   @db.VarChar(80)
+  message     String   @db.VarChar(500)
+  detailsJson Json?    @map("details_json")
+  createdAt   DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  @@index([datasetId, severity], map: "idx_dataset_validation_severity")
+  @@map("dataset_validation_results")
+}
+
+model ImportJob {
+  id             String   @id @db.VarChar(64)
+  organizationId String   @map("organization_id") @db.VarChar(64)
+  projectId      String   @map("project_id") @db.VarChar(64)
+  datasetId      String?  @map("dataset_id") @db.VarChar(64)
+  fileId         String?  @map("file_id") @db.VarChar(64)
+  idempotencyKey String   @map("idempotency_key") @db.VarChar(128)
+  status         String   @default("pending") @db.VarChar(32)
+  processedRows  Int      @default(0) @map("processed_rows")
+  totalRows      Int?     @map("total_rows")
+  createdAt      DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  completedAt    DateTime? @map("completed_at") @db.DateTime(3)
+  @@unique([organizationId, idempotencyKey], map: "uq_import_jobs_idempotency")
+  @@index([projectId, createdAt], map: "idx_import_jobs_project")
+  @@map("import_jobs")
+}
+
+model ImportJobRow {
+  id        BigInt @id @default(autoincrement()) @db.UnsignedBigInt
+  importId  String @map("import_id") @db.VarChar(64)
+  rowNumber Int    @map("row_number")
+  status    String @db.VarChar(32)
+  errorCode String? @map("error_code") @db.VarChar(80)
+  @@unique([importId, rowNumber], map: "uq_import_job_rows")
+  @@map("import_job_rows")
+}
+
+model ImportError {
+  id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  importId  String   @map("import_id") @db.VarChar(64)
+  rowNumber Int?     @map("row_number")
+  columnName String? @map("column_name") @db.VarChar(191)
+  code      String   @db.VarChar(80)
+  message   String   @db.VarChar(500)
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  @@index([importId, rowNumber], map: "idx_import_errors_row")
+  @@map("import_errors")
+}
+
+model SqlQuery {
+  id             String   @id @db.VarChar(64)
+  organizationId String   @map("organization_id") @db.VarChar(64)
+  projectId      String   @map("project_id") @db.VarChar(64)
+  connectionId   String?  @map("connection_id") @db.VarChar(64)
+  datasetId      String?  @map("dataset_id") @db.VarChar(64)
+  name           String   @db.VarChar(180)
+  sqlText        String   @map("sql_text") @db.LongText
+  parametersJson Json?    @map("parameters_json")
+  revision       Int      @default(0)
+  createdAt      DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.DateTime(3)
+  @@index([projectId, updatedAt], map: "idx_sql_queries_project")
+  @@map("sql_queries")
+}
+
+model SqlQueryRun {
+  id             String   @id @db.VarChar(64)
+  organizationId String   @map("organization_id") @db.VarChar(64)
+  projectId      String   @map("project_id") @db.VarChar(64)
+  queryId        String?  @map("query_id") @db.VarChar(64)
+  connectionId   String?  @map("connection_id") @db.VarChar(64)
+  datasetId      String?  @map("dataset_id") @db.VarChar(64)
+  sqlHash        String   @map("sql_hash") @db.Char(64)
+  status         String   @db.VarChar(32)
+  durationMs     Int?     @map("duration_ms")
+  rowCount       Int?     @map("row_count")
+  truncated      Boolean  @default(false)
+  createdAt      DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  @@index([projectId, createdAt], map: "idx_sql_query_runs_project")
+  @@map("sql_query_runs")
+}
+
+model SqlQueryResult {
+  id        String   @id @db.VarChar(64)
+  runId     String   @unique @map("run_id") @db.VarChar(64)
+  rowCount  Int      @map("row_count")
+  truncated Boolean  @default(false)
+  expiresAt DateTime? @map("expires_at") @db.DateTime(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  @@map("sql_query_results")
+}
+
+model SqlQueryResultColumn {
+  id         String @id @db.VarChar(64)
+  resultId   String @map("result_id") @db.VarChar(64)
+  name       String @db.VarChar(191)
+  dataType   String @map("data_type") @db.VarChar(80)
+  ordinal    Int
+  @@unique([resultId, ordinal], map: "uq_sql_query_result_columns")
+  @@map("sql_query_result_columns")
+}
+
+model SqlQueryResultRow {
+  id        BigInt @id @default(autoincrement()) @db.UnsignedBigInt
+  resultId  String @map("result_id") @db.VarChar(64)
+  rowNumber Int    @map("row_number")
+  rowJson   Json   @map("row_json")
+  @@unique([resultId, rowNumber], map: "uq_sql_query_result_rows")
+  @@map("sql_query_result_rows")
+}
+
+model DashboardShareLink {
+  id             String   @id @db.VarChar(64)
+  organizationId String   @map("organization_id") @db.VarChar(64)
+  projectId      String   @map("project_id") @db.VarChar(64)
+  dashboardId    String   @map("dashboard_id") @db.VarChar(64)
+  tokenHash      String   @unique @map("token_hash") @db.Char(64)
+  status         String   @default("active") @db.VarChar(32)
+  allowedOrigins Json?    @map("allowed_origins")
+  revision       Int      @default(0)
+  expiresAt      DateTime? @map("expires_at") @db.DateTime(3)
+  revokedAt      DateTime? @map("revoked_at") @db.DateTime(3)
+  createdAt      DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  @@index([dashboardId, createdAt], map: "idx_dashboard_share_links_dashboard")
+  @@map("dashboard_share_links")
+}
+
+model DashboardShareSnapshot {
+  id                String   @id @db.VarChar(64)
+  shareId           String   @map("share_id") @db.VarChar(64)
+  dashboardRevision Int      @map("dashboard_revision")
+  snapshotJson      Json     @map("snapshot_json")
+  checksum          String   @db.Char(64)
+  createdAt         DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  @@unique([shareId], map: "uq_dashboard_share_snapshots_share")
+  @@map("dashboard_share_snapshots")
+}
+
+model DashboardShareAccessLog {
+  id         BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  shareId    String   @map("share_id") @db.VarChar(64)
+  requestId  String   @map("request_id") @db.VarChar(64)
+  origin     String?  @db.VarChar(255)
+  userAgent  String?  @map("user_agent") @db.VarChar(500)
+  outcome    String   @db.VarChar(32)
+  accessedAt DateTime @default(now()) @map("accessed_at") @db.DateTime(3)
+  @@index([shareId, accessedAt], map: "idx_dashboard_share_access_logs_share")
+  @@map("dashboard_share_access_logs")
+}
+
+model EmbedSetting {
+  id             String @id @db.VarChar(64)
+  shareId        String @unique @map("share_id") @db.VarChar(64)
+  showHeader     Boolean @default(false) @map("show_header")
+  theme          String @default("auto") @db.VarChar(20)
+  optionsJson    Json?  @map("options_json")
+  @@map("embed_settings")
+}
+
+model ExportJob {
+  id             String   @id @db.VarChar(64)
+  organizationId String   @map("organization_id") @db.VarChar(64)
+  projectId      String   @map("project_id") @db.VarChar(64)
+  requestedBy    String   @map("requested_by") @db.VarChar(64)
+  entityType     String   @map("entity_type") @db.VarChar(40)
+  entityId       String   @map("entity_id") @db.VarChar(64)
+  format         String   @db.VarChar(20)
+  status         String   @default("pending") @db.VarChar(32)
+  optionsJson    Json?    @map("options_json")
+  createdAt      DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  completedAt    DateTime? @map("completed_at") @db.DateTime(3)
+  @@index([projectId, createdAt], map: "idx_export_jobs_project")
+  @@map("export_jobs")
+}
+
+model ExportFile {
+  id        String   @id @db.VarChar(64)
+  exportId  String   @map("export_id") @db.VarChar(64)
+  fileId    String   @map("file_id") @db.VarChar(64)
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  @@unique([exportId, fileId], map: "uq_export_files")
+  @@map("export_files")
+}
+
+model UserPreference {
+  id             String   @id @db.VarChar(64)
+  organizationId String   @map("organization_id") @db.VarChar(64)
+  userId         String   @map("user_id") @db.VarChar(64)
+  locale         String   @default("th") @db.VarChar(20)
+  theme          String   @default("system") @db.VarChar(20)
+  density        String   @default("comfortable") @db.VarChar(20)
+  dateFormat     String   @default("MMM d, yyyy") @map("date_format") @db.VarChar(40)
+  numberFormat   String   @default("compact") @map("number_format") @db.VarChar(40)
+  preferencesJson Json?   @map("preferences_json")
+  revision       Int      @default(0)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.DateTime(3)
+  @@unique([organizationId, userId], map: "uq_user_preferences_org_user")
+  @@map("user_preferences")
+}
+
+model FileRecord {
+  id             String   @id @db.VarChar(64)
+  organizationId String   @map("organization_id") @db.VarChar(64)
+  projectId      String?  @map("project_id") @db.VarChar(64)
+  ownerUserId    String   @map("owner_user_id") @db.VarChar(64)
+  provider       String   @db.VarChar(40)
+  storageKey     String   @unique @map("storage_key") @db.VarChar(500)
+  filename       String   @db.VarChar(255)
+  mimeType       String   @map("mime_type") @db.VarChar(120)
+  sizeBytes      BigInt   @map("size_bytes") @db.UnsignedBigInt
+  checksum       String   @db.Char(64)
+  retentionUntil DateTime? @map("retention_until") @db.DateTime(3)
+  createdAt      DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  @@index([organizationId, projectId, createdAt], map: "idx_files_scope")
+  @@map("files")
+}
+
+model AuditLog {
+  id             BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  organizationId String   @map("organization_id") @db.VarChar(64)
+  projectId      String?  @map("project_id") @db.VarChar(64)
+  actorUserId    String?  @map("actor_user_id") @db.VarChar(64)
+  requestId      String   @map("request_id") @db.VarChar(64)
+  entityType     String?  @map("entity_type") @db.VarChar(80)
+  entityId       String?  @map("entity_id") @db.VarChar(64)
+  action         String   @db.VarChar(120)
+  outcome        String   @db.VarChar(32)
+  metadataJson   Json?    @map("metadata_json")
+  occurredAt     DateTime @default(now()) @map("occurred_at") @db.DateTime(3)
+  @@index([organizationId, occurredAt, id], map: "idx_audit_logs_org_time")
+  @@index([organizationId, entityType, entityId], map: "idx_audit_logs_entity")
+  @@map("audit_logs")
+}
+
+model ErrorLog {
+  id             BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  organizationId String?  @map("organization_id") @db.VarChar(64)
+  requestId      String   @map("request_id") @db.VarChar(64)
+  code           String   @db.VarChar(80)
+  safeMessage    String   @map("safe_message") @db.VarChar(500)
+  metadataJson   Json?    @map("metadata_json")
+  occurredAt     DateTime @default(now()) @map("occurred_at") @db.DateTime(3)
+  @@index([occurredAt, id], map: "idx_error_logs_time")
+  @@map("error_logs")
+}
+
+model ApiRequestLog {
+  id             BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  organizationId String?  @map("organization_id") @db.VarChar(64)
+  userId         String?  @map("user_id") @db.VarChar(64)
+  requestId      String   @unique @map("request_id") @db.VarChar(64)
+  method         String   @db.VarChar(12)
+  path           String   @db.VarChar(500)
+  statusCode     Int      @map("status_code")
+  durationMs     Int      @map("duration_ms")
+  occurredAt     DateTime @default(now()) @map("occurred_at") @db.DateTime(3)
+  @@index([organizationId, occurredAt, id], map: "idx_api_request_logs_org_time")
+  @@map("api_request_logs")
+}

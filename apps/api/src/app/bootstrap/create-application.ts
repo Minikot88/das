@@ -1,0 +1,35 @@
+import 'reflect-metadata';
+import cookie from '@fastify/cookie';
+import cors from '@fastify/cors';
+import helmet from '@fastify/helmet';
+import multipart from '@fastify/multipart';
+import rateLimit from '@fastify/rate-limit';
+import type { FastifyRequest } from 'fastify';
+import { ValidationPipe } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
+import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
+import { AppModule } from '../app.module.js';
+import { parseEnvironment } from '../config/environment.js';
+import { ApiEnvelopeInterceptor } from '../../shared/http/api-envelope.interceptor.js';
+import { ApiExceptionFilter } from '../../shared/http/api-exception.filter.js';
+import { ensureRequestId } from '../../shared/http/request-id.js';
+
+export async function createApplication(input: NodeJS.ProcessEnv | Record<string, string | undefined> = process.env): Promise<NestFastifyApplication> {
+  const environment = parseEnvironment(input);
+  const app = await NestFactory.create<NestFastifyApplication>(AppModule.configured(environment), new FastifyAdapter({ bodyLimit: 6 * 1024 * 1024 }), { logger: environment.nodeEnv === 'test' ? false : ['log','warn','error'] });
+  await app.register(cookie, { secret: environment.sessionSigningKey });
+  await app.register(helmet, { contentSecurityPolicy: false });
+  await app.register(cors, { origin: environment.corsOrigins, credentials: true });
+  await app.register(rateLimit, { max: 300, timeWindow: '1 minute' });
+  await app.register(multipart, { limits: { fileSize: 5 * 1024 * 1024, files: 1, fields: 20 } });
+  app.getHttpAdapter().getInstance().addHook('onRequest', (request: FastifyRequest, _reply, done) => {
+    ensureRequestId(request);
+    done();
+  });
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+  app.useGlobalInterceptors(new ApiEnvelopeInterceptor());
+  app.useGlobalFilters(new ApiExceptionFilter());
+  await app.init();
+  await app.getHttpAdapter().getInstance().ready();
+  return app;
+}
