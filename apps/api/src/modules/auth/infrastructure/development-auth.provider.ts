@@ -16,8 +16,8 @@ export class DevelopmentAuthProvider implements AuthProvider {
   constructor(@Inject(ENVIRONMENT) private readonly environment: RuntimeEnvironment) {}
 
   async authenticate(email: string, password: string): Promise<AuthenticatedUser> {
-    const expectedEmail = this.environment.developmentAuthEmail || 'dev@example.com';
-    const expectedPassword = this.environment.developmentAuthPassword || 'development-password';
+    const expectedEmail = this.environment.developmentAuthEmail || 'demo@dataviz.bi';
+    const expectedPassword = this.environment.developmentAuthPassword || 'demo1234';
     if (!safeEqual(String(email || ''), expectedEmail) || !safeEqual(String(password || ''), expectedPassword)) {
       throw new ApiError(401, 'INVALID_CREDENTIALS', 'Email or password is incorrect.');
     }
