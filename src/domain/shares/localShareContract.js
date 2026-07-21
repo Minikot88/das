@@ -42,16 +42,9 @@ function sanitizeOpaqueDatasetString(value) {
         changed = true;
       }
     });
-    const fragment = url.hash.startsWith("#") ? url.hash.slice(1) : url.hash;
-    if (fragment.includes("=")) {
-      const params = new URLSearchParams(fragment);
-      Array.from(params.keys()).forEach((key) => {
-        if (isSecretSnapshotKey(key)) {
-          params.delete(key);
-          changed = true;
-        }
-      });
-      url.hash = params.toString();
+    if (url.hash) {
+      url.hash = "";
+      changed = true;
     }
     return changed ? url.toString() : value;
   } catch {

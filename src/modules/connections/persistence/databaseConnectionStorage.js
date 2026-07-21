@@ -80,14 +80,7 @@ export function sanitizeConnectionUrl(value) {
     Array.from(url.searchParams.keys()).forEach((key) => {
       if (!isSafeUrlParameter(key)) url.searchParams.delete(key);
     });
-    const fragment = url.hash.startsWith("#") ? url.hash.slice(1) : url.hash;
-    if (fragment.includes("=")) {
-      const fragmentParams = new URLSearchParams(fragment);
-      Array.from(fragmentParams.keys()).forEach((key) => {
-        if (!isSafeUrlParameter(key)) fragmentParams.delete(key);
-      });
-      url.hash = fragmentParams.toString();
-    }
+    url.hash = "";
     return sanitizeSemicolonParameters(`${jdbcPrefix}${url.toString()}`);
   } catch {
     return sanitizeOpaqueConnectionUrl(jdbcPrefix ? `${jdbcPrefix}${candidate}` : raw);

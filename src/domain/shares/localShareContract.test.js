@@ -67,6 +67,18 @@ describe("local readonly share contract", () => {
     expect(validateLocalShare(share)).toEqual({ valid: true, errors: [] });
   });
 
+  it("drops opaque URL fragments from application-owned share snapshot URLs", () => {
+    const { project, dashboard } = fixture();
+    dashboard.widgets[0].config = {
+      imageUrl: "https://assets.example.test/image#SYNTHETIC_BEARER_SECRET",
+    };
+
+    const share = createLocalReadonlyShare({ id: "share-fragment", project, dashboard });
+
+    expect(share.snapshot.widgets[0].config.imageUrl).toBeUndefined();
+    expect(validateLocalShare(share)).toEqual({ valid: true, errors: [] });
+  });
+
   it("rejects invalid ownership, invalid modes, and editable snapshots", () => {
     const { project, dashboard } = fixture();
     const share = createLocalReadonlyShare({ id: "share-1", project, dashboard });

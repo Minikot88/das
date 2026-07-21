@@ -81,6 +81,13 @@ describe("database connection metadata safety", () => {
       .toBe("jdbc:sqlserver://db.example.test;databaseName=sales");
   });
 
+  it("drops opaque URL fragments before persisting connection metadata", () => {
+    const unsafeUrl = "https://db.example.test/source#SYNTHETIC_BEARER_SECRET";
+
+    expect(sanitizeConnectionUrl(unsafeUrl)).toBe("https://db.example.test/source");
+    expect(containsCredentialMaterial(unsafeUrl)).toBe(true);
+  });
+
   it("persists only whitelisted, secret-free metadata", () => {
     const sanitized = sanitizeConnectionMetadata(unsafeProfile());
 
