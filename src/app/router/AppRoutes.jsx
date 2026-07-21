@@ -4,7 +4,7 @@ import { MainLayout } from "@app/layouts/Layout";
 import RouteErrorBoundary from "@app/error-boundaries/RouteErrorBoundary";
 import { useStore } from "@/store/useStore";
 
-const BuilderPage = lazy(() => import("@/pages/Builder.jsx"));
+const BuilderPage = lazy(() => import("@modules/charts/pages/Builder.jsx"));
 const DashboardCanvasBuilder = lazy(() => import("@/pages/DashboardCanvasBuilder.jsx"));
 const DashboardDesignerV2 = lazy(() => import("@/pages/DashboardDesignerV2"));
 const DashboardPage = lazy(() => import("@/pages/DashboardPage.jsx"));

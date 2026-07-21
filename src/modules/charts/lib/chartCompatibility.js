@@ -1,4 +1,4 @@
-import { getChartJsTemplateById } from "@/utils/chartTemplates.js";
+import { getChartJsTemplateById } from "@modules/charts/lib/chartTemplates.js";
 
 function normalizeSchema(schema) {
   if (Array.isArray(schema)) return schema;

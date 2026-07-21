@@ -21,7 +21,7 @@ import { exportRowsToCsv, transformChartData } from "@/components/dashboard-v2/u
 import { getLatestEChartsDataUrl } from "@/components/dashboard-v2/utils/echartsInstanceRegistry";
 import { validateChartConfig, validateFieldForSlot } from "@/components/dashboard-v2/utils/chartValidation";
 import { getChartDefinition } from "@/components/dashboard-v2/utils/chartRegistry";
-import { getSavedChartById, upsertSavedChart } from "@/utils/savedChartsStorage";
+import { getSavedChartById, upsertSavedChart } from "@modules/charts/persistence/savedChartsStorage";
 import {
   compactChartConfigForStorage,
   consumeStorageRecoveryMessage,

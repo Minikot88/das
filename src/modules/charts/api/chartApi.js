@@ -1,20 +1,20 @@
 import { apiRequest, isMockMode } from "@/api/client";
 import { mockData, mockRows } from "@/data/mockData";
-import { mockSchema } from "@/data/mockSchema";
+import { mockSchema } from "@modules/charts/data/mockSchema";
 import {
   chartJsTemplates,
   getChartJsTemplateById,
   getChartTypes as getTemplateChartTypes,
-} from "@/utils/chartTemplates";
+} from "@modules/charts/lib/chartTemplates";
 import {
   getChartValidationMessage,
   validateChartMapping as validateChartMappingInternal,
-} from "@/utils/chartCompatibility";
-import { createChartConfig as createChartConfigInternal } from "@/utils/chartFactory";
+} from "@modules/charts/lib/chartCompatibility";
+import { createChartConfig as createChartConfigInternal } from "@modules/charts/lib/chartFactory";
 import {
   executeMockSql,
   generateVisualSql as generateVisualSqlInternal,
-} from "@/utils/mockSqlEngine";
+} from "@modules/charts/lib/mockSqlEngine";
 import { createEntityId } from "@shared/lib/id";
 import { useStore } from "@/store/useStore";
 

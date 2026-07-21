@@ -60,7 +60,7 @@ describe("useDashboardDesignerState canonical datasets", () => {
   });
 
   it("replays a saved imported-dataset chart with the same rows after remount", async () => {
-    const savedCharts = await import("@/utils/savedChartsStorage");
+    const savedCharts = await import("@modules/charts/persistence/savedChartsStorage");
     savedCharts.upsertSavedChart({
       id: "chart-imported-replay",
       title: "Imported replay",
@@ -87,7 +87,7 @@ describe("useDashboardDesignerState canonical datasets", () => {
   });
 
   it("replays the persisted SQL data contract instead of rerunning against demo rows", async () => {
-    const savedCharts = await import("@/utils/savedChartsStorage");
+    const savedCharts = await import("@modules/charts/persistence/savedChartsStorage");
     savedCharts.upsertSavedChart({
       id: "chart-sql-replay",
       title: "Persisted SQL replay",

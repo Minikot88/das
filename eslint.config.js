@@ -30,9 +30,9 @@ export default defineConfig([
   {
     files: [
       'src/components/bi/CommandPaletteModal.jsx',
-      'src/components/charts/ChartJsRenderer.jsx',
-      'src/features/builder/ChartTypePicker.jsx',
-      'src/features/builder/FieldList.jsx',
+      'src/modules/charts/components/ChartJsRenderer.jsx',
+      'src/modules/charts/builder/ChartTypePicker.jsx',
+      'src/modules/charts/builder/FieldList.jsx',
       'src/shared/hooks/useNavigationControls.js',
       'src/app/layouts/AppHeader.jsx',
       'src/modules/sharing/pages/DashboardPublicPage.jsx',

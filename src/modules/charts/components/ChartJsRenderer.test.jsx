@@ -24,7 +24,7 @@ vi.mock("chart.js/auto", () => ({
   },
 }));
 
-import ChartJsRenderer from "@/components/charts/ChartJsRenderer";
+import ChartJsRenderer from "@modules/charts/components/ChartJsRenderer";
 
 describe("ChartJsRenderer lifecycle", () => {
   beforeEach(() => {

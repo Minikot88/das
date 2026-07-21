@@ -309,7 +309,7 @@ describe("Zustand workspace compatibility subscription", () => {
   it("replays exact imported data through designer chart save dashboard placement and refresh", async () => {
     const [{ useStore }, savedCharts, projectStorage, datasetService, { workspaceRepository: initialRepository }] = await Promise.all([
       import("@/store/useStore"),
-      import("@/utils/savedChartsStorage"),
+      import("@modules/charts/persistence/savedChartsStorage"),
       import("@/services/projectStorage"),
       import("@/components/dashboard-v2/services/datasetService"),
       import("@domain/workspace/workspaceRepository"),
@@ -355,7 +355,7 @@ describe("Zustand workspace compatibility subscription", () => {
     const [{ workspaceRepository }, refreshedProjectStorage, refreshedSavedCharts, refreshedChartContract] = await Promise.all([
       import("@domain/workspace/workspaceRepository"),
       import("@/services/projectStorage"),
-      import("@/utils/savedChartsStorage"),
+      import("@modules/charts/persistence/savedChartsStorage"),
       import("@domain/charts/chartDataContract"),
     ]);
     const refreshedChart = refreshedSavedCharts.getSavedChartById("chart-replay");
@@ -376,7 +376,7 @@ describe("Zustand workspace compatibility subscription", () => {
 
   it("replays a built-in demo chart through dashboard placement and refresh", async () => {
     const [savedCharts, projectStorage] = await Promise.all([
-      import("@/utils/savedChartsStorage"),
+      import("@modules/charts/persistence/savedChartsStorage"),
       import("@/services/projectStorage"),
     ]);
     const rows = [{ region: "North", revenue: 12800000 }];
@@ -409,7 +409,7 @@ describe("Zustand workspace compatibility subscription", () => {
     const [{ workspaceRepository }, refreshedProjectStorage, refreshedSavedCharts, refreshedChartContract] = await Promise.all([
       import("@domain/workspace/workspaceRepository"),
       import("@/services/projectStorage"),
-      import("@/utils/savedChartsStorage"),
+      import("@modules/charts/persistence/savedChartsStorage"),
       import("@domain/charts/chartDataContract"),
     ]);
     const refreshedChart = refreshedSavedCharts.getSavedChartById("chart-demo-replay");

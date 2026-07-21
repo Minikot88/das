@@ -8,15 +8,15 @@ import {
   createBuilderReturnState,
 } from "@/utils/dashboardWorkspace";
 import { clearBuilderDraft } from "@/utils/storage";
-import FieldList from "@/features/builder/FieldList";
-import ChartTypePicker from "@/features/builder/ChartTypePicker";
-import QueryModePanel from "@/features/builder/QueryModePanel";
-import ChartMappingPanel from "@/features/builder/ChartMappingPanel";
-import ChartPreviewPanel from "@/features/builder/ChartPreviewPanel";
-import ChartSettingsPanel from "@/features/builder/ChartSettingsPanel";
-import ChartAnalyticsPanel from "@/features/builder/ChartAnalyticsPanel";
-import ChartSavePanel from "@/features/builder/ChartSavePanel";
-import useChartBuilder from "@/features/builder/hooks/useChartBuilder";
+import FieldList from "@modules/charts/builder/FieldList";
+import ChartTypePicker from "@modules/charts/builder/ChartTypePicker";
+import QueryModePanel from "@modules/charts/builder/QueryModePanel";
+import ChartMappingPanel from "@modules/charts/builder/ChartMappingPanel";
+import ChartPreviewPanel from "@modules/charts/builder/ChartPreviewPanel";
+import ChartSettingsPanel from "@modules/charts/builder/ChartSettingsPanel";
+import ChartAnalyticsPanel from "@modules/charts/builder/ChartAnalyticsPanel";
+import ChartSavePanel from "@modules/charts/builder/ChartSavePanel";
+import useChartBuilder from "@modules/charts/builder/hooks/useChartBuilder";
 
 function getBuilderContextFromRoute(locationState, fallbackContext) {
   return locationState?.builderContext ?? fallbackContext ?? null;

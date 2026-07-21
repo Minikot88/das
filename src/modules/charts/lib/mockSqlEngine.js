@@ -1,5 +1,5 @@
 import { mockDataset } from "@/data/mockData.js";
-import { mockSchema } from "@/data/mockSchema.js";
+import { mockSchema } from "@modules/charts/data/mockSchema.js";
 
 export const DEFAULT_SQL_CONNECTION_NAME = "Mock Connection";
 export const DEFAULT_SQL_NAMESPACE = "analytics";

@@ -1,6 +1,6 @@
 
 import { create } from "zustand";
-import { normalizeChartConfig } from "@/utils/normalizeChartConfig";
+import { normalizeChartConfig } from "@modules/charts/lib/normalizeChartConfig";
 import { schema } from "@/data/mockData";
 import {
   clearBuilderDraft,

@@ -10,12 +10,12 @@ import {
   runDatasetSql,
   updateChart,
   validateChartMapping,
-} from "@/api/chartApi";
+} from "@modules/charts/api/chartApi";
 import { addSavedChartToDashboard } from "@/api/dashboardApi";
 import {
   DEFAULT_SQL_CONNECTION_NAME,
   DEFAULT_SQL_NAMESPACE,
-} from "@/utils/mockSqlEngine";
+} from "@modules/charts/lib/mockSqlEngine";
 import { loadBuilderDraft, saveBuilderDraft } from "@/utils/storage";
 
 const BASE_SETTINGS = {

@@ -1,8 +1,8 @@
 import React, { memo, useEffect, useMemo, useRef, useState } from "react";
-import ChartRenderer from "@/components/charts/ChartRenderer";
-import ChartSkeleton from "@/components/charts/ChartSkeleton";
+import ChartRenderer from "@modules/charts/components/ChartRenderer";
+import ChartSkeleton from "@modules/charts/components/ChartSkeleton";
 import CardActions from "@/components/dashboard/CardActions";
-import { pickChartColor } from "@/utils/chartPalette";
+import { pickChartColor } from "@modules/charts/lib/chartPalette";
 import { getResponsiveChartKind } from "@/utils/layoutUtils";
 
 function accessibleCellValue(value) {
