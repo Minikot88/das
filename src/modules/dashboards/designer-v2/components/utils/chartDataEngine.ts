@@ -11,6 +11,7 @@ import type {
   SortMode,
   TransformedChartData,
 } from "@modules/dashboards/designer-v2/components/types";
+import { buildCsv } from "@shared/lib/csvExport";
 import { aggregateRows, groupByRows, isNumericField, toNumber, toText, uniqueFields } from "@modules/dashboards/designer-v2/components/utils/chartAggregations";
 import { clampPercent } from "@modules/dashboards/designer-v2/components/utils/chartFormatters";
 
@@ -552,14 +553,5 @@ export function transformChartData(
 }
 
 export function exportRowsToCsv(rows: DataRow[], columns: DataField[]) {
-  const header = columns.map((column) => `"${column.name.replace(/"/g, '""')}"`).join(",");
-  const body = rows.map((row) =>
-    columns
-      .map((column) => {
-        const value = row[column.id] ?? "";
-        return `"${String(value).replace(/"/g, '""')}"`;
-      })
-      .join(",")
-  );
-  return [header, ...body].join("\n");
+  return buildCsv(rows, columns.map((column) => ({ key: column.id, label: column.name })));
 }

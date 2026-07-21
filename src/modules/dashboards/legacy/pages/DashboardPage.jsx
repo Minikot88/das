@@ -34,6 +34,7 @@ import {
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import "@shared/styles/enterpriseBiRedesign.css";
+import { buildCsv } from "@shared/lib/csvExport";
 
 const GLOBAL_FILTER_PRESETS = [
   {
@@ -170,18 +171,11 @@ function downloadCsv(rows = [], filename = "chart-data", onError = () => {}) {
     onError("No columns available to export yet.");
     return false;
   }
-  const csv = [
-    columns.join(","),
-    ...safeRows.map((row) =>
-      columns
-        .map((column) => {
-          const value = row?.[column] ?? "";
-          const escaped = String(value).replace(/"/g, '""');
-          return `"${escaped}"`;
-        })
-        .join(",")
-    ),
-  ].join("\n");
+  const csv = buildCsv(
+    safeRows,
+    columns.map((column) => ({ key: column, label: column })),
+    { quoteHeaders: false },
+  );
 
   const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
