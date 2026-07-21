@@ -34,3 +34,24 @@ Branch created before edits: `refactor/production-folder-structure`
 
 These are baseline conditions. This organization refactor will not silently change dependencies, chunking behavior, tests, or Docker architecture to hide them.
 
+## Final verification
+
+Date: 2026-07-21
+
+Branch: `refactor/production-folder-structure`
+
+| Command or check | Result | Evidence |
+| --- | --- | --- |
+| `npm.cmd run lint` | PASS | ESLint exit 0 |
+| `npm.cmd run typecheck` | PASS | `tsc --noEmit` exit 0 |
+| `npm.cmd test -- --run` | PASS | Same 44 files and 247 tests |
+| `npm.cmd run build` | PASS with baseline warning | 1,871 modules transformed; large chunk warning remains |
+| `npm.cmd run audit:prod` | PASS | 0 production vulnerabilities |
+| `npm.cmd run check` | FAIL at unchanged baseline audit | All preceding lint, typecheck, test, and build stages passed; same `brace-expansion` dev advisory |
+| Static dependency graph | PASS | 235 source files, 501 imports, 0 cycles, 0 unresolved imports, 0 deep relative imports |
+| Route set comparison | PASS | All 14 explicit path declarations match baseline, including public and legacy paths |
+| Storage/environment/deployment contracts | PASS | Required keys and variables present; root deployment files have no content diff |
+| Workspace migration comparison | PASS | Migration logic unchanged; only its internal schema import path changed |
+| Docker image build | ENVIRONMENT BLOCKED | Docker Desktop Linux daemon pipe is unavailable |
+
+The aggregate gate is not reported as fully passing because the pre-existing development audit remains. Dependency remediation and bundle splitting are intentionally outside this behavior-preserving organization change.
