@@ -21,6 +21,9 @@ type OptionObject = Record<string, unknown>;
 type SeriesObject = Record<string, unknown>;
 
 const chartFontFamily = "IBM Plex Sans Thai";
+const HEX_COLOR_PATTERN = /^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
+const RGB_COLOR_PATTERN = /^rgba?\([\d\s.,%+\-]+\)$/i;
+const HSL_COLOR_PATTERN = /^hsla?\([\d\s.,%+\-degturnrad]+\)$/i;
 const animationEasing = {
   ease: "cubicOut",
   "ease-in": "cubicIn",
@@ -40,6 +43,15 @@ const darkChartTheme: ChartVisualTheme = {
   positive: enterpriseChartTheme.positive,
   negative: enterpriseChartTheme.negative,
 };
+
+export function sanitizeChartColor(value: unknown, fallback: string) {
+  if (typeof value !== "string") return fallback;
+  const candidate = value.trim();
+  if (HEX_COLOR_PATTERN.test(candidate) || RGB_COLOR_PATTERN.test(candidate) || HSL_COLOR_PATTERN.test(candidate) || candidate === "transparent") {
+    return candidate;
+  }
+  return fallback;
+}
 
 function isDarkAppTheme() {
   if (typeof document === "undefined") return false;
@@ -83,16 +95,19 @@ function chartVisualTheme(settings: ChartConfig["settings"]) {
 
 function chartBackground(settings: ChartConfig["settings"]) {
   if (isDarkChartMode(settings) && isLightHexColor(settings.general.backgroundColor)) return darkChartTheme.panel;
-  return settings.general.backgroundColor;
+  return sanitizeChartColor(settings.general.backgroundColor, chartVisualTheme(settings).panel);
 }
 
 function readableLabelColor(settings: ChartConfig["settings"]) {
-  if (!isDarkChartMode(settings)) return settings.labels.color;
-  return isDarkHexColor(settings.labels.color) ? darkChartTheme.title : settings.labels.color;
+  const safeColor = sanitizeChartColor(settings.labels.color, chartVisualTheme(settings).axisLabel);
+  if (!isDarkChartMode(settings)) return safeColor;
+  return isDarkHexColor(safeColor) ? darkChartTheme.title : safeColor;
 }
 
 function palette(settings: ChartConfig["settings"], chartTheme?: ChartTheme) {
-  return chartTheme?.palette?.length ? chartTheme.palette : settings.colors.seriesColors.length ? settings.colors.seriesColors : chartPalettes[settings.colors.palette];
+  const fallback = chartPalettes[settings.colors.palette] ?? Object.values(chartPalettes)[0];
+  const selected = chartTheme?.palette?.length ? chartTheme.palette : settings.colors.seriesColors.length ? settings.colors.seriesColors : fallback;
+  return selected.map((color, index) => sanitizeChartColor(color, fallback[index % fallback.length]));
 }
 
 function opacity(settings: ChartConfig["settings"]) {
@@ -226,7 +241,7 @@ function valueAxis(settings: ChartConfig["settings"], name?: string): OptionObje
     splitLine: {
       show: settings.grid.showGrid,
       lineStyle: {
-        color: settings.grid.color || theme.gridLine,
+        color: sanitizeChartColor(settings.grid.color, theme.gridLine),
         opacity: settings.grid.opacity / 100,
         type: lineType(settings),
       },
@@ -255,7 +270,7 @@ function categoryAxis(settings: ChartConfig["settings"], categories: string[], n
     splitLine: {
       show: false,
       lineStyle: {
-        color: settings.grid.color || theme.gridLine,
+        color: sanitizeChartColor(settings.grid.color, theme.gridLine),
         opacity: settings.grid.opacity / 100,
         type: lineType(settings),
       },
@@ -386,7 +401,7 @@ function buildPieOption(input: BuilderInput, donut = false): EChartsOption {
         radius: donut ? ["48%", "72%"] : ["0%", "72%"],
         center: ["50%", "54%"],
         itemStyle: {
-          borderColor: settings.colors.borderColor,
+          borderColor: sanitizeChartColor(settings.colors.borderColor, chartVisualTheme(settings).gridLine),
           borderWidth: 1,
           opacity: opacity(settings),
         },
