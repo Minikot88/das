@@ -10,7 +10,7 @@ import {
   getActiveProject as getStoredActiveProject,
   setActiveProject as setStoredActiveProject,
 } from "@/services/projectStorage";
-import { createBuilderContextForDashboard } from "@/utils/dashboardWorkspace";
+import { createBuilderContextForDashboard } from "@modules/dashboards/lib/dashboardWorkspace";
 import { getStorageHealth, subscribeStorageHealth } from "@/utils/storage";
 
 const RIBBON_TABS = [

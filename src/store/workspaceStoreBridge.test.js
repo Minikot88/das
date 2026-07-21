@@ -311,7 +311,7 @@ describe("Zustand workspace compatibility subscription", () => {
       import("@/store/useStore"),
       import("@modules/charts/persistence/savedChartsStorage"),
       import("@/services/projectStorage"),
-      import("@/components/dashboard-v2/services/datasetService"),
+      import("@modules/dashboards/designer-v2/components/services/datasetService"),
       import("@domain/workspace/workspaceRepository"),
     ]);
     const rows = [

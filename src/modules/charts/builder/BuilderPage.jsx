@@ -6,7 +6,7 @@ import { useStore } from "@/store/useStore";
 import {
   createBuilderContextForDashboard,
   createBuilderReturnState,
-} from "@/utils/dashboardWorkspace";
+} from "@modules/dashboards/lib/dashboardWorkspace";
 import { clearBuilderDraft } from "@/utils/storage";
 import FieldList from "@modules/charts/builder/FieldList";
 import ChartTypePicker from "@modules/charts/builder/ChartTypePicker";

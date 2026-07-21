@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import DemoHint from "@/components/dashboard-v2/DemoHint";
+import DemoHint from "@modules/dashboards/designer-v2/components/DemoHint";
 import { safeSetLocalStorage } from "@/services/projectStorage";
 import { deleteSavedChart } from "@modules/charts/persistence/savedChartsStorage";
 import { loadBuilderDraft } from "@/utils/storage";

@@ -5,9 +5,9 @@ import RouteErrorBoundary from "@app/error-boundaries/RouteErrorBoundary";
 import { useStore } from "@/store/useStore";
 
 const BuilderPage = lazy(() => import("@modules/charts/pages/Builder.jsx"));
-const DashboardCanvasBuilder = lazy(() => import("@/pages/DashboardCanvasBuilder.jsx"));
-const DashboardDesignerV2 = lazy(() => import("@/pages/DashboardDesignerV2"));
-const DashboardPage = lazy(() => import("@/pages/DashboardPage.jsx"));
+const DashboardCanvasBuilder = lazy(() => import("@modules/dashboards/current/DashboardCanvasBuilder.jsx"));
+const DashboardDesignerV2 = lazy(() => import("@modules/dashboards/designer-v2/pages"));
+const DashboardPage = lazy(() => import("@modules/dashboards/legacy/pages/DashboardPage.jsx"));
 const DashboardPublicPage = lazy(() => import("@modules/sharing/pages/DashboardPublicPage.jsx"));
 const DatabaseConnectionPage = lazy(() => import("@modules/connections/pages/DatabaseConnectionPage.jsx"));
 const DatasetsPage = lazy(() => import("@modules/datasets/pages/DatasetsPage.jsx"));

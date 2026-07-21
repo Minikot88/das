@@ -20,7 +20,7 @@ import {
   getPreferredChartLayout,
   sanitizeLayout,
   tryCreateAdjacentLayoutItem,
-} from "@/utils/layoutUtils";
+} from "@modules/dashboards/lib/layoutUtils";
 import { createCopyName, createEntityId, createTimestampId } from "@shared/lib/id";
 import { createShareToken } from "@modules/sharing/lib/shareTokens";
 import {

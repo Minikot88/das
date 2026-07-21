@@ -63,9 +63,9 @@ export default defineConfig([
   },
   {
     files: [
-      'src/components/dashboard-v2/PropertyPanel.tsx',
-      'src/components/dashboard-v2/SqlQueryPanel.tsx',
-      'src/hooks/dashboard-v2/useDashboardDesignerState.ts',
+      'src/modules/dashboards/designer-v2/components/PropertyPanel.tsx',
+      'src/modules/dashboards/designer-v2/components/SqlQueryPanel.tsx',
+      'src/modules/dashboards/designer-v2/hooks/useDashboardDesignerState.ts',
     ],
     rules: {
       'react-hooks/set-state-in-effect': 'off',
