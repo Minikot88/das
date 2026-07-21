@@ -7,10 +7,15 @@
 .env.*
 !.env.example
 node_modules
+**/node_modules
 dist
+**/dist
 coverage
 outputs
 nest-backend
 *.log
-docs
+docs/*
+!docs/database/
+docs/database/*
+!docs/database/schema-manifest.json
 screenshots

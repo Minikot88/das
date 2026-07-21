@@ -14,7 +14,7 @@ describe('HTTP foundation', () => {
       DEVELOPMENT_AUTH_PASSWORD: 'development-password',
       SESSION_SIGNING_KEY: randomBytes(32).toString('base64'),
       SECRET_MASTER_KEY: randomBytes(32).toString('base64'),
-      DATABASE_URL: 'mysql://dashboard:dashboard@127.0.0.1:3307/dashboard_mini_bi',
+      DATABASE_URL: 'postgresql://dashboard:dashboard@127.0.0.1:5432/dashboard_mini_bi',
     });
   });
 

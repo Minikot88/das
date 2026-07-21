@@ -24,6 +24,8 @@ import {
   exportNodeAsPdf,
   sanitizeFileName,
 } from "@modules/sharing/public/dashboardExport";
+import { createPersistentDashboardShare } from "@modules/sharing";
+import { isMockMode } from "@infrastructure/http/client";
 import {
   applyDashboardFiltersToWidget,
   getActiveDashboardFilterChips,
@@ -649,15 +651,24 @@ export default function DashboardPage() {
       return;
     }
 
-    const shareId = getOrCreateDashboardShareLink({
-      projectId: currentProjectId,
-      sheetId: activeSheet.id,
-      dashboardId: activeDashboard.id,
-    });
-    setDashboardShareId(shareId);
+    if (isMockMode()) {
+      const shareId = getOrCreateDashboardShareLink({
+        projectId: currentProjectId,
+        sheetId: activeSheet.id,
+        dashboardId: activeDashboard.id,
+      });
+      setDashboardShareId(shareId);
+      return undefined;
+    }
+    let active = true;
+    createPersistentDashboardShare(activeDashboard.id, [window.location.origin])
+      .then((share) => { if (active) setDashboardShareId(share?.token ?? ""); })
+      .catch((error) => { if (active) { setDashboardShareId(""); setNotice({ type: "error", message: error.message }); } });
+    return () => { active = false; };
   }, [activeDashboard?.id, activeSheet?.id, currentProjectId, getOrCreateDashboardShareLink]);
 
   useEffect(() => {
+    if (!isMockMode()) return;
     if (!dashboardShareId || !activeDashboard?.id) return;
     updateDashboardShareSnapshot(dashboardShareId, {
       projectName: activeProject?.name ?? "Workspace",

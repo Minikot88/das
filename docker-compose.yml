@@ -1,20 +1,48 @@
 services:
-  database:
-    image: mariadb:11.4
+  postgres:
+    image: postgres:17-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193
     environment:
-      MARIADB_DATABASE: ${MARIADB_DATABASE:-dashboard_mini_bi}
-      MARIADB_USER: ${MARIADB_USER:-dashboard}
-      MARIADB_PASSWORD: ${MARIADB_PASSWORD:-dashboard-local-only}
-      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:-root-local-only}
+      POSTGRES_DB: ${POSTGRES_DB:-dashboard_mini_bi}
+      POSTGRES_USER: ${POSTGRES_MIGRATION_USER:-dashboard_migrator}
+      POSTGRES_PASSWORD: ${POSTGRES_MIGRATION_PASSWORD:-migrator-local-only}
+      POSTGRES_RUNTIME_USER: ${POSTGRES_RUNTIME_USER:-dashboard_app}
+      POSTGRES_RUNTIME_PASSWORD: ${POSTGRES_RUNTIME_PASSWORD:-dashboard-local-only}
+      TZ: UTC
+      PGTZ: UTC
+    command:
+      - postgres
+      - -c
+      - timezone=UTC
+      - -c
+      - max_connections=100
+      - -c
+      - idle_in_transaction_session_timeout=30000
+      - -c
+      - statement_timeout=120000
     volumes:
-      - dashboard_mini_bi_database:/var/lib/mysql
+      - dashboard_mini_bi_postgres:/var/lib/postgresql/data
       - dashboard_mini_bi_backups:/backups
+      - ./infrastructure/database/postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      test: ["CMD-SHELL", "pg_isready -U \"${POSTGRES_MIGRATION_USER:-dashboard_migrator}\" -d \"${POSTGRES_DB:-dashboard_mini_bi}\""]
       interval: 10s
       timeout: 5s
       retries: 10
     restart: unless-stopped
+    networks:
+      - backend_database
+
+  migration:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    command: ["sh", "-c", "npm exec prisma migrate deploy && npm run prisma:seed"]
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_MIGRATION_USER:-dashboard_migrator}:${POSTGRES_MIGRATION_PASSWORD:-migrator-local-only}@postgres:5432/${POSTGRES_DB:-dashboard_mini_bi}?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
     networks:
       - backend_database
 
@@ -25,7 +53,8 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV:-development}
       AUTH_PROVIDER: ${AUTH_PROVIDER:-development}
-      DATABASE_URL: mysql://${MARIADB_USER:-dashboard}:${MARIADB_PASSWORD:-dashboard-local-only}@database:3306/${MARIADB_DATABASE:-dashboard_mini_bi}
+      DATABASE_URL: postgresql://${POSTGRES_RUNTIME_USER:-dashboard_app}:${POSTGRES_RUNTIME_PASSWORD:-dashboard-local-only}@postgres:5432/${POSTGRES_DB:-dashboard_mini_bi}?schema=public
+      DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:-10}
       SECRET_MASTER_KEY: ${SECRET_MASTER_KEY:-YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=}
       SESSION_SIGNING_KEY: ${SESSION_SIGNING_KEY:-YmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmI=}
       DEVELOPMENT_AUTH_EMAIL: ${DEVELOPMENT_AUTH_EMAIL:-dev@example.com}
@@ -36,7 +65,7 @@ services:
       QUERY_TIMEOUT: ${QUERY_TIMEOUT:-30000}
       QUERY_ROW_LIMIT: ${QUERY_ROW_LIMIT:-50000}
       LOG_LEVEL: ${LOG_LEVEL:-info}
-      CONNECTOR_NETWORK_ALLOWLIST: ${CONNECTOR_NETWORK_ALLOWLIST:-}
+      CONNECTOR_NETWORK_ALLOWLIST: ${CONNECTOR_NETWORK_ALLOWLIST:-postgres}
       DEBUG: ${DEBUG:-false}
       DEMO_CONNECTOR_ENABLED: ${DEMO_CONNECTOR_ENABLED:-false}
       INCLUDE_DEMO_SEED: ${INCLUDE_DEMO_SEED:-false}
@@ -48,27 +77,13 @@ services:
       - dashboard_mini_bi_uploads:/data/uploads
       - dashboard_mini_bi_exports:/data/exports
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/v1/health"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/v1/ready"]
       interval: 15s
       timeout: 5s
-      retries: 5
+      retries: 10
     restart: unless-stopped
     networks:
       - frontend_api
-      - backend_database
-
-  migration:
-    build:
-      context: ./apps/api
-      dockerfile: Dockerfile
-    command: ["npx", "prisma", "migrate", "deploy"]
-    environment:
-      DATABASE_URL: mysql://${MARIADB_USER:-dashboard}:${MARIADB_PASSWORD:-dashboard-local-only}@database:3306/${MARIADB_DATABASE:-dashboard_mini_bi}
-    depends_on:
-      database:
-        condition: service_healthy
-    restart: "no"
-    networks:
       - backend_database
 
   frontend:
@@ -94,7 +109,9 @@ services:
       - frontend_api
 
 volumes:
+  # Retained intentionally so an existing MariaDB/MySQL volume is never deleted by this migration.
   dashboard_mini_bi_database:
+  dashboard_mini_bi_postgres:
   dashboard_mini_bi_uploads:
   dashboard_mini_bi_exports:
   dashboard_mini_bi_backups:

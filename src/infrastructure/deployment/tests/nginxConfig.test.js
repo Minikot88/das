@@ -132,7 +132,7 @@ describe("nginx static frontend configuration", () => {
     const compose = readFileSync(composePath, "utf8");
 
     expect(compose).toMatch(/frontend:\s*[\s\S]*?networks:\s*\r?\n\s*- frontend_api/);
-    expect(compose).toMatch(/database:\s*[\s\S]*?networks:\s*\r?\n\s*- backend_database/);
+    expect(compose).toMatch(/postgres:\s*[\s\S]*?networks:\s*\r?\n\s*- backend_database/);
     expect(compose).toMatch(/backend_database:\s*\r?\n\s+internal:\s+true/);
   });
 });

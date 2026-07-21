@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { validateReadOnlySql } from './query-policy.js';
 
 describe('validateReadOnlySql', () => {
-  it.each(['DELETE FROM sales', 'DROP TABLE sales', 'SELECT 1; SELECT 2', 'BEGIN'])('rejects unsafe SQL: %s', sql => {
+  it.each(['DELETE FROM sales', 'DROP TABLE sales', 'SELECT 1; SELECT 2', 'BEGIN', "SELECT pg_read_file('/etc/passwd')", "COPY sales TO '/tmp/sales.csv'"])('rejects unsafe SQL: %s', sql => {
     expect(() => validateReadOnlySql(sql)).toThrow();
   });
 

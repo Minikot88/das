@@ -20,7 +20,7 @@ describe('parseEnvironment', () => {
 
   it('rejects example cryptographic keys and permissive runtime flags in production', () => {
     const base = {
-      NODE_ENV: 'production', AUTH_PROVIDER: 'external', DATABASE_URL: 'mysql://app:secret@database/app',
+      NODE_ENV: 'production', AUTH_PROVIDER: 'external', DATABASE_URL: 'postgresql://app:secret@postgres/app',
       CORS_ORIGINS: 'https://dashboard.example.test', FILE_STORAGE_PATH: '/data/uploads',
       SECRET_MASTER_KEY: Buffer.alloc(32, 97).toString('base64'),
       SESSION_SIGNING_KEY: Buffer.alloc(32, 98).toString('base64'),
@@ -40,9 +40,11 @@ describe('parseEnvironment', () => {
   });
 
   it('validates origins and operational limits', () => {
+    expect(() => parseEnvironment({ NODE_ENV: 'test', DATABASE_URL: 'mysql://app:secret@database/app' })).toThrow(/PostgreSQL/i);
     expect(() => parseEnvironment({ NODE_ENV: 'test', CORS_ORIGINS: '*' })).toThrow(/CORS/i);
     expect(() => parseEnvironment({ NODE_ENV: 'test', MAX_UPLOAD_SIZE: '999999999' })).toThrow(/MAX_UPLOAD_SIZE/i);
     expect(() => parseEnvironment({ NODE_ENV: 'test', QUERY_ROW_LIMIT: '0' })).toThrow(/QUERY_ROW_LIMIT/i);
     expect(() => parseEnvironment({ NODE_ENV: 'test', LOG_LEVEL: 'trace-all' })).toThrow(/LOG_LEVEL/i);
+    expect(() => parseEnvironment({ NODE_ENV: 'test', DATABASE_POOL_MAX: '1000' })).toThrow(/DATABASE_POOL_MAX/i);
   });
 });

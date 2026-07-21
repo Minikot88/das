@@ -1,10 +1,11 @@
+
 generator client {
   provider = "prisma-client"
   output   = "../src/infrastructure/database/generated/prisma"
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
 }
 
 model Organization {
@@ -13,9 +14,9 @@ model Organization {
   name      String   @db.VarChar(180)
   status    String   @default("active") @db.VarChar(32)
   revision  Int      @default(0)
-  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(3)
-  updatedAt DateTime @updatedAt @map("updated_at") @db.DateTime(3)
-  deletedAt DateTime? @map("deleted_at") @db.DateTime(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
   @@map("organizations")
 }
 
@@ -28,8 +29,8 @@ model UserProfile {
   displayName          String   @map("display_name") @db.VarChar(180)
   status               String   @default("active") @db.VarChar(32)
   revision             Int      @default(0)
-  createdAt            DateTime @default(now()) @map("created_at") @db.DateTime(3)
-  updatedAt            DateTime @updatedAt @map("updated_at") @db.DateTime(3)
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
   @@unique([organizationId, externalAuthProvider, externalUserId], map: "uq_user_profiles_external")
   @@index([organizationId, email], map: "idx_user_profiles_org_email")
   @@map("user_profiles")
@@ -65,7 +66,7 @@ model UserRole {
   id        String   @id @db.VarChar(64)
   userId    String   @map("user_id") @db.VarChar(64)
   roleId    String   @map("role_id") @db.VarChar(64)
-  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   @@unique([userId, roleId], map: "uq_user_roles")
   @@index([roleId], map: "idx_user_roles_role")
   @@map("user_roles")
@@ -78,9 +79,9 @@ model BiProject {
   name           String   @db.VarChar(180)
   status         String   @default("active") @db.VarChar(32)
   revision       Int      @default(0)
-  createdAt      DateTime @default(now()) @map("created_at") @db.DateTime(3)
-  updatedAt      DateTime @updatedAt @map("updated_at") @db.DateTime(3)
-  deletedAt      DateTime? @map("deleted_at") @db.DateTime(3)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt      DateTime? @map("deleted_at") @db.Timestamptz(3)
   @@unique([organizationId, name], map: "uq_bi_projects_org_name")
   @@index([organizationId, updatedAt, id], map: "idx_bi_projects_org_updated")
   @@map("bi_projects")
@@ -104,8 +105,8 @@ model BiSheet {
   name           String   @db.VarChar(180)
   position       Int      @default(0)
   revision       Int      @default(0)
-  createdAt      DateTime @default(now()) @map("created_at") @db.DateTime(3)
-  updatedAt      DateTime @updatedAt @map("updated_at") @db.DateTime(3)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
   @@unique([projectId, name], map: "uq_bi_sheets_project_name")
   @@index([projectId, position, id], map: "idx_bi_sheets_project_position")
   @@map("bi_sheets")
@@ -119,7 +120,7 @@ model WorkspaceContext {
   activeSheetId     String?  @map("active_sheet_id") @db.VarChar(64)
   activeDashboardId String?  @map("active_dashboard_id") @db.VarChar(64)
   revision          Int      @default(0)
-  updatedAt         DateTime @updatedAt @map("updated_at") @db.DateTime(3)
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
   @@unique([organizationId, userId], map: "uq_workspace_contexts_org_user")
   @@map("workspace_contexts")
 }
@@ -133,9 +134,9 @@ model BiDashboard {
   canvasSettingsJson Json?    @map("canvas_settings_json")
   status             String   @default("draft") @db.VarChar(32)
   revision           Int      @default(0)
-  createdAt          DateTime @default(now()) @map("created_at") @db.DateTime(3)
-  updatedAt          DateTime @updatedAt @map("updated_at") @db.DateTime(3)
-  deletedAt          DateTime? @map("deleted_at") @db.DateTime(3)
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt          DateTime? @map("deleted_at") @db.Timestamptz(3)
   @@index([projectId, updatedAt, id], map: "idx_bi_dashboards_project_updated")
   @@map("bi_dashboards")
 }
@@ -147,7 +148,7 @@ model DashboardVersion {
   revision       Int
   snapshotJson   Json     @map("snapshot_json")
   createdBy      String?  @map("created_by") @db.VarChar(64)
-  createdAt      DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   @@unique([dashboardId, revision], map: "uq_dashboard_versions_revision")
   @@map("dashboard_versions")
 }
@@ -165,8 +166,8 @@ model DashboardWidget {
   zIndex         Int      @default(0) @map("z_index")
   configJson     Json?    @map("config_json")
   revision       Int      @default(0)
-  createdAt      DateTime @default(now()) @map("created_at") @db.DateTime(3)
-  updatedAt      DateTime @updatedAt @map("updated_at") @db.DateTime(3)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
   @@index([dashboardId, zIndex, id], map: "idx_dashboard_widgets_order")
   @@index([chartId], map: "idx_dashboard_widgets_chart")
   @@map("dashboard_widgets")
@@ -181,8 +182,8 @@ model SavedView {
   name           String   @db.VarChar(180)
   stateJson      Json     @map("state_json")
   revision       Int      @default(0)
-  createdAt      DateTime @default(now()) @map("created_at") @db.DateTime(3)
-  updatedAt      DateTime @updatedAt @map("updated_at") @db.DateTime(3)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
   @@index([projectId, userId, updatedAt], map: "idx_saved_views_project_user")
   @@map("saved_views")
 }
@@ -233,9 +234,9 @@ model Chart {
   queryDefinitionJson Json?    @map("query_definition_json")
   dataContractJson    Json?    @map("data_contract_json")
   revision            Int      @default(0)
-  createdAt           DateTime @default(now()) @map("created_at") @db.DateTime(3)
-  updatedAt           DateTime @updatedAt @map("updated_at") @db.DateTime(3)
-  deletedAt           DateTime? @map("deleted_at") @db.DateTime(3)
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt           DateTime? @map("deleted_at") @db.Timestamptz(3)
   @@index([projectId, updatedAt, id], map: "idx_charts_project_updated")
   @@index([datasetId], map: "idx_charts_dataset")
   @@map("charts")
@@ -246,7 +247,7 @@ model ChartVersion {
   chartId      String   @map("chart_id") @db.VarChar(64)
   revision     Int
   snapshotJson Json     @map("snapshot_json")
-  createdAt    DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   @@unique([chartId, revision], map: "uq_chart_versions_revision")
   @@map("chart_versions")
 }
@@ -269,9 +270,9 @@ model DataSourceConnection {
   metadataJson   Json?    @map("metadata_json")
   status         String   @default("untested") @db.VarChar(32)
   revision       Int      @default(0)
-  createdAt      DateTime @default(now()) @map("created_at") @db.DateTime(3)
-  updatedAt      DateTime @updatedAt @map("updated_at") @db.DateTime(3)
-  deletedAt      DateTime? @map("deleted_at") @db.DateTime(3)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt      DateTime? @map("deleted_at") @db.Timestamptz(3)
   @@index([projectId, updatedAt, id], map: "idx_data_source_connections_project")
   @@map("data_source_connections")
 }
@@ -282,9 +283,9 @@ model DataSourceSecretReference {
   connectionId   String   @map("connection_id") @db.VarChar(64)
   provider       String   @db.VarChar(40)
   keyVersion     Int      @default(1) @map("key_version")
-  encryptedJson  String   @map("encrypted_json") @db.LongText
-  createdAt      DateTime @default(now()) @map("created_at") @db.DateTime(3)
-  rotatedAt      DateTime? @map("rotated_at") @db.DateTime(3)
+  encryptedJson  String   @map("encrypted_json") @db.Text
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  rotatedAt      DateTime? @map("rotated_at") @db.Timestamptz(3)
   @@unique([connectionId], map: "uq_data_source_secret_connection")
   @@map("data_source_secret_references")
 }
@@ -297,7 +298,7 @@ model DataSourceTestRun {
   durationMs     Int?     @map("duration_ms")
   errorCode      String?  @map("error_code") @db.VarChar(80)
   safeMessage    String?  @map("safe_message") @db.VarChar(500)
-  createdAt      DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   @@index([connectionId, createdAt], map: "idx_data_source_test_runs_connection")
   @@map("data_source_test_runs")
 }
@@ -306,7 +307,7 @@ model DataSourceSchema {
   id           String   @id @db.VarChar(64)
   connectionId String   @map("connection_id") @db.VarChar(64)
   name         String   @db.VarChar(191)
-  discoveredAt DateTime @default(now()) @map("discovered_at") @db.DateTime(3)
+  discoveredAt DateTime @default(now()) @map("discovered_at") @db.Timestamptz(3)
   @@unique([connectionId, name], map: "uq_data_source_schemas")
   @@map("data_source_schemas")
 }
@@ -346,9 +347,9 @@ model Dataset {
   sourceFileId   String?  @map("source_file_id") @db.VarChar(64)
   statisticsJson Json?    @map("statistics_json")
   revision       Int      @default(0)
-  createdAt      DateTime @default(now()) @map("created_at") @db.DateTime(3)
-  updatedAt      DateTime @updatedAt @map("updated_at") @db.DateTime(3)
-  deletedAt      DateTime? @map("deleted_at") @db.DateTime(3)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt      DateTime? @map("deleted_at") @db.Timestamptz(3)
   @@index([projectId, updatedAt, id], map: "idx_datasets_project_updated")
   @@map("datasets")
 }
@@ -359,7 +360,7 @@ model DatasetVersion {
   version      Int
   schemaJson   Json     @map("schema_json")
   rowCount     Int      @map("row_count")
-  createdAt    DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   @@unique([datasetId, version], map: "uq_dataset_versions")
   @@map("dataset_versions")
 }
@@ -380,11 +381,11 @@ model DatasetField {
 }
 
 model DatasetRow {
-  id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  id        BigInt   @id @default(autoincrement()) @db.BigInt
   datasetId String   @map("dataset_id") @db.VarChar(64)
   rowNumber Int      @map("row_number")
   rowJson   Json     @map("row_json")
-  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   @@unique([datasetId, rowNumber], map: "uq_dataset_rows_number")
   @@map("dataset_rows")
 }
@@ -395,7 +396,7 @@ model DatasetStatistic {
   fieldId    String?  @map("field_id") @db.VarChar(64)
   statistic  String   @db.VarChar(80)
   valueJson  Json?    @map("value_json")
-  computedAt DateTime @default(now()) @map("computed_at") @db.DateTime(3)
+  computedAt DateTime @default(now()) @map("computed_at") @db.Timestamptz(3)
   @@index([datasetId, fieldId], map: "idx_dataset_statistics_field")
   @@map("dataset_statistics")
 }
@@ -408,7 +409,7 @@ model DatasetValidationResult {
   code        String   @db.VarChar(80)
   message     String   @db.VarChar(500)
   detailsJson Json?    @map("details_json")
-  createdAt   DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   @@index([datasetId, severity], map: "idx_dataset_validation_severity")
   @@map("dataset_validation_results")
 }
@@ -423,15 +424,15 @@ model ImportJob {
   status         String   @default("pending") @db.VarChar(32)
   processedRows  Int      @default(0) @map("processed_rows")
   totalRows      Int?     @map("total_rows")
-  createdAt      DateTime @default(now()) @map("created_at") @db.DateTime(3)
-  completedAt    DateTime? @map("completed_at") @db.DateTime(3)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  completedAt    DateTime? @map("completed_at") @db.Timestamptz(3)
   @@unique([organizationId, idempotencyKey], map: "uq_import_jobs_idempotency")
   @@index([projectId, createdAt], map: "idx_import_jobs_project")
   @@map("import_jobs")
 }
 
 model ImportJobRow {
-  id        BigInt @id @default(autoincrement()) @db.UnsignedBigInt
+  id        BigInt @id @default(autoincrement()) @db.BigInt
   importId  String @map("import_id") @db.VarChar(64)
   rowNumber Int    @map("row_number")
   status    String @db.VarChar(32)
@@ -441,13 +442,13 @@ model ImportJobRow {
 }
 
 model ImportError {
-  id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  id        BigInt   @id @default(autoincrement()) @db.BigInt
   importId  String   @map("import_id") @db.VarChar(64)
   rowNumber Int?     @map("row_number")
   columnName String? @map("column_name") @db.VarChar(191)
   code      String   @db.VarChar(80)
   message   String   @db.VarChar(500)
-  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   @@index([importId, rowNumber], map: "idx_import_errors_row")
   @@map("import_errors")
 }
@@ -459,11 +460,11 @@ model SqlQuery {
   connectionId   String?  @map("connection_id") @db.VarChar(64)
   datasetId      String?  @map("dataset_id") @db.VarChar(64)
   name           String   @db.VarChar(180)
-  sqlText        String   @map("sql_text") @db.LongText
+  sqlText        String   @map("sql_text") @db.Text
   parametersJson Json?    @map("parameters_json")
   revision       Int      @default(0)
-  createdAt      DateTime @default(now()) @map("created_at") @db.DateTime(3)
-  updatedAt      DateTime @updatedAt @map("updated_at") @db.DateTime(3)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
   @@index([projectId, updatedAt], map: "idx_sql_queries_project")
   @@map("sql_queries")
 }
@@ -480,7 +481,7 @@ model SqlQueryRun {
   durationMs     Int?     @map("duration_ms")
   rowCount       Int?     @map("row_count")
   truncated      Boolean  @default(false)
-  createdAt      DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   @@index([projectId, createdAt], map: "idx_sql_query_runs_project")
   @@map("sql_query_runs")
 }
@@ -490,8 +491,8 @@ model SqlQueryResult {
   runId     String   @unique @map("run_id") @db.VarChar(64)
   rowCount  Int      @map("row_count")
   truncated Boolean  @default(false)
-  expiresAt DateTime? @map("expires_at") @db.DateTime(3)
-  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  expiresAt DateTime? @map("expires_at") @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   @@map("sql_query_results")
 }
 
@@ -506,7 +507,7 @@ model SqlQueryResultColumn {
 }
 
 model SqlQueryResultRow {
-  id        BigInt @id @default(autoincrement()) @db.UnsignedBigInt
+  id        BigInt @id @default(autoincrement()) @db.BigInt
   resultId  String @map("result_id") @db.VarChar(64)
   rowNumber Int    @map("row_number")
   rowJson   Json   @map("row_json")
@@ -523,9 +524,9 @@ model DashboardShareLink {
   status         String   @default("active") @db.VarChar(32)
   allowedOrigins Json?    @map("allowed_origins")
   revision       Int      @default(0)
-  expiresAt      DateTime? @map("expires_at") @db.DateTime(3)
-  revokedAt      DateTime? @map("revoked_at") @db.DateTime(3)
-  createdAt      DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  expiresAt      DateTime? @map("expires_at") @db.Timestamptz(3)
+  revokedAt      DateTime? @map("revoked_at") @db.Timestamptz(3)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   @@index([dashboardId, createdAt], map: "idx_dashboard_share_links_dashboard")
   @@map("dashboard_share_links")
 }
@@ -536,19 +537,19 @@ model DashboardShareSnapshot {
   dashboardRevision Int      @map("dashboard_revision")
   snapshotJson      Json     @map("snapshot_json")
   checksum          String   @db.Char(64)
-  createdAt         DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   @@unique([shareId], map: "uq_dashboard_share_snapshots_share")
   @@map("dashboard_share_snapshots")
 }
 
 model DashboardShareAccessLog {
-  id         BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  id         BigInt   @id @default(autoincrement()) @db.BigInt
   shareId    String   @map("share_id") @db.VarChar(64)
   requestId  String   @map("request_id") @db.VarChar(64)
   origin     String?  @db.VarChar(255)
   userAgent  String?  @map("user_agent") @db.VarChar(500)
   outcome    String   @db.VarChar(32)
-  accessedAt DateTime @default(now()) @map("accessed_at") @db.DateTime(3)
+  accessedAt DateTime @default(now()) @map("accessed_at") @db.Timestamptz(3)
   @@index([shareId, accessedAt], map: "idx_dashboard_share_access_logs_share")
   @@map("dashboard_share_access_logs")
 }
@@ -572,8 +573,8 @@ model ExportJob {
   format         String   @db.VarChar(20)
   status         String   @default("pending") @db.VarChar(32)
   optionsJson    Json?    @map("options_json")
-  createdAt      DateTime @default(now()) @map("created_at") @db.DateTime(3)
-  completedAt    DateTime? @map("completed_at") @db.DateTime(3)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  completedAt    DateTime? @map("completed_at") @db.Timestamptz(3)
   @@index([projectId, createdAt], map: "idx_export_jobs_project")
   @@map("export_jobs")
 }
@@ -582,7 +583,7 @@ model ExportFile {
   id        String   @id @db.VarChar(64)
   exportId  String   @map("export_id") @db.VarChar(64)
   fileId    String   @map("file_id") @db.VarChar(64)
-  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   @@unique([exportId, fileId], map: "uq_export_files")
   @@map("export_files")
 }
@@ -598,7 +599,7 @@ model UserPreference {
   numberFormat   String   @default("compact") @map("number_format") @db.VarChar(40)
   preferencesJson Json?   @map("preferences_json")
   revision       Int      @default(0)
-  updatedAt      DateTime @updatedAt @map("updated_at") @db.DateTime(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
   @@unique([organizationId, userId], map: "uq_user_preferences_org_user")
   @@map("user_preferences")
 }
@@ -612,16 +613,16 @@ model FileRecord {
   storageKey     String   @unique @map("storage_key") @db.VarChar(500)
   filename       String   @db.VarChar(255)
   mimeType       String   @map("mime_type") @db.VarChar(120)
-  sizeBytes      BigInt   @map("size_bytes") @db.UnsignedBigInt
+  sizeBytes      BigInt   @map("size_bytes") @db.BigInt
   checksum       String   @db.Char(64)
-  retentionUntil DateTime? @map("retention_until") @db.DateTime(3)
-  createdAt      DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  retentionUntil DateTime? @map("retention_until") @db.Timestamptz(3)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   @@index([organizationId, projectId, createdAt], map: "idx_files_scope")
   @@map("files")
 }
 
 model AuditLog {
-  id             BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  id             BigInt   @id @default(autoincrement()) @db.BigInt
   organizationId String   @map("organization_id") @db.VarChar(64)
   projectId      String?  @map("project_id") @db.VarChar(64)
   actorUserId    String?  @map("actor_user_id") @db.VarChar(64)
@@ -631,26 +632,26 @@ model AuditLog {
   action         String   @db.VarChar(120)
   outcome        String   @db.VarChar(32)
   metadataJson   Json?    @map("metadata_json")
-  occurredAt     DateTime @default(now()) @map("occurred_at") @db.DateTime(3)
+  occurredAt     DateTime @default(now()) @map("occurred_at") @db.Timestamptz(3)
   @@index([organizationId, occurredAt, id], map: "idx_audit_logs_org_time")
   @@index([organizationId, entityType, entityId], map: "idx_audit_logs_entity")
   @@map("audit_logs")
 }
 
 model ErrorLog {
-  id             BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  id             BigInt   @id @default(autoincrement()) @db.BigInt
   organizationId String?  @map("organization_id") @db.VarChar(64)
   requestId      String   @map("request_id") @db.VarChar(64)
   code           String   @db.VarChar(80)
   safeMessage    String   @map("safe_message") @db.VarChar(500)
   metadataJson   Json?    @map("metadata_json")
-  occurredAt     DateTime @default(now()) @map("occurred_at") @db.DateTime(3)
+  occurredAt     DateTime @default(now()) @map("occurred_at") @db.Timestamptz(3)
   @@index([occurredAt, id], map: "idx_error_logs_time")
   @@map("error_logs")
 }
 
 model ApiRequestLog {
-  id             BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  id             BigInt   @id @default(autoincrement()) @db.BigInt
   organizationId String?  @map("organization_id") @db.VarChar(64)
   userId         String?  @map("user_id") @db.VarChar(64)
   requestId      String   @unique @map("request_id") @db.VarChar(64)
@@ -658,7 +659,7 @@ model ApiRequestLog {
   path           String   @db.VarChar(500)
   statusCode     Int      @map("status_code")
   durationMs     Int      @map("duration_ms")
-  occurredAt     DateTime @default(now()) @map("occurred_at") @db.DateTime(3)
+  occurredAt     DateTime @default(now()) @map("occurred_at") @db.Timestamptz(3)
   @@index([organizationId, occurredAt, id], map: "idx_api_request_logs_org_time")
   @@map("api_request_logs")
 }

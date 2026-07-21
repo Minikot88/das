@@ -6,7 +6,8 @@ describe('buildSeedData', () => {
     const seed = buildSeedData({ includeDemoSales: false });
     expect(seed.organization.id).toBe('org-default');
     expect(seed.chartTypes.map(item => item.code)).toEqual(expect.arrayContaining(['bar', 'line', 'pie', 'table', 'kpi']));
-    expect(seed.dataSourceTypes.find(item => item.code === 'mariadb')).toMatchObject({ implementation: 'available' });
+    expect(seed.dataSourceTypes.find(item => item.code === 'postgresql')).toMatchObject({ implementation: 'available' });
+    expect(seed.dataSourceTypes.find(item => item.code === 'mariadb')).toMatchObject({ implementation: 'not_implemented' });
     expect(seed.dataSourceTypes.find(item => item.code === 'oracle')).toMatchObject({ implementation: 'not_implemented' });
     expect(seed.demoDatasets).toEqual([]);
   });

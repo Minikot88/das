@@ -9,19 +9,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
-      mariadb:
-        image: mariadb:11.4
+      postgres:
+        image: postgres:17-alpine
         env:
-          MARIADB_DATABASE: dashboard_mini_bi
-          MARIADB_USER: dashboard
-          MARIADB_PASSWORD: dashboard
-          MARIADB_ROOT_PASSWORD: root
-        ports: ["3306:3306"]
+          POSTGRES_DB: dashboard_mini_bi
+          POSTGRES_USER: dashboard
+          POSTGRES_PASSWORD: dashboard
+          TZ: UTC
+        ports: ["5432:5432"]
         options: >-
-          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-cmd="pg_isready -U dashboard -d dashboard_mini_bi"
           --health-interval=10s --health-timeout=5s --health-retries=10
     env:
-      DATABASE_URL: mysql://dashboard:dashboard@127.0.0.1:3306/dashboard_mini_bi
+      DATABASE_URL: postgresql://dashboard:dashboard@127.0.0.1:5432/dashboard_mini_bi?schema=public
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4

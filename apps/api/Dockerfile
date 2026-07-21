@@ -5,8 +5,8 @@ RUN npm ci
 COPY prisma ./prisma
 COPY prisma.config.ts tsconfig.json tsconfig.build.json ./
 COPY src ./src
-ENV DATABASE_URL=mysql://dashboard:dashboard@database:3306/dashboard_mini_bi
-RUN npm run prisma:generate && npm run build
+ENV DATABASE_URL=postgresql://dashboard_app:dashboard@postgres:5432/dashboard_mini_bi
+RUN npm run prisma:generate && npm run lint && npm run typecheck && npm test -- --run && npm run build
 
 FROM node:22-alpine@sha256:16e22a550f3863206a3f701448c45f7912c6896a62de43add43bb9c86130c3e2 AS production
 WORKDIR /app
@@ -15,7 +15,9 @@ COPY --chown=node:node --from=builder /app/package.json /app/package-lock.json .
 COPY --chown=node:node --from=builder /app/node_modules ./node_modules
 COPY --chown=node:node --from=builder /app/dist ./dist
 COPY --chown=node:node --from=builder /app/prisma ./prisma
+COPY --chown=node:node --from=builder /app/src/infrastructure/database/generated/prisma ./src/infrastructure/database/generated/prisma
 COPY --chown=node:node --from=builder /app/prisma.config.ts ./prisma.config.ts
+RUN mkdir -p /data/uploads /data/exports && chown -R node:node /data
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD wget -qO- http://127.0.0.1:3000/api/v1/health || exit 1

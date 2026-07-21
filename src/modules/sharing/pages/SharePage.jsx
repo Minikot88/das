@@ -7,6 +7,8 @@ import { findDashboardContextById } from "@modules/dashboards/public/workspace";
 import ReadOnlyDashboardHeader from "@modules/sharing/components/ReadOnlyDashboardHeader";
 import ReadOnlyChartFrame from "@modules/sharing/components/ReadOnlyChartFrame";
 import ReadOnlyStateCard from "@modules/sharing/components/ReadOnlyStateCard";
+import { isMockMode } from "@infrastructure/http/client";
+import { resolvePersistentDashboardShare } from "@modules/sharing/api/sharingApi";
 
 export default function SharePage() {
   const { sheetId } = useParams();
@@ -16,6 +18,16 @@ export default function SharePage() {
   const workspaceSnapshot = useWorkspaceSelector((snapshot) => snapshot);
   const [loading, setLoading] = useState(true);
   const [viewedAt] = useState(() => Date.now());
+  const [serverShare, setServerShare] = useState({ status: "loading", share: null });
+
+  useEffect(() => {
+    if (isMockMode()) return undefined;
+    let active = true;
+    resolvePersistentDashboardShare(sheetId)
+      .then((share) => { if (active) setServerShare({ status: "ready", share }); })
+      .catch((error) => { if (active) setServerShare({ status: error.status === 410 ? "expired" : "missing", share: null }); });
+    return () => { active = false; };
+  }, [sheetId]);
 
   const shareResolution = useMemo(() => {
     const canonical = resolveLocalShare(workspaceSnapshot, sheetId);
@@ -111,7 +123,11 @@ export default function SharePage() {
         : "Local share unavailable | Mini BI";
   }, [dashboardTitle, loading, sheet]);
 
-  if (shareResolution.status === "ready") {
+  if (!isMockMode() && serverShare.status === "ready") {
+    return <Navigate replace to={`/dashboard/${encodeURIComponent(serverShare.share.dashboardId)}/view?share=${encodeURIComponent(sheetId)}`} />;
+  }
+
+  if (isMockMode() && shareResolution.status === "ready") {
     return (
       <Navigate
         replace
@@ -120,7 +136,7 @@ export default function SharePage() {
     );
   }
 
-  if (loading) {
+  if (loading || (!isMockMode() && serverShare.status === "loading")) {
     return (
       <main className="share-page share-page-shell">
         <ReadOnlyStateCard

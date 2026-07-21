@@ -17,6 +17,7 @@ export type RuntimeEnvironment = {
   maxUploadSize: number;
   queryTimeoutMs: number;
   queryRowLimit: number;
+  databasePoolMax: number;
   logLevel: typeof LOG_LEVELS[number];
   connectorNetworkAllowlist: string[];
 };
@@ -57,6 +58,12 @@ export function parseEnvironment(input: NodeJS.ProcessEnv | Record<string, strin
   if (nodeEnv === 'production' && !input.DATABASE_URL) throw new Error('DATABASE_URL is required in production');
   if (nodeEnv === 'production' && !input.SECRET_MASTER_KEY) throw new Error('SECRET_MASTER_KEY is required in production');
   if (nodeEnv === 'production' && !input.SESSION_SIGNING_KEY) throw new Error('SESSION_SIGNING_KEY is required in production');
+
+  if (input.DATABASE_URL) {
+    let databaseUrl: URL;
+    try { databaseUrl = new URL(input.DATABASE_URL); } catch { throw new Error('DATABASE_URL must be a valid PostgreSQL URL'); }
+    if (!['postgres:', 'postgresql:'].includes(databaseUrl.protocol)) throw new Error('DATABASE_URL must use PostgreSQL');
+  }
 
   const secretMasterKey = input.SECRET_MASTER_KEY;
   if (secretMasterKey) {
@@ -102,6 +109,7 @@ export function parseEnvironment(input: NodeJS.ProcessEnv | Record<string, strin
     maxUploadSize: parseBoundedInteger('MAX_UPLOAD_SIZE', input.MAX_UPLOAD_SIZE, 5_000_000, 1, 6 * 1024 * 1024),
     queryTimeoutMs: parseBoundedInteger('QUERY_TIMEOUT', input.QUERY_TIMEOUT, 30_000, 100, 120_000),
     queryRowLimit: parseBoundedInteger('QUERY_ROW_LIMIT', input.QUERY_ROW_LIMIT, 50_000, 1, 50_000),
+    databasePoolMax: parseBoundedInteger('DATABASE_POOL_MAX', input.DATABASE_POOL_MAX, 10, 1, 50),
     logLevel,
     connectorNetworkAllowlist: String(input.CONNECTOR_NETWORK_ALLOWLIST || '').split(',').map(value => value.trim()).filter(Boolean),
   };

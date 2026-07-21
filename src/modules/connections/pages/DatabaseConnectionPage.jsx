@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageContainer, PageHeader } from "@app/layouts/Layout";
 import {
@@ -16,6 +16,9 @@ import {
   sanitizeConnectionUrl,
   upsertDatabaseConnection,
 } from "@modules/connections/persistence/databaseConnectionStorage";
+import { createServerConnection, deleteServerConnection, listConnectionProfiles, testServerConnection } from "@modules/connections/api/connectionApi";
+import { isMockMode } from "@infrastructure/http/client";
+import { useStore } from "@app/store/useStore";
 import "@shared/styles/databaseConnection.css";
 
 const AUTH_OPTIONS = [
@@ -185,14 +188,24 @@ function statusClass(status) {
 
 export default function DatabaseConnectionPage() {
   const navigate = useNavigate();
+  const activeProjectId = useStore((state) => state.activeProjectId);
   const [selectedTypeId, setSelectedTypeId] = useState("postgresql");
   const [activeTab, setActiveTab] = useState("main");
   const [form, setForm] = useState(() => createDefaultConnectionForm("postgresql"));
-  const [savedConnections, setSavedConnections] = useState(() => loadDatabaseConnections());
+  const [savedConnections, setSavedConnections] = useState(() => isMockMode() ? loadDatabaseConnections() : []);
   const [validation, setValidation] = useState({ errors: {}, warnings: [], valid: true });
   const [testStatus, setTestStatus] = useState(null);
   const [notice, setNotice] = useState(null);
   const [passwordVisible, setPasswordVisible] = useState(false);
+
+  useEffect(() => {
+    if (isMockMode() || !activeProjectId) return undefined;
+    let active = true;
+    listConnectionProfiles(activeProjectId)
+      .then((profiles) => { if (active) setSavedConnections(profiles ?? []); })
+      .catch((error) => { if (active) setNotice({ title: "โหลด connection profile ไม่สำเร็จ", message: error.message }); });
+    return () => { active = false; };
+  }, [activeProjectId]);
 
   const selectedType = getDatabaseType(selectedTypeId);
   const previewConfig = useMemo(
@@ -228,7 +241,7 @@ export default function DatabaseConnectionPage() {
     setTestStatus(null);
   }
 
-  function runConnectionTest(targetForm = form, targetType = selectedType) {
+  async function runConnectionTest(targetForm = form, targetType = selectedType) {
     const result = validateConnection(targetForm, targetType);
     setValidation(result);
     if (!result.valid) {
@@ -238,6 +251,21 @@ export default function DatabaseConnectionPage() {
         message: Object.values(result.errors)[0] ?? "ตรวจสอบข้อมูล connection อีกครั้ง",
       });
       return false;
+    }
+
+    if (!isMockMode()) {
+      if (targetType.id !== "postgresql") {
+        setTestStatus({ type: "error", title: "ยังไม่รองรับ connector นี้", message: "Production mode รองรับ PostgreSQL เท่านั้น" });
+        return false;
+      }
+      try {
+        const resultStatus = await testServerConnection(targetForm, targetForm.id);
+        setTestStatus({ type: "success", title: "เชื่อมต่อสำเร็จ", message: "PostgreSQL ตอบสนองและผ่านนโยบายเครือข่าย", latency: `${resultStatus.durationMs}ms`, server: `${targetForm.host}:${targetForm.port}`, database: targetForm.database, warnings: result.warnings });
+        return true;
+      } catch (error) {
+        setTestStatus({ type: "error", title: "ทดสอบการเชื่อมต่อไม่ผ่าน", message: error.message });
+        return false;
+      }
     }
 
     setTestStatus({
@@ -252,7 +280,7 @@ export default function DatabaseConnectionPage() {
     return true;
   }
 
-  function handleSaveProfile() {
+  async function handleSaveProfile() {
     const result = validateConnection(form, selectedType);
     setValidation(result);
     if (!result.valid) {
@@ -261,6 +289,18 @@ export default function DatabaseConnectionPage() {
         title: "ยังบันทึกไม่ได้",
         message: Object.values(result.errors)[0] ?? "กรุณาตรวจสอบข้อมูล connection",
       });
+      return;
+    }
+
+    if (!isMockMode()) {
+      if (!activeProjectId) { setNotice({ title: "ยังบันทึกไม่ได้", message: "กรุณาเลือก Project ก่อนบันทึก connection" }); return; }
+      if (selectedType.id !== "postgresql") { setNotice({ title: "ยังไม่รองรับ connector นี้", message: "Production mode รองรับ PostgreSQL เท่านั้น" }); return; }
+      try {
+        const profile = await createServerConnection(form, activeProjectId);
+        setSavedConnections((current) => [profile, ...current.filter((item) => item.id !== profile.id)]);
+        patchForm({ id: profile.id, createdAt: profile.createdAt, password: "" });
+        setNotice({ title: "บันทึก connection profile แล้ว", message: "Secret ถูกเข้ารหัสและเก็บที่ Backend โดยไม่บันทึกใน localStorage" });
+      } catch (error) { setNotice({ title: "บันทึก connection profile ไม่สำเร็จ", message: error.message }); }
       return;
     }
 
@@ -318,16 +358,23 @@ export default function DatabaseConnectionPage() {
     setNotice({ title: "ทำสำเนา profile แล้ว", message: duplicated.name });
   }
 
-  function handleTestProfile(profile) {
+  async function handleTestProfile(profile) {
     const nextType = getDatabaseType(profile.type);
     const nextForm = createFormFromProfile(profile);
     setSelectedTypeId(nextType.id);
     setForm(nextForm);
     setActiveTab("main");
-    runConnectionTest(nextForm, nextType);
+    await runConnectionTest(nextForm, nextType);
   }
 
-  function handleDeleteProfile(profileId) {
+  async function handleDeleteProfile(profileId) {
+    if (!isMockMode()) {
+      const profile = savedConnections.find((item) => item.id === profileId);
+      if (!profile) return;
+      try { await deleteServerConnection(profile); setSavedConnections((current) => current.filter((item) => item.id !== profileId)); setNotice({ title: "ลบ connection profile แล้ว", message: "Profile ถูกปิดใช้งานบน Backend" }); }
+      catch (error) { setNotice({ title: "ลบ profile ไม่สำเร็จ", message: error.message }); }
+      return;
+    }
     const nextConnections = deleteDatabaseConnection(profileId);
     if (!nextConnections) {
       setNotice({ title: "ลบ profile ไม่สำเร็จ", message: "ไม่สามารถเขียนข้อมูลลงพื้นที่จัดเก็บของเบราว์เซอร์" });

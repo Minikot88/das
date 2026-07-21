@@ -8,6 +8,8 @@ import { useStore } from "@app/store/useStore";
 import { resolveDashboardViewOptions } from "@modules/sharing/lib/dashboardShareUtils";
 import { normalizeLocalShareRecord, resolveLocalShare, validateLocalShare } from "@domain/shares/localShareContract";
 import { useWorkspaceSelector } from "@app/store/useWorkspaceSelector";
+import { isMockMode } from "@infrastructure/http/client";
+import { resolvePersistentDashboardShare } from "@modules/sharing/api/sharingApi";
 
 function countChartTypes(widgets = []) {
   return new Set(widgets.map((widget) => widget.type).filter(Boolean)).size;
@@ -79,6 +81,7 @@ export default function DashboardPublicPage() {
   const storeTheme = useStore((state) => state.theme);
   const resolveShareLink = useStore((state) => state.resolveShareLink);
   const [viewedAt, setViewedAt] = useState(() => Date.now());
+  const [serverShare, setServerShare] = useState({ status: "loading", share: null });
   const workspaceSnapshot = useWorkspaceSelector((snapshot) => snapshot);
   const mode = getRouteMode(location.pathname, routeMode);
   const shareId = useMemo(() => new URLSearchParams(location.search).get("share") ?? "", [location.search]);
@@ -86,17 +89,30 @@ export default function DashboardPublicPage() {
     () => resolveLocalShare(workspaceSnapshot, shareId, { now: new Date(viewedAt).toISOString() }),
     [shareId, viewedAt, workspaceSnapshot]
   );
+  useEffect(() => {
+    if (isMockMode()) return undefined;
+    if (!shareId) { setServerShare({ status: "missing", share: null }); return undefined; }
+    let active = true;
+    setServerShare({ status: "loading", share: null });
+    resolvePersistentDashboardShare(shareId)
+      .then((share) => { if (active) setServerShare({ status: "ready", share: { ...share, id: shareId } }); })
+      .catch((error) => { if (active) setServerShare({ status: error.status === 410 ? "expired" : error.status === 403 ? "invalid" : "missing", share: null }); });
+    return () => { active = false; };
+  }, [shareId]);
   const shareRecord = useMemo(() => (
-    canonicalShare.status === "missing"
+    !isMockMode() && serverShare.share
+      ? normalizeLocalShareRecord(serverShare.share)
+      : canonicalShare.status === "missing"
       ? normalizeLocalShareRecord(resolveShareLink(shareId))
       : normalizeLocalShareRecord(canonicalShare.share)
-  ), [canonicalShare, resolveShareLink, shareId]);
+  ), [canonicalShare, resolveShareLink, serverShare.share, shareId]);
   const legacyDashboardContext = useMemo(() => (
     canonicalShare.status === "missing" && shareRecord
       ? findDashboardContextById(projects, charts, shareRecord.dashboardId)
       : null
   ), [canonicalShare.status, charts, projects, shareRecord]);
   const shareState = useMemo(() => {
+    if (!isMockMode()) return serverShare.status;
     if (canonicalShare.status !== "missing") return canonicalShare.status;
     if (!shareRecord) return "missing";
     if (!legacyDashboardContext || !validateLocalShare(shareRecord, {
@@ -105,7 +121,7 @@ export default function DashboardPublicPage() {
     }).valid) return "invalid";
     if (shareRecord.expiresAt && Date.parse(shareRecord.expiresAt) <= viewedAt) return "expired";
     return "ready";
-  }, [canonicalShare.status, legacyDashboardContext, shareRecord, viewedAt]);
+  }, [canonicalShare.status, legacyDashboardContext, serverShare.status, shareRecord, viewedAt]);
   useEffect(() => {
     const expiresAt = Date.parse(shareRecord?.expiresAt ?? "");
     if (!Number.isFinite(expiresAt)) return undefined;
