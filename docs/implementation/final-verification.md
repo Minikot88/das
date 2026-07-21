@@ -11,7 +11,7 @@ Command: `npm run check`
 
 - ESLint: passed
 - TypeScript: passed
-- Tests: passed — 53 files, 273 tests
+- Tests: passed — 54 files, 274 tests
 - Production build: passed
 - Dependency audit: passed — 0 vulnerabilities (development and production)
 - Known non-failing warnings: jsdom canvas implementation absent; Vite chunks over 500 kB (`index` about 501.51 kB and `ChartPreview` about 870.11 kB)
