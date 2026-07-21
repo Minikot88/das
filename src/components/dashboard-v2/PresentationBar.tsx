@@ -7,8 +7,8 @@ import ShareRoundedIcon from "@mui/icons-material/ShareRounded";
 import TabletMacRoundedIcon from "@mui/icons-material/TabletMacRounded";
 import ZoomInRoundedIcon from "@mui/icons-material/ZoomInRounded";
 import { Box, Button, ButtonGroup, IconButton, Stack, Tooltip, Typography } from "@mui/material";
-import { dashboardV2Tokens as tokens } from "./theme";
-import type { DeviceMode } from "./types";
+import { dashboardV2Tokens as tokens } from "@/components/dashboard-v2/theme";
+import type { DeviceMode } from "@/components/dashboard-v2/types";
 
 type PresentationBarProps = {
   deviceMode: DeviceMode;

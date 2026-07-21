@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import axe from "axe-core";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
-import ReadOnlyStateCard from "./ReadOnlyStateCard";
+import ReadOnlyStateCard from "@shared/components/ui/ReadOnlyStateCard";
 
 describe("ReadOnlyStateCard accessibility", () => {
   it("has no detectable WCAG A/AA violations in its unavailable state", async () => {

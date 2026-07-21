@@ -9,13 +9,13 @@ import UndoRoundedIcon from "@mui/icons-material/UndoRounded";
 import ZoomInRoundedIcon from "@mui/icons-material/ZoomInRounded";
 import { Box, Button, ButtonGroup, IconButton, Paper, Stack, Tooltip, Typography } from "@mui/material";
 import { useDrop } from "react-dnd";
-import ChartErrorBoundary from "./components/charts/ChartErrorBoundary";
-import ChartPreview from "./components/charts/ChartPreview";
-import InsightStrip from "./InsightStrip";
-import type { DemoDatasetRow } from "./services/datasetService";
-import { dashboardV2Tokens as tokens } from "./theme";
-import type { ChartConfig, ChartDefinition, DataField, DeviceMode, DragFieldItem } from "./types";
-import type { DemoInsight } from "./demo/demoTypes";
+import ChartErrorBoundary from "@/components/dashboard-v2/components/charts/ChartErrorBoundary";
+import ChartPreview from "@/components/dashboard-v2/components/charts/ChartPreview";
+import InsightStrip from "@/components/dashboard-v2/InsightStrip";
+import type { DemoDatasetRow } from "@/components/dashboard-v2/services/datasetService";
+import { dashboardV2Tokens as tokens } from "@/components/dashboard-v2/theme";
+import type { ChartConfig, ChartDefinition, DataField, DeviceMode, DragFieldItem } from "@/components/dashboard-v2/types";
+import type { DemoInsight } from "@/components/dashboard-v2/demo/demoTypes";
 
 type PreviewCanvasProps = {
   chart?: ChartDefinition;

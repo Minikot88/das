@@ -24,10 +24,10 @@ import {
 } from "@mui/material";
 import type { SelectChangeEvent } from "@mui/material/Select";
 import { useDrag, useDrop } from "react-dnd";
-import { getDistinctFieldValues } from "./services/datasetService";
-import { dashboardV2Tokens as tokens } from "./theme";
-import { validateFieldForSlot } from "./utils/chartValidation";
-import type { Aggregation, ChartType, DataField, DragFieldItem, FilterValue, MappingSlot, MappingSlotId } from "./types";
+import { getDistinctFieldValues } from "@/components/dashboard-v2/services/datasetService";
+import { dashboardV2Tokens as tokens } from "@/components/dashboard-v2/theme";
+import { validateFieldForSlot } from "@/components/dashboard-v2/utils/chartValidation";
+import type { Aggregation, ChartType, DataField, DragFieldItem, FilterValue, MappingSlot, MappingSlotId } from "@/components/dashboard-v2/types";
 
 type FieldMappingProps = {
   mappings: MappingSlot[];

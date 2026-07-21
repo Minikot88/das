@@ -1,16 +1,16 @@
 import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { PageContainer } from "../components/layout/Layout";
-import Button from "../components/ui/Button";
-import EmptyState from "../components/ui/EmptyState";
-import Panel from "../components/ui/Panel";
-import ProjectCard from "../components/ui/ProjectCard";
-import SectionHeader from "../components/ui/SectionHeader";
-import CreateProjectModal from "../components/ui/CreateProjectModal";
-import { useStore } from "../store/useStore";
-import { useI18n } from "../utils/i18n";
-import { createBuilderContextForDashboard } from "../utils/dashboardWorkspace";
-import { TEMPLATE_GALLERY_CATALOG } from "../data/templateGalleryCatalog";
+import { PageContainer } from "@app/layouts/Layout";
+import Button from "@shared/components/ui/Button";
+import EmptyState from "@shared/components/ui/EmptyState";
+import Panel from "@shared/components/ui/Panel";
+import ProjectCard from "@shared/components/ui/ProjectCard";
+import SectionHeader from "@shared/components/ui/SectionHeader";
+import CreateProjectModal from "@shared/components/ui/CreateProjectModal";
+import { useStore } from "@/store/useStore";
+import { useI18n } from "@shared/lib/i18n";
+import { createBuilderContextForDashboard } from "@/utils/dashboardWorkspace";
+import { TEMPLATE_GALLERY_CATALOG } from "@/data/templateGalleryCatalog";
 import {
   ACTIVE_DASHBOARD_KEY,
   ACTIVE_PROJECT_KEY,
@@ -22,7 +22,7 @@ import {
   renameProject as renameStoredProject,
   setActiveDashboard as setStoredActiveDashboard,
   setActiveProject as setStoredActiveProject,
-} from "../services/projectStorage";
+} from "@/services/projectStorage";
 
 function formatLastUpdated(dateValue) {
   if (!dateValue) return null;

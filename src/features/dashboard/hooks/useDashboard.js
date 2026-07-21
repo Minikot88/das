@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { getDashboardCharts } from "../../../api/dashboardApi";
+import { getDashboardCharts } from "@/api/dashboardApi";
 
 export default function useDashboard({ projectId, sheetId, dashboardId, layout = [], charts = [] }) {
   const [widgets, setWidgets] = useState([]);

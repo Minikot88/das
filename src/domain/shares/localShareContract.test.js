@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { scanForSecretMaterial } from "@/domain/workspace/workspaceSchema";
+import { scanForSecretMaterial } from "@domain/workspace/workspaceSchema";
 import {
   createLocalReadonlyShare,
   createLocalShareUrl,
   normalizeLocalShareRecord,
   resolveLocalShare,
   validateLocalShare,
-} from "./localShareContract";
+} from "@domain/shares/localShareContract";
 
 function fixture() {
   const project = { id: "project-1", name: "Sales" };

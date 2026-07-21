@@ -1,8 +1,8 @@
 import { render, screen, within } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import { describe, expect, it } from "vitest";
-import type { DataField, TransformedChartData } from "../../types";
-import { AccessibleChartTable } from "./EChartsRenderer";
+import type { DataField, TransformedChartData } from "@/components/dashboard-v2/types";
+import { AccessibleChartTable } from "@/components/dashboard-v2/components/charts/EChartsRenderer";
 
 const regionField: DataField = {
   id: "region",

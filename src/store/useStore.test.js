@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { useStore } from "./useStore";
+import { useStore } from "@/store/useStore";
 
 function activeContext() {
   const state = useStore.getState();

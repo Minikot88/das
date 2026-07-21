@@ -1,7 +1,7 @@
 import React, { Suspense, lazy } from "react";
 import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
-import { MainLayout } from "@/components/layout/Layout";
-import RouteErrorBoundary from "@/components/common/RouteErrorBoundary";
+import { MainLayout } from "@app/layouts/Layout";
+import RouteErrorBoundary from "@app/error-boundaries/RouteErrorBoundary";
 import { useStore } from "@/store/useStore";
 
 const BuilderPage = lazy(() => import("@/pages/Builder.jsx"));

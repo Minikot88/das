@@ -1,9 +1,9 @@
 import React, { useEffect, useRef } from "react";
 import { Outlet, useLocation } from "react-router-dom";
-import AppHeader from "../../layout/AppHeader";
-import SidebarRight from "../../layout/SidebarRight";
-import { useStore } from "../../store/useStore";
-import { applyThemeMode } from "../../utils/themeMode";
+import AppHeader from "@app/layouts/AppHeader";
+import SidebarRight from "@app/layouts/SidebarRight";
+import { useStore } from "@/store/useStore";
+import { applyThemeMode } from "@shared/lib/themeMode";
 
 const ROUTE_TITLES = {
   "/": "Home",

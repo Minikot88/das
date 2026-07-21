@@ -1,5 +1,5 @@
-import type { ChartSettings } from "../types";
-import type { DemoThemeId, DemoThemePreset } from "./demoTypes";
+import type { ChartSettings } from "@/components/dashboard-v2/types";
+import type { DemoThemeId, DemoThemePreset } from "@/components/dashboard-v2/demo/demoTypes";
 
 export const demoThemes: DemoThemePreset[] = [
   {

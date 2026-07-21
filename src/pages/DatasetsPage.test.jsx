@@ -2,7 +2,7 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
-import DatasetsPage from "./DatasetsPage";
+import DatasetsPage from "@/pages/DatasetsPage";
 
 const datasets = [
   { id: "dataset-a", projectId: "project-a", name: "Project A dataset", fields: [], rows: [] },
@@ -32,7 +32,7 @@ vi.mock("@/domain/workspace/workspaceSelectors", () => ({
   useWorkspaceSelector: (selector) => selector(workspace),
 }));
 
-vi.mock("@/components/ui/EnterpriseDataTable", () => ({ default: () => null }));
+vi.mock("@shared/components/ui/EnterpriseDataTable", () => ({ default: () => null }));
 
 describe("DatasetsPage project ownership", () => {
   it("shows imported datasets from the active project only", () => {

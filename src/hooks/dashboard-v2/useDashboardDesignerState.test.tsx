@@ -2,7 +2,7 @@ import type { PropsWithChildren } from "react";
 import { act, renderHook } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createProjectStorageLegacyFixture, createZustandLegacyFixture } from "@/domain/workspace/__fixtures__/workspaceFixtures";
+import { createProjectStorageLegacyFixture, createZustandLegacyFixture } from "@domain/workspace/__fixtures__/workspaceFixtures";
 
 function Wrapper({ children }: PropsWithChildren) {
   return <MemoryRouter initialEntries={["/dashboard-v2"]}>{children}</MemoryRouter>;
@@ -26,8 +26,8 @@ describe("useDashboardDesignerState canonical datasets", () => {
 
   it("adds datasets created after the designer hook mounts", async () => {
     const [{ useDashboardDesignerState }, { workspaceRepository }] = await Promise.all([
-      import("./useDashboardDesignerState"),
-      import("@/domain/workspace/workspaceRepository"),
+      import("@/hooks/dashboard-v2/useDashboardDesignerState"),
+      import("@domain/workspace/workspaceRepository"),
     ]);
     const { result } = renderHook(() => useDashboardDesignerState(), { wrapper: Wrapper });
 
@@ -44,7 +44,7 @@ describe("useDashboardDesignerState canonical datasets", () => {
   });
 
   it("selects imported rows and fields without substituting demo data", async () => {
-    const { useDashboardDesignerState } = await import("./useDashboardDesignerState");
+    const { useDashboardDesignerState } = await import("@/hooks/dashboard-v2/useDashboardDesignerState");
     const { result } = renderHook(() => useDashboardDesignerState(), { wrapper: Wrapper });
 
     act(() => {
@@ -73,7 +73,7 @@ describe("useDashboardDesignerState canonical datasets", () => {
         mappings: [{ id: "x", fields: [{ id: "region" }] }],
       },
     });
-    const { useDashboardDesignerState } = await import("./useDashboardDesignerState");
+    const { useDashboardDesignerState } = await import("@/hooks/dashboard-v2/useDashboardDesignerState");
     const { result } = renderHook(() => useDashboardDesignerState(), {
       wrapper: wrapperFor("/dashboard-v2?chartId=chart-imported-replay"),
     });
@@ -107,7 +107,7 @@ describe("useDashboardDesignerState canonical datasets", () => {
         queryText: "select total from a_future_backend_table",
       },
     });
-    const { useDashboardDesignerState } = await import("./useDashboardDesignerState");
+    const { useDashboardDesignerState } = await import("@/hooks/dashboard-v2/useDashboardDesignerState");
     const { result } = renderHook(() => useDashboardDesignerState(), {
       wrapper: wrapperFor("/dashboard-v2?chartId=chart-sql-replay"),
     });
@@ -127,7 +127,7 @@ describe("useDashboardDesignerState canonical datasets", () => {
       value: { writeText },
     });
     window.history.replaceState({}, "", "/dashboard-v2?chartId=private-chart");
-    const { useDashboardDesignerState } = await import("./useDashboardDesignerState");
+    const { useDashboardDesignerState } = await import("@/hooks/dashboard-v2/useDashboardDesignerState");
     const { result } = renderHook(() => useDashboardDesignerState(), { wrapper: Wrapper });
 
     await act(async () => {
@@ -142,7 +142,7 @@ describe("useDashboardDesignerState canonical datasets", () => {
   it("does not autosave credential-bearing SQL text into chart config storage", async () => {
     vi.useFakeTimers();
     try {
-      const { useDashboardDesignerState } = await import("./useDashboardDesignerState");
+      const { useDashboardDesignerState } = await import("@/hooks/dashboard-v2/useDashboardDesignerState");
       const { result } = renderHook(() => useDashboardDesignerState(), { wrapper: Wrapper });
 
       act(() => {
@@ -168,7 +168,7 @@ describe("useDashboardDesignerState canonical datasets", () => {
       configurable: true,
       value: { writeText },
     });
-    const { useDashboardDesignerState } = await import("./useDashboardDesignerState");
+    const { useDashboardDesignerState } = await import("@/hooks/dashboard-v2/useDashboardDesignerState");
     const { result } = renderHook(() => useDashboardDesignerState(), { wrapper: Wrapper });
 
     act(() => {
@@ -190,7 +190,7 @@ describe("useDashboardDesignerState canonical datasets", () => {
 
   it("persists the latest draft when the designer unmounts before the debounce elapses", async () => {
     vi.useFakeTimers();
-    const { useDashboardDesignerState } = await import("./useDashboardDesignerState");
+    const { useDashboardDesignerState } = await import("@/hooks/dashboard-v2/useDashboardDesignerState");
     const { result, unmount } = renderHook(() => useDashboardDesignerState(), { wrapper: Wrapper });
 
     act(() => {

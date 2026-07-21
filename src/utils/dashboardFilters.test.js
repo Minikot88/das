@@ -4,7 +4,7 @@ import {
   getInteractionChips,
   getNextDrilldownStep,
   resolveInteractionPoint,
-} from "./dashboardFilters";
+} from "@/utils/dashboardFilters";
 
 const rows = [
   { id: 1, date: "2026-01-01", year: "2026", category: "Technology", subcategory: "Phones", region: "North", sales: 120 },

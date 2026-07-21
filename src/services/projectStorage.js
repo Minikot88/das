@@ -1,10 +1,10 @@
-import { repairMojibakeText, repairObjectTextWithMeta } from "@/utils/textEncodingRepair";
+import { repairMojibakeText, repairObjectTextWithMeta } from "@shared/lib/textEncodingRepair";
 import {
   mergeProjectStorageProjects,
   toProjectStorageProjects,
-} from "@/domain/workspace/workspaceCompatibility";
-import { workspaceRepository } from "@/domain/workspace/workspaceRepository";
-import { cloneWorkspace } from "@/domain/workspace/workspaceSchema";
+} from "@domain/workspace/workspaceCompatibility";
+import { workspaceRepository } from "@domain/workspace/workspaceRepository";
+import { cloneWorkspace } from "@domain/workspace/workspaceSchema";
 
 const PROJECTS_KEY = "mini-bi-projects";
 const ACTIVE_PROJECT_KEY = "mini-bi-active-project-id";

@@ -1,7 +1,7 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import ShareDialog from "./ShareDialog";
+import ShareDialog from "@/components/dashboard-v2/ShareDialog";
 
 describe("Dashboard Designer V2 share dialog", () => {
   it("does not expose the authenticated designer URL as a share or embed target", () => {

@@ -1,4 +1,4 @@
-import { CHART_SELECTOR_FAMILIES } from "./chartFamilies";
+import { CHART_SELECTOR_FAMILIES } from "@/utils/chartFamilies";
 
 const TYPE_LABELS = {
   string: "Text",

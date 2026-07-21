@@ -1,4 +1,4 @@
-import type { Aggregation, DataField, FieldType, SemanticType } from "../types";
+import type { Aggregation, DataField, FieldType, SemanticType } from "@/components/dashboard-v2/types";
 
 export type DemoDatasetRow = Record<string, string | number | boolean>;
 

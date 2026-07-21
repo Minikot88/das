@@ -1,5 +1,5 @@
 import React from "react";
-import ChartRenderer from "../charts/ChartRenderer";
+import ChartRenderer from "@/components/charts/ChartRenderer";
 
 const CHART_TYPE_LABELS = {
   line: "เส้น",

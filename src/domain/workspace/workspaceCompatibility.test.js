@@ -4,8 +4,8 @@ import {
   mergeZustandWorkspaceSnapshot,
   toProjectStorageProjects,
   toZustandWorkspaceSnapshot,
-} from "./workspaceCompatibility";
-import { createValidWorkspaceFixture, fixedClock } from "./__fixtures__/workspaceFixtures";
+} from "@domain/workspace/workspaceCompatibility";
+import { createValidWorkspaceFixture, fixedClock } from "@domain/workspace/__fixtures__/workspaceFixtures";
 
 describe("workspace compatibility projections", () => {
   function createTwoProjectWorkspace() {

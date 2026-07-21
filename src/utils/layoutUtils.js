@@ -1,4 +1,4 @@
-import { createInstanceId } from "./id";
+import { createInstanceId } from "@shared/lib/id";
 
 export const GRID_BREAKPOINTS = { lg: 1280, md: 980, sm: 720, xs: 0 };
 export const GRID_COLUMNS = { lg: 12, md: 10, sm: 6, xs: 1 };

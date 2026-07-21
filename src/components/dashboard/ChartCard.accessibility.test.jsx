@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import ChartCard from "./ChartCard";
+import ChartCard from "@/components/dashboard/ChartCard";
 
 vi.mock("../charts/ChartRenderer", () => ({ default: () => <div>chart canvas</div> }));
 vi.mock("../charts/ChartSkeleton", () => ({ default: () => <div>loading chart</div> }));

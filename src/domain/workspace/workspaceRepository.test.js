@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
-import { CANONICAL_WORKSPACE_KEY, MIGRATION_MARKER_KEY } from "./workspaceSchema";
-import { createLocalWorkspaceRepository } from "./workspaceRepository";
+import { CANONICAL_WORKSPACE_KEY, MIGRATION_MARKER_KEY } from "@domain/workspace/workspaceSchema";
+import { createLocalWorkspaceRepository } from "@domain/workspace/workspaceRepository";
 import {
   createProjectStorageLegacyFixture,
   createZustandLegacyFixture,
   createValidWorkspaceFixture,
   fixedClock,
-} from "./__fixtures__/workspaceFixtures";
+} from "@domain/workspace/__fixtures__/workspaceFixtures";
 
 function createMemoryStorage(initial = {}, options = {}) {
   const values = new Map(Object.entries(initial));

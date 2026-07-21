@@ -1,9 +1,9 @@
 import React, { memo, useEffect, useMemo, useRef, useState } from "react";
-import ChartRenderer from "../charts/ChartRenderer";
-import ChartSkeleton from "../charts/ChartSkeleton";
-import CardActions from "./CardActions";
-import { pickChartColor } from "../../utils/chartPalette";
-import { getResponsiveChartKind } from "../../utils/layoutUtils";
+import ChartRenderer from "@/components/charts/ChartRenderer";
+import ChartSkeleton from "@/components/charts/ChartSkeleton";
+import CardActions from "@/components/dashboard/CardActions";
+import { pickChartColor } from "@/utils/chartPalette";
+import { getResponsiveChartKind } from "@/utils/layoutUtils";
 
 function accessibleCellValue(value) {
   if (value === null || typeof value === "undefined") return "";

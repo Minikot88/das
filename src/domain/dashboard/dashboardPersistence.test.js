@@ -8,7 +8,7 @@ import {
   revokeRemovedSessionAssets,
   runExplicitDashboardSave,
   shouldWarnAboutUnsavedChanges,
-} from "./dashboardPersistence";
+} from "@domain/dashboard/dashboardPersistence";
 
 describe("dashboard persistence", () => {
   it("normalizes layout deterministically and enforces dashboard ownership", () => {

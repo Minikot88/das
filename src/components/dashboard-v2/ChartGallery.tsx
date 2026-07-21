@@ -2,10 +2,10 @@ import React, { memo, useMemo, useState } from "react";
 import ArrowForwardIosRoundedIcon from "@mui/icons-material/ArrowForwardIosRounded";
 import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
 import { Box, Button, Chip, IconButton, Menu, MenuItem, Paper, Stack, Tooltip, Typography } from "@mui/material";
-import { dashboardV2Tokens as tokens } from "./theme";
-import { chartCategories, isChartRecommended } from "./utils/chartRegistry";
-import type { ChartPreset } from "./demo/demoTypes";
-import type { ChartCategory, ChartDefinition, ChartType, MappingSlot } from "./types";
+import { dashboardV2Tokens as tokens } from "@/components/dashboard-v2/theme";
+import { chartCategories, isChartRecommended } from "@/components/dashboard-v2/utils/chartRegistry";
+import type { ChartPreset } from "@/components/dashboard-v2/demo/demoTypes";
+import type { ChartCategory, ChartDefinition, ChartType, MappingSlot } from "@/components/dashboard-v2/types";
 
 type ChartGalleryProps = {
   charts: ChartDefinition[];

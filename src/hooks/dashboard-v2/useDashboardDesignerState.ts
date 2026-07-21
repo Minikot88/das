@@ -6,8 +6,8 @@ import { applyThemeToSettings, demoThemes } from "@/components/dashboard-v2/demo
 import type { ChartPreset, DemoMappingPreset, DemoSettingsPatch, DemoTemplate, DemoThemeId } from "@/components/dashboard-v2/demo/demoTypes";
 import { chartCatalog, createDefaultConfig, dataFields, defaultChartSettings } from "@/components/dashboard-v2/mockData";
 import { getDatasetRows, getDatasetSchema, getDatasources, refreshDataset as refreshDatasetRows, type DemoDatasource, type DemoDatasetRow } from "@/components/dashboard-v2/services/datasetService";
-import { useWorkspaceSelector } from "@/domain/workspace/workspaceSelectors";
-import { scanForSecretMaterial } from "@/domain/workspace/workspaceSchema";
+import { useWorkspaceSelector } from "@domain/workspace/workspaceSelectors";
+import { scanForSecretMaterial } from "@domain/workspace/workspaceSchema";
 import {
   defaultSavedSqlQueries,
   formatSql,

@@ -1,6 +1,6 @@
-import type { ChartConfig, ChartSettings, MappingSlot, MappingSlotId } from "./types";
-import { getDatasetSchema } from "./services/datasetService";
-import { chartRegistry } from "./utils/chartRegistry";
+import type { ChartConfig, ChartSettings, MappingSlot, MappingSlotId } from "@/components/dashboard-v2/types";
+import { getDatasetSchema } from "@/components/dashboard-v2/services/datasetService";
+import { chartRegistry } from "@/components/dashboard-v2/utils/chartRegistry";
 
 export const dataFields = getDatasetSchema("researchdb").fields;
 export const chartCatalog = chartRegistry;

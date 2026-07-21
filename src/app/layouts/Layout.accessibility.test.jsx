@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it } from "vitest";
-import { MainLayout } from "./Layout";
+import { MainLayout } from "@app/layouts/Layout";
 
 describe("MainLayout accessibility", () => {
   it("provides one main landmark and a keyboard skip link", () => {

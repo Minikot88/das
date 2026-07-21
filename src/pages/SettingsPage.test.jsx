@@ -1,7 +1,7 @@
 import React from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import SettingsPage from "./SettingsPage";
+import SettingsPage from "@/pages/SettingsPage";
 
 const updateAppSettings = vi.fn();
 const storeState = {

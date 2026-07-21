@@ -8,8 +8,8 @@ import {
   normalizeWorkspaceDocument,
   scanForSecretMaterial,
   validateWorkspaceDocument,
-} from "./workspaceSchema";
-import { createValidWorkspaceFixture, fixedClock } from "./__fixtures__/workspaceFixtures";
+} from "@domain/workspace/workspaceSchema";
+import { createValidWorkspaceFixture, fixedClock } from "@domain/workspace/__fixtures__/workspaceFixtures";
 
 describe("workspace schema", () => {
   it("creates a deterministic empty version-one workspace", () => {

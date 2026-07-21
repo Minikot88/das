@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { workspaceRepository } from "./workspaceRepository";
+import { workspaceRepository } from "@domain/workspace/workspaceRepository";
 
 export function selectProjects(snapshot) {
   return Array.isArray(snapshot?.projects) ? snapshot.projects : [];

@@ -1,6 +1,6 @@
-import { workspaceRepository } from "@/domain/workspace/workspaceRepository";
-import { demoDataFields, demoDatasources, demoRows, type DemoDatasource, type DemoDatasetRow } from "../data/demoDataset";
-import type { Aggregation, DataField, FieldType, SemanticType } from "../types";
+import { workspaceRepository } from "@domain/workspace/workspaceRepository";
+import { demoDataFields, demoDatasources, demoRows, type DemoDatasource, type DemoDatasetRow } from "@/components/dashboard-v2/data/demoDataset";
+import type { Aggregation, DataField, FieldType, SemanticType } from "@/components/dashboard-v2/types";
 
 type WorkspaceField = {
   id?: string;

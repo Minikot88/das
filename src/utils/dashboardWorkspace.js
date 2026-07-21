@@ -1,4 +1,4 @@
-import { getPreferredChartLayout } from "./layoutUtils";
+import { getPreferredChartLayout } from "@/utils/layoutUtils";
 
 function formatChartTypeLabel(value = "chart") {
   return String(value)

@@ -1,8 +1,8 @@
-import { workspaceRepository } from "@/domain/workspace/workspaceRepository";
+import { workspaceRepository } from "@domain/workspace/workspaceRepository";
 import {
   mergeZustandWorkspaceSnapshot,
   toZustandWorkspaceSnapshot,
-} from "@/domain/workspace/workspaceCompatibility";
+} from "@domain/workspace/workspaceCompatibility";
 
 const WORKSPACE_STORAGE_KEY = "mini-bi-v8-workspace";
 const BUILDER_DRAFT_STORAGE_KEY = "mini-bi-v8-builder-draft";

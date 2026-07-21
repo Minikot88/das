@@ -1,5 +1,5 @@
 import { useContext } from "react";
-import { DashboardDesignerContext } from "./dashboardDesignerContextValue";
+import { DashboardDesignerContext } from "@/contexts/dashboard-v2/dashboardDesignerContextValue";
 
 export function useDashboardDesigner() {
   const context = useContext(DashboardDesignerContext);

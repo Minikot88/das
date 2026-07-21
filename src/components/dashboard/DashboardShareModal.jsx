@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import useFocusTrap from "../../hooks/useFocusTrap";
+import useFocusTrap from "@shared/hooks/useFocusTrap";
 
 function copyWithFallback(text) {
   if (navigator.clipboard?.writeText) {

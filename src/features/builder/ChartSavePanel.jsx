@@ -1,5 +1,5 @@
 import React from "react";
-import useFocusTrap from "../../hooks/useFocusTrap";
+import useFocusTrap from "@shared/hooks/useFocusTrap";
 
 export default function ChartSavePanel({
   builderContext,

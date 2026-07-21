@@ -1,4 +1,4 @@
-import { getChartMeta, resolveChartRuntimeType } from "./chartCatalog";
+import { getChartMeta, resolveChartRuntimeType } from "@/utils/chartCatalog";
 
 const CHART_TYPE_ALIASES = {
   stacked_bar: "stacked-bar",

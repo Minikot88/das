@@ -1,4 +1,4 @@
-import type { DemoTemplate } from "./demoTypes";
+import type { DemoTemplate } from "@/components/dashboard-v2/demo/demoTypes";
 
 export const demoTemplates: DemoTemplate[] = [
   {

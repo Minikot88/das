@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import useFocusTrap from "../../hooks/useFocusTrap";
+import useFocusTrap from "@shared/hooks/useFocusTrap";
 
 const NO_ACTIONS_COPY = "ไม่พบคำสั่งที่ตรงกับการค้นหา";
 

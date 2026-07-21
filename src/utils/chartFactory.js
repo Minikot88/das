@@ -1,7 +1,7 @@
-import { getChartJsTemplateById } from "./chartTemplates.js";
-import { validateChartMapping } from "./chartCompatibility.js";
-import { createCartesianOptions, createPieOptions, createRadialOptions } from "./chartTheme.js";
-import { chartJsPalette, getNamedChartPalette, pickChartColor } from "./chartPalette.js";
+import { getChartJsTemplateById } from "@/utils/chartTemplates.js";
+import { validateChartMapping } from "@/utils/chartCompatibility.js";
+import { createCartesianOptions, createPieOptions, createRadialOptions } from "@/utils/chartTheme.js";
+import { chartJsPalette, getNamedChartPalette, pickChartColor } from "@/utils/chartPalette.js";
 
 function ensureArray(value) {
   if (Array.isArray(value)) return value.filter(Boolean);

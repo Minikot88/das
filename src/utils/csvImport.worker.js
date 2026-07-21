@@ -1,4 +1,4 @@
-import { parseCsvText } from "./csvImport.js";
+import { parseCsvText } from "@/utils/csvImport.js";
 
 self.onmessage = (event) => {
   try {

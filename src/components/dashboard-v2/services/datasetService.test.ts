@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { createValidWorkspaceFixture } from "@/domain/workspace/__fixtures__/workspaceFixtures";
+import { createValidWorkspaceFixture } from "@domain/workspace/__fixtures__/workspaceFixtures";
 import {
   getDatasetRows,
   getDatasetSchema,
   getDatasources,
-} from "./datasetService";
+} from "@/components/dashboard-v2/services/datasetService";
 
 describe("dashboard designer dataset service", () => {
   it("adds active-project canonical datasets to the explicit demo catalog", () => {

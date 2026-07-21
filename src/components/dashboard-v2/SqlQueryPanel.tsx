@@ -27,8 +27,8 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { dashboardV2Tokens as tokens } from "./theme";
-import type { SqlExample, SqlQueryError, SqlQueryResult, SqlSavedQuery } from "./sql/sqlQueryEngine";
+import { dashboardV2Tokens as tokens } from "@/components/dashboard-v2/theme";
+import type { SqlExample, SqlQueryError, SqlQueryResult, SqlSavedQuery } from "@/components/dashboard-v2/sql/sqlQueryEngine";
 
 type SqlTab = "query" | "results" | "saved";
 

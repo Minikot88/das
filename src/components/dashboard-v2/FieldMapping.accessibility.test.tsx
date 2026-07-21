@@ -1,8 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import FieldMapping from "./FieldMapping";
-import type { DataField, MappingSlot } from "./types";
+import FieldMapping from "@/components/dashboard-v2/FieldMapping";
+import type { DataField, MappingSlot } from "@/components/dashboard-v2/types";
 
 vi.mock("react-dnd", () => ({
   useDrag: () => [{ isDragging: false }, vi.fn()],

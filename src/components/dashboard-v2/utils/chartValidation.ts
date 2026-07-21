@@ -1,8 +1,8 @@
-import { isNumericField } from "./chartAggregations";
-import { getMappingSlot } from "./chartDataEngine";
-import { getChartDefinition } from "./chartRegistry";
-import type { ChartConfig, DataField, MappingSlot, MappingSlotId, ValidationResult } from "../types";
-import type { MappingRequirement } from "../types/chartTypes";
+import { isNumericField } from "@/components/dashboard-v2/utils/chartAggregations";
+import { getMappingSlot } from "@/components/dashboard-v2/utils/chartDataEngine";
+import { getChartDefinition } from "@/components/dashboard-v2/utils/chartRegistry";
+import type { ChartConfig, DataField, MappingSlot, MappingSlotId, ValidationResult } from "@/components/dashboard-v2/types";
+import type { MappingRequirement } from "@/components/dashboard-v2/types/chartTypes";
 
 const slotAliases: Record<MappingSlotId, MappingSlotId[]> = {
   xAxis: ["xAxis", "category", "rows"],

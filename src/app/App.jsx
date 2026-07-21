@@ -1,8 +1,8 @@
 import React, { useEffect } from "react";
 import { BrowserRouter } from "react-router-dom";
-import AppRoutes from "@/app/AppRoutes";
+import AppRoutes from "@app/router/AppRoutes";
 import { useStore } from "@/store/useStore";
-import { applyThemeMode } from "@/utils/themeMode";
+import { applyThemeMode } from "@shared/lib/themeMode";
 
 export default function App() {
   const theme = useStore((state) => state.theme);

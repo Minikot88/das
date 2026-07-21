@@ -1,13 +1,13 @@
 import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { PageContainer, PageHeader } from "../components/layout/Layout";
+import { PageContainer, PageHeader } from "@app/layouts/Layout";
 import {
   CONNECTION_TABS,
   DATABASE_TYPE_OPTIONS,
   buildConnectionUrl,
   createDefaultConnectionForm,
   getDatabaseType,
-} from "../data/databaseConnectionDefaults";
+} from "@/data/databaseConnectionDefaults";
 import {
   createConnectionProfile,
   deleteDatabaseConnection,
@@ -15,8 +15,8 @@ import {
   sanitizeConnectionMetadata,
   sanitizeConnectionUrl,
   upsertDatabaseConnection,
-} from "../utils/databaseConnectionStorage";
-import "../styles/databaseConnection.css";
+} from "@/utils/databaseConnectionStorage";
+import "@/styles/databaseConnection.css";
 
 const AUTH_OPTIONS = [
   { value: "username-password", label: "Username / Password" },

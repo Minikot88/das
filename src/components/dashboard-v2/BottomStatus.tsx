@@ -4,8 +4,8 @@ import CloudQueueRoundedIcon from "@mui/icons-material/CloudQueueRounded";
 import DatabaseRoundedIcon from "@mui/icons-material/StorageRounded";
 import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
 import { Box, Divider, Stack, Tooltip, Typography } from "@mui/material";
-import { dashboardV2Tokens as tokens } from "./theme";
-import type { ChartDefinition, MappingSlot } from "./types";
+import { dashboardV2Tokens as tokens } from "@/components/dashboard-v2/theme";
+import type { ChartDefinition, MappingSlot } from "@/components/dashboard-v2/types";
 
 type BottomStatusProps = {
   chart?: ChartDefinition;

@@ -26,8 +26,8 @@ import type {
   ChartType,
   MappingRequirement,
   RegistryAggregation,
-} from "../types";
-import type { DataField, MappingSlot } from "../types";
+} from "@/components/dashboard-v2/types";
+import type { DataField, MappingSlot } from "@/components/dashboard-v2/types";
 
 function icon(component: React.ElementType) {
   return React.createElement(component);

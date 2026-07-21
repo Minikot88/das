@@ -1,4 +1,4 @@
-import type { DemoDatasetRow } from "../services/datasetService";
+import type { DemoDatasetRow } from "@/components/dashboard-v2/services/datasetService";
 import type {
   Aggregation,
   ChartConfig,
@@ -10,11 +10,11 @@ import type {
   MappingSlotId,
   SortMode,
   TransformedChartData,
-} from "../types";
-import { aggregateRows, groupByRows, isNumericField, toNumber, toText, uniqueFields } from "./chartAggregations";
-import { clampPercent } from "./chartFormatters";
+} from "@/components/dashboard-v2/types";
+import { aggregateRows, groupByRows, isNumericField, toNumber, toText, uniqueFields } from "@/components/dashboard-v2/utils/chartAggregations";
+import { clampPercent } from "@/components/dashboard-v2/utils/chartFormatters";
 
-export { formatValue } from "./chartFormatters";
+export { formatValue } from "@/components/dashboard-v2/utils/chartFormatters";
 
 const monthOrder = new Map([
   ["ม.ค.", 1],

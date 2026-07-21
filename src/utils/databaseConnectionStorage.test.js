@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { scanForSecretMaterial } from "@/domain/workspace/workspaceSchema";
+import { scanForSecretMaterial } from "@domain/workspace/workspaceSchema";
 import {
   DB_CONNECTIONS_STORAGE_KEY,
   containsCredentialMaterial,
@@ -9,8 +9,8 @@ import {
   sanitizeConnectionUrl,
   saveDatabaseConnections,
   upsertDatabaseConnection,
-} from "./databaseConnectionStorage";
-import { DATABASE_TYPE_OPTIONS } from "../data/databaseConnectionDefaults";
+} from "@/utils/databaseConnectionStorage";
+import { DATABASE_TYPE_OPTIONS } from "@/data/databaseConnectionDefaults";
 
 const sentinel = "synthetic-secret-never-store";
 

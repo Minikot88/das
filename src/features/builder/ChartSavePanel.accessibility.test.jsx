@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import ChartSavePanel from "./ChartSavePanel";
+import ChartSavePanel from "@/features/builder/ChartSavePanel";
 
 function renderPanel(overrides = {}) {
   const props = {

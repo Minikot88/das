@@ -5,13 +5,13 @@ import {
   fingerprintSourceValue,
   readLegacySourceValues,
   validateMigrationCandidate,
-} from "./workspaceMigrations";
+} from "@domain/workspace/workspaceMigrations";
 import {
   FIXED_TIMESTAMP,
   createProjectStorageLegacyFixture,
   createZustandLegacyFixture,
   fixedClock,
-} from "./__fixtures__/workspaceFixtures";
+} from "@domain/workspace/__fixtures__/workspaceFixtures";
 
 function createSourceValues(overrides = {}) {
   return {

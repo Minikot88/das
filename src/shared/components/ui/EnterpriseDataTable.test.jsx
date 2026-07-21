@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import EnterpriseDataTable from "./EnterpriseDataTable";
+import EnterpriseDataTable from "@shared/components/ui/EnterpriseDataTable";
 
 const rows = Array.from({ length: 80 }, (_, index) => ({
   id: `row-${index}`,

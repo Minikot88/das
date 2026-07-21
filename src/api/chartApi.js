@@ -1,22 +1,22 @@
-import { apiRequest, isMockMode } from "./client";
-import { mockData, mockRows } from "../data/mockData";
-import { mockSchema } from "../data/mockSchema";
+import { apiRequest, isMockMode } from "@/api/client";
+import { mockData, mockRows } from "@/data/mockData";
+import { mockSchema } from "@/data/mockSchema";
 import {
   chartJsTemplates,
   getChartJsTemplateById,
   getChartTypes as getTemplateChartTypes,
-} from "../utils/chartTemplates";
+} from "@/utils/chartTemplates";
 import {
   getChartValidationMessage,
   validateChartMapping as validateChartMappingInternal,
-} from "../utils/chartCompatibility";
-import { createChartConfig as createChartConfigInternal } from "../utils/chartFactory";
+} from "@/utils/chartCompatibility";
+import { createChartConfig as createChartConfigInternal } from "@/utils/chartFactory";
 import {
   executeMockSql,
   generateVisualSql as generateVisualSqlInternal,
-} from "../utils/mockSqlEngine";
-import { createEntityId } from "../utils/id";
-import { useStore } from "../store/useStore";
+} from "@/utils/mockSqlEngine";
+import { createEntityId } from "@shared/lib/id";
+import { useStore } from "@/store/useStore";
 
 function getActiveStoreContext() {
   const state = useStore.getState();

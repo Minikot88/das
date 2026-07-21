@@ -1,5 +1,5 @@
-import { FIELD_ROLES, getChartRequirements } from "./chartRequirements";
-import { CHART_SELECTOR_FAMILIES as FAMILY_SELECTOR_CATALOG } from "./chartFamilies";
+import { FIELD_ROLES, getChartRequirements } from "@/utils/chartRequirements";
+import { CHART_SELECTOR_FAMILIES as FAMILY_SELECTOR_CATALOG } from "@/utils/chartFamilies";
 
 export { FIELD_ROLES };
 

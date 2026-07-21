@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import ChartPreview from "@/components/dashboard-v2/components/charts/ChartPreview";
 import { createDefaultConfig, dataFields, defaultChartSettings } from "@/components/dashboard-v2/mockData";
 import { getDatasetRows } from "@/components/dashboard-v2/services/datasetService";
-import { resolveChartData } from "@/domain/charts/chartDataContract";
+import { resolveChartData } from "@domain/charts/chartDataContract";
 import {
   createBeforeUnloadHandler,
   createDashboardAutosave,
@@ -12,11 +12,11 @@ import {
   prepareDashboardForPersistence,
   runExplicitDashboardSave,
   shouldWarnAboutUnsavedChanges,
-} from "@/domain/dashboard/dashboardPersistence";
-import { createLocalReadonlyShare, createLocalShareUrl } from "@/domain/shares/localShareContract";
-import { workspaceRepository } from "@/domain/workspace/workspaceRepository";
-import { useWorkspaceSelector } from "@/domain/workspace/workspaceSelectors";
-import useNavigationControls from "@/hooks/useNavigationControls";
+} from "@domain/dashboard/dashboardPersistence";
+import { createLocalReadonlyShare, createLocalShareUrl } from "@domain/shares/localShareContract";
+import { workspaceRepository } from "@domain/workspace/workspaceRepository";
+import { useWorkspaceSelector } from "@domain/workspace/workspaceSelectors";
+import useNavigationControls from "@shared/hooks/useNavigationControls";
 import {
   createSavedChartFromConfig,
   deleteSavedChart,
@@ -41,10 +41,10 @@ import {
   setActiveProject as setStoredActiveProject,
   upsertDashboard,
 } from "@/services/projectStorage";
-import { CANONICAL_WORKSPACE_KEY } from "@/domain/workspace/workspaceSchema";
+import { CANONICAL_WORKSPACE_KEY } from "@domain/workspace/workspaceSchema";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
-import "./DashboardCanvasBuilder.css";
+import "@/pages/DashboardCanvasBuilder.css";
 
 const GridLayout = WidthProvider(ReactGridLayout);
 

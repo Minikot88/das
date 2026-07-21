@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { CANONICAL_WORKSPACE_KEY } from "@/domain/workspace/workspaceSchema";
-import { createProjectStorageLegacyFixture, createZustandLegacyFixture } from "@/domain/workspace/__fixtures__/workspaceFixtures";
+import { CANONICAL_WORKSPACE_KEY } from "@domain/workspace/workspaceSchema";
+import { createProjectStorageLegacyFixture, createZustandLegacyFixture } from "@domain/workspace/__fixtures__/workspaceFixtures";
 
 function seedLegacyStorage() {
   const zustand = createZustandLegacyFixture();
@@ -26,7 +26,7 @@ describe("workspace storage bridge", () => {
 
   it("loads canonical domain data with safe legacy UI/auth state", async () => {
     const original = window.localStorage.getItem("mini-bi-v8-workspace");
-    const storage = await import("./storage");
+    const storage = await import("@/utils/storage");
 
     const loaded = storage.loadWorkspaceState();
 
@@ -40,7 +40,7 @@ describe("workspace storage bridge", () => {
 
   it("writes domain changes to canonical storage and safe UI state to a separate key", async () => {
     const original = window.localStorage.getItem("mini-bi-v8-workspace");
-    const storage = await import("./storage");
+    const storage = await import("@/utils/storage");
     const loaded = storage.loadWorkspaceState();
     loaded.projects[0].name = "Renamed through Zustand";
     loaded.user = {
@@ -62,14 +62,14 @@ describe("workspace storage bridge", () => {
   });
 
   it("reloads the combined canonical and UI projection", async () => {
-    let storage = await import("./storage");
+    let storage = await import("@/utils/storage");
     const loaded = storage.loadWorkspaceState();
     loaded.projects[0].name = "Persisted canonical name";
     loaded.sidebarCollapsed = true;
     storage.saveWorkspaceState(loaded);
     vi.resetModules();
 
-    storage = await import("./storage");
+    storage = await import("@/utils/storage");
     const reloaded = storage.loadWorkspaceState();
 
     expect(reloaded.projects[0].name).toBe("Persisted canonical name");
@@ -80,7 +80,7 @@ describe("workspace storage bridge", () => {
   it("redacts credential material when canonical persistence falls back to the legacy key", async () => {
     window.localStorage.setItem(CANONICAL_WORKSPACE_KEY, "{invalid-canonical");
     vi.resetModules();
-    const storage = await import("./storage");
+    const storage = await import("@/utils/storage");
 
     storage.saveWorkspaceState({
       projects: [],
@@ -99,7 +99,7 @@ describe("workspace storage bridge", () => {
   });
 
   it("redacts credential material from builder drafts", async () => {
-    const storage = await import("./storage");
+    const storage = await import("@/utils/storage");
 
     storage.saveBuilderDraft({
       title: "Safe draft",
@@ -120,7 +120,7 @@ describe("workspace storage bridge", () => {
   });
 
   it("preserves credential-named dataset columns while redacting app-owned credentials", async () => {
-    const storage = await import("./storage");
+    const storage = await import("@/utils/storage");
 
     const snapshot = storage.createWorkspaceSnapshot({
       projects: [],

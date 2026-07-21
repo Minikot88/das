@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { PageContainer, PageHeader } from "../components/layout/Layout";
-import EnterpriseDataTable from "../components/ui/EnterpriseDataTable";
-import { mockDataset } from "../data/mockData";
-import { selectProjectDatasets, useWorkspaceSelector } from "../domain/workspace/workspaceSelectors";
-import { useStore } from "../store/useStore";
-import { createDatasetFromCsv, parseCsvTextAsync, validateCsvFile } from "../utils/csvImport";
+import { PageContainer, PageHeader } from "@app/layouts/Layout";
+import EnterpriseDataTable from "@shared/components/ui/EnterpriseDataTable";
+import { mockDataset } from "@/data/mockData";
+import { selectProjectDatasets, useWorkspaceSelector } from "@domain/workspace/workspaceSelectors";
+import { useStore } from "@/store/useStore";
+import { createDatasetFromCsv, parseCsvTextAsync, validateCsvFile } from "@/utils/csvImport";
 
 function datasetColumns(dataset) {
   return (dataset?.fields ?? []).map((field) => ({

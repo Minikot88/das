@@ -2,8 +2,8 @@ import React, { memo } from "react";
 import RocketLaunchRoundedIcon from "@mui/icons-material/RocketLaunchRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, Stack, Typography } from "@mui/material";
-import { dashboardV2Tokens as tokens } from "./theme";
-import type { FutureFeature } from "./demo/demoTypes";
+import { dashboardV2Tokens as tokens } from "@/components/dashboard-v2/theme";
+import type { FutureFeature } from "@/components/dashboard-v2/demo/demoTypes";
 
 type FeaturePreviewDialogProps = {
   feature: FutureFeature | null;

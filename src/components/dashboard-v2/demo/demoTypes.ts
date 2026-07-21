@@ -1,6 +1,6 @@
-import type { Aggregation, ChartSettings, ChartType, DemoThemeId, MappingSlotId, SortMode } from "../types";
+import type { Aggregation, ChartSettings, ChartType, DemoThemeId, MappingSlotId, SortMode } from "@/components/dashboard-v2/types";
 
-export type { DemoThemeId } from "../types";
+export type { DemoThemeId } from "@/components/dashboard-v2/types";
 
 export type DemoSettingsPatch = {
   [K in keyof ChartSettings]?: Partial<ChartSettings[K]>;

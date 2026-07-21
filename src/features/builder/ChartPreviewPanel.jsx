@@ -1,5 +1,5 @@
 import React from "react";
-import ChartRenderer from "../../components/charts/ChartRenderer";
+import ChartRenderer from "@/components/charts/ChartRenderer";
 
 export default function ChartPreviewPanel({ previewConfig, settings, validation, children }) {
   const previewTitle = typeof settings.title === "string" ? settings.title.trim() : "";

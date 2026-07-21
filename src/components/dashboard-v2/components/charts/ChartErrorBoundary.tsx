@@ -2,7 +2,7 @@ import React from "react";
 import RestartAltRoundedIcon from "@mui/icons-material/RestartAltRounded";
 import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
 import { Box, Button, Stack, Typography } from "@mui/material";
-import { dashboardV2Tokens as tokens } from "../../theme";
+import { dashboardV2Tokens as tokens } from "@/components/dashboard-v2/theme";
 
 type ChartErrorBoundaryProps = {
   children: React.ReactNode;

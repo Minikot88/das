@@ -15,8 +15,8 @@ import TextFieldsRoundedIcon from "@mui/icons-material/TextFieldsRounded";
 import TrendingUpRoundedIcon from "@mui/icons-material/TrendingUpRounded";
 import ZoomInRoundedIcon from "@mui/icons-material/ZoomInRounded";
 import { AppBar, Box, Button, ButtonGroup, Divider, IconButton, Menu, MenuItem, Stack, Toolbar, Tooltip, Typography } from "@mui/material";
-import { dashboardV2Tokens as tokens } from "./theme";
-import type { ChartType, DeviceMode } from "./types";
+import { dashboardV2Tokens as tokens } from "@/components/dashboard-v2/theme";
+import type { ChartType, DeviceMode } from "@/components/dashboard-v2/types";
 
 type DesignerToolbarProps = {
   deviceMode: DeviceMode;

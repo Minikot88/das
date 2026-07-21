@@ -1,5 +1,5 @@
 import React from "react";
-import DropZone from "./DropZone";
+import DropZone from "@/features/builder/DropZone";
 
 export default function ChartMappingPanel({
   template,

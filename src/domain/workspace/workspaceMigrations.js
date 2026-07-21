@@ -3,7 +3,7 @@ import {
   createEmptyWorkspace,
   normalizeWorkspaceDocument,
   validateWorkspaceDocument,
-} from "./workspaceSchema";
+} from "@domain/workspace/workspaceSchema";
 
 export const LEGACY_SOURCE_KEYS = Object.freeze([
   "mini-bi-v8-workspace",

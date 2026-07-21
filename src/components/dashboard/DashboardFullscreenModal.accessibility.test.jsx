@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import DashboardFullscreenModal from "./DashboardFullscreenModal";
+import DashboardFullscreenModal from "@/components/dashboard/DashboardFullscreenModal";
 
 vi.mock("./ChartCard", () => ({
   default: () => <button type="button">Chart action</button>,

@@ -1,5 +1,5 @@
-import type { ChartConfig, TransformedChartData } from "../types";
-import type { DemoInsight } from "./demoTypes";
+import type { ChartConfig, TransformedChartData } from "@/components/dashboard-v2/types";
+import type { DemoInsight } from "@/components/dashboard-v2/demo/demoTypes";
 
 function formatNumber(value: number) {
   return new Intl.NumberFormat("th-TH", { notation: value >= 1_000_000 ? "compact" : "standard", maximumFractionDigits: 1 }).format(value);

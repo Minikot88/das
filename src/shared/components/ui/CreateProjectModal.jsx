@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { useI18n } from "../../utils/i18n";
-import useFocusTrap from "../../hooks/useFocusTrap";
-import Button from "./Button";
-import Input from "./Input";
+import { useI18n } from "@shared/lib/i18n";
+import useFocusTrap from "@shared/hooks/useFocusTrap";
+import Button from "@shared/components/ui/Button";
+import Input from "@shared/components/ui/Input";
 
 export default function CreateProjectModal({ onClose, onCreate }) {
   const { t } = useI18n();

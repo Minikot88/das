@@ -1,13 +1,13 @@
 ﻿import React, { useEffect, useMemo } from "react";
 import { useLocation, useParams } from "react-router-dom";
 import { useState } from "react";
-import DashboardGrid from "../components/dashboard/DashboardGrid";
-import ReadOnlyStateCard from "../components/ui/ReadOnlyStateCard";
-import { useStore } from "../store/useStore";
-import { findDashboardContextById } from "../utils/dashboardWorkspace";
-import { resolveDashboardViewOptions } from "../utils/dashboardShareUtils";
-import { normalizeLocalShareRecord, resolveLocalShare, validateLocalShare } from "../domain/shares/localShareContract";
-import { useWorkspaceSelector } from "../domain/workspace/workspaceSelectors";
+import DashboardGrid from "@/components/dashboard/DashboardGrid";
+import ReadOnlyStateCard from "@shared/components/ui/ReadOnlyStateCard";
+import { useStore } from "@/store/useStore";
+import { findDashboardContextById } from "@/utils/dashboardWorkspace";
+import { resolveDashboardViewOptions } from "@/utils/dashboardShareUtils";
+import { normalizeLocalShareRecord, resolveLocalShare, validateLocalShare } from "@domain/shares/localShareContract";
+import { useWorkspaceSelector } from "@domain/workspace/workspaceSelectors";
 
 function countChartTypes(widgets = []) {
   return new Set(widgets.map((widget) => widget.type).filter(Boolean)).size;

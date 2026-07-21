@@ -1,39 +1,39 @@
 ﻿import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useStore } from "../store/useStore";
-import { PageContainer, WorkspaceLayout } from "../components/layout/Layout";
-import { autoArrangeDashboardLayout, DASHBOARD_GRID_MARGIN, DASHBOARD_ROW_HEIGHT } from "../utils/layoutUtils";
-import ChartPicker from "../components/dashboard/ChartPicker";
-import DashboardGrid from "../components/dashboard/DashboardGrid";
-import DashboardFullscreenModal from "../components/dashboard/DashboardFullscreenModal";
-import DashboardShareModal from "../components/dashboard/DashboardShareModal";
-import CommandPaletteModal from "../components/bi/CommandPaletteModal";
-import DatasetExplorerModal from "../components/bi/DatasetExplorerModal";
-import SidebarRight from "../layout/SidebarRight";
-import useDashboard from "../features/dashboard/hooks/useDashboard";
+import { useStore } from "@/store/useStore";
+import { PageContainer, WorkspaceLayout } from "@app/layouts/Layout";
+import { autoArrangeDashboardLayout, DASHBOARD_GRID_MARGIN, DASHBOARD_ROW_HEIGHT } from "@/utils/layoutUtils";
+import ChartPicker from "@/components/dashboard/ChartPicker";
+import DashboardGrid from "@/components/dashboard/DashboardGrid";
+import DashboardFullscreenModal from "@/components/dashboard/DashboardFullscreenModal";
+import DashboardShareModal from "@/components/dashboard/DashboardShareModal";
+import CommandPaletteModal from "@/components/bi/CommandPaletteModal";
+import DatasetExplorerModal from "@/components/bi/DatasetExplorerModal";
+import SidebarRight from "@app/layouts/SidebarRight";
+import useDashboard from "@/features/dashboard/hooks/useDashboard";
 import {
   createBuilderContextForDashboard,
   getDashboardWorkspaceStats,
   readBuilderReturnState,
   toDashboardChartModel,
-} from "../utils/dashboardWorkspace";
+} from "@/utils/dashboardWorkspace";
 import {
   buildDashboardEmbedCode,
   buildDashboardViewUrl,
   exportNodeAsImage,
   exportNodeAsPdf,
   sanitizeFileName,
-} from "../utils/dashboardShareUtils";
+} from "@/utils/dashboardShareUtils";
 import {
   applyDashboardFiltersToWidget,
   getActiveDashboardFilterChips,
   getInteractionChips,
   getNextDrilldownStep,
   resolveInteractionPoint,
-} from "../utils/dashboardFilters";
+} from "@/utils/dashboardFilters";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
-import "../styles/enterpriseBiRedesign.css";
+import "@/styles/enterpriseBiRedesign.css";
 
 const GLOBAL_FILTER_PRESETS = [
   {

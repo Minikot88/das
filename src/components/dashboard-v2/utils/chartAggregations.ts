@@ -1,4 +1,4 @@
-import type { Aggregation, DataField } from "../types";
+import type { Aggregation, DataField } from "@/components/dashboard-v2/types";
 
 export type DataRecord = Record<string, string | number | boolean | undefined>;
 

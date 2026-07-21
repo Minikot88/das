@@ -5,8 +5,8 @@ import NumbersRoundedIcon from "@mui/icons-material/NumbersRounded";
 import ToggleOnRoundedIcon from "@mui/icons-material/ToggleOnRounded";
 import { Box, Typography } from "@mui/material";
 import { useDrag } from "react-dnd";
-import { dashboardV2Tokens as tokens } from "./theme";
-import type { DataField, DragFieldItem, FieldType } from "./types";
+import { dashboardV2Tokens as tokens } from "@/components/dashboard-v2/theme";
+import type { DataField, DragFieldItem, FieldType } from "@/components/dashboard-v2/types";
 
 const typeMeta: Record<FieldType, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
   date: { label: "Date", color: tokens.color.date, bg: tokens.color.dateSoft, icon: <CalendarMonthRoundedIcon /> },

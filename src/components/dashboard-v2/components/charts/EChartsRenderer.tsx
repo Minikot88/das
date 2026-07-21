@@ -17,15 +17,15 @@ import {
   TableSortLabel,
   Typography,
 } from "@mui/material";
-import type { DemoDatasetRow } from "../../services/datasetService";
-import { dashboardV2Tokens as tokens } from "../../theme";
-import type { Aggregation, ChartSettings, ChartType, DataField, DeviceMode, FilterValue, MappingSlot, TransformedChartData } from "../../types";
-import { toText } from "../../utils/chartAggregations";
-import { formatValue, transformChartData } from "../../utils/chartDataEngine";
-import { clearLatestEChartsInstance, setLatestEChartsInstance } from "../../utils/echartsInstanceRegistry";
-import { buildEChartsOption } from "../../utils/echartsOptionBuilder";
-import { echarts } from "../../utils/echartsModules";
-import { validateChartConfig } from "../../utils/chartValidation";
+import type { DemoDatasetRow } from "@/components/dashboard-v2/services/datasetService";
+import { dashboardV2Tokens as tokens } from "@/components/dashboard-v2/theme";
+import type { Aggregation, ChartSettings, ChartType, DataField, DeviceMode, FilterValue, MappingSlot, TransformedChartData } from "@/components/dashboard-v2/types";
+import { toText } from "@/components/dashboard-v2/utils/chartAggregations";
+import { formatValue, transformChartData } from "@/components/dashboard-v2/utils/chartDataEngine";
+import { clearLatestEChartsInstance, setLatestEChartsInstance } from "@/components/dashboard-v2/utils/echartsInstanceRegistry";
+import { buildEChartsOption } from "@/components/dashboard-v2/utils/echartsOptionBuilder";
+import { echarts } from "@/components/dashboard-v2/utils/echartsModules";
+import { validateChartConfig } from "@/components/dashboard-v2/utils/chartValidation";
 
 type BuiltEChartsOption = ReturnType<typeof buildEChartsOption>;
 

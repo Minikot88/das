@@ -10,8 +10,8 @@ import {
   safeSetLocalStorage,
   upsertChart as upsertProjectChart,
 } from "@/services/projectStorage";
-import { repairMojibakeText, repairObjectText } from "@/utils/textEncodingRepair";
-import { normalizeChartDataContract } from "@/domain/charts/chartDataContract";
+import { repairMojibakeText, repairObjectText } from "@shared/lib/textEncodingRepair";
+import { normalizeChartDataContract } from "@domain/charts/chartDataContract";
 
 function makeId(prefix = "chart") {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;

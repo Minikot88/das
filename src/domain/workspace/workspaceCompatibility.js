@@ -1,5 +1,5 @@
-import { cloneWorkspace, normalizeWorkspaceDocument, validateWorkspaceDocument } from "./workspaceSchema";
-import { createMigrationCandidate } from "./workspaceMigrations";
+import { cloneWorkspace, normalizeWorkspaceDocument, validateWorkspaceDocument } from "@domain/workspace/workspaceSchema";
+import { createMigrationCandidate } from "@domain/workspace/workspaceMigrations";
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];

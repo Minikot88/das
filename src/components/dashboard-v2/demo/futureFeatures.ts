@@ -1,4 +1,4 @@
-import type { FutureFeature } from "./demoTypes";
+import type { FutureFeature } from "@/components/dashboard-v2/demo/demoTypes";
 
 export const futureFeatures: FutureFeature[] = [
   {

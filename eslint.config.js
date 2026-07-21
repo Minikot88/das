@@ -33,8 +33,8 @@ export default defineConfig([
       'src/components/charts/ChartJsRenderer.jsx',
       'src/features/builder/ChartTypePicker.jsx',
       'src/features/builder/FieldList.jsx',
-      'src/hooks/useNavigationControls.js',
-      'src/layout/AppHeader.jsx',
+      'src/shared/hooks/useNavigationControls.js',
+      'src/app/layouts/AppHeader.jsx',
       'src/pages/DashboardPublicPage.jsx',
     ],
     rules: {

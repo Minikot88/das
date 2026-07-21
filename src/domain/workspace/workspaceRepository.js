@@ -6,12 +6,12 @@ import {
   createEmptyWorkspace,
   normalizeWorkspaceDocument,
   validateWorkspaceDocument,
-} from "./workspaceSchema";
+} from "@domain/workspace/workspaceSchema";
 import {
   createMigrationCandidate,
   readLegacySourceValues,
   validateMigrationCandidate,
-} from "./workspaceMigrations";
+} from "@domain/workspace/workspaceMigrations";
 
 function isObject(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);

@@ -1,5 +1,5 @@
 ﻿import React from "react";
-import Button from "./Button";
+import Button from "@shared/components/ui/Button";
 
 export default function EmptyState({ title, description, icon = "--", actionText, onAction, className = "" }) {
   return (

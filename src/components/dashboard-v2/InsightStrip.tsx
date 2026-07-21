@@ -3,8 +3,8 @@ import InsightsRoundedIcon from "@mui/icons-material/InsightsRounded";
 import TrendingUpRoundedIcon from "@mui/icons-material/TrendingUpRounded";
 import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
 import { Box, Button, Menu, MenuItem, Stack, Typography } from "@mui/material";
-import { dashboardV2Tokens as tokens } from "./theme";
-import type { DemoInsight } from "./demo/demoTypes";
+import { dashboardV2Tokens as tokens } from "@/components/dashboard-v2/theme";
+import type { DemoInsight } from "@/components/dashboard-v2/demo/demoTypes";
 
 type InsightStripProps = {
   insights: DemoInsight[];

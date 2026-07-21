@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
-import ChartCard from "./ChartCard";
-import useFocusTrap from "../../hooks/useFocusTrap";
+import ChartCard from "@/components/dashboard/ChartCard";
+import useFocusTrap from "@shared/hooks/useFocusTrap";
 
 function getFullscreenHeight() {
   if (typeof window === "undefined") return 640;

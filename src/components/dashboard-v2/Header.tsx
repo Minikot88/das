@@ -26,7 +26,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { dashboardV2Tokens as tokens } from "./theme";
+import { dashboardV2Tokens as tokens } from "@/components/dashboard-v2/theme";
 
 type DesignerHeaderProps = {
   canUndo: boolean;

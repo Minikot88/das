@@ -31,10 +31,10 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { dashboardV2Tokens as tokens } from "./theme";
-import type { DemoThemeId, DemoThemePreset } from "./demo/demoTypes";
-import type { ChartConfig, ChartSettingKey, ChartSettings } from "./types";
-import { getChartDefinition } from "./utils/chartRegistry";
+import { dashboardV2Tokens as tokens } from "@/components/dashboard-v2/theme";
+import type { DemoThemeId, DemoThemePreset } from "@/components/dashboard-v2/demo/demoTypes";
+import type { ChartConfig, ChartSettingKey, ChartSettings } from "@/components/dashboard-v2/types";
+import { getChartDefinition } from "@/components/dashboard-v2/utils/chartRegistry";
 
 type PropertyPanelProps = {
   config: ChartConfig;

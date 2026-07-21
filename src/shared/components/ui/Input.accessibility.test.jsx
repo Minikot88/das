@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import Input from "./Input";
+import Input from "@shared/components/ui/Input";
 
 describe("Input accessibility", () => {
   it("associates its label and validation message with the input", () => {

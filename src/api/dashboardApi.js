@@ -1,7 +1,7 @@
-import { apiRequest, isMockMode } from "./client";
-import { useStore } from "../store/useStore";
-import { getChartsByDashboardId } from "./chartApi";
-import { resolveDashboardWidgets } from "../utils/dashboardWorkspace";
+import { apiRequest, isMockMode } from "@/api/client";
+import { useStore } from "@/store/useStore";
+import { getChartsByDashboardId } from "@/api/chartApi";
+import { resolveDashboardWidgets } from "@/utils/dashboardWorkspace";
 
 function getDashboardContext(state, dashboardId, context = {}) {
   const scopedProject = state.projects.find((project) => project.id === context.projectId) ?? null;

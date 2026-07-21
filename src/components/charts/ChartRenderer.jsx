@@ -1,14 +1,14 @@
 import React from "react";
-import ChartErrorBoundary from "./ChartErrorBoundary";
-import ChartJsRenderer from "./ChartJsRenderer";
-import KPIWidget from "./KPIWidget";
-import { mockSchema } from "../../data/mockSchema";
+import ChartErrorBoundary from "@/components/charts/ChartErrorBoundary";
+import ChartJsRenderer from "@/components/charts/ChartJsRenderer";
+import KPIWidget from "@/components/charts/KPIWidget";
+import { mockSchema } from "@/data/mockSchema";
 import {
   createCartesianConfig,
   createChartConfig,
   createPieLikeConfig,
   createRadialConfig,
-} from "../../utils/chartFactory";
+} from "@/utils/chartFactory";
 
 const FALLBACK_COLORS = ["#fb7185", "#fdba74", "#fde68a", "#60a5fa", "#a78bfa", "#34d399"];
 

@@ -1,5 +1,5 @@
-import { apiRequest, isMockMode } from "./client";
-import { useStore } from "../store/useStore";
+import { apiRequest, isMockMode } from "@/api/client";
+import { useStore } from "@/store/useStore";
 
 export async function getProjects() {
   if (isMockMode()) return useStore.getState().projects;

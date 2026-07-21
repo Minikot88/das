@@ -1,4 +1,4 @@
-import type { ChartConfig, ChartSettings } from "../types";
+import type { ChartConfig, ChartSettings } from "@/components/dashboard-v2/types";
 
 export const chartPalettes: Record<ChartSettings["colors"]["palette"], string[]> = {
   default: ["#2563EB", "#16A34A", "#F59E0B", "#8B5CF6", "#06B6D4", "#64748B", "#EF4444"],

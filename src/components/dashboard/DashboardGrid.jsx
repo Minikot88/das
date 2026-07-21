@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { Responsive, WidthProvider } from "react-grid-layout";
-import ChartCard from "./ChartCard";
+import ChartCard from "@/components/dashboard/ChartCard";
 import {
   buildResponsiveLayouts,
   DASHBOARD_COMPACT_TYPE,
@@ -11,8 +11,8 @@ import {
   GRID_BREAKPOINTS,
   GRID_COLUMNS,
   normalizeLayoutItems,
-} from "../../utils/layoutUtils";
-import { toDashboardChartModel } from "../../utils/dashboardWorkspace";
+} from "@/utils/layoutUtils";
+import { toDashboardChartModel } from "@/utils/dashboardWorkspace";
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 

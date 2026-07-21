@@ -1,12 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Navigate, useParams } from "react-router-dom";
-import { useStore } from "../store/useStore";
-import { normalizeLocalShareRecord, resolveLocalShare, validateLocalShare } from "../domain/shares/localShareContract";
-import { useWorkspaceSelector } from "../domain/workspace/workspaceSelectors";
-import { findDashboardContextById } from "../utils/dashboardWorkspace";
-import ReadOnlyDashboardHeader from "../components/ui/ReadOnlyDashboardHeader";
-import ReadOnlyChartFrame from "../components/ui/ReadOnlyChartFrame";
-import ReadOnlyStateCard from "../components/ui/ReadOnlyStateCard";
+import { useStore } from "@/store/useStore";
+import { normalizeLocalShareRecord, resolveLocalShare, validateLocalShare } from "@domain/shares/localShareContract";
+import { useWorkspaceSelector } from "@domain/workspace/workspaceSelectors";
+import { findDashboardContextById } from "@/utils/dashboardWorkspace";
+import ReadOnlyDashboardHeader from "@shared/components/ui/ReadOnlyDashboardHeader";
+import ReadOnlyChartFrame from "@shared/components/ui/ReadOnlyChartFrame";
+import ReadOnlyStateCard from "@shared/components/ui/ReadOnlyStateCard";
 
 export default function SharePage() {
   const { sheetId } = useParams();

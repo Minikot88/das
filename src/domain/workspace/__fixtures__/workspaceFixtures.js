@@ -1,4 +1,4 @@
-import { createEmptyWorkspace } from "../workspaceSchema";
+import { createEmptyWorkspace } from "@domain/workspace/workspaceSchema";
 
 export const FIXED_TIMESTAMP = "2026-07-11T00:00:00.000Z";
 export const fixedClock = () => FIXED_TIMESTAMP;

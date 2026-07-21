@@ -1,4 +1,4 @@
-import type { ChartPreset } from "./demoTypes";
+import type { ChartPreset } from "@/components/dashboard-v2/demo/demoTypes";
 
 export const chartPresets: ChartPreset[] = [
   {

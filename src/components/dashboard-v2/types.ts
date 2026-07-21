@@ -7,7 +7,7 @@ export type {
   ChartType,
   MappingRequirement,
   RegistryAggregation,
-} from "./types/chartTypes";
+} from "@/components/dashboard-v2/types/chartTypes";
 
 export type FieldType = "date" | "number" | "text" | "boolean" | "currency" | "percentage" | "geography";
 
@@ -166,7 +166,7 @@ export type ChartConfig = {
   schemaVersion: number;
   dashboardId: string;
   chartId: string;
-  chartType: import("./types/chartTypes").ChartType | null;
+  chartType: import("@/components/dashboard-v2/types/chartTypes").ChartType | null;
   mappings: MappingSlot[];
   settings: ChartSettings;
   filters: Record<string, FilterValue>;
@@ -221,7 +221,7 @@ export type TransformedChartData = {
   kpiLabel: string;
   gaugePercent: number;
   metadata: {
-    chartType: import("./types/chartTypes").ChartType | null;
+    chartType: import("@/components/dashboard-v2/types/chartTypes").ChartType | null;
     rowCount: number;
     filteredRowCount: number;
     aggregation: Aggregation;

@@ -4,7 +4,7 @@ import {
   buildDashboardViewUrl,
   resolveDashboardViewOptions,
   sanitizeFileName,
-} from "./dashboardShareUtils";
+} from "@/utils/dashboardShareUtils";
 
 describe("dashboard share utilities", () => {
   it("builds local share URLs and embed code safely", () => {

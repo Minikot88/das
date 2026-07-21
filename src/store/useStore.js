@@ -1,7 +1,7 @@
 
 import { create } from "zustand";
-import { normalizeChartConfig } from "../utils/normalizeChartConfig";
-import { schema } from "../data/mockData";
+import { normalizeChartConfig } from "@/utils/normalizeChartConfig";
+import { schema } from "@/data/mockData";
 import {
   clearBuilderDraft,
   createWorkspaceUiSnapshot,
@@ -11,23 +11,23 @@ import {
   loadWorkspaceState,
   queueWorkspaceSave,
   saveBuilderDraft,
-} from "../utils/storage";
-import { toZustandWorkspaceSnapshot } from "../domain/workspace/workspaceCompatibility";
-import { workspaceRepository } from "../domain/workspace/workspaceRepository";
-import { sanitizeLocalShareSnapshot } from "../domain/shares/localShareContract";
+} from "@/utils/storage";
+import { toZustandWorkspaceSnapshot } from "@domain/workspace/workspaceCompatibility";
+import { workspaceRepository } from "@domain/workspace/workspaceRepository";
+import { sanitizeLocalShareSnapshot } from "@domain/shares/localShareContract";
 import {
   createLayoutItem,
   getPreferredChartLayout,
   sanitizeLayout,
   tryCreateAdjacentLayoutItem,
-} from "../utils/layoutUtils";
-import { createCopyName, createEntityId, createTimestampId } from "../utils/id";
-import { createShareToken } from "../utils/shareTokens";
+} from "@/utils/layoutUtils";
+import { createCopyName, createEntityId, createTimestampId } from "@shared/lib/id";
+import { createShareToken } from "@/utils/shareTokens";
 import {
   normalizeThemeMode,
   readStoredThemeMode,
   writeStoredThemeMode,
-} from "../utils/themeMode";
+} from "@shared/lib/themeMode";
 
 const defaultDashboard = (id = "dash-1", name = "Dashboard 1") => ({
   id,

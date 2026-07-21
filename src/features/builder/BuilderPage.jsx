@@ -1,22 +1,22 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Resizable } from "react-resizable";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { PageContainer, WorkspaceLayout } from "../../components/layout/Layout";
-import { useStore } from "../../store/useStore";
+import { PageContainer, WorkspaceLayout } from "@app/layouts/Layout";
+import { useStore } from "@/store/useStore";
 import {
   createBuilderContextForDashboard,
   createBuilderReturnState,
-} from "../../utils/dashboardWorkspace";
-import { clearBuilderDraft } from "../../utils/storage";
-import FieldList from "./FieldList";
-import ChartTypePicker from "./ChartTypePicker";
-import QueryModePanel from "./QueryModePanel";
-import ChartMappingPanel from "./ChartMappingPanel";
-import ChartPreviewPanel from "./ChartPreviewPanel";
-import ChartSettingsPanel from "./ChartSettingsPanel";
-import ChartAnalyticsPanel from "./ChartAnalyticsPanel";
-import ChartSavePanel from "./ChartSavePanel";
-import useChartBuilder from "./hooks/useChartBuilder";
+} from "@/utils/dashboardWorkspace";
+import { clearBuilderDraft } from "@/utils/storage";
+import FieldList from "@/features/builder/FieldList";
+import ChartTypePicker from "@/features/builder/ChartTypePicker";
+import QueryModePanel from "@/features/builder/QueryModePanel";
+import ChartMappingPanel from "@/features/builder/ChartMappingPanel";
+import ChartPreviewPanel from "@/features/builder/ChartPreviewPanel";
+import ChartSettingsPanel from "@/features/builder/ChartSettingsPanel";
+import ChartAnalyticsPanel from "@/features/builder/ChartAnalyticsPanel";
+import ChartSavePanel from "@/features/builder/ChartSavePanel";
+import useChartBuilder from "@/features/builder/hooks/useChartBuilder";
 
 function getBuilderContextFromRoute(locationState, fallbackContext) {
   return locationState?.builderContext ?? fallbackContext ?? null;

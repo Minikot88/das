@@ -3,8 +3,8 @@ import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import DashboardCustomizeRoundedIcon from "@mui/icons-material/DashboardCustomizeRounded";
 import { Box, Button, Chip, Dialog, DialogContent, DialogTitle, IconButton, Stack, Typography } from "@mui/material";
-import { dashboardV2Tokens as tokens } from "./theme";
-import type { DemoTemplate } from "./demo/demoTypes";
+import { dashboardV2Tokens as tokens } from "@/components/dashboard-v2/theme";
+import type { DemoTemplate } from "@/components/dashboard-v2/demo/demoTypes";
 
 type TemplateDialogProps = {
   open: boolean;

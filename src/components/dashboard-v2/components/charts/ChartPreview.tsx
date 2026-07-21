@@ -1,7 +1,7 @@
 import React, { memo } from "react";
-import type { DemoDatasetRow } from "../../services/datasetService";
-import type { ChartConfig, DataField, DeviceMode } from "../../types";
-import EChartsRenderer from "./EChartsRenderer";
+import type { DemoDatasetRow } from "@/components/dashboard-v2/services/datasetService";
+import type { ChartConfig, DataField, DeviceMode } from "@/components/dashboard-v2/types";
+import EChartsRenderer from "@/components/dashboard-v2/components/charts/EChartsRenderer";
 
 type ChartPreviewProps = {
   config: ChartConfig;

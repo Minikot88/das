@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createProjectStorageLegacyFixture, createZustandLegacyFixture } from "@/domain/workspace/__fixtures__/workspaceFixtures";
+import { createProjectStorageLegacyFixture, createZustandLegacyFixture } from "@domain/workspace/__fixtures__/workspaceFixtures";
 
 function seedLegacyStorage() {
   window.localStorage.setItem("mini-bi-v8-workspace", JSON.stringify(createZustandLegacyFixture()));
@@ -16,7 +16,7 @@ describe("saved chart canonical data contracts", () => {
   });
 
   it("persists a project-owned dataset contract", async () => {
-    const savedCharts = await import("./savedChartsStorage");
+    const savedCharts = await import("@/utils/savedChartsStorage");
 
     const saved = savedCharts.upsertSavedChart({
       id: "chart-dataset-contract",
@@ -45,7 +45,7 @@ describe("saved chart canonical data contracts", () => {
   });
 
   it("persists SQL result rows as a local replay snapshot", async () => {
-    const savedCharts = await import("./savedChartsStorage");
+    const savedCharts = await import("@/utils/savedChartsStorage");
 
     const saved = savedCharts.upsertSavedChart({
       id: "chart-sql-contract",
@@ -71,7 +71,7 @@ describe("saved chart canonical data contracts", () => {
   });
 
   it("preserves every SQL snapshot row and legitimate reserved-looking column name", async () => {
-    const savedCharts = await import("./savedChartsStorage");
+    const savedCharts = await import("@/utils/savedChartsStorage");
     const rows = Array.from({ length: 5_001 }, (_, index) => ({
       rows: index,
       option: `value-${index}`,
@@ -100,7 +100,7 @@ describe("saved chart canonical data contracts", () => {
   });
 
   it("preserves the source data contract when creating a duplicate", async () => {
-    const savedCharts = await import("./savedChartsStorage");
+    const savedCharts = await import("@/utils/savedChartsStorage");
     const dataContract = {
       sourceType: "sql-result",
       datasetId: null,

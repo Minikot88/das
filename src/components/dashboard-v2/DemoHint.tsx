@@ -2,7 +2,7 @@ import React, { memo, useState } from "react";
 import TipsAndUpdatesRoundedIcon from "@mui/icons-material/TipsAndUpdatesRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import { Box, IconButton, Stack, Typography } from "@mui/material";
-import { dashboardV2Tokens as tokens } from "./theme";
+import { dashboardV2Tokens as tokens } from "@/components/dashboard-v2/theme";
 
 type DemoHintProps = {
   id: string;

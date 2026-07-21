@@ -5,11 +5,11 @@ import KeyboardArrowRightRoundedIcon from "@mui/icons-material/KeyboardArrowRigh
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import TableChartRoundedIcon from "@mui/icons-material/TableChartRounded";
 import { Box, Button, InputAdornment, MenuItem, Paper, Select, Stack, TextField, Typography } from "@mui/material";
-import DemoHint from "./DemoHint";
-import DraggableField from "./DraggableField";
-import { dashboardV2Tokens as tokens } from "./theme";
-import type { DemoDatasource, DemoDatasetRow } from "./services/datasetService";
-import type { DataField } from "./types";
+import DemoHint from "@/components/dashboard-v2/DemoHint";
+import DraggableField from "@/components/dashboard-v2/DraggableField";
+import { dashboardV2Tokens as tokens } from "@/components/dashboard-v2/theme";
+import type { DemoDatasource, DemoDatasetRow } from "@/components/dashboard-v2/services/datasetService";
+import type { DataField } from "@/components/dashboard-v2/types";
 
 type DataPanelProps = {
   datasources: DemoDatasource[];

@@ -1,5 +1,5 @@
-import type { DataField, FieldType, SemanticType } from "../types";
-import type { DemoDatasetRow } from "../services/datasetService";
+import type { DataField, FieldType, SemanticType } from "@/components/dashboard-v2/types";
+import type { DemoDatasetRow } from "@/components/dashboard-v2/services/datasetService";
 
 export type SqlValue = string | number | boolean;
 export type SqlRow = Record<string, SqlValue>;

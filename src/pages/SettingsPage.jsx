@@ -1,6 +1,6 @@
 import React from "react";
-import { PageContainer, PageHeader } from "../components/layout/Layout";
-import { useStore } from "../store/useStore";
+import { PageContainer, PageHeader } from "@app/layouts/Layout";
+import { useStore } from "@/store/useStore";
 
 const SETTINGS_OPTIONS = {
   theme: [

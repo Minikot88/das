@@ -1,6 +1,6 @@
 import type { EChartsOption } from "echarts/types/dist/shared";
-import type { ChartConfig, ChartType, TransformedChartData, ValidationResult } from "../types";
-import { chartPalettes, enterpriseChartTheme, formatValue } from "./chartFormatters";
+import type { ChartConfig, ChartType, TransformedChartData, ValidationResult } from "@/components/dashboard-v2/types";
+import { chartPalettes, enterpriseChartTheme, formatValue } from "@/components/dashboard-v2/utils/chartFormatters";
 
 type ChartTheme = {
   palette?: string[];

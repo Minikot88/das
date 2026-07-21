@@ -1,8 +1,8 @@
 ﻿import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { login as loginApi } from "../api/authApi";
-import { useI18n } from "../utils/i18n";
-import { resolveLoginRedirect } from "../utils/loginRedirect";
+import { login as loginApi } from "@/api/authApi";
+import { useI18n } from "@shared/lib/i18n";
+import { resolveLoginRedirect } from "@/utils/loginRedirect";
 
 export default function LoginPage() {
   const { locale, t } = useI18n();
