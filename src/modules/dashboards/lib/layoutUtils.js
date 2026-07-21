@@ -428,8 +428,14 @@ export function normalizeLayoutItems(layout = [], widgets = []) {
 
   return normalized.map((item, index, items) => {
     let nextY = item.y;
-    while (items.some((other, otherIndex) => otherIndex < index && collides({ ...item, y: nextY }, other))) {
-      nextY += 1;
+    while (true) {
+      const collisionBottoms = items
+        .slice(0, index)
+        .filter((other) => collides({ ...item, y: nextY }, other))
+        .map((other) => other.y + other.h);
+
+      if (!collisionBottoms.length) break;
+      nextY = Math.max(...collisionBottoms);
     }
 
     return { ...item, y: nextY };
