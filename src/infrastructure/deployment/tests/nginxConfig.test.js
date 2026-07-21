@@ -24,11 +24,11 @@ describe("nginx static frontend configuration", () => {
     expect(locationBlocks.some((block) => block.includes("add_header"))).toBe(false);
   });
 
-  it("fails API requests explicitly instead of serving the SPA shell", () => {
+  it("proxies API requests to the backend instead of serving the SPA shell", () => {
     const config = readFileSync(configPath, "utf8");
 
-    expect(config).toMatch(/location\s+=\s+\/api\s*\{[^}]*return\s+503/m);
-    expect(config).toMatch(/location\s+\^~\s+\/api\/\s*\{[^}]*return\s+503/m);
+    expect(config).toMatch(/location\s+=\s+\/api\s*\{[^}]*proxy_pass\s+http:\/\/backend:3000/m);
+    expect(config).toMatch(/location\s+\^~\s+\/api\/\s*\{[^}]*proxy_pass\s+http:\/\/backend:3000/m);
   });
 
   it("never falls back to SPA HTML inside the generated asset namespace", () => {

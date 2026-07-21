@@ -1,17 +1,63 @@
 services:
+  database:
+    image: mariadb:11.4
+    environment:
+      MARIADB_DATABASE: ${MARIADB_DATABASE:-dashboard_mini_bi}
+      MARIADB_USER: ${MARIADB_USER:-dashboard}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD:-dashboard-local-only}
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:-root-local-only}
+    volumes:
+      - dashboard_mini_bi_database:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      AUTH_PROVIDER: ${AUTH_PROVIDER:-development}
+      DATABASE_URL: mysql://${MARIADB_USER:-dashboard}:${MARIADB_PASSWORD:-dashboard-local-only}@database:3306/${MARIADB_DATABASE:-dashboard_mini_bi}
+      SECRET_MASTER_KEY: ${SECRET_MASTER_KEY:-YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=}
+      SESSION_SIGNING_KEY: ${SESSION_SIGNING_KEY:-YmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmI=}
+      DEVELOPMENT_AUTH_EMAIL: ${DEVELOPMENT_AUTH_EMAIL:-dev@example.com}
+      DEVELOPMENT_AUTH_PASSWORD: ${DEVELOPMENT_AUTH_PASSWORD:-development-password}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}
+      PORT: 3000
+    depends_on:
+      database:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/v1/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   frontend:
     build:
       context: .
       dockerfile: Dockerfile
       args:
-        VITE_USE_MOCK: ${VITE_USE_MOCK:-true}
+        VITE_USE_MOCK: ${VITE_USE_MOCK:-false}
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
         VITE_API_TIMEOUT_MS: ${VITE_API_TIMEOUT_MS:-15000}
     ports:
       - "${FRONTEND_HOST:-127.0.0.1}:${FRONTEND_PORT:-8080}:80"
     restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
       interval: 30s
       timeout: 5s
       retries: 3
+
+volumes:
+  dashboard_mini_bi_database:
