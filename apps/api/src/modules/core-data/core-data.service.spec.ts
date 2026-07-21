@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
+import { HTTP_CODE_METADATA } from '@nestjs/common/constants.js';
+import { CoreDataController } from './core-data.controller.js';
 import { CoreDataService } from './core-data.service.js';
 
 function service() {
@@ -15,6 +17,10 @@ function service() {
 const principal = { organizationId: 'org-default', userId: 'user-development' };
 
 describe('CoreDataService dataset query validation', () => {
+  it('declares dataset queries as successful reads instead of resource creation', () => {
+    expect(Reflect.getMetadata(HTTP_CODE_METADATA, CoreDataController.prototype.queryDataset)).toBe(200);
+  });
+
   it('rejects unknown fields', async () => {
     await expect(service().queryDataset(principal, 'dataset-1', { select: ['secret_column'] })).rejects.toMatchObject({ code: 'UNKNOWN_FIELD' });
   });
