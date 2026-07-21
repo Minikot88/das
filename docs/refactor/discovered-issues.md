@@ -7,5 +7,4 @@ Issues listed here are not fixed by the repository-organization refactor unless 
 3. Vitest/jsdom reports the expected missing canvas implementation warning.
 4. Docker CLI is installed but the Docker Desktop Linux daemon is not running, blocking baseline image/runtime verification.
 5. Several source files are very large and mix orchestration concerns. Splitting their business logic would materially increase behavior risk and is deferred.
-6. Static analysis reports 11 unused candidates, but worker/config/lazy entry behavior makes deletion unsafe without a dedicated proof cycle.
-
+6. Baseline static analysis reported 11 unused candidates. The final scan reports 17 because module public API files and config/dynamic entries have no ordinary incoming static import. No candidate was deleted; cleanup requires a separate proof cycle.

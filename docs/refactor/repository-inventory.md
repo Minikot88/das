@@ -15,7 +15,7 @@ Baseline commit: `e6f6be1`
 - Tests: Vitest/jsdom, colocated with source; 44 files and 247 tests at baseline
 - Deployment: root `Dockerfile`, `docker-compose.yml`, and `nginx.conf`
 
-## Current top-level structure
+## Baseline top-level structure
 
 ```text
 DashboardBi/
@@ -83,7 +83,7 @@ Generated or dependency directories `node_modules/`, `dist/`, and `outputs/` are
 - `src/services/projectStorage.js`: 50 KB legacy/canonical persistence bridge.
 - `src/utils/storage.js`: local UI/draft storage bridge.
 
-The domain tree contains no React imports discovered by static inspection. Browser persistence remains outside pure schema/selector code but its current boundaries are split across `domain`, `services`, and `utils`.
+Most domain code was pure, but `workspaceSelectors.js` also contained a React subscription hook and `workspaceRepository.js` contained browser persistence. The refactor separated those adapters into `app/store` and `infrastructure/persistence` without changing their contracts.
 
 ## API boundary
 
@@ -139,4 +139,3 @@ Several are known entry/config/dynamic cases (`setup.js`, worker, lazy directory
 - mock API/data paths
 - canonical workspace migration and all legacy localStorage source keys
 - connection metadata compatibility key
-

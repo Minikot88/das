@@ -87,3 +87,13 @@ Infrastructure may import domain contracts and implement persistence/HTTP behavi
 - `src/main.jsx` remains the Vite entry.
 - Root Docker, Compose, and nginx paths remain usable even if documented under an infrastructure index.
 
+## Final graph
+
+After the move, the graph contains 235 source files and 501 resolved internal imports. Static analysis reports:
+
+- 0 circular dependency cycles;
+- 0 unresolved internal imports;
+- 0 deep relative imports, reduced from 42;
+- no React, HTTP client, or browser storage import in production domain files.
+
+The increased file count comes from module public APIs and the extracted React workspace selector adapter; no test or behavior implementation was removed.

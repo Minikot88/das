@@ -2,6 +2,8 @@
 
 Date: 2026-07-21
 
+Status: implemented incrementally on `refactor/production-folder-structure`; final verification results are recorded in `baseline-results.md` and the delivery report.
+
 ## Architecture decision
 
 Use a transitional, domain-oriented modular monolith inside the existing `src/` tree. Do not convert to `apps/packages` because the repository contains only one frontend application and no backend implementation. A monorepo conversion would change build/deployment ownership without a current use case.
@@ -81,4 +83,3 @@ After each phase run lint, typecheck, related tests, full tests, and production 
 3. `refactor: organize frontend feature modules`
 4. `refactor: centralize infrastructure adapters`
 5. `docs: document modular frontend architecture`
-
