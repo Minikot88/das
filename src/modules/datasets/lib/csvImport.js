@@ -2,7 +2,10 @@ export const CSV_IMPORT_LIMITS = Object.freeze({
   maxFileBytes: 5_000_000,
   maxRows: 50_000,
   maxColumns: 200,
+  maxFieldLength: 100_000,
 });
+
+const CSV_MIME_TYPES = new Set(["", "text/csv", "application/csv", "text/plain", "application/vnd.ms-excel"]);
 
 function normalizedLimits(value = {}) {
   return {
@@ -15,6 +18,9 @@ function normalizedLimits(value = {}) {
     maxColumns: Number.isFinite(value.maxColumns) && value.maxColumns > 0
       ? Math.floor(value.maxColumns)
       : CSV_IMPORT_LIMITS.maxColumns,
+    maxFieldLength: Number.isFinite(value.maxFieldLength) && value.maxFieldLength > 0
+      ? Math.floor(value.maxFieldLength)
+      : CSV_IMPORT_LIMITS.maxFieldLength,
   };
 }
 
@@ -61,6 +67,13 @@ function parseRecords(text, delimiter, { signal, limits }) {
   let fieldStarted = false;
   let recordHadDelimiter = false;
 
+  function appendField(value) {
+    field += value;
+    if (field.length > limits.maxFieldLength) {
+      throw new Error(`CSV field exceeds the ${limits.maxFieldLength} character limit.`);
+    }
+  }
+
   function pushField() {
     record.push(field.trim());
     field = "";
@@ -87,7 +100,7 @@ function parseRecords(text, delimiter, { signal, limits }) {
 
     if (char === '"') {
       if (inQuotes && next === '"') {
-        field += '"';
+        appendField('"');
         index += 1;
         fieldStarted = true;
         continue;
@@ -101,7 +114,7 @@ function parseRecords(text, delimiter, { signal, limits }) {
         fieldStarted = true;
         continue;
       }
-      field += char;
+      appendField(char);
       fieldStarted = true;
       continue;
     }
@@ -120,12 +133,12 @@ function parseRecords(text, delimiter, { signal, limits }) {
 
     if (inQuotes && char === "\r") {
       if (next === "\n") index += 1;
-      field += "\n";
+      appendField("\n");
       fieldStarted = true;
       continue;
     }
 
-    field += char;
+    appendField(char);
     fieldStarted = true;
   }
 
@@ -207,6 +220,14 @@ function stableHash(value) {
 export function validateCsvFile(file, options = {}) {
   const limits = normalizedLimits(options.limits);
   if (!file || typeof file.size !== "number") throw new Error("Select a CSV file to import.");
+  const fileName = String(file.name ?? "");
+  const normalizedName = fileName.normalize("NFKC");
+  if (!normalizedName || normalizedName.includes("\0") || /[\\/]/.test(normalizedName) || /(^|\.)\.($|\.)/.test(normalizedName)) {
+    throw new Error("CSV filename is invalid or contains a path segment.");
+  }
+  if (!/\.csv$/i.test(normalizedName)) throw new Error("CSV file extension must be .csv.");
+  const mimeType = String(file.type ?? "").toLowerCase();
+  if (!CSV_MIME_TYPES.has(mimeType)) throw new Error("CSV file MIME type is not allowed.");
   if (file.size > limits.maxFileBytes) {
     throw new Error(`CSV file exceeds the ${limits.maxFileBytes} byte limit.`);
   }
@@ -217,6 +238,7 @@ export function parseCsvText(text = "", options = {}) {
   const limits = normalizedLimits(options.limits);
   assertNotCancelled(options.signal);
   const cleanText = String(text ?? "").replace(/^\uFEFF/, "");
+  if (cleanText.includes("\0")) throw new Error("CSV contains a null byte.");
   const size = byteLength(cleanText);
   if (size > limits.maxFileBytes) {
     throw new Error(`CSV file exceeds the ${limits.maxFileBytes} byte limit.`);

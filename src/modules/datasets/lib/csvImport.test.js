@@ -105,4 +105,24 @@ describe("CSV import utilities", () => {
       `CSV file exceeds the ${CSV_IMPORT_LIMITS.maxFileBytes} byte limit.`,
     );
   });
+
+  it.each([
+    { name: "../sales.csv", size: 10, type: "text/csv" },
+    { name: "..\\sales.csv", size: 10, type: "text/csv" },
+    { name: "sales.csv\0.exe", size: 10, type: "text/csv" },
+  ])("rejects unsafe CSV filenames: $name", (file) => {
+    expect(() => validateCsvFile(file)).toThrow(/filename/i);
+  });
+
+  it("rejects invalid extensions and MIME types", () => {
+    expect(() => validateCsvFile({ name: "sales.exe", size: 10, type: "text/csv" })).toThrow(/extension/i);
+    expect(() => validateCsvFile({ name: "sales.csv", size: 10, type: "application/x-msdownload" })).toThrow(/MIME/i);
+  });
+
+  it("rejects null bytes and fields beyond the configured limit", () => {
+    expect(() => parseCsvText("name\nhello\0world")).toThrow(/null byte/i);
+    expect(() => parseCsvText("name\nabc", {
+      limits: { ...CSV_IMPORT_LIMITS, maxFieldLength: 2 },
+    })).toThrow(/field exceeds/i);
+  });
 });
