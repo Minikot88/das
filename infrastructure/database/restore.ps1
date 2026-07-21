@@ -6,4 +6,5 @@ $ErrorActionPreference = 'Stop'
 $resolvedInput = Resolve-Path -LiteralPath $InputFile
 if (-not $ConfirmDataReplacement) { throw 'Restore requires -ConfirmDataReplacement.' }
 Get-Content -LiteralPath $resolvedInput -Raw | docker compose exec -T database sh -c 'mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" "$MARIADB_DATABASE"'
+if ($LASTEXITCODE -ne 0) { throw "Database restore failed with exit code $LASTEXITCODE." }
 Write-Output "Restore completed from $resolvedInput"

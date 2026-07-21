@@ -12,6 +12,8 @@ const dockerfilePath = path.resolve(process.cwd(), "Dockerfile");
 const dockerignorePath = path.resolve(process.cwd(), ".dockerignore");
 const envExamplePath = path.resolve(process.cwd(), ".env.example");
 const apiDockerfilePath = path.resolve(process.cwd(), "apps/api/Dockerfile");
+const backupScriptPath = path.resolve(process.cwd(), "infrastructure/database/backup.ps1");
+const restoreScriptPath = path.resolve(process.cwd(), "infrastructure/database/restore.ps1");
 
 describe("nginx static frontend configuration", () => {
   it("applies security and cache headers from one inheritable server scope", () => {
@@ -99,11 +101,30 @@ describe("nginx static frontend configuration", () => {
     expect(config).toContain("location ~* \\.(?:bak|old|tmp|sql|map)$");
   });
 
+  it("preserves client addresses for backend rate limiting", () => {
+    const config = readFileSync(configPath, "utf8");
+    const backendBootstrap = readFileSync(path.resolve(process.cwd(), "apps/api/src/app/bootstrap/create-application.ts"), "utf8");
+
+    expect(config).toContain("proxy_set_header X-Real-IP $remote_addr;");
+    expect(config).toContain("proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;");
+    expect(backendBootstrap).toMatch(/trustProxy:\s*\[/);
+  });
+
   it("runs application containers as non-root users", () => {
     const frontendDockerfile = readFileSync(dockerfilePath, "utf8");
     const apiDockerfile = readFileSync(apiDockerfilePath, "utf8");
 
     expect(frontendDockerfile).toMatch(/USER\s+nginx/);
     expect(apiDockerfile).toMatch(/USER\s+node/);
+  });
+
+  it("fails closed and restricts database backup files", () => {
+    const backup = readFileSync(backupScriptPath, "utf8");
+    const restore = readFileSync(restoreScriptPath, "utf8");
+
+    expect(backup).toContain("SetAccessRuleProtection($true, $false)");
+    expect(backup).toContain("Set-Acl -LiteralPath");
+    expect(backup).toMatch(/LASTEXITCODE\s+-ne\s+0/);
+    expect(restore).toMatch(/LASTEXITCODE\s+-ne\s+0/);
   });
 });

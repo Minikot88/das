@@ -16,12 +16,21 @@ import { ensureRequestId } from '../../shared/http/request-id.js';
 
 export async function createApplication(input: NodeJS.ProcessEnv | Record<string, string | undefined> = process.env): Promise<NestFastifyApplication> {
   const environment = parseEnvironment(input);
-  const app = await NestFactory.create<NestFastifyApplication>(AppModule.configured(environment), new FastifyAdapter({ bodyLimit: 6 * 1024 * 1024 }), { logger: environment.nodeEnv === 'test' ? false : ['log','warn','error'] });
+  const logger: false | Array<'log' | 'warn' | 'error' | 'debug'> = environment.nodeEnv === 'test'
+    ? false
+    : environment.logLevel === 'debug' ? ['log', 'warn', 'error', 'debug']
+      : environment.logLevel === 'info' ? ['log', 'warn', 'error']
+        : environment.logLevel === 'warn' ? ['warn', 'error']
+          : ['error'];
+  const app = await NestFactory.create<NestFastifyApplication>(AppModule.configured(environment), new FastifyAdapter({
+    bodyLimit: 6 * 1024 * 1024,
+    trustProxy: ['loopback', 'linklocal', 'uniquelocal'],
+  }), { logger });
   await app.register(cookie, { secret: environment.sessionSigningKey });
   await app.register(helmet, { contentSecurityPolicy: false });
   await app.register(cors, { origin: environment.corsOrigins, credentials: true });
   await app.register(rateLimit, { max: 300, timeWindow: '1 minute' });
-  await app.register(multipart, { limits: { fileSize: 5 * 1024 * 1024, files: 1, fields: 20 } });
+  await app.register(multipart, { limits: { fileSize: environment.maxUploadSize, files: 1, fields: 20 } });
   app.getHttpAdapter().getInstance().addHook('onRequest', (request: FastifyRequest, _reply, done) => {
     ensureRequestId(request);
     done();

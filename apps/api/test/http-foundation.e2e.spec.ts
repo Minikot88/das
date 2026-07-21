@@ -27,11 +27,32 @@ describe('HTTP foundation', () => {
     expect(response.json().requestId).toMatch(/^[0-9a-f-]{36}$/);
   });
 
+  it('sets security headers and only allows configured CORS origins', async () => {
+    const allowed = await app.inject({ method: 'GET', url: '/api/v1/health', headers: { origin: 'http://localhost:8080' } });
+    expect(allowed.headers['access-control-allow-origin']).toBe('http://localhost:8080');
+    expect(allowed.headers['x-content-type-options']).toBe('nosniff');
+    expect(allowed.headers['referrer-policy']).toBeTruthy();
+    expect(allowed.headers['x-powered-by']).toBeUndefined();
+
+    const denied = await app.inject({ method: 'GET', url: '/api/v1/health', headers: { origin: 'https://attacker.example.test' } });
+    expect(denied.headers['access-control-allow-origin']).toBeUndefined();
+  });
+
+  it('rejects requests beyond the HTTP body limit', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/login',
+      payload: { email: `${'x'.repeat(6 * 1024 * 1024)}@example.test`, password: 'x' },
+    });
+    expect(response.statusCode).toBe(413);
+  });
+
   it('authenticates only the configured development credential and sets an httpOnly cookie', async () => {
     const response = await app.inject({ method: 'POST', url: '/api/v1/auth/login', payload: { email: 'dev@example.com', password: 'development-password' } });
     expect(response.statusCode).toBe(201);
     expect(response.headers['set-cookie']).toContain('HttpOnly');
     expect(response.json()).toMatchObject({ data: { id: 'user-development', email: 'dev@example.com' } });
+    expect(response.body).not.toContain('development-password');
 
     const denied = await app.inject({ method: 'POST', url: '/api/v1/auth/login', payload: { email: 'dev@example.com', password: 'wrong' } });
     expect(denied.statusCode).toBe(401);

@@ -30,6 +30,8 @@ Backup:
 
 `powershell -File infrastructure/database/backup.ps1 -OutputFile D:\backups\dashboard-mini-bi.sql`
 
+The script writes atomically, rejects an empty/failed dump, and restricts the resulting Windows ACL to the invoking identity, Local System and local Administrators. Keep the destination on an encrypted, access-controlled backup volume; never place database dumps under the frontend web root, source tree, shared downloads, or public object storage.
+
 Restore (destructive to the target database and requires an explicit switch):
 
 `powershell -File infrastructure/database/restore.ps1 -InputFile D:\backups\dashboard-mini-bi.sql -ConfirmDataReplacement`
