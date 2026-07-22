@@ -35,5 +35,6 @@ trap - EXIT
   done
 } >"$manifest"
 sha256sum "$archive" "$manifest" >"$archive.sha256"
+chmod 600 "$archive" "$manifest" "$archive.sha256"
 find "$backup_root" -maxdepth 1 -type f -name 'dashboardmini-*' -mtime "+$retention_days" -delete
 printf '%s\n' "$archive"
