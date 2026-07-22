@@ -31,4 +31,10 @@ describe('production authentication database schema', () => {
       expect(migration).toContain(`ALTER TABLE "${table}" ALTER COLUMN "token_hash" TYPE VARCHAR(64)`);
     }
   });
+
+  it('enforces one outstanding password reset per user in PostgreSQL', () => {
+    const migration = readFileSync('prisma/postgres-migrations/0004_single_active_password_reset/migration.sql', 'utf8');
+    expect(migration).toContain('CREATE UNIQUE INDEX "uq_password_reset_tokens_one_active_user"');
+    expect(migration).toContain('WHERE "used_at" IS NULL AND "revoked_at" IS NULL');
+  });
 });

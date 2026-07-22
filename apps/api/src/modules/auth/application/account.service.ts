@@ -43,18 +43,21 @@ export class AccountService {
     if (profile && profile.status === 'active' && !profile.disabledAt) {
       const issued = issueOpaqueToken();
       const now = new Date();
-      await this.prisma.passwordResetToken.updateMany({
-        where: { userId: profile.id, usedAt: null, revokedAt: null },
-        data: { revokedAt: now },
-      });
-      await this.prisma.passwordResetToken.create({
-        data: {
-          id: `reset-${randomUUID()}`,
-          userId: profile.id,
-          tokenHash: issued.tokenHash,
-          expiresAt: new Date(now.getTime() + this.environment.passwordResetTimeoutSeconds * 1_000),
-          createdAt: now,
-        },
+      await this.prisma.$transaction(async tx => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${profile.id}, 0))`;
+        await tx.passwordResetToken.updateMany({
+          where: { userId: profile.id, usedAt: null, revokedAt: null },
+          data: { revokedAt: now },
+        });
+        await tx.passwordResetToken.create({
+          data: {
+            id: `reset-${randomUUID()}`,
+            userId: profile.id,
+            tokenHash: issued.tokenHash,
+            expiresAt: new Date(now.getTime() + this.environment.passwordResetTimeoutSeconds * 1_000),
+            createdAt: now,
+          },
+        });
       });
       await this.mail.sendPasswordReset(profile.email, issued.token);
     }

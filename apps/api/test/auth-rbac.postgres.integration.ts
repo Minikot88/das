@@ -62,12 +62,24 @@ describe('PostgreSQL authentication and RBAC boundaries', () => {
       const datasetIds = datasets.map(item => item.id);
       const imports = await prisma.importJob.findMany({ where: { organizationId }, select: { id: true } });
       const importIds = imports.map(item => item.id);
+      const shares = await prisma.dashboardShareLink.findMany({ where: { organizationId }, select: { id: true } });
+      const shareIds = shares.map(item => item.id);
+      const exports = await prisma.exportJob.findMany({ where: { organizationId }, select: { id: true } });
+      const exportIds = exports.map(item => item.id);
+      const files = await prisma.fileRecord.findMany({ where: { organizationId }, select: { id: true } });
+      const fileIds = files.map(item => item.id);
       await prisma.$transaction([
         prisma.authSession.deleteMany({ where: { userId: { in: userIds } } }),
         prisma.passwordResetToken.deleteMany({ where: { userId: { in: userIds } } }),
         prisma.authenticationAuditLog.deleteMany({ where: { organizationId } }),
         prisma.auditLog.deleteMany({ where: { organizationId } }),
         prisma.invitation.deleteMany({ where: { organizationId } }),
+        prisma.dashboardShareAccessLog.deleteMany({ where: { shareId: { in: shareIds } } }),
+        prisma.dashboardShareSnapshot.deleteMany({ where: { shareId: { in: shareIds } } }),
+        prisma.dashboardShareLink.deleteMany({ where: { organizationId } }),
+        prisma.exportFile.deleteMany({ where: { OR: [{ exportId: { in: exportIds } }, { fileId: { in: fileIds } }] } }),
+        prisma.exportJob.deleteMany({ where: { organizationId } }),
+        prisma.fileRecord.deleteMany({ where: { organizationId } }),
         prisma.dashboardWidget.deleteMany({ where: { organizationId } }),
         prisma.biDashboard.deleteMany({ where: { organizationId } }),
         prisma.chart.deleteMany({ where: { organizationId } }),
@@ -141,6 +153,20 @@ describe('PostgreSQL authentication and RBAC boundaries', () => {
     expect((await app.inject({ method: 'GET', url: '/api/v1/auth/me', headers: { cookie: login.cookie } })).statusCode).toBe(401);
   });
 
+  it('keeps only one active password-reset token when requests race', async () => {
+    await prisma.passwordResetToken.deleteMany({ where: { userId: adminUserId } });
+    const requests = await Promise.all(Array.from({ length: 8 }, (_, index) => app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/forgot-password',
+      payload: { email: adminEmail },
+      remoteAddress: `192.0.2.${index + 1}`,
+    })));
+    expect(requests.every(response => response.statusCode === 200)).toBe(true);
+    expect(await prisma.passwordResetToken.count({
+      where: { userId: adminUserId, usedAt: null, revokedAt: null, expiresAt: { gt: new Date() } },
+    })).toBe(1);
+  });
+
   it('uses revision control under concurrent project updates without silent last-write-wins', async () => {
     const login = await loginAs(adminEmail, adminPassword);
     const created = await app.inject({ method: 'POST', url: '/api/v1/projects', headers: login.mutationHeaders, payload: { name: 'Concurrent project' } });
@@ -153,6 +179,35 @@ describe('PostgreSQL authentication and RBAC boundaries', () => {
     expect(responses.map(item => item.statusCode).sort()).toEqual([200, 409]);
     const loaded = await app.inject({ method: 'GET', url: `/api/v1/projects/${project.id}`, headers: { cookie: login.cookie } });
     expect(loaded.json().data.revision).toBe(1);
+  });
+
+  it('uses revision control under concurrent dashboard updates without silent last-write-wins', async () => {
+    const login = await loginAs(adminEmail, adminPassword);
+    const project = await app.inject({ method: 'POST', url: '/api/v1/projects', headers: login.mutationHeaders, payload: { name: `Dashboard race ${randomUUID()}` } });
+    const dashboard = await app.inject({ method: 'POST', url: '/api/v1/dashboards', headers: login.mutationHeaders, payload: { projectId: project.json().data.id, name: 'Concurrent dashboard' } });
+    expect(dashboard.statusCode).toBe(201);
+    const dashboardId = dashboard.json().data.id;
+    const responses = await Promise.all([
+      app.inject({ method: 'PATCH', url: `/api/v1/dashboards/${dashboardId}`, headers: login.mutationHeaders, payload: { name: 'Dashboard writer one', revision: 0 } }),
+      app.inject({ method: 'PATCH', url: `/api/v1/dashboards/${dashboardId}`, headers: login.mutationHeaders, payload: { name: 'Dashboard writer two', revision: 0 } }),
+    ]);
+    expect(responses.map(response => response.statusCode).sort()).toEqual([200, 409]);
+    expect((await prisma.biDashboard.findUnique({ where: { id: dashboardId } }))?.revision).toBe(1);
+  });
+
+  it('uses revision control under concurrent widget-layout saves without mixing writers', async () => {
+    const login = await loginAs(adminEmail, adminPassword);
+    const project = await app.inject({ method: 'POST', url: '/api/v1/projects', headers: login.mutationHeaders, payload: { name: `Widget race ${randomUUID()}` } });
+    const dashboard = await app.inject({ method: 'POST', url: '/api/v1/dashboards', headers: login.mutationHeaders, payload: { projectId: project.json().data.id, name: 'Concurrent layout' } });
+    const dashboardId = dashboard.json().data.id;
+    const save = (id: string, x: number) => app.inject({
+      method: 'PATCH', url: `/api/v1/dashboards/${dashboardId}/widgets`, headers: login.mutationHeaders,
+      payload: { revision: 0, widgets: [{ id, type: 'text', x, y: 0, w: 4, h: 2 }] },
+    });
+    const responses = await Promise.all([save(`widget-a-${randomUUID()}`, 0), save(`widget-b-${randomUUID()}`, 6)]);
+    expect(responses.map(response => response.statusCode).sort()).toEqual([200, 409]);
+    expect(await prisma.dashboardWidget.count({ where: { dashboardId } })).toBe(1);
+    expect((await prisma.biDashboard.findUnique({ where: { id: dashboardId } }))?.revision).toBe(1);
   });
 
   it('rolls back all writes when a transaction fails halfway', async () => {
@@ -266,6 +321,63 @@ describe('PostgreSQL authentication and RBAC boundaries', () => {
     expect(broken.statusCode).toBe(400);
     expect(broken.json().code).toBe('CROSS_PROJECT_REFERENCE');
     expect(await prisma.biProject.count({ where: { id: brokenProjectId } })).toBe(0);
+  });
+
+  it('persists immutable shares and safe exports, and rolls back a failed share snapshot', async () => {
+    const login = await loginAs(adminEmail, adminPassword);
+    const projectId = `share-project-${randomUUID()}`;
+    const datasetId = `share-dataset-${randomUUID()}`;
+    const dashboardId = `share-dashboard-${randomUUID()}`;
+    const workspace = {
+      schemaVersion: 1,
+      projects: [{
+        id: projectId,
+        name: 'Share and export project',
+        datasets: [{ id: datasetId, name: 'Formula dataset', fields: [{ name: 'name', type: 'string' }, { name: 'value', type: 'string' }], rows: [{ name: 'row', value: '=SUM(A1:A2)' }] }],
+        charts: [],
+        dashboards: [{ id: dashboardId, name: 'Immutable dashboard', widgets: [] }],
+      }],
+    };
+    expect((await app.inject({ method: 'POST', url: '/api/v1/workspace/import', headers: login.mutationHeaders, payload: workspace })).statusCode).toBe(201);
+
+    const created = await app.inject({
+      method: 'POST', url: '/api/v1/shares', headers: login.mutationHeaders,
+      payload: { dashboardId, allowedOrigins: ['https://embed.example.test'], expiresAt: new Date(Date.now() + 60_000).toISOString() },
+    });
+    expect(created.statusCode).toBe(201);
+    const share = created.json().data;
+    const resolved = await app.inject({ method: 'GET', url: `/api/v1/shares/${share.token}`, headers: { origin: 'https://embed.example.test' } });
+    expect(resolved.statusCode).toBe(200);
+    expect(resolved.json().data.snapshot).toMatchObject({ dashboardId, dashboardName: 'Immutable dashboard' });
+    expect((await app.inject({ method: 'GET', url: `/api/v1/shares/${share.token}`, headers: { origin: 'https://blocked.example.test' } })).statusCode).toBe(403);
+
+    const exported = await app.inject({
+      method: 'POST', url: '/api/v1/exports', headers: login.mutationHeaders,
+      payload: { projectId, entityType: 'dataset', entityId: datasetId, format: 'csv' },
+    });
+    expect(exported.statusCode).toBe(201);
+    const downloaded = await app.inject({ method: 'GET', url: `/api/v1/exports/${exported.json().data.id}/file`, headers: { cookie: login.cookie } });
+    expect(downloaded.statusCode).toBe(200);
+    expect(downloaded.headers['content-type']).toContain('text/csv');
+    expect(downloaded.body).toContain("'=SUM(A1:A2)");
+
+    const revoked = await app.inject({ method: 'PATCH', url: `/api/v1/shares/${share.id}/revoke`, headers: login.mutationHeaders, payload: { revision: 0 } });
+    expect(revoked.statusCode).toBe(200);
+    expect((await app.inject({ method: 'GET', url: `/api/v1/shares/${share.token}` })).statusCode).toBe(404);
+
+    await prisma.$executeRawUnsafe(`CREATE FUNCTION reject_integration_share_snapshot() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'controlled snapshot failure'; END $$`);
+    await prisma.$executeRawUnsafe(`CREATE TRIGGER reject_integration_share_snapshot BEFORE INSERT ON dashboard_share_snapshots FOR EACH ROW EXECUTE FUNCTION reject_integration_share_snapshot()`);
+    const before = await prisma.dashboardShareLink.count({ where: { organizationId, dashboardId } });
+    try {
+      const failed = await app.inject({ method: 'POST', url: '/api/v1/shares', headers: login.mutationHeaders, payload: { dashboardId } });
+      expect(failed.statusCode).toBe(500);
+      expect(failed.json()).toMatchObject({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred.' });
+      expect(failed.body).not.toMatch(/controlled snapshot failure|dashboard_share_snapshots|prisma/i);
+      expect(await prisma.dashboardShareLink.count({ where: { organizationId, dashboardId } })).toBe(before);
+    } finally {
+      await prisma.$executeRawUnsafe('DROP TRIGGER IF EXISTS reject_integration_share_snapshot ON dashboard_share_snapshots');
+      await prisma.$executeRawUnsafe('DROP FUNCTION IF EXISTS reject_integration_share_snapshot()');
+    }
   });
 
   it('consumes an invitation once under concurrency and protects the last organization admin', async () => {

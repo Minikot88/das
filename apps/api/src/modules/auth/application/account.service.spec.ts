@@ -8,6 +8,7 @@ beforeAll(async () => { currentHash = await hashPassword('current password phras
 function fixture() {
   const profile = { id: 'user-1', organizationId: 'org-1', email: 'user@example.com', displayName: 'Example User', status: 'active', disabledAt: null };
   const prisma: Record<string, any> = {
+    $executeRaw: vi.fn().mockResolvedValue(1),
     userProfile: { findUnique: vi.fn().mockResolvedValue(profile) },
     userCredential: {
       findUnique: vi.fn().mockResolvedValue({ userId: 'user-1', passwordHash: currentHash }),

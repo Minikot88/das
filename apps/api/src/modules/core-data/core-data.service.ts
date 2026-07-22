@@ -166,7 +166,12 @@ export class CoreDataService {
     await this.project(principal, current.projectId, 'write');
     const revision = Number(input.revision);
     if (!Number.isInteger(revision) || revision !== current.revision) throw new ApiError(409, 'REVISION_CONFLICT', 'Dashboard has changed since it was loaded.', undefined, false, current.revision);
-    return this.prisma.biDashboard.update({ where: { id }, data: { name: input.name === undefined ? current.name : requiredName(input.name, 'Dashboard'), canvasSettingsJson: input.canvasSettings === undefined ? undefined : asJson(input.canvasSettings), status: input.status === undefined ? current.status : String(input.status), revision: { increment: 1 } } });
+    const changed = await this.prisma.biDashboard.updateMany({ where: { id, organizationId: principal.organizationId, revision }, data: { name: input.name === undefined ? current.name : requiredName(input.name, 'Dashboard'), canvasSettingsJson: input.canvasSettings === undefined ? undefined : asJson(input.canvasSettings), status: input.status === undefined ? current.status : String(input.status), revision: { increment: 1 } } });
+    if (changed.count !== 1) {
+      const latest = await this.prisma.biDashboard.findUnique({ where: { id }, select: { revision: true } });
+      throw new ApiError(409, 'REVISION_CONFLICT', 'Dashboard has changed since it was loaded.', undefined, false, latest?.revision);
+    }
+    return this.dashboard(principal, id);
   }
 
   async saveWidgets(principal: RequestPrincipal, dashboardId: string, input: JsonObject) {
@@ -179,9 +184,13 @@ export class CoreDataService {
     const charts = chartIds.length ? await this.prisma.chart.findMany({ where: { id: { in: chartIds }, organizationId: principal.organizationId, projectId: dashboard.projectId, deletedAt: null }, select: { id: true } }) : [];
     if (new Set(charts.map(item => item.id)).size !== new Set(chartIds).size) throw new ApiError(400, 'CROSS_PROJECT_REFERENCE', 'A widget references a chart outside the dashboard project.');
     await this.prisma.$transaction(async tx => {
+      const changed = await tx.biDashboard.updateMany({ where: { id: dashboardId, organizationId: principal.organizationId, revision }, data: { revision: { increment: 1 } } });
+      if (changed.count !== 1) {
+        const latest = await tx.biDashboard.findUnique({ where: { id: dashboardId }, select: { revision: true } });
+        throw new ApiError(409, 'REVISION_CONFLICT', 'Dashboard has changed since it was loaded.', undefined, false, latest?.revision);
+      }
       await tx.dashboardWidget.deleteMany({ where: { dashboardId, organizationId: principal.organizationId } });
       if (widgets.length) await tx.dashboardWidget.createMany({ data: widgets.map((item, index) => ({ id: String(item.id || `widget-${randomUUID()}`), organizationId: principal.organizationId, dashboardId, chartId: optionalString(item.chartId), type: String(item.type || 'chart'), x: integer(item.x, 0), y: integer(item.y, 0), width: integer(item.width ?? item.w, 6), height: integer(item.height ?? item.h, 4), zIndex: integer(item.zIndex, index), configJson: asJson(item.config), revision: 0 })) });
-      await tx.biDashboard.update({ where: { id: dashboardId }, data: { revision: { increment: 1 } } });
     });
     return this.dashboard(principal, dashboardId);
   }
