@@ -22,7 +22,8 @@ RUN npm run build
 
 FROM nginx:stable-alpine@sha256:0d3b80406a13a767339fbe2f41406d6c7da727ab89cf8fae399e81f780f814d1 AS production
 
-RUN rm -rf /usr/share/nginx/html/* /etc/nginx/conf.d/default.conf \
+RUN apk upgrade --no-cache \
+    && rm -rf /usr/share/nginx/html/* /etc/nginx/conf.d/default.conf \
     && touch /var/run/nginx.pid \
     && chown -R nginx:nginx /usr/share/nginx/html /var/cache/nginx /var/run/nginx.pid /etc/nginx/conf.d
 COPY --chown=nginx:nginx --from=builder /app/dist /usr/share/nginx/html

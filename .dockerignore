@@ -11,6 +11,9 @@ node_modules
 dist
 **/dist
 coverage
+.tmp-production-secrets
+playwright-report
+test-results
 outputs
 nest-backend
 *.log

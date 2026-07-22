@@ -1,0 +1,23 @@
+groups:
+  - name: dashboard-production
+    rules:
+      - alert: DashboardBackendDown
+        expr: up{job="dashboard-backend"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations: { summary: "Dashboard backend is unavailable" }
+      - alert: DashboardHighErrorRate
+        expr: sum(rate(dashboard_http_requests_total{status=~"5.."}[5m])) / clamp_min(sum(rate(dashboard_http_requests_total[5m])), 0.001) > 0.05
+        for: 5m
+        labels: { severity: warning }
+        annotations: { summary: "Dashboard API 5xx rate is above 5%" }
+      - alert: DashboardHighP95Latency
+        expr: histogram_quantile(0.95, sum by (le) (rate(dashboard_http_request_duration_seconds_bucket[5m]))) > 0.8
+        for: 10m
+        labels: { severity: warning }
+        annotations: { summary: "Dashboard API p95 latency exceeds 800ms" }
+      - alert: DashboardProcessMemoryHigh
+        expr: dashboard_process_resident_memory_bytes > 9e8
+        for: 10m
+        labels: { severity: warning }
+        annotations: { summary: "Dashboard backend memory is near its container limit" }

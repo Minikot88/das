@@ -1,0 +1,165 @@
+services:
+  postgres:
+    image: dashboard-mini-bi-postgres:${IMAGE_TAG:-local}
+    build:
+      context: ./infrastructure/database/postgres
+      dockerfile: Dockerfile
+    user: postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+      POSTGRES_USER: ${POSTGRES_MIGRATION_USER:?POSTGRES_MIGRATION_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_MIGRATION_PASSWORD:?POSTGRES_MIGRATION_PASSWORD is required}
+      POSTGRES_RUNTIME_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_RUNTIME_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    deploy:
+      resources:
+        limits: { cpus: "2", memory: 2G }
+        reservations: { memory: 512M }
+
+  migration:
+    environment:
+      DATABASE_URL: ${MIGRATION_DATABASE_URL:?MIGRATION_DATABASE_URL is required}
+
+  backend:
+    environment:
+      APP_ENV: production
+      NODE_ENV: production
+      APP_DOMAIN: ${APP_DOMAIN:?APP_DOMAIN is required}
+      APP_URL: ${APP_URL:?APP_URL is required}
+      AUTH_PROVIDER: database
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET is required}
+      COOKIE_SECRET: ${COOKIE_SECRET:?COOKIE_SECRET is required}
+      SECRET_ENCRYPTION_KEY: ${SECRET_ENCRYPTION_KEY:?SECRET_ENCRYPTION_KEY is required}
+      CSRF_SECRET: ${CSRF_SECRET:?CSRF_SECRET is required}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:?CORS_ALLOWED_ORIGINS is required}
+      COOKIE_SECURE: "true"
+      PUBLIC_REGISTRATION_ENABLED: "false"
+      DEBUG: "false"
+      DEMO_CONNECTOR_ENABLED: "false"
+      INCLUDE_DEMO_SEED: "false"
+      SMTP_ENABLED: ${SMTP_ENABLED:-true}
+      SMTP_HOST: ${SMTP_HOST:?SMTP_HOST is required}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:?SMTP_USER is required}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:?SMTP_PASSWORD is required}
+      SMTP_FROM: ${SMTP_FROM:?SMTP_FROM is required}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      METRICS_ENABLED: ${METRICS_ENABLED:-true}
+      METRICS_TOKEN: ${METRICS_TOKEN:?METRICS_TOKEN is required}
+    deploy:
+      resources:
+        limits: { cpus: "2", memory: 1G }
+        reservations: { memory: 256M }
+    networks: [frontend_api, backend_database, monitoring]
+
+  frontend:
+    ports: !reset []
+    deploy:
+      resources:
+        limits: { cpus: "1", memory: 256M }
+
+  gateway:
+    build:
+      context: ./infrastructure/nginx
+      dockerfile: Dockerfile
+    user: nginx
+    read_only: true
+    tmpfs:
+      - /tmp
+    ports:
+      - "80:8080"
+      - "443:8443"
+    environment:
+      EMBED_ALLOWED_ORIGINS: ${EMBED_ALLOWED_ORIGINS:-'self'}
+      HTTPS_REDIRECT_AUTHORITY: ${APP_DOMAIN:?APP_DOMAIN is required}
+    command: ["sh", "-c", "envsubst '$${EMBED_ALLOWED_ORIGINS} $${HTTPS_REDIRECT_AUTHORITY}' < /etc/nginx/templates/nginx.conf.template > /tmp/nginx.conf && exec nginx -c /tmp/nginx.conf -g 'daemon off;'"]
+    volumes:
+      - ./infrastructure/nginx/production.conf.template:/etc/nginx/templates/nginx.conf.template:ro
+      - ${TLS_CERT_PATH:?TLS_CERT_PATH is required}:/etc/nginx/tls/tls.crt:ro
+      - ${TLS_KEY_PATH:?TLS_KEY_PATH is required}:/etc/nginx/tls/tls.key:ro
+    depends_on:
+      frontend: { condition: service_healthy }
+      backend: { condition: service_healthy }
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-check-certificate", "-qO-", "https://127.0.0.1:8443/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+    networks: [frontend_api]
+
+  prometheus:
+    image: prom/prometheus:v3.12.0
+    profiles: [monitoring]
+    user: "65534:65534"
+    read_only: true
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.path=/prometheus", "--web.enable-lifecycle"]
+    volumes:
+      - ./infrastructure/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infrastructure/monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - ${METRICS_TOKEN_FILE:?METRICS_TOKEN_FILE is required}:/run/secrets/metrics_token:ro
+      - prometheus_data:/prometheus
+    restart: unless-stopped
+    networks: [monitoring]
+
+  alertmanager:
+    image: prom/alertmanager:v0.32.1
+    profiles: [monitoring]
+    user: "65534:65534"
+    read_only: true
+    command: ["--config.file=/etc/alertmanager/alertmanager.yml", "--storage.path=/alertmanager"]
+    volumes:
+      - ./infrastructure/monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    restart: unless-stopped
+    networks: [monitoring]
+
+  grafana:
+    image: grafana/grafana:13.1.1
+    profiles: [monitoring]
+    user: "472:472"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:?GRAFANA_ADMIN_USER is required}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD is required}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_PLUGINS_PREINSTALL_DISABLED: "true"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infrastructure/monitoring/grafana-datasources.yml:/etc/grafana/provisioning/datasources/default.yml:ro
+    restart: unless-stopped
+    networks: [monitoring]
+
+  backup-scheduler:
+    build:
+      context: ./infrastructure/backup
+      dockerfile: Dockerfile
+    profiles: [backup]
+    environment:
+      DATABASE_URL: ${MIGRATION_DATABASE_URL:?MIGRATION_DATABASE_URL is required}
+      BACKUP_STORAGE_ENDPOINT: ${BACKUP_STORAGE_ENDPOINT:?BACKUP_STORAGE_ENDPOINT is required}
+      BACKUP_STORAGE_BUCKET: ${BACKUP_STORAGE_BUCKET:?BACKUP_STORAGE_BUCKET is required}
+      BACKUP_STORAGE_REGION: ${BACKUP_STORAGE_REGION:-us-east-1}
+      BACKUP_STORAGE_ACCESS_KEY: ${BACKUP_STORAGE_ACCESS_KEY:?BACKUP_STORAGE_ACCESS_KEY is required}
+      BACKUP_STORAGE_SECRET_KEY: ${BACKUP_STORAGE_SECRET_KEY:?BACKUP_STORAGE_SECRET_KEY is required}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
+    volumes:
+      - dashboard_mini_bi_uploads:/data/uploads:ro
+      - dashboard_mini_bi_exports:/data/exports:ro
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: unless-stopped
+    networks: [backend_database, backup_egress]
+
+volumes:
+  prometheus_data:
+  alertmanager_data:
+  grafana_data:
+
+networks:
+  monitoring:
+    internal: true
+  backup_egress:

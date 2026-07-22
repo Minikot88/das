@@ -36,6 +36,7 @@ services:
     build:
       context: ./apps/api
       dockerfile: Dockerfile
+      target: migration
     command: ["sh", "-c", "npm exec prisma migrate deploy && npm run prisma:seed"]
     environment:
       DATABASE_URL: postgresql://${POSTGRES_MIGRATION_USER:-dashboard_migrator}:${POSTGRES_MIGRATION_PASSWORD:-migrator-local-only}@postgres:5432/${POSTGRES_DB:-dashboard_mini_bi}?schema=public
