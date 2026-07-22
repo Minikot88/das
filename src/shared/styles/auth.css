@@ -487,10 +487,15 @@
 }
 
 .auth-link-sm {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: transparent;
   color: var(--primary);
   font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
+  cursor: pointer;
 }
 
 .auth-input-v2 {

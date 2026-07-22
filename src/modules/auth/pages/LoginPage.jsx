@@ -1,6 +1,7 @@
 ﻿import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { login as loginApi } from "@modules/auth/api/authApi";
+import { forgotPassword, login as loginApi, resetPassword as resetPasswordApi } from "@modules/auth/api/authApi";
+import { isMockMode } from "@infrastructure/http/client";
 import { useI18n } from "@shared/lib/i18n";
 import { resolveLoginRedirect } from "@modules/auth/lib/loginRedirect";
 
@@ -12,6 +13,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const resetToken = new URLSearchParams(location.search).get("reset") || "";
   const features = t("auth.features");
   const isThai = locale === "th";
   const heroSubtitle = t("auth.heroSubtitle") || (
@@ -47,21 +49,26 @@ export default function LoginPage() {
       ];
   const formKicker = isThai ? "กลับเข้าสู่พื้นที่วิเคราะห์" : "Welcome back";
   const formStatus = isThai ? "พร้อมใช้งาน" : "Ready";
-  const formFootnote = isThai
-    ? "เข้าสู่ระบบเดิมได้ทันที หรือใช้ข้อมูลตัวอย่างเพื่อสำรวจขั้นตอนการทำงานแบบเต็ม"
-    : "Jump back into your workspace or explore the full flow with the demo credentials.";
+  const formFootnote = isMockMode()
+    ? (isThai ? "เข้าสู่ระบบเดิมได้ทันที หรือใช้ข้อมูลตัวอย่างเพื่อสำรวจขั้นตอนการทำงานแบบเต็ม" : "Jump back into your workspace or explore the full flow with the demo credentials.")
+    : (isThai ? "ใช้บัญชีที่ได้รับเชิญจากผู้ดูแลระบบเพื่อเข้าสู่พื้นที่ทำงานขององค์กร" : "Use an account invited by your administrator to access the organization workspace.");
   const passwordPlaceholder = isThai ? "กรอกรหัสผ่าน" : "Enter your password";
 
   async function handleSubmit(event) {
     event.preventDefault();
-    if (!email || !password) {
+    if ((!resetToken && !email) || !password) {
       setError(t("auth.emailPasswordRequired"));
       return;
     }
     setLoading(true);
     setError("");
     try {
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      if (resetToken) {
+        if (password.length < 12) throw new Error(isThai ? "รหัสผ่านต้องมีอย่างน้อย 12 ตัวอักษร" : "Password must be at least 12 characters.");
+        await resetPasswordApi(resetToken, password);
+        navigate("/login", { replace: true });
+        return;
+      }
       await loginApi({ email, password });
       const target = resolveLoginRedirect(location.state?.from);
       navigate(target, { replace: true });
@@ -70,6 +77,16 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleForgotPassword() {
+    if (!email) { setError(t("auth.emailPasswordRequired")); return; }
+    setLoading(true); setError("");
+    try {
+      await forgotPassword(email);
+      setError(isThai ? "หากบัญชีนี้มีอยู่ ระบบได้สร้างคำขอรีเซ็ตรหัสผ่านแล้ว" : "If the account exists, a password reset request has been created.");
+    } catch (submitError) { setError(submitError?.message || "Unable to request a password reset."); }
+    finally { setLoading(false); }
   }
 
   return (
@@ -161,29 +178,31 @@ export default function LoginPage() {
           </div>
           <form className="auth-form-v2" onSubmit={handleSubmit} noValidate>
             {error ? <div className="auth-error-v2" role="alert">{error}</div> : null}
-            <div className="auth-field-v2">
+            {!resetToken ? <div className="auth-field-v2">
               <label className="auth-label-v2" htmlFor="login-email">{t("auth.email")}</label>
               <input id="login-email" className="auth-input-v2" type="email" placeholder="you@company.com" value={email} onChange={(event) => setEmail(event.target.value)} autoFocus autoComplete="email" />
-            </div>
+            </div> : null}
             <div className="auth-field-v2">
               <div className="auth-label-row">
-                <label className="auth-label-v2" htmlFor="login-password">{t("auth.password")}</label>
-                <span className="auth-link-sm">{t("auth.forgotPassword")}</span>
+                <label className="auth-label-v2" htmlFor="login-password">{resetToken ? (isThai ? "รหัสผ่านใหม่" : "New password") : t("auth.password")}</label>
+                {!resetToken ? <button className="auth-link-sm" type="button" onClick={handleForgotPassword} disabled={loading}>{t("auth.forgotPassword")}</button> : null}
               </div>
-              <input id="login-password" className="auth-input-v2" type="password" placeholder={passwordPlaceholder} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" />
+              <input id="login-password" className="auth-input-v2" type="password" placeholder={passwordPlaceholder} value={password} onChange={(event) => setPassword(event.target.value)} autoFocus={Boolean(resetToken)} autoComplete={resetToken ? "new-password" : "current-password"} />
             </div>
-            <button className="auth-btn-v2" type="submit" disabled={loading}>{loading ? t("auth.signingIn") : t("auth.signInAction")}</button>
+            <button className="auth-btn-v2" type="submit" disabled={loading}>{loading ? t("auth.signingIn") : resetToken ? (isThai ? "ตั้งรหัสผ่านใหม่" : "Reset password") : t("auth.signInAction")}</button>
           </form>
           <div className="auth-card-footer">
             <p className="auth-switch-v2">{t("auth.noAccount")} <Link to="/register">{t("auth.createOne")}</Link></p>
             <p className="auth-footnote-v2">{formFootnote}</p>
           </div>
-          <div className="auth-divider-v2"><span>{t("auth.demoCredentials")}</span></div>
-          <div className="auth-demo-credentials">
-            <span className="auth-demo-pill">demo@dataviz.bi</span>
-            <span className="auth-demo-pill">demo1234</span>
-          </div>
-          <button className="auth-demo-btn" type="button" onClick={() => { setEmail("demo@dataviz.bi"); setPassword("demo1234"); }}>{t("auth.fillDemoCredentials")}</button>
+          {isMockMode() ? <>
+            <div className="auth-divider-v2"><span>{t("auth.demoCredentials")}</span></div>
+            <div className="auth-demo-credentials">
+              <span className="auth-demo-pill">demo@dataviz.bi</span>
+              <span className="auth-demo-pill">demo1234</span>
+            </div>
+            <button className="auth-demo-btn" type="button" onClick={() => { setEmail("demo@dataviz.bi"); setPassword("demo1234"); }}>{t("auth.fillDemoCredentials")}</button>
+          </> : null}
         </div>
       </div>
     </main>

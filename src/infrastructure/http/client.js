@@ -10,6 +10,13 @@ export function encodeApiPathSegment(value) {
   return encodeURIComponent(String(value));
 }
 
+export function csrfHeaderForRequest(method = "GET") {
+  if (["GET", "HEAD", "OPTIONS"].includes(String(method).toUpperCase()) || typeof document === "undefined") return {};
+  const entry = String(document.cookie || "").split(";").map((part) => part.trim()).find((part) => part.startsWith("mini_bi_csrf="));
+  const token = entry ? decodeURIComponent(entry.slice("mini_bi_csrf=".length)) : "";
+  return token ? { "X-CSRF-Token": token } : {};
+}
+
 async function parseResponseBody(response) {
   const text = await response.text();
   if (!text) return null;
@@ -24,8 +31,10 @@ async function parseResponseBody(response) {
 export async function apiRequest(path, options = {}) {
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+  const signal = options.signal ? AbortSignal.any([options.signal, controller.signal]) : controller.signal;
   const headers = {
     ...(options.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
+    ...csrfHeaderForRequest(options.method),
     ...options.headers,
   };
 
@@ -34,18 +43,20 @@ export async function apiRequest(path, options = {}) {
       credentials: "same-origin",
       ...options,
       headers,
-      signal: options.signal ?? controller.signal,
+      signal,
     });
 
     const payload = await parseResponseBody(response);
 
     if (!response.ok) {
+      if (response.status === 401 && typeof window !== "undefined") window.dispatchEvent(new CustomEvent("mini-bi:session-expired"));
       const message =
         (payload && typeof payload === "object" && (payload.message || payload.error)) ||
         (typeof payload === "string" && payload) ||
         `API error: ${response.status}`;
       const error = new Error(message);
       error.status = response.status;
+      error.code = payload && typeof payload === "object" ? payload.code : undefined;
       error.payload = payload;
       throw error;
     }

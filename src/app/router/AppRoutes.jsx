@@ -38,6 +38,9 @@ function RouteFallback() {
 function ProtectedRoute() {
   const location = useLocation();
   const isAuthenticated = useStore((state) => state.isAuthenticated);
+  const authStatus = useStore((state) => state.authStatus);
+
+  if (authStatus === "loading") return <RouteFallback />;
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace state={{ from: location }} />;

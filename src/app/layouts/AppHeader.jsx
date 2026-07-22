@@ -12,6 +12,7 @@ import {
 } from "@infrastructure/persistence/project-storage/projectStorage";
 import { createBuilderContextForDashboard } from "@modules/dashboards/lib/dashboardWorkspace";
 import { getStorageHealth, subscribeStorageHealth } from "@infrastructure/persistence/workspace-ui/storage";
+import { logout as logoutApi } from "@modules/auth/api/authApi";
 
 const RIBBON_TABS = [
   { id: "home", label: "หน้าหลัก", routes: ["/", "/home"] },
@@ -503,7 +504,6 @@ export default function AppHeader() {
   const theme = useStore((s) => s.theme);
   const toggleTheme = useStore((s) => s.toggleTheme);
   const user = useStore((s) => s.user);
-  const logout = useStore((s) => s.logout);
   const projects = useStore((s) => s.projects);
   const activeProjectId = useStore((s) => s.activeProjectId);
   const activeSheetId = useStore((s) => s.activeSheetId);
@@ -844,9 +844,9 @@ export default function AppHeader() {
     };
   }, [openCommandPalette]);
 
-  function handleLogout() {
-    logout();
-    navigate("/login", { replace: true });
+  async function handleLogout() {
+    try { await logoutApi(); }
+    finally { navigate("/login", { replace: true }); }
   }
 
   function handleNewProject() {

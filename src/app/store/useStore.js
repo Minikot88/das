@@ -676,10 +676,13 @@ function _getActiveDashboard(s) {
 }
 
 
+const CLIENT_MOCK_AUTH = import.meta.env.VITE_USE_MOCK !== "false";
+
 export const useStore = create((set, get) => ({
 
-  user:            saved?.user            ?? null,
-  isAuthenticated: saved?.isAuthenticated ?? false,
+  user:            CLIENT_MOCK_AUTH ? (saved?.user ?? null) : null,
+  isAuthenticated: CLIENT_MOCK_AUTH ? (saved?.isAuthenticated ?? false) : false,
+  authStatus:       CLIENT_MOCK_AUTH ? (saved?.isAuthenticated ? "authenticated" : "anonymous") : "loading",
 
   projects:          saved?.projects?.length ? saved.projects : [defaultProject()],
   activeProjectId:   saved?.activeProjectId   ?? "project-1",
@@ -725,8 +728,10 @@ export const useStore = create((set, get) => ({
   setAuthenticatedUser: (user) => set((s) => {
     if (!user) return {};
     saveState({ ...s, user, isAuthenticated: true });
-    return { user, isAuthenticated: true };
+    return { user, isAuthenticated: true, authStatus: "authenticated" };
   }),
+
+  setAuthAnonymous: () => set({ user: null, isAuthenticated: false, authStatus: "anonymous" }),
 
   login: (email, password, name) => set((s) => {
     const trimmedEmail = String(email ?? "").trim();
@@ -741,7 +746,7 @@ export const useStore = create((set, get) => ({
       lastLoginAt: new Date().toISOString(),
     };
     saveState({ ...s, user, isAuthenticated: true });
-    return { user, isAuthenticated: true };
+    return { user, isAuthenticated: true, authStatus: "authenticated" };
   }),
 
   register: (email, password, name) => set((s) => {
@@ -760,13 +765,13 @@ export const useStore = create((set, get) => ({
       createdAt: new Date().toISOString(),
     };
     saveState({ ...s, user, isAuthenticated: true });
-    return { user, isAuthenticated: true };
+    return { user, isAuthenticated: true, authStatus: "authenticated" };
   }),
 
   logout: () => set((s) => {
     saveState({ ...s, user: null, isAuthenticated: false });
     clearBuilderDraft();
-    return { user: null, isAuthenticated: false, aiInsights: [], builderState: defaultBuilderState, builderDraft: null };
+    return { user: null, isAuthenticated: false, authStatus: "anonymous", aiInsights: [], builderState: defaultBuilderState, builderDraft: null };
   }),
 
   createProject: (name) => set((s) => {

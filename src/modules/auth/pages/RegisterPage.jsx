@@ -1,11 +1,13 @@
 ﻿import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { register as registerApi } from "@modules/auth/api/authApi";
 import { useI18n } from "@shared/lib/i18n";
 
 export default function RegisterPage() {
   const { t } = useI18n();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const invitationToken = searchParams.get("token") || searchParams.get("invitation") || "";
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,16 +21,19 @@ export default function RegisterPage() {
       setError(t("auth.emailPasswordRequired"));
       return;
     }
-    if (password.length < 6) {
+    if (!invitationToken) {
+      setError("A valid invitation link is required.");
+      return;
+    }
+    if (password.length < 12) {
       setError(t("auth.passwordLength"));
       return;
     }
     setLoading(true);
     setError("");
     try {
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      await registerApi({ email, password, name });
-      navigate("/dashboard", { replace: true });
+      await registerApi({ email, password, name, token: invitationToken, displayName: name });
+      navigate("/login", { replace: true });
     } catch (submitError) {
       setError(submitError?.message || "Unable to create your account. Please try again.");
     } finally {
@@ -77,7 +82,7 @@ export default function RegisterPage() {
             </div>
             <div className="auth-field-v2">
               <label className="auth-label-v2" htmlFor="reg-password">{t("auth.password")}</label>
-              <input id="reg-password" className="auth-input-v2" type="password" placeholder="At least 6 characters" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="new-password" />
+              <input id="reg-password" className="auth-input-v2" type="password" placeholder="At least 12 characters" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="new-password" />
             </div>
             <button className="auth-btn-v2" type="submit" disabled={loading}>{loading ? t("auth.creatingAccount") : t("auth.createAccountAction")}</button>
           </form>
