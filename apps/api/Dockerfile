@@ -5,6 +5,8 @@ RUN npm ci
 COPY prisma ./prisma
 COPY prisma.config.ts tsconfig.json tsconfig.build.json ./
 COPY src ./src
+COPY test/auth-rbac.postgres.integration.ts ./test/auth-rbac.postgres.integration.ts
+COPY vitest.integration.config.ts ./vitest.integration.config.ts
 ENV DATABASE_URL=postgresql://dashboard_app:dashboard@postgres:5432/dashboard_mini_bi
 RUN npm run prisma:generate && npm run lint && npm run typecheck && npm test -- --run && npm run build
 
