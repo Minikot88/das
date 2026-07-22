@@ -12,3 +12,6 @@ scrape_configs:
       type: Bearer
       credentials_file: /run/secrets/metrics_token
     static_configs: [{ targets: ["backend:3000"] }]
+  - job_name: backup-status
+    honor_labels: true
+    static_configs: [{ targets: ["pushgateway:9091"] }]

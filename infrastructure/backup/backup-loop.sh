@@ -18,13 +18,26 @@ export AWS_SECRET_ACCESS_KEY="$BACKUP_STORAGE_SECRET_KEY"
 export AWS_DEFAULT_REGION="${BACKUP_STORAGE_REGION:-us-east-1}"
 export AWS_EC2_METADATA_DISABLED=true
 aws_s3() { aws --endpoint-url "$BACKUP_STORAGE_ENDPOINT" "$@"; }
-aws_s3 s3api head-bucket --bucket "$BACKUP_STORAGE_BUCKET" >/dev/null 2>&1 \
-  || aws_s3 s3api create-bucket --bucket "$BACKUP_STORAGE_BUCKET" >/dev/null
-
+report_backup() {
+  [ -n "${BACKUP_METRICS_URL:-}" ] || return 0
+  success="$1"
+  now="$(date -u +%s)"
+  metrics_file="$(mktemp /work/backup-metrics.XXXXXX)"
+  if [ "$success" = "1" ]; then
+    printf 'dashboard_backup_last_run_success 1\ndashboard_backup_last_success_timestamp_seconds %s\n' "$now" > "$metrics_file"
+  else
+    printf 'dashboard_backup_last_run_success 0\n' > "$metrics_file"
+  fi
+  wget -qO- --header='Content-Type: text/plain; version=0.0.4' --post-file="$metrics_file" "$BACKUP_METRICS_URL/metrics/job/dashboard_backup" >/dev/null
+  rm -f "$metrics_file"
+}
 run_backup() {
   stamp="$(date -u +%Y%m%dT%H%M%SZ)"
   work="$(mktemp -d /work/backup.XXXXXX)"
-  trap 'rm -rf "$work"' EXIT INT TERM
+  trap 'status=$?; trap - EXIT; if [ "$status" -ne 0 ]; then report_backup 0 || true; fi; rm -rf "$work"; exit "$status"' EXIT
+  trap 'exit 1' INT TERM
+  aws_s3 s3api head-bucket --bucket "$BACKUP_STORAGE_BUCKET" >/dev/null 2>&1 \
+    || aws_s3 s3api create-bucket --bucket "$BACKUP_STORAGE_BUCKET" >/dev/null
   pg_dump --dbname="$backup_database_url" --format=custom --no-owner --no-privileges --file="$work/database.dump"
   tar -czf "$work/files.tar.gz" -C /data uploads exports
   migration_count="$(psql "$backup_database_url" -Atc 'SELECT count(*) FROM _prisma_migrations')"
@@ -42,6 +55,7 @@ run_backup() {
       aws_s3 s3 rm "s3://$BACKUP_STORAGE_BUCKET/dashboard-mini-bi/$old_prefix/" --recursive --only-show-errors
     fi
   done
+  report_backup 1 || true
   rm -rf "$work"
   trap - EXIT INT TERM
   echo "backup_completed timestamp=$stamp migration_count=$migration_count"

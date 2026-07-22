@@ -6,6 +6,16 @@ groups:
         for: 2m
         labels: { severity: critical }
         annotations: { summary: "Dashboard backend is unavailable" }
+      - alert: DashboardDatabaseDown
+        expr: sum(increase(dashboard_http_requests_total{route="/api/v1/ready",status="503"}[5m])) > 0
+        for: 1m
+        labels: { severity: critical }
+        annotations: { summary: "Dashboard database readiness is failing" }
+      - alert: DashboardBackupFailed
+        expr: dashboard_backup_last_run_success == 0 or (time() - dashboard_backup_last_success_timestamp_seconds > 90000) or absent(dashboard_backup_last_success_timestamp_seconds)
+        for: 5m
+        labels: { severity: critical }
+        annotations: { summary: "Dashboard backup failed or is overdue" }
       - alert: DashboardHighErrorRate
         expr: sum(rate(dashboard_http_requests_total{status=~"5.."}[5m])) / clamp_min(sum(rate(dashboard_http_requests_total[5m])), 0.001) > 0.05
         for: 5m
