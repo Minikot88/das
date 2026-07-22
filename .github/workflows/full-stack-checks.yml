@@ -33,5 +33,44 @@ jobs:
       - run: npm --prefix apps/api run prisma:generate
       - run: npm --prefix apps/api run prisma:migrate
       - run: npm --prefix apps/api run prisma:seed
-      - run: npm run check:all
+      - run: npm run lint && npm run typecheck && npm run test:coverage && npm run build && npm audit --audit-level=high
+      - run: npm --prefix apps/api run lint && npm --prefix apps/api run typecheck && npm --prefix apps/api run test:coverage && npm --prefix apps/api run build && npm --prefix apps/api audit --audit-level=high
+      - run: npm --prefix apps/api run test:integration
+      - run: node scripts/database/validate-data-dictionary.mjs && node scripts/database/check-schema-drift.mjs
       - run: docker compose config
+
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium firefox webkit
+      - run: docker compose up -d --build
+      - run: npm run test:e2e
+      - if: always()
+        run: docker compose logs --no-color
+
+  containers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - run: docker compose build
+      - uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # 0.33.1
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: 1
+
+  production-approval:
+    needs: [quality, browser, containers]
+    runs-on: ubuntu-latest
+    environment: production
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - run: echo "All immutable build gates passed; deployment requires environment approval."

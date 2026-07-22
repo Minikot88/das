@@ -24,7 +24,7 @@ describe('PostgreSQL authentication and RBAC boundaries', () => {
       COOKIE_SECURE: 'false',
       SESSION_SIGNING_KEY: randomBytes(32).toString('base64'),
       SECRET_MASTER_KEY: randomBytes(32).toString('base64'),
-      FILE_STORAGE_PATH: '/tmp',
+      FILE_STORAGE_PATH: '/tmp/uploads',
     });
     prisma = app.get(PrismaService);
     const now = new Date();

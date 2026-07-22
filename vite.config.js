@@ -45,7 +45,7 @@ export default defineConfig(({ mode }) => {
       setupFiles: "./src/shared/test/setup.js",
       globals: true,
       css: true,
-      exclude: ["apps/api/**", "node_modules/**", "dist/**"],
+      exclude: ["apps/api/**", "tests/e2e/**", "node_modules/**", "dist/**"],
     },
   };
 });
