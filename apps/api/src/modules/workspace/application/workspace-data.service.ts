@@ -6,6 +6,7 @@ import { PrismaService } from '../../../infrastructure/database/prisma.service.j
 import { ApiError } from '../../../shared/http/api-error.js';
 import { validateReadOnlySql } from '../../queries/domain/query-policy.js';
 import type { RequestPrincipal } from '../../projects/application/project.service.js';
+import { AuthorizationService } from '../../auth/application/authorization.service.js';
 
 type JsonMap = Record<string, unknown>;
 type MemoryChart = JsonMap & { id: string; organizationId: string; projectId: string; name: string; revision: number; createdAt: Date; updatedAt: Date };
@@ -15,7 +16,7 @@ type MemoryWidget = { id: string; organizationId: string; dashboardId: string; c
 export class WorkspaceDataService {
   private readonly charts: MemoryChart[] = [];
   private readonly widgets: MemoryWidget[] = [];
-  constructor(private readonly prisma: PrismaService, @Inject(ENVIRONMENT) private readonly environment: RuntimeEnvironment) {}
+  constructor(private readonly prisma: PrismaService, @Inject(ENVIRONMENT) private readonly environment: RuntimeEnvironment, private readonly authorization: AuthorizationService) {}
   private get memory() { return this.environment.nodeEnv === 'test'; }
 
   private async accessibleProjectIds(principal: RequestPrincipal) {
@@ -71,6 +72,7 @@ export class WorkspaceDataService {
   async createChart(principal: RequestPrincipal, payload: JsonMap) {
     const projectId = String(payload.projectId || payload.sourceProjectId || '');
     if (!projectId) throw new ApiError(400, 'VALIDATION_ERROR', 'projectId is required.', { projectId: 'Required' });
+    await this.authorization.assertProjectPermission(principal as never, projectId, 'write');
     const now = new Date();
     const common = { id: String(payload.id || `chart-${randomUUID()}`), organizationId: principal.organizationId, projectId, name: String(payload.name || payload.title || 'Untitled chart'), revision: 0, createdAt: now, updatedAt: now };
     if (this.memory) { const item = { ...payload, ...common }; this.charts.push(item); return item; }
@@ -94,6 +96,7 @@ export class WorkspaceDataService {
     const projectIds = await this.accessibleProjectIds(principal);
     const current = await this.prisma.chart.findFirst({ where: { organizationId: principal.organizationId, projectId: { in: projectIds }, id, deletedAt: null } });
     if (!current) throw new ApiError(404, 'CHART_NOT_FOUND', 'Chart was not found.');
+    await this.authorization.assertProjectPermission(principal as never, current.projectId, 'write');
     if (!Number.isFinite(expectedRevision) || current.revision !== expectedRevision) throw new ApiError(409, 'REVISION_CONFLICT', 'Chart has changed since it was loaded.', undefined, false, current.revision);
     const updated = await this.prisma.chart.update({ where: { id }, data: { name: String(payload.name || payload.title || current.name), mappingJson: asJson(payload.mapping), settingsJson: asJson(payload.settings), configJson: asJson(payload.config), revision: { increment: 1 } } });
     return mapChart(updated);
@@ -101,6 +104,8 @@ export class WorkspaceDataService {
   async deleteChart(principal: RequestPrincipal, id: string) {
     if (this.memory) { const index = this.charts.findIndex(item => item.organizationId === principal.organizationId && item.id === id); if (index < 0) throw new ApiError(404, 'CHART_NOT_FOUND', 'Chart was not found.'); this.charts.splice(index, 1); return { success: true }; }
     const projectIds = await this.accessibleProjectIds(principal);
+    const current = await this.prisma.chart.findFirst({ where: { organizationId: principal.organizationId, projectId: { in: projectIds }, id, deletedAt: null } });
+    if (current) await this.authorization.assertProjectPermission(principal as never, current.projectId, 'write');
     const result = await this.prisma.chart.updateMany({ where: { organizationId: principal.organizationId, projectId: { in: projectIds }, id, deletedAt: null }, data: { deletedAt: new Date(), revision: { increment: 1 } } });
     if (!result.count) throw new ApiError(404, 'CHART_NOT_FOUND', 'Chart was not found.');
     return { success: true };
@@ -113,6 +118,7 @@ export class WorkspaceDataService {
     const dashboard = await this.prisma.biDashboard.findFirst({ where: { id: dashboardId, organizationId: principal.organizationId, projectId: { in: projectIds }, deletedAt: null } });
     const chart = await this.prisma.chart.findFirst({ where: { id: chartId, organizationId: principal.organizationId, projectId: { in: projectIds }, deletedAt: null } });
     if (!dashboard || !chart || dashboard.projectId !== chart.projectId) throw new ApiError(404, 'DASHBOARD_OR_CHART_NOT_FOUND', 'Dashboard or chart was not found.');
+    await this.authorization.assertProjectPermission(principal as never, dashboard.projectId, 'write');
     const widget = await this.prisma.dashboardWidget.create({ data: layoutItem });
     return { layoutItem: widget };
   }

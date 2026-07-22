@@ -8,6 +8,24 @@ describe('parseEnvironment', () => {
     );
   });
 
+  it('configures bounded database sessions and secure production cookies', () => {
+    const testEnvironment = parseEnvironment({
+      NODE_ENV: 'test', AUTH_PROVIDER: 'database', SESSION_IDLE_TIMEOUT_SECONDS: '1800',
+      SESSION_ABSOLUTE_TIMEOUT_SECONDS: '86400', COOKIE_SECURE: 'false',
+    });
+    expect(testEnvironment.sessionIdleTimeoutSeconds).toBe(1800);
+    expect(testEnvironment.sessionAbsoluteTimeoutSeconds).toBe(86400);
+    expect(testEnvironment.cookieSecure).toBe(false);
+
+    const production = {
+      NODE_ENV: 'production', AUTH_PROVIDER: 'database', DATABASE_URL: 'postgresql://app:secret@postgres/app',
+      CORS_ORIGINS: 'https://dashboard.example.test', SECRET_MASTER_KEY: Buffer.alloc(32, 99).toString('base64'),
+      SESSION_SIGNING_KEY: Buffer.alloc(32, 100).toString('base64'),
+    };
+    expect(() => parseEnvironment({ ...production, COOKIE_SECURE: 'false' })).toThrow(/secure cookie/i);
+    expect(() => parseEnvironment({ ...production, COOKIE_SECURE: 'true', PUBLIC_REGISTRATION_ENABLED: 'true' })).toThrow(/public registration/i);
+  });
+
   it('requires a 32-byte secret master key', () => {
     expect(() => parseEnvironment({ NODE_ENV: 'test', AUTH_PROVIDER: 'development', SECRET_MASTER_KEY: 'short' })).toThrow(
       'SECRET_MASTER_KEY',

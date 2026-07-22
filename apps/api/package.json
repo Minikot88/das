@@ -10,10 +10,12 @@
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:watch": "vitest",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
     "prisma:seed": "tsx prisma/seed.ts",
+    "admin:create": "tsx src/scripts/create-admin.ts",
     "check": "npm run lint && npm run typecheck && npm run test && npm run build"
   },
   "dependencies": {
@@ -28,6 +30,7 @@
     "@nestjs/swagger": "^11.2.5",
     "@prisma/adapter-pg": "^7.9.0",
     "@prisma/client": "7.9.0",
+    "argon2": "^0.44.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.3",
     "csv-parse": "^6.1.0",
@@ -40,6 +43,7 @@
   "devDependencies": {
     "@types/node": "^24.10.1",
     "@types/pg": "^8.15.5",
+    "@vitest/coverage-v8": "^4.1.10",
     "prisma": "7.9.0",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3",

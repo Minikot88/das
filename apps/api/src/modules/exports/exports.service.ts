@@ -7,15 +7,17 @@ import { ENVIRONMENT } from '../../app/config/token.js';
 import { PrismaService } from '../../infrastructure/database/prisma.service.js';
 import { ApiError } from '../../shared/http/api-error.js';
 import type { RequestPrincipal } from '../projects/application/project.service.js';
+import { AuthorizationService } from '../auth/application/authorization.service.js';
 
 type JsonObject = Record<string, unknown>;
 
 @Injectable()
 export class ExportsService {
   private readonly root: string;
-  constructor(private readonly prisma: PrismaService, @Inject(ENVIRONMENT) environment: RuntimeEnvironment) { this.root = resolve(dirname(environment.fileStoragePath), 'exports'); }
+  constructor(private readonly prisma: PrismaService, @Inject(ENVIRONMENT) environment: RuntimeEnvironment, private readonly authorization: AuthorizationService) { this.root = resolve(dirname(environment.fileStoragePath), 'exports'); }
 
   private async project(principal: RequestPrincipal, projectId: string) {
+    await this.authorization.assertProjectPermission(principal as never, projectId, 'export');
     const memberIds = (await this.prisma.biProjectMember.findMany({ where: { organizationId: principal.organizationId, userId: principal.userId }, select: { projectId: true } })).map(item => item.projectId);
     const project = await this.prisma.biProject.findFirst({ where: { id: projectId, organizationId: principal.organizationId, deletedAt: null, OR: [{ ownerUserId: principal.userId }, { id: { in: memberIds } }] } });
     if (!project) throw new ApiError(404, 'PROJECT_NOT_FOUND', 'Project was not found.');

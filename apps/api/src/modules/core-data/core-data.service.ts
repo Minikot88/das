@@ -5,6 +5,7 @@ import type { MultipartFile } from '@fastify/multipart';
 import { PrismaService } from '../../infrastructure/database/prisma.service.js';
 import { ApiError } from '../../shared/http/api-error.js';
 import type { RequestPrincipal } from '../projects/application/project.service.js';
+import { AuthorizationService, type ProjectPermission } from '../auth/application/authorization.service.js';
 
 type JsonObject = Record<string, unknown>;
 type QueryFilter = { field: string; operator: string; value?: unknown };
@@ -12,9 +13,10 @@ type Aggregate = { field: string; operation: string; alias?: string };
 
 @Injectable()
 export class CoreDataService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly authorization: AuthorizationService) {}
 
-  private async project(principal: RequestPrincipal, projectId: string) {
+  private async project(principal: RequestPrincipal, projectId: string, permission: ProjectPermission = 'read') {
+    await this.authorization.assertProjectPermission(principal as never, projectId, permission);
     const project = await this.prisma.biProject.findFirst({
       where: {
         id: projectId,
@@ -57,7 +59,7 @@ export class CoreDataService {
     const allowedMime = new Set(['text/csv', 'application/csv', 'application/vnd.ms-excel', 'text/plain', 'application/octet-stream']);
     if (!allowedMime.has(String(file.mimetype || '').toLowerCase())) throw new ApiError(415, 'INVALID_FILE_TYPE', 'Only CSV files are allowed.');
     const projectId = String(input.projectId || '');
-    await this.project(principal, projectId);
+    await this.project(principal, projectId, 'write');
     const idempotencyKey = String(input.idempotencyKey || `upload-${randomUUID()}`).slice(0, 128);
     const existing = await this.prisma.importJob.findUnique({ where: { organizationId_idempotencyKey: { organizationId: principal.organizationId, idempotencyKey } } });
     if (existing) return { importJob: existing, duplicate: true };
@@ -70,18 +72,20 @@ export class CoreDataService {
     ]);
 
     let headers: string[] = [];
+    let headerValidationError = '';
     let rowNumber = 0;
     const batch: Array<{ datasetId: string; rowNumber: number; rowJson: JsonObject }> = [];
     try {
       const parser = file.file.pipe(parse({ bom: true, columns: header => {
         headers = header.map((value: unknown, index: number) => normalizeHeader(String(value ?? ''), index));
-        if (!headers.length || headers.length > 200) throw new Error('CSV must contain between 1 and 200 columns.');
-        if (new Set(headers).size !== headers.length) throw new Error('CSV headers must be unique.');
+        if (!headers.length || headers.length > 200) headerValidationError = 'CSV must contain between 1 and 200 columns.';
+        else if (new Set(headers).size !== headers.length) headerValidationError = 'CSV headers must be unique.';
         return headers;
       }, skip_empty_lines: true, relax_column_count: false, trim: false }));
 
       await this.prisma.$transaction(async tx => {
         for await (const raw of parser) {
+          if (headerValidationError) throw new Error(headerValidationError);
           rowNumber += 1;
           if (rowNumber > 50_000) throw new Error('CSV exceeds the 50,000 row limit.');
           const row = Object.fromEntries(headers.map(key => [key, normalizeCsvValue((raw as JsonObject)[key])]));
@@ -89,6 +93,7 @@ export class CoreDataService {
           if (batch.length >= 1000) { await tx.datasetRow.createMany({ data: batch.splice(0) as never }); }
         }
         if (batch.length) await tx.datasetRow.createMany({ data: batch.splice(0) as never });
+        if (headerValidationError) throw new Error(headerValidationError);
         if (!headers.length) throw new Error('CSV header is required.');
         const sample = await tx.datasetRow.findMany({ where: { datasetId }, orderBy: { rowNumber: 'asc' }, take: 200 });
         const fields = headers.map((name, ordinal) => ({ id: `field-${randomUUID()}`, datasetId, fieldKey: name, name, dataType: inferType(sample.map(item => (item.rowJson as JsonObject)[name])), nullable: sample.some(item => (item.rowJson as JsonObject)[name] == null), ordinal }));
@@ -152,12 +157,13 @@ export class CoreDataService {
 
   async createDashboard(principal: RequestPrincipal, input: JsonObject) {
     const projectId = String(input.projectId || '');
-    await this.project(principal, projectId);
+    await this.project(principal, projectId, 'write');
     return this.prisma.biDashboard.create({ data: { id: String(input.id || `dashboard-${randomUUID()}`), organizationId: principal.organizationId, projectId, sheetId: optionalString(input.sheetId), name: requiredName(input.name, 'Dashboard'), canvasSettingsJson: asJson(input.canvasSettings), status: String(input.status || 'draft') } });
   }
 
   async updateDashboard(principal: RequestPrincipal, id: string, input: JsonObject) {
     const current = await this.dashboard(principal, id);
+    await this.project(principal, current.projectId, 'write');
     const revision = Number(input.revision);
     if (!Number.isInteger(revision) || revision !== current.revision) throw new ApiError(409, 'REVISION_CONFLICT', 'Dashboard has changed since it was loaded.', undefined, false, current.revision);
     return this.prisma.biDashboard.update({ where: { id }, data: { name: input.name === undefined ? current.name : requiredName(input.name, 'Dashboard'), canvasSettingsJson: input.canvasSettings === undefined ? undefined : asJson(input.canvasSettings), status: input.status === undefined ? current.status : String(input.status), revision: { increment: 1 } } });
@@ -165,6 +171,7 @@ export class CoreDataService {
 
   async saveWidgets(principal: RequestPrincipal, dashboardId: string, input: JsonObject) {
     const dashboard = await this.dashboard(principal, dashboardId);
+    await this.project(principal, dashboard.projectId, 'write');
     const revision = Number(input.revision);
     if (!Number.isInteger(revision) || revision !== dashboard.revision) throw new ApiError(409, 'REVISION_CONFLICT', 'Dashboard has changed since it was loaded.', undefined, false, dashboard.revision);
     const widgets = Array.isArray(input.widgets) ? input.widgets as JsonObject[] : [];
@@ -180,6 +187,7 @@ export class CoreDataService {
   }
 
   async importWorkspace(principal: RequestPrincipal, input: JsonObject) {
+    await this.authorization.assertOrganizationAdmin(principal as never, principal.organizationId);
     if (input.schemaVersion !== 1 || !Array.isArray(input.projects)) throw new ApiError(400, 'INVALID_WORKSPACE', 'Workspace schema version 1 is required.');
     const secretPaths = findSecretPaths(input);
     if (secretPaths.length) throw new ApiError(400, 'WORKSPACE_CONTAINS_SECRETS', 'Workspace contains plain secret material.', { workspace: secretPaths.slice(0, 5).join(', ') });

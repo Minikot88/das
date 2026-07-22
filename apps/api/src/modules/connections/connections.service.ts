@@ -10,6 +10,7 @@ import { EncryptedSecretStore, type EncryptedSecret } from '../../infrastructure
 import { ApiError } from '../../shared/http/api-error.js';
 import { validateReadOnlySql } from '../queries/domain/query-policy.js';
 import type { RequestPrincipal } from '../projects/application/project.service.js';
+import { AuthorizationService, type ProjectPermission } from '../auth/application/authorization.service.js';
 
 type JsonObject = Record<string, unknown>;
 type ConnectionSecret = { host: string; port: number; database: string; user: string; password: string; ssl: boolean };
@@ -17,24 +18,25 @@ type ConnectionSecret = { host: string; port: number; database: string; user: st
 @Injectable()
 export class ConnectionsService {
   private readonly secrets: EncryptedSecretStore;
-  constructor(private readonly prisma: PrismaService, @Inject(ENVIRONMENT) private readonly environment: RuntimeEnvironment) { this.secrets = new EncryptedSecretStore(environment.secretMasterKey || ''); }
+  constructor(private readonly prisma: PrismaService, @Inject(ENVIRONMENT) private readonly environment: RuntimeEnvironment, private readonly authorization: AuthorizationService) { this.secrets = new EncryptedSecretStore(environment.secretMasterKey || ''); }
 
-  private async project(principal: RequestPrincipal, projectId: string) {
+  private async project(principal: RequestPrincipal, projectId: string, permission: ProjectPermission = 'read') {
+    await this.authorization.assertProjectPermission(principal as never, projectId, permission);
     const memberIds = (await this.prisma.biProjectMember.findMany({ where: { organizationId: principal.organizationId, userId: principal.userId }, select: { projectId: true } })).map(item => item.projectId);
     const project = await this.prisma.biProject.findFirst({ where: { id: projectId, organizationId: principal.organizationId, deletedAt: null, OR: [{ ownerUserId: principal.userId }, { id: { in: memberIds } }] } });
     if (!project) throw new ApiError(404, 'PROJECT_NOT_FOUND', 'Project was not found.');
     return project;
   }
 
-  private async connection(principal: RequestPrincipal, id: string) {
+  private async connection(principal: RequestPrincipal, id: string, permission: ProjectPermission = 'connection') {
     const item = await this.prisma.dataSourceConnection.findFirst({ where: { id, organizationId: principal.organizationId, deletedAt: null } });
     if (!item) throw new ApiError(404, 'CONNECTION_NOT_FOUND', 'Connection was not found.');
-    await this.project(principal, item.projectId);
+    await this.project(principal, item.projectId, permission);
     return item;
   }
 
   async list(principal: RequestPrincipal, projectId: string) {
-    await this.project(principal, projectId);
+    await this.project(principal, projectId, 'connection');
     return this.prisma.dataSourceConnection.findMany({ where: { organizationId: principal.organizationId, projectId, deletedAt: null }, orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }], select: safeConnectionSelect });
   }
 

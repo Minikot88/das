@@ -5,7 +5,7 @@ const LOG_LEVELS = ['error', 'warn', 'info', 'debug'] as const;
 
 export type RuntimeEnvironment = {
   nodeEnv: 'development' | 'test' | 'production';
-  authProvider: 'development' | 'external';
+  authProvider: 'database' | 'development' | 'external';
   secretMasterKey?: string;
   databaseUrl?: string;
   developmentAuthEmail?: string;
@@ -20,6 +20,12 @@ export type RuntimeEnvironment = {
   databasePoolMax: number;
   logLevel: typeof LOG_LEVELS[number];
   connectorNetworkAllowlist: string[];
+  cookieSecure: boolean;
+  publicRegistrationEnabled: boolean;
+  sessionIdleTimeoutSeconds: number;
+  sessionAbsoluteTimeoutSeconds: number;
+  passwordResetTimeoutSeconds: number;
+  invitationTimeoutSeconds: number;
 };
 
 function parseBoundedInteger(name: string, rawValue: string | undefined, fallback: number, minimum: number, maximum: number) {
@@ -41,12 +47,19 @@ function parseCorsOrigins(rawValue: string | undefined) {
   return origins;
 }
 
+function parseBoolean(name: string, rawValue: string | undefined, fallback: boolean) {
+  if (rawValue === undefined) return fallback;
+  if (rawValue === 'true') return true;
+  if (rawValue === 'false') return false;
+  throw new Error(`${name} must be true or false`);
+}
+
 export function parseEnvironment(input: NodeJS.ProcessEnv | Record<string, string | undefined>): RuntimeEnvironment {
   const nodeEnv = (input.NODE_ENV || 'development') as RuntimeEnvironment['nodeEnv'];
   const authProvider = (input.AUTH_PROVIDER || 'development') as RuntimeEnvironment['authProvider'];
 
   if (!['development', 'test', 'production'].includes(nodeEnv)) throw new Error(`Unsupported NODE_ENV: ${nodeEnv}`);
-  if (!['development', 'external'].includes(authProvider)) throw new Error(`Unsupported AUTH_PROVIDER: ${authProvider}`);
+  if (!['database', 'development', 'external'].includes(authProvider)) throw new Error(`Unsupported AUTH_PROVIDER: ${authProvider}`);
   if (nodeEnv === 'production' && authProvider === 'development') {
     throw new Error('Development authentication is forbidden in production');
   }
@@ -95,6 +108,14 @@ export function parseEnvironment(input: NodeJS.ProcessEnv | Record<string, strin
   const logLevel = String(input.LOG_LEVEL || 'info') as RuntimeEnvironment['logLevel'];
   if (!LOG_LEVELS.includes(logLevel)) throw new Error(`LOG_LEVEL must be one of: ${LOG_LEVELS.join(', ')}`);
 
+  const cookieSecure = parseBoolean('COOKIE_SECURE', input.COOKIE_SECURE, nodeEnv === 'production');
+  const publicRegistrationEnabled = parseBoolean('PUBLIC_REGISTRATION_ENABLED', input.PUBLIC_REGISTRATION_ENABLED, false);
+  if (nodeEnv === 'production' && !cookieSecure) throw new Error('Secure cookie is required in production');
+  if (nodeEnv === 'production' && publicRegistrationEnabled) throw new Error('Public registration is forbidden by the production default policy');
+  const sessionIdleTimeoutSeconds = parseBoundedInteger('SESSION_IDLE_TIMEOUT_SECONDS', input.SESSION_IDLE_TIMEOUT_SECONDS, 1_800, 300, 86_400);
+  const sessionAbsoluteTimeoutSeconds = parseBoundedInteger('SESSION_ABSOLUTE_TIMEOUT_SECONDS', input.SESSION_ABSOLUTE_TIMEOUT_SECONDS, 604_800, 3_600, 2_592_000);
+  if (sessionAbsoluteTimeoutSeconds <= sessionIdleTimeoutSeconds) throw new Error('SESSION_ABSOLUTE_TIMEOUT_SECONDS must exceed SESSION_IDLE_TIMEOUT_SECONDS');
+
   return {
     nodeEnv,
     authProvider,
@@ -112,5 +133,11 @@ export function parseEnvironment(input: NodeJS.ProcessEnv | Record<string, strin
     databasePoolMax: parseBoundedInteger('DATABASE_POOL_MAX', input.DATABASE_POOL_MAX, 10, 1, 50),
     logLevel,
     connectorNetworkAllowlist: String(input.CONNECTOR_NETWORK_ALLOWLIST || '').split(',').map(value => value.trim()).filter(Boolean),
+    cookieSecure,
+    publicRegistrationEnabled,
+    sessionIdleTimeoutSeconds,
+    sessionAbsoluteTimeoutSeconds,
+    passwordResetTimeoutSeconds: parseBoundedInteger('PASSWORD_RESET_TIMEOUT_SECONDS', input.PASSWORD_RESET_TIMEOUT_SECONDS, 900, 300, 86_400),
+    invitationTimeoutSeconds: parseBoundedInteger('INVITATION_TIMEOUT_SECONDS', input.INVITATION_TIMEOUT_SECONDS, 604_800, 900, 2_592_000),
   };
 }

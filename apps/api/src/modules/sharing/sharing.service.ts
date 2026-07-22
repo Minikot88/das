@@ -6,12 +6,13 @@ import { ApiError } from '../../shared/http/api-error.js';
 import { ensureRequestId } from '../../shared/http/request-id.js';
 import type { RequestPrincipal } from '../projects/application/project.service.js';
 import { createShareToken, hashShareToken } from './domain/share-token.js';
+import { AuthorizationService } from '../auth/application/authorization.service.js';
 
 type JsonObject = Record<string, unknown>;
 
 @Injectable()
 export class SharingService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly authorization: AuthorizationService) {}
 
   private async accessibleDashboard(principal: RequestPrincipal, dashboardId: string) {
     const memberships = (await this.prisma.biProjectMember.findMany({ where: { organizationId: principal.organizationId, userId: principal.userId }, select: { projectId: true } })).map(item => item.projectId);
@@ -22,6 +23,7 @@ export class SharingService {
 
   async create(principal: RequestPrincipal, input: JsonObject) {
     const dashboard = await this.accessibleDashboard(principal, String(input.dashboardId || ''));
+    await this.authorization.assertProjectPermission(principal as never, dashboard.projectId, 'share');
     const expiresAt = input.expiresAt ? new Date(String(input.expiresAt)) : null;
     if (expiresAt && (!Number.isFinite(expiresAt.getTime()) || expiresAt <= new Date())) throw new ApiError(400, 'INVALID_EXPIRATION', 'Share expiration must be in the future.');
     const allowedOrigins = parseOrigins(input.allowedOrigins);
@@ -59,6 +61,7 @@ export class SharingService {
     const share = await this.prisma.dashboardShareLink.findFirst({ where: { id, organizationId: principal.organizationId } });
     if (!share) throw new ApiError(404, 'SHARE_NOT_FOUND', 'Share was not found.');
     await this.accessibleDashboard(principal, share.dashboardId);
+    await this.authorization.assertProjectPermission(principal as never, share.projectId, 'share');
     if (!Number.isInteger(revision) || revision !== share.revision) throw new ApiError(409, 'REVISION_CONFLICT', 'Share has changed since it was loaded.', undefined, false, share.revision);
     return this.prisma.dashboardShareLink.update({ where: { id }, data: { status: 'revoked', revokedAt: new Date(), revision: { increment: 1 } }, select: { id: true, status: true, revokedAt: true, revision: true } });
   }

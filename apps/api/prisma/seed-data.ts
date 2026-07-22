@@ -5,7 +5,7 @@ export function buildSeedData(options: SeedOptions) {
     organization: { id: 'org-default', code: 'DEFAULT', name: 'Default Organization' },
     user: {
       id: 'user-development', organizationId: 'org-default', externalUserId: 'development-user',
-      externalAuthProvider: 'development', email: 'dev@example.com', displayName: 'Development User',
+      externalAuthProvider: 'development', email: 'dev@example.com', normalizedEmail: 'dev@example.com', displayName: 'Development User',
     },
     roles: [
       { id: 'role-owner', organizationId: 'org-default', code: 'owner', name: 'Owner', isSystem: true },

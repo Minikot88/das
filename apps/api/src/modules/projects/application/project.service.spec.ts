@@ -23,9 +23,10 @@ class MemoryProjectRepository implements ProjectRepository {
 }
 
 describe('ProjectService', () => {
+  const authorization = { assertOrganizationAdmin: () => Promise.resolve(), assertProjectPermission: () => Promise.resolve() } as never;
   it('isolates organizations and rejects stale writes', async () => {
     const repository = new MemoryProjectRepository();
-    const service = new ProjectService(repository);
+    const service = new ProjectService(repository, authorization);
     const created = await service.create({ organizationId: 'org-a', userId: 'user-a' }, 'Finance');
     expect(await service.list({ organizationId: 'org-b', userId: 'user-b' })).toEqual([]);
     await service.update({ organizationId: 'org-a', userId: 'user-a' }, created.id, { name: 'Finance 2026', revision: 0 });
@@ -35,7 +36,7 @@ describe('ProjectService', () => {
 
   it('does not expose or mutate projects owned by another user in the same organization', async () => {
     const repository = new MemoryProjectRepository();
-    const service = new ProjectService(repository);
+    const service = new ProjectService(repository, authorization);
     const owner = { organizationId: 'org-a', userId: 'owner-a' };
     const other = { organizationId: 'org-a', userId: 'user-b' };
     const created = await service.create(owner, 'Private finance');
@@ -45,5 +46,14 @@ describe('ProjectService', () => {
     await expect(service.update(other, created.id, { name: 'Hijacked', revision: 0 }))
       .rejects.toMatchObject({ code: 'PROJECT_NOT_FOUND' });
     await expect(service.remove(other, created.id, 0)).rejects.toMatchObject({ code: 'PROJECT_NOT_FOUND' });
+  });
+
+  it('rejects project creation when the principal is not an organization admin', async () => {
+    const service = new ProjectService(new MemoryProjectRepository(), {
+      assertOrganizationAdmin: () => Promise.reject(new ApiError(403, 'FORBIDDEN', 'Forbidden')),
+      assertProjectPermission: () => Promise.resolve(),
+    } as never);
+    await expect(service.create({ organizationId: 'org-a', userId: 'viewer-a' }, 'Blocked'))
+      .rejects.toMatchObject({ status: 403, code: 'FORBIDDEN' });
   });
 });

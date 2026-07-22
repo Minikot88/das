@@ -11,7 +11,7 @@ function service() {
     datasetField: { findMany: vi.fn().mockResolvedValue([{ id: 'field-region', datasetId: 'dataset-1', fieldKey: 'region', name: 'region', dataType: 'string', nullable: false, ordinal: 0 }]) },
     datasetRow: { findMany: vi.fn().mockResolvedValue([{ rowNumber: 1, rowJson: { region: 'North' } }]) },
   };
-  return new CoreDataService(prisma as never);
+  return new CoreDataService(prisma as never, { assertProjectPermission: vi.fn().mockResolvedValue(undefined), assertOrganizationAdmin: vi.fn().mockResolvedValue(undefined) } as never);
 }
 
 const principal = { organizationId: 'org-default', userId: 'user-development' };
@@ -31,5 +31,13 @@ describe('CoreDataService dataset query validation', () => {
 
   it('returns paginated projected rows', async () => {
     await expect(service().queryDataset(principal, 'dataset-1', { select: ['region'], page: 1, pageSize: 10 })).resolves.toMatchObject({ rows: [{ region: 'North' }], total: 1, page: 1, pageSize: 10 });
+  });
+
+  it('rejects a viewer attempting to create a dashboard', async () => {
+    const prisma = {} as never;
+    const authorization = { assertProjectPermission: vi.fn().mockRejectedValue({ status: 403, code: 'FORBIDDEN' }) };
+    const service = new CoreDataService(prisma, authorization as never);
+    await expect(service.createDashboard(principal, { projectId: 'project-1', name: 'Blocked' })).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    expect(authorization.assertProjectPermission).toHaveBeenCalledWith(expect.anything(), 'project-1', 'write');
   });
 });

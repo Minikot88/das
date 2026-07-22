@@ -1,13 +1,19 @@
 {
   "manifestVersion": 1,
   "sourceSha256": "A18A90308C43C5C069957853974ECE9FF36B54CC733DF210C280C11ABE5514EB",
-  "engine": "MariaDB",
-  "engineVersion": "11.4",
-  "charset": "utf8mb4",
-  "collation": "utf8mb4_unicode_ci",
+  "engine": "PostgreSQL",
+  "engineVersion": "17",
+  "charset": "UTF-8",
+  "collation": "database-default",
   "orm": "Prisma",
   "generatedAt": "2026-07-21T08:17:30.707Z",
   "tables": [
+    { "name": "auth_sessions", "module": "MOD-AUTH", "classification": "P0_CORE", "approvalStatus": "APPROVED", "migration": "0002_production_auth_rbac", "mergedInto": null },
+    { "name": "authentication_audit_logs", "module": "MOD-AUTH", "classification": "P0_CORE", "approvalStatus": "APPROVED", "migration": "0002_production_auth_rbac", "mergedInto": null },
+    { "name": "invitations", "module": "MOD-AUTH", "classification": "P0_CORE", "approvalStatus": "APPROVED", "migration": "0002_production_auth_rbac", "mergedInto": null },
+    { "name": "organization_members", "module": "MOD-AUTH", "classification": "P0_CORE", "approvalStatus": "APPROVED", "migration": "0002_production_auth_rbac", "mergedInto": null },
+    { "name": "password_reset_tokens", "module": "MOD-AUTH", "classification": "P0_CORE", "approvalStatus": "APPROVED", "migration": "0002_production_auth_rbac", "mergedInto": null },
+    { "name": "user_credentials", "module": "MOD-AUTH", "classification": "P0_CORE", "approvalStatus": "APPROVED", "migration": "0002_production_auth_rbac", "mergedInto": null },
     {
       "name": "organizations",
       "module": "MOD-01",

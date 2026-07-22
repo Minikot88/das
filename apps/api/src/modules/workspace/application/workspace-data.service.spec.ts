@@ -3,6 +3,7 @@ import { WorkspaceDataService } from './workspace-data.service.js';
 
 const principal = { organizationId: 'org-a', userId: 'user-a' };
 const environment = { nodeEnv: 'production' } as never;
+const authorization = { assertProjectPermission: vi.fn().mockResolvedValue(undefined) } as never;
 
 function createPrisma(overrides: Record<string, unknown> = {}) {
   return {
@@ -24,7 +25,7 @@ function createPrisma(overrides: Record<string, unknown> = {}) {
 describe('WorkspaceDataService project isolation', () => {
   it('limits chart listings to projects owned by or shared with the principal', async () => {
     const prisma = createPrisma();
-    const service = new WorkspaceDataService(prisma as never, environment);
+    const service = new WorkspaceDataService(prisma as never, environment, authorization);
 
     await service.listCharts(principal);
 
@@ -35,7 +36,7 @@ describe('WorkspaceDataService project isolation', () => {
 
   it('rejects creating a chart with a dataset from another project', async () => {
     const prisma = createPrisma();
-    const service = new WorkspaceDataService(prisma as never, environment);
+    const service = new WorkspaceDataService(prisma as never, environment, authorization);
 
     await expect(service.createChart(principal, {
       projectId: 'project-owned',
@@ -47,7 +48,7 @@ describe('WorkspaceDataService project isolation', () => {
 
   it('scopes chart reads, updates, and deletes to accessible projects', async () => {
     const prisma = createPrisma();
-    const service = new WorkspaceDataService(prisma as never, environment);
+    const service = new WorkspaceDataService(prisma as never, environment, authorization);
 
     await expect(service.getChart(principal, 'chart-private')).rejects.toMatchObject({ code: 'CHART_NOT_FOUND' });
     await expect(service.updateChart(principal, 'chart-private', { revision: 0 })).rejects.toMatchObject({ code: 'CHART_NOT_FOUND' });
@@ -70,7 +71,7 @@ describe('WorkspaceDataService project isolation', () => {
         create: vi.fn(),
       },
     });
-    const service = new WorkspaceDataService(prisma as never, environment);
+    const service = new WorkspaceDataService(prisma as never, environment, authorization);
 
     await expect(service.attachChart(principal, 'dashboard-a', 'chart-b'))
       .rejects.toMatchObject({ status: 404, code: 'DASHBOARD_OR_CHART_NOT_FOUND' });
@@ -79,7 +80,7 @@ describe('WorkspaceDataService project isolation', () => {
 
   it('limits the legacy current dataset to accessible projects', async () => {
     const prisma = createPrisma();
-    const service = new WorkspaceDataService(prisma as never, environment);
+    const service = new WorkspaceDataService(prisma as never, environment, authorization);
 
     await expect(service.getDataset(principal)).rejects.toMatchObject({ status: 404, code: 'DATASET_NOT_FOUND' });
     expect(prisma.dataset.findFirst).toHaveBeenCalledWith(expect.objectContaining({
@@ -89,7 +90,7 @@ describe('WorkspaceDataService project isolation', () => {
 
   it('does not return dashboard context outside accessible projects', async () => {
     const prisma = createPrisma();
-    const service = new WorkspaceDataService(prisma as never, environment);
+    const service = new WorkspaceDataService(prisma as never, environment, authorization);
 
     await expect(service.dashboardContext(principal, 'dashboard-private'))
       .rejects.toMatchObject({ status: 404, code: 'DASHBOARD_NOT_FOUND' });
