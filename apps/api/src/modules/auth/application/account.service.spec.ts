@@ -59,6 +59,20 @@ describe('AccountService password security', () => {
     expect(JSON.stringify(knownResult)).not.toMatch(/token|user@example/i);
   });
 
+  it('keeps forgot-password enumeration-safe and revokes the token when email delivery fails', async () => {
+    const { service, prisma, mail } = fixture();
+    mail.sendPasswordReset.mockRejectedValueOnce(new Error('SMTP unavailable'));
+
+    await expect(service.forgotPassword('user@example.com', { requestId: 'request-mail-failure' })).resolves.toEqual({ accepted: true });
+    expect(prisma.passwordResetToken.updateMany).toHaveBeenCalledWith({
+      where: { tokenHash: expect.stringMatching(/^[a-f0-9]{64}$/), usedAt: null, revokedAt: null },
+      data: { revokedAt: expect.any(Date) },
+    });
+    expect(prisma.authenticationAuditLog.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ event: 'password_reset_delivery', outcome: 'failed' }),
+    }));
+  });
+
   it('consumes a reset token once and revokes sessions', async () => {
     const { service, prisma, profile } = fixture();
     const token = 'one-time-reset-token';

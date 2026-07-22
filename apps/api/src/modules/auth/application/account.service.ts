@@ -59,7 +59,15 @@ export class AccountService {
           },
         });
       });
-      await this.mail.sendPasswordReset(profile.email, issued.token);
+      try {
+        await this.mail.sendPasswordReset(profile.email, issued.token);
+      } catch {
+        await this.prisma.passwordResetToken.updateMany({
+          where: { tokenHash: issued.tokenHash, usedAt: null, revokedAt: null },
+          data: { revokedAt: new Date() },
+        });
+        await this.audit('password_reset_delivery', 'failed', context, profile.organizationId, profile.id);
+      }
     }
     await this.audit('password_reset_requested', 'accepted', context, profile?.organizationId, profile?.id);
     return { accepted: true };
