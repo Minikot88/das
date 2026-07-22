@@ -26,6 +26,21 @@ export type RuntimeEnvironment = {
   sessionAbsoluteTimeoutSeconds: number;
   passwordResetTimeoutSeconds: number;
   invitationTimeoutSeconds: number;
+  appDomain?: string;
+  appUrl?: string;
+  cookieSecret?: string;
+  csrfSecret?: string;
+  smtp: {
+    enabled: boolean;
+    host?: string;
+    port: number;
+    user?: string;
+    password?: string;
+    from?: string;
+    secure: boolean;
+  };
+  metricsEnabled: boolean;
+  metricsToken?: string;
 };
 
 function parseBoundedInteger(name: string, rawValue: string | undefined, fallback: number, minimum: number, maximum: number) {
@@ -55,8 +70,12 @@ function parseBoolean(name: string, rawValue: string | undefined, fallback: bool
 }
 
 export function parseEnvironment(input: NodeJS.ProcessEnv | Record<string, string | undefined>): RuntimeEnvironment {
-  const nodeEnv = (input.NODE_ENV || 'development') as RuntimeEnvironment['nodeEnv'];
+  const nodeEnv = (input.APP_ENV || input.NODE_ENV || 'development') as RuntimeEnvironment['nodeEnv'];
   const authProvider = (input.AUTH_PROVIDER || 'development') as RuntimeEnvironment['authProvider'];
+  const databaseUrlValue = input.DATABASE_URL;
+  const secretMasterKeyValue = input.SECRET_ENCRYPTION_KEY || input.SECRET_MASTER_KEY;
+  const sessionSigningKeyValue = input.SESSION_SECRET || input.SESSION_SIGNING_KEY;
+  const corsOriginsValue = input.CORS_ALLOWED_ORIGINS || input.CORS_ORIGINS;
 
   if (!['development', 'test', 'production'].includes(nodeEnv)) throw new Error(`Unsupported NODE_ENV: ${nodeEnv}`);
   if (!['database', 'development', 'external'].includes(authProvider)) throw new Error(`Unsupported AUTH_PROVIDER: ${authProvider}`);
@@ -68,17 +87,17 @@ export function parseEnvironment(input: NodeJS.ProcessEnv | Record<string, strin
   if (nodeEnv === 'production' && input.DEMO_CONNECTOR_ENABLED === 'true') throw new Error('Demo connector is forbidden in production');
   if (nodeEnv === 'production' && input.INCLUDE_DEMO_SEED === 'true') throw new Error('Demo seed is forbidden in production');
 
-  if (nodeEnv === 'production' && !input.DATABASE_URL) throw new Error('DATABASE_URL is required in production');
-  if (nodeEnv === 'production' && !input.SECRET_MASTER_KEY) throw new Error('SECRET_MASTER_KEY is required in production');
-  if (nodeEnv === 'production' && !input.SESSION_SIGNING_KEY) throw new Error('SESSION_SIGNING_KEY is required in production');
+  if (nodeEnv === 'production' && !databaseUrlValue) throw new Error('DATABASE_URL is required in production');
+  if (nodeEnv === 'production' && !secretMasterKeyValue) throw new Error('SECRET_MASTER_KEY or SECRET_ENCRYPTION_KEY is required in production');
+  if (nodeEnv === 'production' && !sessionSigningKeyValue) throw new Error('SESSION_SIGNING_KEY or SESSION_SECRET is required in production');
 
-  if (input.DATABASE_URL) {
+  if (databaseUrlValue) {
     let databaseUrl: URL;
-    try { databaseUrl = new URL(input.DATABASE_URL); } catch { throw new Error('DATABASE_URL must be a valid PostgreSQL URL'); }
+    try { databaseUrl = new URL(databaseUrlValue); } catch { throw new Error('DATABASE_URL must be a valid PostgreSQL URL'); }
     if (!['postgres:', 'postgresql:'].includes(databaseUrl.protocol)) throw new Error('DATABASE_URL must use PostgreSQL');
   }
 
-  const secretMasterKey = input.SECRET_MASTER_KEY;
+  const secretMasterKey = secretMasterKeyValue;
   if (secretMasterKey) {
     let decoded: Buffer;
     try {
@@ -92,7 +111,7 @@ export function parseEnvironment(input: NodeJS.ProcessEnv | Record<string, strin
     }
   }
 
-  const sessionSigningKey = input.SESSION_SIGNING_KEY;
+  const sessionSigningKey = sessionSigningKeyValue;
   if (sessionSigningKey) {
     const decoded = Buffer.from(sessionSigningKey, 'base64');
     if (decoded.length < 32) throw new Error('SESSION_SIGNING_KEY must decode to at least 32 bytes');
@@ -103,8 +122,8 @@ export function parseEnvironment(input: NodeJS.ProcessEnv | Record<string, strin
   const port = Number(input.PORT || 3000);
   if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('PORT must be a valid TCP port');
 
-  const corsOrigins = parseCorsOrigins(input.CORS_ORIGINS);
-  if (nodeEnv === 'production' && !input.CORS_ORIGINS) throw new Error('CORS_ORIGINS is required in production');
+  const corsOrigins = parseCorsOrigins(corsOriginsValue);
+  if (nodeEnv === 'production' && !corsOriginsValue) throw new Error('CORS_ORIGINS or CORS_ALLOWED_ORIGINS is required in production');
   const logLevel = String(input.LOG_LEVEL || 'info') as RuntimeEnvironment['logLevel'];
   if (!LOG_LEVELS.includes(logLevel)) throw new Error(`LOG_LEVEL must be one of: ${LOG_LEVELS.join(', ')}`);
 
@@ -112,6 +131,36 @@ export function parseEnvironment(input: NodeJS.ProcessEnv | Record<string, strin
   const publicRegistrationEnabled = parseBoolean('PUBLIC_REGISTRATION_ENABLED', input.PUBLIC_REGISTRATION_ENABLED, false);
   if (nodeEnv === 'production' && !cookieSecure) throw new Error('Secure cookie is required in production');
   if (nodeEnv === 'production' && publicRegistrationEnabled) throw new Error('Public registration is forbidden by the production default policy');
+  const appDomain = input.APP_DOMAIN?.trim();
+  const appUrl = input.APP_URL?.trim();
+  const cookieSecret = input.COOKIE_SECRET;
+  const csrfSecret = input.CSRF_SECRET;
+  if (nodeEnv === 'production' && !appDomain) throw new Error('APP_DOMAIN is required in production');
+  if (appDomain && !/^[a-z0-9.-]+(?::\d+)?$/i.test(appDomain)) throw new Error('APP_DOMAIN must be a hostname with an optional port');
+  if (nodeEnv === 'production' && !appUrl) throw new Error('APP_URL is required in production');
+  if (appUrl) {
+    let parsed: URL;
+    try { parsed = new URL(appUrl); } catch { throw new Error('APP_URL must be a valid URL'); }
+    if (nodeEnv === 'production' && parsed.protocol !== 'https:') throw new Error('APP_URL must use HTTPS in production');
+    if (appDomain && parsed.host !== appDomain) throw new Error('APP_URL host must match APP_DOMAIN');
+  }
+  if (nodeEnv === 'production') {
+    assertSecret('COOKIE_SECRET', cookieSecret);
+    assertSecret('CSRF_SECRET', csrfSecret);
+    if (new Set([sessionSigningKey, cookieSecret, csrfSecret, secretMasterKey]).size !== 4) throw new Error('Production secrets must be independent');
+  }
+  const smtpEnabled = parseBoolean('SMTP_ENABLED', input.SMTP_ENABLED, false);
+  const smtpSecure = parseBoolean('SMTP_SECURE', input.SMTP_SECURE, false);
+  const smtpPort = parseBoundedInteger('SMTP_PORT', input.SMTP_PORT, smtpSecure ? 465 : 587, 1, 65_535);
+  if (smtpEnabled) {
+    for (const name of ['SMTP_HOST', 'SMTP_USER', 'SMTP_PASSWORD', 'SMTP_FROM'] as const) {
+      if (!input[name]?.trim()) throw new Error(`${name} is required when SMTP_ENABLED is true`);
+    }
+    if (/\r|\n/.test(input.SMTP_FROM || '')) throw new Error('SMTP_FROM cannot contain newline characters');
+  }
+  const metricsEnabled = parseBoolean('METRICS_ENABLED', input.METRICS_ENABLED, false);
+  const metricsToken = input.METRICS_TOKEN;
+  if (nodeEnv === 'production' && metricsEnabled) assertSecret('METRICS_TOKEN', metricsToken);
   const sessionIdleTimeoutSeconds = parseBoundedInteger('SESSION_IDLE_TIMEOUT_SECONDS', input.SESSION_IDLE_TIMEOUT_SECONDS, 1_800, 300, 86_400);
   const sessionAbsoluteTimeoutSeconds = parseBoundedInteger('SESSION_ABSOLUTE_TIMEOUT_SECONDS', input.SESSION_ABSOLUTE_TIMEOUT_SECONDS, 604_800, 3_600, 2_592_000);
   if (sessionAbsoluteTimeoutSeconds <= sessionIdleTimeoutSeconds) throw new Error('SESSION_ABSOLUTE_TIMEOUT_SECONDS must exceed SESSION_IDLE_TIMEOUT_SECONDS');
@@ -120,7 +169,7 @@ export function parseEnvironment(input: NodeJS.ProcessEnv | Record<string, strin
     nodeEnv,
     authProvider,
     secretMasterKey,
-    databaseUrl: input.DATABASE_URL,
+    databaseUrl: databaseUrlValue,
     developmentAuthEmail: input.DEVELOPMENT_AUTH_EMAIL,
     developmentAuthPassword: input.DEVELOPMENT_AUTH_PASSWORD,
     sessionSigningKey,
@@ -139,5 +188,17 @@ export function parseEnvironment(input: NodeJS.ProcessEnv | Record<string, strin
     sessionAbsoluteTimeoutSeconds,
     passwordResetTimeoutSeconds: parseBoundedInteger('PASSWORD_RESET_TIMEOUT_SECONDS', input.PASSWORD_RESET_TIMEOUT_SECONDS, 900, 300, 86_400),
     invitationTimeoutSeconds: parseBoundedInteger('INVITATION_TIMEOUT_SECONDS', input.INVITATION_TIMEOUT_SECONDS, 604_800, 900, 2_592_000),
+    appDomain,
+    appUrl,
+    cookieSecret,
+    csrfSecret,
+    smtp: { enabled: smtpEnabled, host: input.SMTP_HOST, port: smtpPort, user: input.SMTP_USER, password: input.SMTP_PASSWORD, from: input.SMTP_FROM, secure: smtpSecure },
+    metricsEnabled,
+    metricsToken,
   };
+}
+
+function assertSecret(name: string, value: string | undefined) {
+  if (!value || Buffer.byteLength(value) < 32) throw new Error(`${name} must contain at least 32 bytes`);
+  if (/change[_-]?me|example|default/i.test(value)) throw new Error(`${name} cannot use a placeholder value in production`);
 }

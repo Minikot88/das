@@ -7,6 +7,7 @@ import { ApiError } from '../../../shared/http/api-error.js';
 import { hashOpaqueToken, hashPassword, issueOpaqueToken, normalizeEmail, validatePasswordPolicy } from '../domain/auth-security.js';
 import type { SessionPrincipal } from './auth.service.js';
 import { AuthorizationService } from './authorization.service.js';
+import { MAIL_PROVIDER, type MailProvider } from './mail-provider.js';
 
 const ORGANIZATION_ROLES = new Set(['organization_admin', 'member']);
 const PROJECT_ROLES = new Set(['project_owner', 'editor', 'viewer']);
@@ -17,6 +18,7 @@ export class MembershipService {
     private readonly prisma: PrismaService,
     private readonly authorization: AuthorizationService,
     @Inject(ENVIRONMENT) private readonly environment: RuntimeEnvironment,
+    @Inject(MAIL_PROVIDER) private readonly mail: MailProvider,
   ) {}
 
   async createInvitation(principal: SessionPrincipal, organizationId: string, input: { email?: string; role?: string; projectId?: string }) {
@@ -45,6 +47,7 @@ export class MembershipService {
         createdAt: now,
       },
     });
+    await this.mail.sendInvitation(invitation.email, issued.token);
     return { ...safeInvitation(invitation), token: issued.token };
   }
 

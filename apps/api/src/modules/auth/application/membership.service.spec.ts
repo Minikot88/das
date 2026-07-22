@@ -3,6 +3,7 @@ import { hashOpaqueToken, verifyPassword } from '../domain/auth-security.js';
 import { MembershipService } from './membership.service.js';
 
 function fixture() {
+  const mail = { sendInvitation: vi.fn().mockResolvedValue(undefined), sendPasswordReset: vi.fn().mockResolvedValue(undefined) };
   const invitation = {
     id: 'invite-1', organizationId: 'org-1', projectId: 'project-1', email: 'New.User@example.com',
     normalizedEmail: 'new.user@example.com', role: 'editor', tokenHash: hashOpaqueToken('invite-token'),
@@ -46,14 +47,14 @@ function fixture() {
     assertOrganizationAdmin: vi.fn().mockResolvedValue(undefined),
     assertProjectPermission: vi.fn().mockResolvedValue(undefined),
   };
-  const service = new MembershipService(prisma as never, authorization as never, { invitationTimeoutSeconds: 604_800, passwordResetTimeoutSeconds: 900 } as never);
+  const service = new MembershipService(prisma as never, authorization as never, { invitationTimeoutSeconds: 604_800, passwordResetTimeoutSeconds: 900 } as never, mail);
   const admin = { organizationId: 'org-1', userId: 'admin-1', sessionId: 'session-1', roles: ['organization_admin'], csrfTokenHash: 'x' };
-  return { service, prisma, authorization, invitation, admin };
+  return { service, prisma, authorization, invitation, admin, mail };
 }
 
 describe('MembershipService invitations and admin safety', () => {
   it('creates a one-time invitation and stores only its hash', async () => {
-    const { service, prisma, admin } = fixture();
+    const { service, prisma, admin, mail } = fixture();
     const result = await service.createInvitation(admin, 'org-1', { email: ' New.User@Example.com ', role: 'editor', projectId: 'project-1' });
     const stored = prisma.invitation.create.mock.calls[0][0].data;
 
@@ -61,6 +62,7 @@ describe('MembershipService invitations and admin safety', () => {
     expect(stored.normalizedEmail).toBe('new.user@example.com');
     expect(stored.tokenHash).toMatch(/^[a-f0-9]{64}$/);
     expect(JSON.stringify(stored)).not.toContain(result.token);
+    expect(mail.sendInvitation).toHaveBeenCalledWith('New.User@Example.com', result.token);
   });
 
   it('lists invitations without token hashes', async () => {

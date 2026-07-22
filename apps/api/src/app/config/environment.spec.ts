@@ -2,6 +2,17 @@ import { describe, expect, it } from 'vitest';
 import { parseEnvironment } from './environment.js';
 
 describe('parseEnvironment', () => {
+  const productionBase = {
+    NODE_ENV: 'production', AUTH_PROVIDER: 'database', DATABASE_URL: 'postgresql://app:secret@postgres/app',
+    APP_DOMAIN: 'dashboard.example.test', APP_URL: 'https://dashboard.example.test',
+    CORS_ALLOWED_ORIGINS: 'https://dashboard.example.test',
+    SECRET_ENCRYPTION_KEY: Buffer.alloc(32, 99).toString('base64'),
+    SESSION_SECRET: Buffer.alloc(32, 100).toString('base64'),
+    COOKIE_SECRET: Buffer.alloc(32, 101).toString('base64'),
+    CSRF_SECRET: Buffer.alloc(32, 102).toString('base64'),
+    COOKIE_SECURE: 'true', PUBLIC_REGISTRATION_ENABLED: 'false',
+  };
+
   it('rejects development authentication in production', () => {
     expect(() => parseEnvironment({ NODE_ENV: 'production', AUTH_PROVIDER: 'development' })).toThrow(
       'Development authentication is forbidden in production',
@@ -64,5 +75,27 @@ describe('parseEnvironment', () => {
     expect(() => parseEnvironment({ NODE_ENV: 'test', QUERY_ROW_LIMIT: '0' })).toThrow(/QUERY_ROW_LIMIT/i);
     expect(() => parseEnvironment({ NODE_ENV: 'test', LOG_LEVEL: 'trace-all' })).toThrow(/LOG_LEVEL/i);
     expect(() => parseEnvironment({ NODE_ENV: 'test', DATABASE_POOL_MAX: '1000' })).toThrow(/DATABASE_POOL_MAX/i);
+  });
+
+  it('requires an HTTPS application identity and independent production secrets', () => {
+    expect(() => parseEnvironment({ ...productionBase, APP_DOMAIN: undefined })).toThrow(/APP_DOMAIN/i);
+    expect(() => parseEnvironment({ ...productionBase, APP_URL: 'http://dashboard.example.test' })).toThrow(/APP_URL.*HTTPS/i);
+    expect(() => parseEnvironment({ ...productionBase, COOKIE_SECRET: 'short' })).toThrow(/COOKIE_SECRET/i);
+    expect(() => parseEnvironment({ ...productionBase, CSRF_SECRET: productionBase.SESSION_SECRET })).toThrow(/independent/i);
+    expect(() => parseEnvironment({ ...productionBase, COOKIE_SECRET: 'CHANGE_ME_WITH_AT_LEAST_32_RANDOM_BYTES' })).toThrow(/placeholder/i);
+  });
+
+  it('requires complete SMTP configuration when SMTP delivery is enabled', () => {
+    expect(() => parseEnvironment({ ...productionBase, SMTP_ENABLED: 'true' })).toThrow(/SMTP_HOST/i);
+    const configured = parseEnvironment({
+      ...productionBase, SMTP_ENABLED: 'true', SMTP_HOST: 'mail.example.test', SMTP_PORT: '587',
+      SMTP_USER: 'mailer', SMTP_PASSWORD: 'mail-secret-value', SMTP_FROM: 'Dashboard BI <noreply@example.test>',
+      SMTP_SECURE: 'false',
+    });
+    expect(configured.smtp).toMatchObject({ enabled: true, host: 'mail.example.test', port: 587, secure: false });
+  });
+
+  it('requires a non-placeholder metrics token when production metrics are enabled', () => {
+    expect(() => parseEnvironment({ ...productionBase, METRICS_ENABLED: 'true' })).toThrow(/METRICS_TOKEN/i);
   });
 });

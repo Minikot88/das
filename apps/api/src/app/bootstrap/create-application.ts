@@ -13,6 +13,7 @@ import { parseEnvironment } from '../config/environment.js';
 import { ApiEnvelopeInterceptor } from '../../shared/http/api-envelope.interceptor.js';
 import { ApiExceptionFilter } from '../../shared/http/api-exception.filter.js';
 import { ensureRequestId } from '../../shared/http/request-id.js';
+import { registerMetrics } from '../../infrastructure/monitoring/metrics.js';
 
 export async function createApplication(input: NodeJS.ProcessEnv | Record<string, string | undefined> = process.env): Promise<NestFastifyApplication> {
   const environment = parseEnvironment(input);
@@ -26,11 +27,12 @@ export async function createApplication(input: NodeJS.ProcessEnv | Record<string
     bodyLimit: 6 * 1024 * 1024,
     trustProxy: ['loopback', 'linklocal', 'uniquelocal'],
   }), { logger });
-  await app.register(cookie, { secret: environment.sessionSigningKey });
+  await app.register(cookie, { secret: environment.cookieSecret || environment.sessionSigningKey });
   await app.register(helmet, { contentSecurityPolicy: false });
   await app.register(cors, { origin: environment.corsOrigins, credentials: true });
   await app.register(rateLimit, { max: 300, timeWindow: '1 minute' });
   await app.register(multipart, { limits: { fileSize: environment.maxUploadSize, files: 1, fields: 20 } });
+  registerMetrics(app.getHttpAdapter().getInstance(), environment);
   app.getHttpAdapter().getInstance().addHook('onRequest', (request: FastifyRequest, _reply, done) => {
     ensureRequestId(request);
     done();
