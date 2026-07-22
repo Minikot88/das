@@ -19,6 +19,7 @@ describe('native server deployment tooling', () => {
     expect(deploy).toContain('releases');
     expect(deploy).toContain('ln -sfn');
     expect(deploy).toContain('prisma migrate deploy');
+    expect(deploy).toContain('VITE_USE_MOCK=false npm run build');
     expect(deploy).toContain('verify-native.sh');
     expect(deploy).not.toContain('git reset --hard');
     expect(deploy).not.toContain('docker compose');

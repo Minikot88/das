@@ -16,7 +16,7 @@ set -a
 source "$project_root/shared/backend.env"
 set +a
 npm --prefix apps/api run prisma:generate
-npm run build
+VITE_USE_MOCK=false npm run build
 npm --prefix apps/api run build
 
 cd apps/api
