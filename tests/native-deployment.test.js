@@ -24,6 +24,13 @@ describe('native server deployment tooling', () => {
     expect(deploy).not.toContain('docker compose');
   });
 
+  it('waits for bounded native startup before declaring health verification failed', () => {
+    const verify = read('scripts/verify-native.sh');
+    expect(verify).toContain('wait_for_url');
+    expect(verify).toContain('for attempt in $(seq 1 30)');
+    expect(verify).toContain('sleep 1');
+  });
+
   it('rolls application symlinks back without automatically rolling back the database', () => {
     const rollback = read('scripts/rollback-native.sh');
     expect(rollback).toContain('previous');
