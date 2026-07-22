@@ -18,7 +18,7 @@ trap cleanup EXIT
 docker exec server-postgres sh -lc 'createdb -U "$POSTGRES_USER" "$1"' sh "$restore_database"
 docker cp "$archive" "server-postgres:$container_file" >/dev/null
 docker exec server-postgres sh -lc 'pg_restore -U "$POSTGRES_USER" -d "$1" --no-owner --no-privileges "$2"' sh "$restore_database" "$container_file"
-docker exec server-postgres sh -lc 'psql -v ON_ERROR_STOP=1 -At -U "$POSTGRES_USER" -d "$1" -c "select count(*) from _prisma_migrations; select count(*) from users; select count(*) from projects;"' sh "$restore_database"
+docker exec server-postgres sh -lc 'psql -v ON_ERROR_STOP=1 -At -U "$POSTGRES_USER" -d "$1" -c "select count(*) from _prisma_migrations; select count(*) from user_profiles; select count(*) from bi_projects;"' sh "$restore_database"
 docker exec server-postgres sh -lc 'dropdb -U "$POSTGRES_USER" "$1"' sh "$restore_database"
 docker exec server-postgres rm -f "$container_file"
 trap - EXIT

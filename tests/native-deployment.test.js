@@ -47,6 +47,9 @@ describe('native server deployment tooling', () => {
     expect(backup).toContain('flock');
     expect(restore).toContain('dashboardmini_restore_');
     expect(restore).toContain('pg_restore');
+    expect(restore).toContain('from user_profiles');
+    expect(restore).toContain('from bi_projects');
+    expect(restore).not.toContain('from users');
     expect(restore).toContain('dropdb');
     expect(restore).not.toContain('dropdb dashboardmini');
   });
