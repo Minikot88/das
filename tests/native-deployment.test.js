@@ -46,6 +46,7 @@ describe('native server deployment tooling', () => {
     expect(backup).toContain('sha256sum');
     expect(backup).toContain('flock');
     expect(backup).toContain('chmod 600 "$archive" "$manifest" "$archive.sha256"');
+    expect(backup.indexOf('umask 077')).toBeLessThan(backup.indexOf('exec 9>'));
     expect(restore).toContain('dashboardmini_restore_');
     expect(restore).toContain('pg_restore');
     expect(restore).toContain('from user_profiles');

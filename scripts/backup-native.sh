@@ -9,11 +9,11 @@ archive="$backup_root/dashboardmini-$timestamp.dump"
 manifest="$backup_root/dashboardmini-$timestamp.manifest"
 container_file="/tmp/dashboardmini-$timestamp.dump"
 
+umask 077
 mkdir -p "$backup_root"
 chmod 700 "$backup_root"
 exec 9>"$backup_root/.backup.lock"
 flock -n 9 || { echo 'A DashboardMiniBi backup is already running.' >&2; exit 1; }
-umask 077
 cleanup() { docker exec server-postgres rm -f "$container_file" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
 
