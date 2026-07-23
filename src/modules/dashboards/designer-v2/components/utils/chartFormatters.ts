@@ -9,11 +9,11 @@ export const chartPalettes: Record<ChartSettings["colors"]["palette"], string[]>
 };
 
 export const enterpriseChartTheme = {
-  axisLabel: "#6B7280",
+  axisLabel: "#475569",
   axisLine: "#D8DEE8",
   gridLine: "#EEF2F7",
   title: "#111827",
-  mutedText: "#6B7280",
+  mutedText: "#475569",
   panel: "#FFFFFF",
   tooltipDark: "#111827",
   tooltipLight: "#FFFFFF",
