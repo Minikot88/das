@@ -13,6 +13,11 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     resolve: {
       alias: {
+        "@app": path.resolve(__dirname, "src/app"),
+        "@modules": path.resolve(__dirname, "src/modules"),
+        "@domain": path.resolve(__dirname, "src/domain"),
+        "@shared": path.resolve(__dirname, "src/shared"),
+        "@infrastructure": path.resolve(__dirname, "src/infrastructure"),
         "@": path.resolve(__dirname, "src"),
       },
       // Allow importing CSS files from packages that don't expose them via exports
@@ -37,9 +42,10 @@ export default defineConfig(({ mode }) => {
     },
     test: {
       environment: "jsdom",
-      setupFiles: "./src/test/setup.js",
+      setupFiles: "./src/shared/test/setup.js",
       globals: true,
       css: true,
+      exclude: ["apps/api/**", "tests/e2e/**", "node_modules/**", "dist/**"],
     },
   };
 });

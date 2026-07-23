@@ -1,17 +1,127 @@
 services:
+  postgres:
+    image: postgres:17-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-dashboard_mini_bi}
+      POSTGRES_USER: ${POSTGRES_MIGRATION_USER:-dashboard_migrator}
+      POSTGRES_PASSWORD: ${POSTGRES_MIGRATION_PASSWORD:-migrator-local-only}
+      POSTGRES_RUNTIME_USER: ${POSTGRES_RUNTIME_USER:-dashboard_app}
+      POSTGRES_RUNTIME_PASSWORD: ${POSTGRES_RUNTIME_PASSWORD:-dashboard-local-only}
+      TZ: UTC
+      PGTZ: UTC
+    command:
+      - postgres
+      - -c
+      - timezone=UTC
+      - -c
+      - max_connections=100
+      - -c
+      - idle_in_transaction_session_timeout=30000
+      - -c
+      - statement_timeout=120000
+    volumes:
+      - dashboard_mini_bi_postgres:/var/lib/postgresql/data
+      - dashboard_mini_bi_backups:/backups
+      - ./infrastructure/database/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"${POSTGRES_MIGRATION_USER:-dashboard_migrator}\" -d \"${POSTGRES_DB:-dashboard_mini_bi}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - backend_database
+
+  migration:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+      target: migration
+    command: ["sh", "-c", "npm exec prisma migrate deploy && npm run prisma:seed"]
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_MIGRATION_USER:-dashboard_migrator}:${POSTGRES_MIGRATION_PASSWORD:-migrator-local-only}@postgres:5432/${POSTGRES_DB:-dashboard_mini_bi}?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    networks:
+      - backend_database
+
+  backend:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      AUTH_PROVIDER: ${AUTH_PROVIDER:-database}
+      DATABASE_URL: postgresql://${POSTGRES_RUNTIME_USER:-dashboard_app}:${POSTGRES_RUNTIME_PASSWORD:-dashboard-local-only}@postgres:5432/${POSTGRES_DB:-dashboard_mini_bi}?schema=public
+      DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:-10}
+      SECRET_MASTER_KEY: ${SECRET_MASTER_KEY:-YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=}
+      SESSION_SIGNING_KEY: ${SESSION_SIGNING_KEY:-YmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmI=}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      PUBLIC_REGISTRATION_ENABLED: ${PUBLIC_REGISTRATION_ENABLED:-false}
+      SESSION_IDLE_TIMEOUT_SECONDS: ${SESSION_IDLE_TIMEOUT_SECONDS:-1800}
+      SESSION_ABSOLUTE_TIMEOUT_SECONDS: ${SESSION_ABSOLUTE_TIMEOUT_SECONDS:-604800}
+      DEVELOPMENT_AUTH_EMAIL: ${DEVELOPMENT_AUTH_EMAIL:-demo@dataviz.bi}
+      DEVELOPMENT_AUTH_PASSWORD: ${DEVELOPMENT_AUTH_PASSWORD:-demo1234}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}
+      FILE_STORAGE_PATH: ${FILE_STORAGE_PATH:-/data/uploads}
+      MAX_UPLOAD_SIZE: ${MAX_UPLOAD_SIZE:-5000000}
+      QUERY_TIMEOUT: ${QUERY_TIMEOUT:-30000}
+      QUERY_ROW_LIMIT: ${QUERY_ROW_LIMIT:-50000}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      CONNECTOR_NETWORK_ALLOWLIST: ${CONNECTOR_NETWORK_ALLOWLIST:-postgres}
+      DEBUG: ${DEBUG:-false}
+      DEMO_CONNECTOR_ENABLED: ${DEMO_CONNECTOR_ENABLED:-false}
+      INCLUDE_DEMO_SEED: ${INCLUDE_DEMO_SEED:-false}
+      PORT: 3000
+    depends_on:
+      migration:
+        condition: service_completed_successfully
+    volumes:
+      - dashboard_mini_bi_uploads:/data/uploads
+      - dashboard_mini_bi_exports:/data/exports
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/v1/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - frontend_api
+      - backend_database
+
   frontend:
     build:
       context: .
       dockerfile: Dockerfile
       args:
-        VITE_USE_MOCK: ${VITE_USE_MOCK:-true}
+        VITE_USE_MOCK: ${VITE_USE_MOCK:-false}
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
         VITE_API_TIMEOUT_MS: ${VITE_API_TIMEOUT_MS:-15000}
     ports:
-      - "${FRONTEND_HOST:-127.0.0.1}:${FRONTEND_PORT:-8080}:80"
+      - "${FRONTEND_HOST:-127.0.0.1}:${FRONTEND_PORT:-8080}:8080"
     restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
       interval: 30s
       timeout: 5s
       retries: 3
+    networks:
+      - frontend_api
+
+volumes:
+  # Retained intentionally so an existing MariaDB/MySQL volume is never deleted by this migration.
+  dashboard_mini_bi_database:
+  dashboard_mini_bi_postgres:
+  dashboard_mini_bi_uploads:
+  dashboard_mini_bi_exports:
+  dashboard_mini_bi_backups:
+
+networks:
+  frontend_api:
+  backend_database:
+    internal: true

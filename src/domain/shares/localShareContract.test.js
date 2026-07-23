@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { scanForSecretMaterial } from "@/domain/workspace/workspaceSchema";
+import { scanForSecretMaterial } from "@domain/workspace/workspaceSchema";
 import {
   createLocalReadonlyShare,
   createLocalShareUrl,
   normalizeLocalShareRecord,
   resolveLocalShare,
   validateLocalShare,
-} from "./localShareContract";
+} from "@domain/shares/localShareContract";
 
 function fixture() {
   const project = { id: "project-1", name: "Sales" };
@@ -64,6 +64,18 @@ describe("local readonly share contract", () => {
       token: "customer-segment",
       sourceUrl: "https://example.test/report?range=A1",
     });
+    expect(validateLocalShare(share)).toEqual({ valid: true, errors: [] });
+  });
+
+  it("drops opaque URL fragments from application-owned share snapshot URLs", () => {
+    const { project, dashboard } = fixture();
+    dashboard.widgets[0].config = {
+      imageUrl: "https://assets.example.test/image#SYNTHETIC_BEARER_SECRET",
+    };
+
+    const share = createLocalReadonlyShare({ id: "share-fragment", project, dashboard });
+
+    expect(share.snapshot.widgets[0].config.imageUrl).toBeUndefined();
     expect(validateLocalShare(share)).toEqual({ valid: true, errors: [] });
   });
 

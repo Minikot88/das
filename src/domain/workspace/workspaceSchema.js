@@ -3,7 +3,7 @@ export const CANONICAL_WORKSPACE_KEY = "mini-bi-workspace-v1";
 export const MIGRATION_MARKER_KEY = "mini-bi-workspace-v1-migration-complete";
 
 const DEFAULT_SETTINGS = Object.freeze({
-  theme: "system",
+  theme: "light",
   locale: "th",
   density: "comfortable",
   dateFormat: "MMM d, yyyy",

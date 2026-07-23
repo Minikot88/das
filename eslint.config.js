@@ -6,7 +6,7 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist/**', 'client/dist/**']),
+  globalIgnores(['dist/**', 'client/dist/**', 'apps/api/**']),
   {
     files: ['**/*.{js,jsx}'],
     extends: [
@@ -29,13 +29,13 @@ export default defineConfig([
   },
   {
     files: [
-      'src/components/bi/CommandPaletteModal.jsx',
-      'src/components/charts/ChartJsRenderer.jsx',
-      'src/features/builder/ChartTypePicker.jsx',
-      'src/features/builder/FieldList.jsx',
-      'src/hooks/useNavigationControls.js',
-      'src/layout/AppHeader.jsx',
-      'src/pages/DashboardPublicPage.jsx',
+      'src/app/components/command-palette/CommandPaletteModal.jsx',
+      'src/modules/charts/components/ChartJsRenderer.jsx',
+      'src/modules/charts/builder/ChartTypePicker.jsx',
+      'src/modules/charts/builder/FieldList.jsx',
+      'src/shared/hooks/useNavigationControls.js',
+      'src/app/layouts/AppHeader.jsx',
+      'src/modules/sharing/pages/DashboardPublicPage.jsx',
     ],
     rules: {
       'react-hooks/set-state-in-effect': 'off',
@@ -63,9 +63,9 @@ export default defineConfig([
   },
   {
     files: [
-      'src/components/dashboard-v2/PropertyPanel.tsx',
-      'src/components/dashboard-v2/SqlQueryPanel.tsx',
-      'src/hooks/dashboard-v2/useDashboardDesignerState.ts',
+      'src/modules/dashboards/designer-v2/components/PropertyPanel.tsx',
+      'src/modules/dashboards/designer-v2/components/SqlQueryPanel.tsx',
+      'src/modules/dashboards/designer-v2/hooks/useDashboardDesignerState.ts',
     ],
     rules: {
       'react-hooks/set-state-in-effect': 'off',

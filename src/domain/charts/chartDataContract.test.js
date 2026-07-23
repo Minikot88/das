@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-import { createValidWorkspaceFixture } from "@/domain/workspace/__fixtures__/workspaceFixtures";
+import { createValidWorkspaceFixture } from "@domain/workspace/__fixtures__/workspaceFixtures";
 import {
   createChartDataContract,
   normalizeChartDataContract,
   resolveChartData,
   validateChartConfiguration,
-} from "./chartDataContract";
+} from "@domain/charts/chartDataContract";
 
 function chartFixture(overrides = {}) {
   return {

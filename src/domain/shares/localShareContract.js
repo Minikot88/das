@@ -1,4 +1,4 @@
-import { scanForSecretMaterial } from "@/domain/workspace/workspaceSchema";
+import { scanForSecretMaterial } from "@domain/workspace/workspaceSchema";
 
 const SECRET_KEY_PATTERN = /(password|passwd|secret|token|private.?key|client.?key|ssh.?password|credential|authorization|cookie)/i;
 const CREDENTIAL_URL_PATTERN = /:\/\/[^/\s:@]+:[^@\s/]+@|[?&](?:password|passwd|secret|token|api_?key|access_?key|client_?secret)=/i;
@@ -42,16 +42,9 @@ function sanitizeOpaqueDatasetString(value) {
         changed = true;
       }
     });
-    const fragment = url.hash.startsWith("#") ? url.hash.slice(1) : url.hash;
-    if (fragment.includes("=")) {
-      const params = new URLSearchParams(fragment);
-      Array.from(params.keys()).forEach((key) => {
-        if (isSecretSnapshotKey(key)) {
-          params.delete(key);
-          changed = true;
-        }
-      });
-      url.hash = params.toString();
+    if (url.hash) {
+      url.hash = "";
+      changed = true;
     }
     return changed ? url.toString() : value;
   } catch {

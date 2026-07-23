@@ -1,5 +1,5 @@
-import { cloneWorkspace, normalizeWorkspaceDocument, validateWorkspaceDocument } from "./workspaceSchema";
-import { createMigrationCandidate } from "./workspaceMigrations";
+import { cloneWorkspace, normalizeWorkspaceDocument, validateWorkspaceDocument } from "@domain/workspace/workspaceSchema";
+import { createMigrationCandidate } from "@domain/workspace/workspaceMigrations";
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];
@@ -181,7 +181,7 @@ export function toZustandWorkspaceSnapshot(workspace, uiState = {}) {
     importedDatasets: projects.flatMap((project) => project.datasets.map((dataset) => cloneWorkspace(dataset))),
     shareLinks,
     appSettings: cloneWorkspace(workspace?.settings ?? {}),
-    theme: workspace?.settings?.theme ?? "system",
+    theme: workspace?.settings?.theme ?? "light",
     locale: workspace?.settings?.locale ?? "th",
   };
 }

@@ -56,6 +56,14 @@ Vite reads `VITE_*` variables at build time.
 
 ## Documentation
 
+- [Architecture overview](docs/architecture/overview.md)
+- [Folder structure](docs/architecture/folder-structure.md)
+- [Dependency rules](docs/architecture/dependency-rules.md)
+- [Development setup](docs/development/getting-started.md)
+- [Testing](docs/development/testing.md)
+- [Environment](docs/development/environment.md)
+- [Test server deployment](docs/deployment/test-server.md)
+- [Refactor migration map](docs/refactor/migration-map.md)
 - [Architecture](ARCHITECTURE.md)
 - [State management](STATE_MANAGEMENT.md)
 - [Installation](INSTALLATION.md)

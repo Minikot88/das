@@ -1,0 +1,72 @@
+worker_processes auto;
+pid /tmp/nginx.pid;
+error_log /dev/stderr warn;
+
+events { worker_connections 1024; }
+
+http {
+  include /etc/nginx/mime.types;
+  default_type application/octet-stream;
+  access_log /dev/stdout;
+  server_tokens off;
+  sendfile on;
+  client_body_temp_path /tmp/client_body;
+  proxy_temp_path /tmp/proxy;
+  fastcgi_temp_path /tmp/fastcgi;
+  uwsgi_temp_path /tmp/uwsgi;
+  scgi_temp_path /tmp/scgi;
+
+  map $http_upgrade $connection_upgrade { default upgrade; '' close; }
+
+  server {
+    listen 8080;
+    server_name _;
+    return 308 https://${HTTPS_REDIRECT_AUTHORITY}$request_uri;
+  }
+
+  server {
+    listen 8443 ssl;
+    server_name _;
+    ssl_certificate /etc/nginx/tls/tls.crt;
+    ssl_certificate_key /etc/nginx/tls/tls.key;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_session_cache shared:TLS:10m;
+    ssl_session_timeout 1d;
+    client_max_body_size 6m;
+
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()" always;
+    add_header Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; connect-src 'self'; worker-src 'self' blob:; frame-src 'self'; frame-ancestors ${EMBED_ALLOWED_ORIGINS}; form-action 'self'" always;
+
+    location = /healthz { access_log off; proxy_pass http://frontend:8080/healthz; }
+    location ~ /\. { deny all; }
+    location ~* \.(?:bak|old|tmp|sql|dump|env|map)$ { deny all; }
+
+    location ^~ /api/ {
+      proxy_pass http://backend:3000;
+      proxy_http_version 1.1;
+      proxy_set_header Host $host;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto https;
+      proxy_set_header X-Request-ID $request_id;
+      proxy_set_header Upgrade $http_upgrade;
+      proxy_set_header Connection $connection_upgrade;
+      proxy_connect_timeout 5s;
+      proxy_send_timeout 120s;
+      proxy_read_timeout 120s;
+      add_header Cache-Control "no-store" always;
+    }
+
+    location / {
+      proxy_pass http://frontend:8080;
+      proxy_http_version 1.1;
+      proxy_set_header Host $host;
+      proxy_set_header X-Forwarded-Proto https;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_hide_header Content-Security-Policy;
+    }
+  }
+}

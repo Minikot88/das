@@ -4,8 +4,8 @@ import {
   mergeZustandWorkspaceSnapshot,
   toProjectStorageProjects,
   toZustandWorkspaceSnapshot,
-} from "./workspaceCompatibility";
-import { createValidWorkspaceFixture, fixedClock } from "./__fixtures__/workspaceFixtures";
+} from "@domain/workspace/workspaceCompatibility";
+import { createValidWorkspaceFixture, fixedClock } from "@domain/workspace/__fixtures__/workspaceFixtures";
 
 describe("workspace compatibility projections", () => {
   function createTwoProjectWorkspace() {
@@ -81,7 +81,7 @@ describe("workspace compatibility projections", () => {
       activeProjectId: "project-1",
       activeSheetId: "sheet-1",
       activeDashboardId: "dashboard-1",
-      theme: "system",
+      theme: "light",
       locale: "th",
       user: { id: "demo-user" },
       isAuthenticated: true,

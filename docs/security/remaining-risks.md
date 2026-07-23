@@ -1,0 +1,11 @@
+# Remaining security risks
+
+1. **Real authentication/session lifecycle is absent.** Deterministic sessions are replayable until signing-key rotation. This is intentionally deferred and blocks public deployment.
+2. **The connector is PostgreSQL-only.** Other connector types fail with `not_implemented`; private destinations require an explicit allowlist and the connector must remain internal until real authentication is added.
+3. **Large analytical queries are intentionally bounded.** Dataset query execution validates fields/operators but loads at most 50,000 rows for service-side aggregation; workloads beyond that need a separately designed SQL pushdown path.
+4. **Encrypted connector secrets lack online key rotation.** AES-256-GCM storage is active, but key-ID/previous-key rotation remains future operational work.
+5. **Backup archives are not application-encrypted.** Windows ACLs and checksums are applied, but volume encryption and encrypted off-host retention remain deployment responsibilities.
+6. **Bundle warnings remain.** Large chunks and jsdom canvas warnings are baseline performance/test-environment warnings, not security failures.
+7. **Authentication remains the production blocker.** Docker, migrations, restart persistence and temporary-database restore are verified, but this stack is still Internal/Test only.
+11. **`/api/v1/auth/me` is not an authentication boundary.** It currently returns a fixed development owner identity without a session guard. No first-party frontend consumer was found and protected data endpoints remain guarded, but this is a release blocker for any client that would use it as session proof. It is intentionally deferred with the wider authentication implementation.
+12. **Legacy/fallback browser persistence has a weaker credential-redaction boundary.** Canonical workspace and workspace-UI snapshots recursively redact secret-shaped keys and credential-bearing URLs, while legacy project/chart compatibility storage may retain arbitrary nested chart settings or SQL text. No current input path placing real connector credentials in those fields was confirmed; the fallback remains a local exposure risk until the compatibility storage path reuses the canonical sanitizer.

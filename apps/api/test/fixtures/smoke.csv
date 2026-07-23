@@ -1,0 +1,4 @@
+region,revenue,ordered_at,active
+North,120.50,2026-07-01,true
+South,80.25,2026-07-02,false
+North,200.00,2026-07-03,true

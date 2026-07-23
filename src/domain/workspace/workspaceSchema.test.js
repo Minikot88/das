@@ -8,8 +8,8 @@ import {
   normalizeWorkspaceDocument,
   scanForSecretMaterial,
   validateWorkspaceDocument,
-} from "./workspaceSchema";
-import { createValidWorkspaceFixture, fixedClock } from "./__fixtures__/workspaceFixtures";
+} from "@domain/workspace/workspaceSchema";
+import { createValidWorkspaceFixture, fixedClock } from "@domain/workspace/__fixtures__/workspaceFixtures";
 
 describe("workspace schema", () => {
   it("creates a deterministic empty version-one workspace", () => {
@@ -24,7 +24,7 @@ describe("workspace schema", () => {
       active: { projectId: null, dashboardId: null },
       projects: [],
       settings: {
-        theme: "system",
+        theme: "light",
         locale: "th",
         density: "comfortable",
         dateFormat: "MMM d, yyyy",
@@ -167,7 +167,7 @@ describe("workspace schema", () => {
 
     const normalized = normalizeWorkspaceDocument(input, { clock: fixedClock });
 
-    expect(normalized.settings.theme).toBe("system");
+    expect(normalized.settings.theme).toBe("light");
     expect(normalized.settings.locale).toBe("th");
     expect(input).toEqual(original);
   });
