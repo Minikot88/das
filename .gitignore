@@ -1,6 +1,7 @@
 # Logs
 logs
 *.log
+*.local-credentials.txt
 eslint_report.json
 eslint_temp.json
 lint-output.txt

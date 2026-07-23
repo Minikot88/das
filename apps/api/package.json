@@ -17,6 +17,7 @@
     "prisma:migrate": "prisma migrate deploy",
     "prisma:seed": "tsx prisma/seed.ts",
     "admin:create": "tsx src/scripts/create-admin.ts",
+    "admin:reset-password": "tsx src/scripts/reset-password.ts",
     "check": "npm run lint && npm run typecheck && npm run test && npm run build"
   },
   "dependencies": {
