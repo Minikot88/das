@@ -15,6 +15,11 @@ import { ApiExceptionFilter } from '../../shared/http/api-exception.filter.js';
 import { ensureRequestId } from '../../shared/http/request-id.js';
 import { registerMetrics } from '../../infrastructure/monitoring/metrics.js';
 
+export const securityHeadersOptions = {
+  contentSecurityPolicy: false,
+  hsts: { includeSubDomains: false, preload: false },
+};
+
 export async function createApplication(input: NodeJS.ProcessEnv | Record<string, string | undefined> = process.env): Promise<NestFastifyApplication> {
   const environment = parseEnvironment(input);
   const logger: false | Array<'log' | 'warn' | 'error' | 'debug'> = environment.nodeEnv === 'test'
@@ -28,7 +33,7 @@ export async function createApplication(input: NodeJS.ProcessEnv | Record<string
     trustProxy: ['loopback', 'linklocal', 'uniquelocal'],
   }), { logger });
   await app.register(cookie, { secret: environment.cookieSecret || environment.sessionSigningKey });
-  await app.register(helmet, { contentSecurityPolicy: false });
+  await app.register(helmet, securityHeadersOptions);
   await app.register(cors, { origin: environment.corsOrigins, credentials: true });
   await app.register(rateLimit, { max: 300, timeWindow: '1 minute' });
   await app.register(multipart, { limits: { fileSize: environment.maxUploadSize, files: 1, fields: 20 } });
