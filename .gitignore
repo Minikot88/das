@@ -30,6 +30,7 @@ tmp-chrome-builder-audit/
 !.vscode/extensions.json
 .idea
 .DS_Store
+~$*.xlsx
 *.suo
 *.ntvs*
 *.njsproj
