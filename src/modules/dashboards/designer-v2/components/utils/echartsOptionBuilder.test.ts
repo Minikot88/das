@@ -12,6 +12,15 @@ describe("ECharts grid options", () => {
       outerBoundsContain: "axisLabel",
     });
   });
+
+  it("reserves independent rows for a heading and a top legend", () => {
+    const settings = {
+      ...defaultChartSettings,
+      legend: { ...defaultChartSettings.legend, showLegend: true, position: "top" as const },
+    };
+
+    expect(buildCartesianGridOption(settings).top).toBe(72);
+  });
 });
 
 describe("ECharts color safety", () => {

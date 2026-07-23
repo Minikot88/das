@@ -260,7 +260,12 @@ function EChartsCanvas({ option }: { option: BuiltEChartsOption }) {
       };
     }
 
-    const chart = echarts.init(element, undefined, { renderer: "canvas" });
+    const chart = echarts.init(element, undefined, {
+      renderer: "canvas",
+      // Dashboard canvas zoom uses a CSS transform. Rendering at least 2x
+      // prevents labels and lines from becoming soft at non-100% zoom levels.
+      devicePixelRatio: Math.max(window.devicePixelRatio || 1, 2),
+    });
     chartRef.current = chart;
     setLatestEChartsInstance(chart);
 

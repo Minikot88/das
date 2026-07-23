@@ -1129,10 +1129,24 @@ function WidgetContent({
       );
     }
 
+    const dashboardChartConfig = {
+      ...chartConfig,
+      settings: {
+        ...chartConfig.settings,
+        general: {
+          ...chartConfig.settings.general,
+          // The widget handle already presents the saved chart title. Keeping a
+          // second title inside a compact dashboard card wastes plot space.
+          showTitle: false,
+          showSubtitle: false,
+        },
+      },
+    };
+
     return (
       <div className="dcb-chart-widget">
         <ChartPreview
-          config={chartConfig}
+          config={dashboardChartConfig}
           datasetRows={chartData.rows}
           fields={chartData.fields}
           previewMode

@@ -144,8 +144,21 @@ function titleOption(settings: ChartConfig["settings"]): OptionObject | undefine
   };
 }
 
+function hasChartHeading(settings: ChartConfig["settings"]) {
+  return settings.general.showTitle || settings.general.showSubtitle;
+}
+
+function topLegendOffset(settings: ChartConfig["settings"]) {
+  return hasChartHeading(settings) ? 46 : 8;
+}
+
 export function buildCartesianGridOption(settings: ChartConfig["settings"]): OptionObject {
-  const top = settings.general.showTitle || settings.general.showSubtitle ? 48 : 16;
+  const hasTopLegend = settings.legend.showLegend && settings.legend.position === "top";
+  const top = hasTopLegend
+    ? topLegendOffset(settings) + 26
+    : hasChartHeading(settings)
+      ? 48
+      : 16;
   return {
     top,
     left: 50,
@@ -164,7 +177,7 @@ function legendOption(settings: ChartConfig["settings"]): OptionObject | undefin
     show: true,
     type: "scroll",
     orient: horizontal ? "horizontal" : "vertical",
-    top: settings.legend.position === "top" ? 24 : settings.legend.position === "bottom" ? undefined : "middle",
+    top: settings.legend.position === "top" ? topLegendOffset(settings) : settings.legend.position === "bottom" ? undefined : "middle",
     bottom: settings.legend.position === "bottom" ? 8 : undefined,
     left: settings.legend.position === "left" ? 0 : settings.legend.align === "start" ? 0 : settings.legend.align === "end" ? undefined : "center",
     right: settings.legend.position === "right" ? 0 : settings.legend.align === "end" ? 0 : undefined,
