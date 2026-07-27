@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import ReactGridLayout, { WidthProvider } from "react-grid-layout";
 import { useLocation, useNavigate } from "react-router-dom";
 import ChartPreview from "@modules/dashboards/designer-v2/components/components/charts/ChartPreview";
+import { chartWidgetDensity } from "./chartWidgetDensity";
 import { createDefaultConfig, dataFields, defaultChartSettings } from "@modules/dashboards/designer-v2/components/mockData";
 import { getDatasetRows } from "@modules/dashboards/designer-v2/components/services/datasetService";
 import { resolveChartData } from "@domain/charts/chartDataContract";
@@ -456,7 +457,7 @@ function defaultWidgetSize(type) {
 function minWidgetSize(type) {
   switch (type) {
     case "chart":
-      return { w: 28, h: 20 };
+      return { w: 18, h: 12 };
     case "kpi":
       return { w: 23, h: 12 };
     case "table":
@@ -1115,7 +1116,7 @@ function WidgetContent({
 
     const chartWidth = widget.w * GRID_UNIT;
     const chartHeight = widget.h * GRID_UNIT;
-    if (chartWidth < 200 || chartHeight < 140) {
+    if (chartWidth < 120 || chartHeight < 84) {
       return (
         <div className="dcb-chart-compact-placeholder">
           <strong>ขยายวิดเจ็ตเพื่อดูกราฟ</strong>
@@ -1129,8 +1130,9 @@ function WidgetContent({
       );
     }
 
-    const compactChart = chartWidth < 520 || chartHeight < 280;
-    const miniChart = chartWidth < 320 || chartHeight < 200;
+    const density = chartWidgetDensity(chartWidth, chartHeight);
+    const compactChart = density === "compact" || density === "mini" || density === "micro";
+    const miniChart = density === "mini" || density === "micro";
     const dashboardChartConfig = {
       ...chartConfig,
       settings: {
@@ -1166,7 +1168,7 @@ function WidgetContent({
     };
 
     return (
-      <div className={`dcb-chart-widget ${miniChart ? "is-mini" : compactChart ? "is-compact" : ""}`}>
+      <div className={`dcb-chart-widget ${density === "micro" ? "is-micro" : miniChart ? "is-mini" : compactChart ? "is-compact" : ""}`}>
         <ChartPreview
           config={dashboardChartConfig}
           datasetRows={chartData.rows}

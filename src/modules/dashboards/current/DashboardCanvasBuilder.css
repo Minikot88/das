@@ -1878,6 +1878,10 @@ body:has(.dashboard-canvas-builder.is-preview) .mini-bi-ribbon-shell .main-conte
   padding: 3px 6px 6px;
 }
 
+.dcb-chart-widget.is-micro {
+  padding: 1px 3px 3px;
+}
+
 .dcb-widget-chart.is-compact-size .dcb-widget-handle {
   height: 24px;
   flex-basis: 24px;
