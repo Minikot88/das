@@ -769,7 +769,7 @@ function createWidget(type, overrides = {}) {
     visible: true,
     background: "#FFFFFF",
     borderColor: "#E6EAF0",
-    radius: 6,
+    radius: 4,
     config: {},
     createdAt: now,
     updatedAt: now,

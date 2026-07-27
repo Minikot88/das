@@ -1573,16 +1573,18 @@ body:has(.dashboard-canvas-builder.is-preview) .mini-bi-ribbon-shell .main-conte
 .dcb-canvas-scale-wrap {
   position: relative;
   flex: 0 0 auto;
-  border-radius: 14px;
+  border-radius: 4px;
 }
 
-.dcb-canvas-surface {
+.dashboard-canvas-builder .dcb-canvas-surface {
   position: relative;
   overflow: hidden;
   transform-origin: top left;
   background: #ffffff;
   border: 1px solid #dbe4ef;
-  border-radius: 14px;
+  /* The app-shell card token is intentionally overridden here: this is a
+     document canvas, so it should read as a precise rectangular workspace. */
+  border-radius: 4px !important;
   box-shadow:
     0 1px 2px rgba(15, 23, 42, 0.04),
     0 18px 42px rgba(15, 23, 42, 0.1);
@@ -1605,14 +1607,14 @@ body:has(.dashboard-canvas-builder.is-preview) .mini-bi-ribbon-shell .main-conte
   overflow: visible;
 }
 
-.dcb-widget {
+.dashboard-canvas-builder .dcb-widget {
   position: relative;
   width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border-radius: 10px;
+  border-radius: 4px;
   border: 1px solid var(--dcb-border);
   background: #ffffff;
   box-shadow:
@@ -1705,7 +1707,7 @@ body:has(.dashboard-canvas-builder.is-preview) .mini-bi-ribbon-shell .main-conte
   display: grid;
   place-items: center;
   border: 0;
-  border-radius: 6px;
+  border-radius: 3px;
   background: transparent;
   color: var(--dcb-muted);
   cursor: pointer;
@@ -2207,11 +2209,11 @@ body:has(.dashboard-canvas-builder.is-preview) .mini-bi-ribbon-shell .main-conte
   display: block;
   box-sizing: border-box;
   border: 0 !important;
-  border-radius: 999px;
+  border-radius: 2px;
   background: var(--dcb-primary);
   box-shadow:
-    0 0 0 2px var(--dcb-panel),
-    0 1px 4px rgba(37, 99, 235, 0.32);
+    0 0 0 1px var(--dcb-panel),
+    0 1px 3px rgba(37, 99, 235, 0.24);
 }
 
 .dashboard-canvas-builder .react-resizable-handle-e {
@@ -2220,10 +2222,10 @@ body:has(.dashboard-canvas-builder.is-preview) .mini-bi-ribbon-shell .main-conte
 }
 
 .dashboard-canvas-builder .react-resizable-handle-e::after {
-  top: 4px;
+  top: 3px;
   left: 7px;
-  width: 4px !important;
-  height: 10px !important;
+  width: 3px !important;
+  height: 12px !important;
 }
 
 .dashboard-canvas-builder .react-resizable-handle-s {
@@ -2233,9 +2235,9 @@ body:has(.dashboard-canvas-builder.is-preview) .mini-bi-ribbon-shell .main-conte
 
 .dashboard-canvas-builder .react-resizable-handle-s::after {
   top: 7px;
-  left: 4px;
-  width: 10px !important;
-  height: 4px !important;
+  left: 3px;
+  width: 12px !important;
+  height: 3px !important;
 }
 
 .dashboard-canvas-builder .react-resizable-handle-se {
@@ -2246,9 +2248,9 @@ body:has(.dashboard-canvas-builder.is-preview) .mini-bi-ribbon-shell .main-conte
 .dashboard-canvas-builder .react-resizable-handle-se::after {
   top: 5px;
   left: 5px;
-  width: 9px !important;
-  height: 9px !important;
-  border: 2px solid var(--dcb-panel) !important;
+  width: 8px !important;
+  height: 8px !important;
+  border: 1px solid var(--dcb-panel) !important;
 }
 
 .dashboard-canvas-builder .dcb-grid-item.is-selected > .react-resizable-handle:hover {
