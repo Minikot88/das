@@ -10,6 +10,9 @@ import { normalizeLocalShareRecord, resolveLocalShare, validateLocalShare } from
 import { useWorkspaceSelector } from "@app/store/useWorkspaceSelector";
 import { isMockMode } from "@infrastructure/http/client";
 import { resolvePersistentDashboardShare } from "@modules/sharing/api/sharingApi";
+import { normalizeServerShareWidgets } from "@modules/sharing/lib/serverShareSnapshot";
+import ChartPreview from "@modules/dashboards/designer-v2/components/components/charts/ChartPreview";
+import { createDefaultConfig } from "@modules/dashboards/designer-v2/components/mockData";
 
 function countChartTypes(widgets = []) {
   return new Set(widgets.map((widget) => widget.type).filter(Boolean)).size;
@@ -20,7 +23,106 @@ function getRouteMode(pathname = "", routeMode = "") {
   return "view";
 }
 
+function asObject(value) {
+  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+}
+
+function asArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function normalizeSharedField(field, index, rows) {
+  const source = asObject(field);
+  const id = String(source.id ?? source.name ?? source.key ?? `field-${index + 1}`);
+  const samples = rows
+    .map((row) => row?.[id])
+    .filter((value) => typeof value === "string" || typeof value === "number" || typeof value === "boolean")
+    .slice(0, 5);
+  const numeric = source.type === "number" || source.dataType === "number" || samples.some((value) => typeof value === "number");
+  const date = source.type === "date" || source.dataType === "date";
+  return {
+    id,
+    name: String(source.name ?? source.label ?? id),
+    label: String(source.label ?? source.name ?? id),
+    type: numeric ? "number" : date ? "date" : source.type === "boolean" ? "boolean" : "text",
+    semanticType: numeric ? "quantity" : date ? "date" : source.type === "boolean" ? "boolean" : "category",
+    table: String(source.table ?? "shared_snapshot"),
+    description: String(source.description ?? "Shared snapshot field"),
+    sampleValues: samples,
+    isMeasure: numeric,
+    isDimension: !numeric,
+    defaultAggregation: numeric ? "Sum" : "None",
+  };
+}
+
+function inferSharedFields(rows) {
+  const keys = Object.keys(asObject(rows[0]));
+  return keys.map((key, index) => normalizeSharedField({ id: key, name: key }, index, rows));
+}
+
+function inferSharedMappings(chartType, fields) {
+  const dimension = fields.find((field) => field.isDimension) ?? fields[0];
+  const measure = fields.find((field) => field.isMeasure) ?? fields[1] ?? fields[0];
+  const slot = (id, fieldsForSlot, aggregation = "None") => ({ id, label: id, helper: "Shared snapshot", fields: fieldsForSlot ? [fieldsForSlot] : [], aggregation });
+  if (chartType === "pie" || chartType === "donut") {
+    return [slot("category", dimension), slot("value", measure, "Sum")];
+  }
+  return [slot("xAxis", dimension), slot("yAxis", measure, "Sum")];
+}
+
+function toSharedChartPreview(widget) {
+  const fallback = createDefaultConfig();
+  const config = asObject(widget.config);
+  const rows = asArray(widget.rows);
+  const fields = asArray(widget.fields).length
+    ? asArray(widget.fields).map((field, index) => normalizeSharedField(field, index, rows))
+    : inferSharedFields(rows);
+  const mappings = asArray(config.mappings).length ? asArray(config.mappings) : inferSharedMappings(widget.type, fields);
+  const settings = asObject(config.settings);
+
+  return {
+    config: {
+      ...fallback,
+      ...config,
+      chartId: String(config.chartId ?? widget.chartId ?? widget.id),
+      chartType: widget.type ?? config.chartType ?? fallback.chartType,
+      mappings,
+      filters: asObject(config.filters),
+      settings: {
+        ...fallback.settings,
+        ...settings,
+        general: {
+          ...fallback.settings.general,
+          ...asObject(settings.general),
+          title: asObject(settings.general).title || widget.title,
+          subtitle: asObject(settings.general).subtitle || "",
+          showSubtitle: false,
+        },
+      },
+    },
+    fields,
+    rows,
+    density: Number(widget.w) <= 45 ? "mini" : Number(widget.w) <= 60 ? "compact" : "standard",
+  };
+}
+
 function CanvasSnapshotWidget({ widget }) {
+  if (widget.type && !["kpi", "text", "image", "table"].includes(widget.type)) {
+    const chart = toSharedChartPreview(widget);
+    return (
+      <article className="dashboard-public-snapshot-card is-chart" aria-label={widget.title || "Shared chart"}>
+        <ChartPreview
+          config={chart.config}
+          datasetRows={chart.rows}
+          fields={chart.fields}
+          previewMode
+          deviceMode="desktop"
+          zoom={1}
+          density={chart.density}
+        />
+      </article>
+    );
+  }
   if (widget.type === "kpi") {
     return (
       <article className="dashboard-public-snapshot-card is-kpi" aria-label={widget.config?.metricTitle || widget.title || "KPI"}>
@@ -46,12 +148,7 @@ function CanvasSnapshotWidget({ widget }) {
       </article>
     );
   }
-  return (
-    <article className="dashboard-public-snapshot-card">
-      <strong>{widget.title || widget.config?.title || widget.type || "วิดเจ็ต"}</strong>
-      <span>{widget.type === "chart" ? "กราฟ snapshot แบบอ่านอย่างเดียว" : "วิดเจ็ตแบบอ่านอย่างเดียว"}</span>
-    </article>
-  );
+  return <article className="dashboard-public-snapshot-card"><strong>{widget.title || widget.config?.title || widget.type || "วิดเจ็ต"}</strong></article>;
 }
 
 function CanvasSnapshotView({ widgets }) {
@@ -149,7 +246,7 @@ export default function DashboardPublicPage() {
             name: shareRecord.snapshot.dashboardName ?? "แดชบอร์ดที่แชร์",
             layout: shareRecord.snapshot.layout ?? [],
           },
-          widgets: shareRecord.snapshot.widgets ?? [],
+          widgets: normalizeServerShareWidgets(shareRecord.snapshot.widgets),
           snapshot: shareRecord.snapshot,
         };
       }
@@ -309,7 +406,7 @@ export default function DashboardPublicPage() {
                 width: "100%",
               }}
             >
-              {snapshot?.canvasSettings ? (
+              {snapshot ? (
                 <CanvasSnapshotView widgets={widgets} />
               ) : (
                 <DashboardGrid

@@ -3,6 +3,7 @@ import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { MainLayout } from "@app/layouts/Layout";
 import RouteErrorBoundary from "@app/error-boundaries/RouteErrorBoundary";
 import { useStore } from "@app/store/useStore";
+import { isInternalSingleUserMode } from "@infrastructure/http/client";
 
 const BuilderPage = lazy(() => import("@modules/charts/pages/Builder.jsx"));
 const DashboardCanvasBuilder = lazy(() => import("@modules/dashboards/current/DashboardCanvasBuilder.jsx"));
@@ -42,7 +43,7 @@ function ProtectedRoute() {
 
   if (authStatus === "loading") return <RouteFallback />;
 
-  if (!isAuthenticated) {
+  if (!isInternalSingleUserMode() && !isAuthenticated) {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
@@ -57,8 +58,8 @@ export default function AppRoutes() {
   return (
     <Suspense fallback={<RouteFallback />}>
       <Routes>
-        <Route path="/login" element={withRouteBoundary(<LoginPage />)} />
-        <Route path="/register" element={withRouteBoundary(<RegisterPage />)} />
+        <Route path="/login" element={isInternalSingleUserMode() ? <Navigate to="/dashboard" replace /> : withRouteBoundary(<LoginPage />)} />
+        <Route path="/register" element={isInternalSingleUserMode() ? <Navigate to="/dashboard" replace /> : withRouteBoundary(<RegisterPage />)} />
         <Route path="/share/:sheetId" element={withRouteBoundary(<SharePage />)} />
         <Route path="/dashboard/:dashboardId/view" element={withRouteBoundary(<DashboardPublicPage />)} />
         <Route path="/dashboard/:dashboardId/embed" element={withRouteBoundary(<DashboardPublicPage />)} />

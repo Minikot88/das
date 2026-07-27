@@ -3909,6 +3909,16 @@ body.dashboard-presentation-active {
   color: var(--text-primary);
 }
 
+.dashboard-public-snapshot-card.is-chart {
+  display: block;
+  overflow: hidden;
+  padding: 12px;
+}
+
+.dashboard-public-snapshot-card.is-chart > * {
+  height: 100%;
+}
+
 .dashboard-public-snapshot-card.is-kpi strong {
   font-size: clamp(28px, 5vw, 48px);
   line-height: 1;

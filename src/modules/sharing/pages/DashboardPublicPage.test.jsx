@@ -21,6 +21,10 @@ vi.mock("@app/store/useStore", () => ({
   useStore: (selector) => selector(storeState),
 }));
 
+vi.mock("@infrastructure/http/client", () => ({
+  isMockMode: () => true,
+}));
+
 vi.mock("@modules/dashboards/legacy/components/DashboardGrid", () => ({
   default: ({ widgets, isEditable }) => (
     <div data-testid="readonly-grid" data-editable={String(isEditable)}>

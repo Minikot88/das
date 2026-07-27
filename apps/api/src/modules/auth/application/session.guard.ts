@@ -20,6 +20,10 @@ export class SessionGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
+    if (this.environment.internalSingleUserId) {
+      request.principal = await this.auth.authenticateInternalSingleUser(this.environment.internalSingleUserId);
+      return true;
+    }
     const sessionToken = String(request.cookies?.mini_bi_session || '');
     if (!sessionToken) throw new ApiError(401, 'AUTHENTICATION_REQUIRED', 'Authentication is required.');
     const principal = await this.auth.authenticateSession(sessionToken);

@@ -6,6 +6,7 @@ const LOG_LEVELS = ['error', 'warn', 'info', 'debug'] as const;
 export type RuntimeEnvironment = {
   nodeEnv: 'development' | 'test' | 'production';
   authProvider: 'database' | 'development' | 'external';
+  internalSingleUserId?: string;
   secretMasterKey?: string;
   databaseUrl?: string;
   developmentAuthEmail?: string;
@@ -72,6 +73,7 @@ function parseBoolean(name: string, rawValue: string | undefined, fallback: bool
 export function parseEnvironment(input: NodeJS.ProcessEnv | Record<string, string | undefined>): RuntimeEnvironment {
   const nodeEnv = (input.APP_ENV || input.NODE_ENV || 'development') as RuntimeEnvironment['nodeEnv'];
   const authProvider = (input.AUTH_PROVIDER || 'development') as RuntimeEnvironment['authProvider'];
+  const internalSingleUserId = input.INTERNAL_SINGLE_USER_ID?.trim();
   const databaseUrlValue = input.DATABASE_URL;
   const secretMasterKeyValue = input.SECRET_ENCRYPTION_KEY || input.SECRET_MASTER_KEY;
   const sessionSigningKeyValue = input.SESSION_SECRET || input.SESSION_SIGNING_KEY;
@@ -82,6 +84,7 @@ export function parseEnvironment(input: NodeJS.ProcessEnv | Record<string, strin
   if (nodeEnv === 'production' && authProvider === 'development') {
     throw new Error('Development authentication is forbidden in production');
   }
+  if (nodeEnv === 'production' && internalSingleUserId) throw new Error('INTERNAL_SINGLE_USER_ID is forbidden in production');
 
   if (nodeEnv === 'production' && input.DEBUG === 'true') throw new Error('DEBUG mode is forbidden in production');
   if (nodeEnv === 'production' && input.DEMO_CONNECTOR_ENABLED === 'true') throw new Error('Demo connector is forbidden in production');
@@ -168,6 +171,7 @@ export function parseEnvironment(input: NodeJS.ProcessEnv | Record<string, strin
   return {
     nodeEnv,
     authProvider,
+    internalSingleUserId,
     secretMasterKey,
     databaseUrl: databaseUrlValue,
     developmentAuthEmail: input.DEVELOPMENT_AUTH_EMAIL,

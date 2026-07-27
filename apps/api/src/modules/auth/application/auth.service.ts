@@ -120,6 +120,22 @@ export class AuthService {
     };
   }
 
+  async authenticateInternalSingleUser(userId: string): Promise<SessionPrincipal> {
+    const user = await this.prisma.userProfile.findUnique({ where: { id: userId } });
+    if (!user || user.status !== 'active' || user.disabledAt) throw invalidSession();
+    const [organizationMembership, projectMemberships] = await Promise.all([
+      this.prisma.organizationMember.findUnique({ where: { organizationId_userId: { organizationId: user.organizationId, userId: user.id } } }),
+      this.prisma.biProjectMember.findMany({ where: { organizationId: user.organizationId, userId: user.id }, select: { role: true } }),
+    ]);
+    return {
+      organizationId: user.organizationId,
+      userId: user.id,
+      sessionId: 'internal-single-user',
+      csrfTokenHash: '',
+      roles: [...new Set([...(organizationMembership?.role ? [organizationMembership.role] : []), ...projectMemberships.map(item => item.role)])],
+    };
+  }
+
   async logout(sessionId: string, userId: string) {
     if (this.isTestDevelopment) {
       for (const session of this.testSessions.values()) if (session.id === sessionId && session.user.id === userId) session.revokedAt = new Date();

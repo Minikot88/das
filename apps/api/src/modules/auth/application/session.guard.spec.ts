@@ -22,6 +22,18 @@ describe('SessionGuard cookie and CSRF protection', () => {
     expect(auth.authenticateSession).not.toHaveBeenCalled();
   });
 
+  it('uses the explicitly configured internal principal without a cookie or CSRF token', async () => {
+    const internalPrincipal = { ...principal, sessionId: 'internal-single-user' };
+    const auth = { authenticateSession: vi.fn(), authenticateInternalSingleUser: vi.fn().mockResolvedValue(internalPrincipal) };
+    const request = { method: 'POST', cookies: {}, headers: {} };
+    const singleUserEnvironment = { corsOrigins: [], internalSingleUserId: 'user-1' } as never;
+
+    await expect(new SessionGuard(auth as never, singleUserEnvironment).canActivate(context(request))).resolves.toBe(true);
+    expect(auth.authenticateInternalSingleUser).toHaveBeenCalledWith('user-1');
+    expect(auth.authenticateSession).not.toHaveBeenCalled();
+    expect(request).toMatchObject({ principal: internalPrincipal });
+  });
+
   it('authenticates safe requests through the database session service', async () => {
     const auth = { authenticateSession: vi.fn().mockResolvedValue(principal) };
     const request = { method: 'GET', cookies: { mini_bi_session: 'opaque-session' }, headers: {} };

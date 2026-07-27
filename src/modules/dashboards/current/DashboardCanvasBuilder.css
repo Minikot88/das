@@ -819,17 +819,59 @@ body:has(.dashboard-canvas-builder.is-preview) .mini-bi-ribbon-shell .main-conte
 }
 
 .dcb-unified-chart-heading {
-  align-items: start;
+  align-items: center;
+  margin: 0 -2px 4px;
+  padding: 4px 2px 12px;
+  border-bottom: 1px solid var(--dcb-border);
+}
+
+.dcb-unified-chart-heading strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.dcb-unified-chart-heading strong em {
+  min-width: 19px;
+  height: 19px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--dcb-soft);
+  color: var(--dcb-primary);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 600;
+}
+
+.dcb-unified-chart-heading span {
+  overflow: visible;
+  white-space: normal;
+  font-size: 10.5px;
+  line-height: 1.45;
+}
+
+/* The left rail is a command list: keep the primary action visible and place
+   less-frequent actions in the existing expandable menu. */
+.dcb-unified-chart-heading > div > span {
+  max-width: 168px;
 }
 
 .dcb-library-create {
   min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
   padding: 0 10px;
-  border: 1px solid var(--dcb-border);
-  border-radius: 4px;
-  background: var(--dcb-panel);
-  color: var(--dcb-text);
+  border: 1px solid var(--dcb-primary);
+  border-radius: 6px;
+  background: var(--dcb-primary);
+  color: #ffffff;
   font-size: 11px;
+  font-weight: 600;
   line-height: 1.25;
   white-space: nowrap;
   cursor: pointer;
@@ -837,9 +879,9 @@ body:has(.dashboard-canvas-builder.is-preview) .mini-bi-ribbon-shell .main-conte
 
 .dcb-library-create:hover,
 .dcb-library-create:focus-visible {
-  border-color: #cfe0ff;
-  background: var(--dcb-selected);
-  color: #1d4ed8;
+  border-color: #1d4ed8;
+  background: #1d4ed8;
+  color: #ffffff;
   outline: 0;
 }
 
@@ -847,7 +889,7 @@ body:has(.dashboard-canvas-builder.is-preview) .mini-bi-ribbon-shell .main-conte
   min-width: 0;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
+  gap: 5px;
 }
 
 .dcb-chart-filter-chips button {
@@ -857,7 +899,7 @@ body:has(.dashboard-canvas-builder.is-preview) .mini-bi-ribbon-shell .main-conte
   align-items: center;
   justify-content: center;
   gap: 5px;
-  padding: 0 7px;
+  padding: 0 8px;
   border: 1px solid var(--dcb-border);
   border-radius: 999px;
   background: var(--dcb-panel);
@@ -1096,6 +1138,45 @@ body:has(.dashboard-canvas-builder.is-preview) .mini-bi-ribbon-shell .main-conte
   grid-template-columns: minmax(0, 1fr) 34px;
 }
 
+/* Keep the card actions readable on the compact left rail instead of
+   shortening the labels into ambiguous ellipses. */
+.dcb-unified-chart-item .dcb-added-chart-actions:not(.is-available) {
+  grid-template-columns: minmax(0, 1fr) 38px;
+}
+
+.dcb-unified-chart-item .dcb-added-chart-actions:not(.is-available) .dcb-added-chart-primary {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.dcb-unified-chart-item .dcb-added-chart-actions:not(.is-available) .dcb-added-chart-secondary {
+  display: none;
+}
+
+.dcb-unified-chart-item .dcb-added-chart-actions:not(.is-available) .dcb-added-chart-more-wrap {
+  grid-column: 2;
+  grid-row: 1;
+  height: 100%;
+  width: 38px;
+}
+
+.dcb-unified-chart-item .dcb-added-chart-actions:not(.is-available) .dcb-added-chart-more {
+  height: 100%;
+  min-width: 38px;
+  width: 38px;
+  font-size: 0;
+}
+
+.dcb-unified-chart-item .dcb-added-chart-more::before {
+  content: "⋯";
+  display: block;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  line-height: 1;
+  transform: translateY(-1px);
+}
+
 .dcb-added-chart-primary {
   min-width: 0;
   height: 30px;
@@ -1167,6 +1248,21 @@ body:has(.dashboard-canvas-builder.is-preview) .mini-bi-ribbon-shell .main-conte
   border-radius: 8px;
   background: var(--dcb-panel);
   box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
+}
+
+/* The chart library is scrollable. Keep its action menu in the card flow so
+   it expands the card instead of being clipped behind the Canvas. */
+.dcb-added-chart-actions:has(.dcb-added-chart-menu) .dcb-added-chart-more-wrap {
+  display: contents;
+}
+
+.dcb-added-chart-actions:has(.dcb-added-chart-menu) .dcb-added-chart-menu {
+  position: static;
+  grid-column: 1 / -1;
+  width: auto;
+  max-width: none;
+  margin-top: 2px;
+  box-shadow: inset 0 1px 0 rgba(226, 232, 240, 0.86);
 }
 
 .dcb-added-chart-menu button {
@@ -1605,6 +1701,19 @@ body:has(.dashboard-canvas-builder.is-preview) .mini-bi-ribbon-shell .main-conte
 
 .dcb-grid-item {
   overflow: visible;
+  will-change: transform;
+}
+
+.dcb-grid-item.react-draggable-dragging {
+  z-index: 20 !important;
+}
+
+.dcb-grid-item.react-draggable-dragging .dcb-widget {
+  cursor: grabbing;
+  box-shadow:
+    0 0 0 1px rgba(37, 99, 235, 0.14),
+    0 16px 32px rgba(15, 23, 42, 0.18);
+  transition: none;
 }
 
 .dashboard-canvas-builder .dcb-widget {
@@ -1669,13 +1778,18 @@ body:has(.dashboard-canvas-builder.is-preview) .mini-bi-ribbon-shell .main-conte
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 6px;
-  padding: 0 7px 0 10px;
-  color: var(--dcb-muted);
-  border-bottom: 1px solid rgba(226, 232, 240, 0.72);
-  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  gap: 8px;
+  padding: 0 6px 0 9px;
+  color: #475569;
+  border-bottom: 1px solid #e8eef5;
+  background: #fbfcfe;
   cursor: move;
+  touch-action: none;
   user-select: none;
+}
+
+.dcb-widget-handle:active {
+  cursor: grabbing;
 }
 
 .dcb-widget-handle span {
@@ -1684,12 +1798,15 @@ body:has(.dashboard-canvas-builder.is-preview) .mini-bi-ribbon-shell .main-conte
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 10px;
-  font-weight: 500;
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 .dcb-widget-handle div {
   display: flex;
-  gap: 2px;
+  gap: 1px;
+  padding-left: 4px;
+  border-left: 1px solid #e8eef5;
   opacity: 0;
   pointer-events: none;
   transition: opacity 120ms ease-out;
@@ -2172,9 +2289,10 @@ body:has(.dashboard-canvas-builder.is-preview) .mini-bi-ribbon-shell .main-conte
 }
 
 .react-grid-item.react-grid-placeholder {
-  background: rgba(37, 99, 235, 0.12);
-  border: 1px dashed var(--dcb-primary);
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px solid rgba(37, 99, 235, 0.38);
   opacity: 1;
+  transition: transform 90ms linear, width 90ms linear, height 90ms linear;
 }
 
 .react-resizable-handle {
@@ -2219,6 +2337,9 @@ body:has(.dashboard-canvas-builder.is-preview) .mini-bi-ribbon-shell .main-conte
 .dashboard-canvas-builder .react-resizable-handle-e {
   right: -9px;
   margin-top: -9px;
+  /* react-resizable rotates the stock SVG grip; remove that library treatment. */
+  transform: none !important;
+  background-image: none !important;
 }
 
 .dashboard-canvas-builder .react-resizable-handle-e::after {
@@ -2231,6 +2352,9 @@ body:has(.dashboard-canvas-builder.is-preview) .mini-bi-ribbon-shell .main-conte
 .dashboard-canvas-builder .react-resizable-handle-s {
   bottom: -9px;
   margin-left: -9px;
+  /* Keep the edge grips orthogonal to the widget, never diagonal. */
+  transform: none !important;
+  background-image: none !important;
 }
 
 .dashboard-canvas-builder .react-resizable-handle-s::after {
@@ -2243,13 +2367,14 @@ body:has(.dashboard-canvas-builder.is-preview) .mini-bi-ribbon-shell .main-conte
 .dashboard-canvas-builder .react-resizable-handle-se {
   right: -8px;
   bottom: -8px;
+  background-image: none !important;
 }
 
 .dashboard-canvas-builder .react-resizable-handle-se::after {
   top: 5px;
   left: 5px;
-  width: 8px !important;
-  height: 8px !important;
+  width: 9px !important;
+  height: 9px !important;
   border: 1px solid var(--dcb-panel) !important;
 }
 

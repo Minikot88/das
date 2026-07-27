@@ -34,7 +34,16 @@ export class SharingService {
     ]);
     const chartIds = widgets.map(item => item.chartId).filter((id): id is string => Boolean(id));
     const charts = chartIds.length ? await this.prisma.chart.findMany({ where: { id: { in: chartIds }, projectId: dashboard.projectId, organizationId: principal.organizationId, deletedAt: null } }) : [];
-    const chartById = new Map(charts.map(item => [item.id, item]));
+    const datasetIds = charts.map(item => item.datasetId).filter((id): id is string => Boolean(id));
+    const [datasetFields, datasetRows] = datasetIds.length ? await Promise.all([
+      this.prisma.datasetField.findMany({ where: { datasetId: { in: datasetIds } }, orderBy: { ordinal: 'asc' } }),
+      this.prisma.datasetRow.findMany({ where: { datasetId: { in: datasetIds } }, orderBy: { rowNumber: 'asc' }, take: 50_000 }),
+    ]) : [[], []];
+    const fieldsByDataset = new Map<string, unknown[]>();
+    const rowsByDataset = new Map<string, unknown[]>();
+    for (const field of datasetFields) fieldsByDataset.set(field.datasetId, [...(fieldsByDataset.get(field.datasetId) || []), field]);
+    for (const row of datasetRows) rowsByDataset.set(row.datasetId, [...(rowsByDataset.get(row.datasetId) || []), row.rowJson]);
+    const chartById = new Map(charts.map(item => [item.id, toPublicSnapshotChart(item, fieldsByDataset, rowsByDataset)]));
     const snapshot = {
       dashboardId: dashboard.id,
       dashboardName: dashboard.name,
@@ -90,4 +99,23 @@ export class SharingService {
 }
 
 function parseOrigins(value: unknown) { if (!Array.isArray(value)) return []; const origins = value.map(String).filter(Boolean).slice(0, 20); for (const origin of origins) { let url: URL; try { url = new URL(origin); } catch { throw new ApiError(400, 'INVALID_ORIGIN', 'Allowed embed origin is invalid.'); } if (!['https:', 'http:'].includes(url.protocol) || url.origin !== origin) throw new ApiError(400, 'INVALID_ORIGIN', 'Allowed embed origin must be an exact HTTP(S) origin.'); } return [...new Set(origins)]; }
+function asObject(value: unknown): JsonObject { return value && typeof value === 'object' && !Array.isArray(value) ? value as JsonObject : {}; }
+function toPublicSnapshotChart(chart: { id: string; name: string; engine: string; datasetId: string | null; mappingJson: unknown; settingsJson: unknown; filtersJson: unknown; configJson: unknown; dataContractJson: unknown }, fieldsByDataset: Map<string, unknown[]>, rowsByDataset: Map<string, unknown[]>) {
+  const contract = asObject(chart.dataContractJson);
+  const config = asObject(chart.configJson);
+  const datasetId = chart.datasetId || (typeof contract.datasetId === 'string' ? contract.datasetId : null);
+  const rows = Array.isArray(contract.rows) && contract.rows.length ? contract.rows : (datasetId ? rowsByDataset.get(datasetId) || [] : []);
+  const fields = Array.isArray(contract.fields) && contract.fields.length ? contract.fields : (datasetId ? fieldsByDataset.get(datasetId) || [] : []);
+  return {
+    id: chart.id,
+    name: chart.name,
+    engine: chart.engine,
+    datasetId,
+    mappingJson: chart.mappingJson,
+    settingsJson: chart.settingsJson,
+    filtersJson: chart.filtersJson,
+    configJson: config,
+    dataContractJson: { ...contract, datasetId, rows, fields },
+  };
+}
 function stableStringify(value: unknown): string { if (value instanceof Date) return JSON.stringify(value.toISOString()); if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`; if (value && typeof value === 'object') return `{${Object.entries(value as JsonObject).filter(([,item]) => item !== undefined).sort(([left],[right]) => left.localeCompare(right)).map(([key,item]) => `${JSON.stringify(key)}:${stableStringify(item)}`).join(',')}}`; return JSON.stringify(value) ?? 'null'; }

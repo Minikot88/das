@@ -1,9 +1,14 @@
 const USE_MOCK = import.meta.env.VITE_USE_MOCK !== "false";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 const API_TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT_MS || 15000);
+const INTERNAL_SINGLE_USER = import.meta.env.VITE_INTERNAL_SINGLE_USER === "true";
 
 export function isMockMode() {
   return USE_MOCK;
+}
+
+export function isInternalSingleUserMode() {
+  return INTERNAL_SINGLE_USER;
 }
 
 export function encodeApiPathSegment(value) {

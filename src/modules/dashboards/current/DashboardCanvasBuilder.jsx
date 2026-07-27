@@ -14,7 +14,7 @@ import {
   runExplicitDashboardSave,
   shouldWarnAboutUnsavedChanges,
 } from "@domain/dashboard/dashboardPersistence";
-import { createPersistentDashboardShare } from "@modules/sharing/api/sharingApi";
+import { buildServerShareWorkspace, createPersistentDashboardShare, importWorkspaceForServerShare } from "@modules/sharing";
 import { useWorkspaceSelector } from "@app/store/useWorkspaceSelector";
 import useNavigationControls from "@shared/hooks/useNavigationControls";
 import {
@@ -63,8 +63,8 @@ const WIDGET_CONTEXT_MENU_HEIGHT = 280;
 
 const CHART_LIST_FILTERS = [
   { id: "all", label: "ทั้งหมด" },
-  { id: "dashboard", label: "อยู่ใน Dashboard" },
-  { id: "available", label: "ยังไม่ได้เพิ่ม" },
+  { id: "dashboard", label: "บน Canvas" },
+  { id: "available", label: "ยังไม่เพิ่ม" },
 ];
 
 const WIDGET_LABELS = {
@@ -1361,7 +1361,7 @@ export default function DashboardCanvasBuilder() {
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
   const [templateConfirm, setTemplateConfirm] = useState(null);
   const [shareOpen, setShareOpen] = useState(false);
-  const [serverShare, setServerShare] = useState({ status: "idle", token: "", error: "" });
+  const [serverShare, setServerShare] = useState({ status: "idle", token: "", dashboardId: "", error: "" });
   const [pdfModalOpen, setPdfModalOpen] = useState(false);
   const [toast, setToast] = useState(() =>
     consumeStorageRecoveryMessage() || (initialState.recovered ? "กู้คืน layout ที่ไม่สมบูรณ์แล้ว" : "")
@@ -2491,9 +2491,9 @@ export default function DashboardCanvasBuilder() {
   }, [autosave, buildLayoutPayload]);
 
   const shareLink = useMemo(() => {
-    if (typeof window === "undefined" || !activeDashboardId || !serverShare.token) return "";
-    return `${window.location.origin}/dashboard/${encodeURIComponent(activeDashboardId)}/view?share=${encodeURIComponent(serverShare.token)}`;
-  }, [activeDashboardId, serverShare.token]);
+    if (typeof window === "undefined" || !serverShare.dashboardId || !serverShare.token) return "";
+    return `${window.location.origin}/dashboard/${encodeURIComponent(serverShare.dashboardId)}/view?share=${encodeURIComponent(serverShare.token)}`;
+  }, [serverShare.dashboardId, serverShare.token]);
 
   const embedCode = useMemo(
     () => {
@@ -2506,20 +2506,35 @@ export default function DashboardCanvasBuilder() {
 
   const openServerShare = useCallback(async () => {
     if (!activeDashboardId) return;
-    setServerShare({ status: "creating", token: "", error: "" });
+    setServerShare({ status: "creating", token: "", dashboardId: "", error: "" });
     try {
       await autosave.flush(buildLayoutPayload());
-      const share = await createPersistentDashboardShare(activeDashboardId);
+      const chartDataById = Object.fromEntries(savedCharts.map((chart) => {
+        const data = resolveChartData(workspaceSnapshot, chart, {
+          demoResolver: (datasetId) => ({ rows: getDatasetRows(datasetId, workspaceSnapshot), fields: dataFields }),
+        });
+        return [chart.id, data.status === "ready" ? {
+          sourceType: "snapshot",
+          datasetId: null,
+          fields: data.fields,
+          rows: data.rows,
+        } : null];
+      }).filter(([, data]) => data));
+      const imported = await importWorkspaceForServerShare(
+        buildServerShareWorkspace(workspaceSnapshot, activeProjectIdRef.current, buildLayoutPayload(), chartDataById)
+      );
+      const serverDashboardId = imported?.mapping?.dashboards?.[activeDashboardId] || activeDashboardId;
+      const share = await createPersistentDashboardShare(serverDashboardId);
       if (!share?.token) throw new Error("Share API returned no token");
-      setServerShare({ status: "ready", token: share.token, error: "" });
+      setServerShare({ status: "ready", token: share.token, dashboardId: serverDashboardId, error: "" });
       setShareOpen(true);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to create server share";
-      setServerShare({ status: "error", token: "", error: message });
+      setServerShare({ status: "error", token: "", dashboardId: "", error: message });
       setShareOpen(true);
       setToast("ไม่สามารถสร้างลิงก์แชร์จากเซิร์ฟเวอร์ได้");
     }
-  }, [activeDashboardId, autosave, buildLayoutPayload]);
+  }, [activeDashboardId, autosave, buildLayoutPayload, savedCharts, workspaceSnapshot]);
 
   const copyShareLink = useCallback(async () => {
     const copied = await copyText(shareLink);
@@ -2571,6 +2586,34 @@ export default function DashboardCanvasBuilder() {
         legend: {
           ...chartConfig.settings.legend,
           showLegend: checked,
+        },
+      },
+    };
+    updateWidget(selectedWidget.id, {
+      chartConfigSnapshot: nextConfig,
+      config: {
+        ...selectedWidget.config,
+        chartConfig: nextConfig,
+        chartType: nextConfig.chartType,
+        fieldMappings: nextConfig.mappings,
+        settings: nextConfig.settings,
+        filters: nextConfig.filters,
+      },
+    });
+  }, [selectedChartConfig, selectedWidget, updateWidget]);
+
+  const updateSelectedChartAxis = useCallback((axis, checked) => {
+    if (!selectedWidget || selectedWidget.type !== "chart") return;
+    const chartConfig = selectedChartConfig ?? normalizeChartConfig(selectedWidget.config.chartConfig);
+    const axisKey = axis === "x" ? "showXAxis" : "showYAxis";
+    const nextConfig = {
+      ...chartConfig,
+      updatedAt: new Date().toISOString(),
+      settings: {
+        ...chartConfig.settings,
+        axis: {
+          ...chartConfig.settings.axis,
+          [axisKey]: checked,
         },
       },
     };
@@ -3097,11 +3140,11 @@ export default function DashboardCanvasBuilder() {
                   <section className="dcb-chart-section dcb-chart-section-unified">
                     <div className="dcb-section-heading dcb-unified-chart-heading">
                       <div>
-                        <strong>กราฟทั้งหมด ({unifiedChartItems.length})</strong>
-                        <span>เลือก เพิ่ม และจัดการกราฟใน Dashboard</span>
+                        <strong>คลังกราฟ <em>{unifiedChartItems.length}</em></strong>
+                        <span>คลิกชื่อกราฟเพื่อเลือก · กด “เพิ่ม” เพื่อวางบน Canvas</span>
                       </div>
                       <button type="button" className="dcb-library-create" onClick={openChartDesignerForCreate}>
-                        สร้างกราฟ
+                        <span aria-hidden="true">+</span> สร้างกราฟ
                       </button>
                     </div>
                     <div className="dcb-chart-filter-chips" role="group" aria-label="กรองรายการกราฟ">
@@ -3167,7 +3210,7 @@ export default function DashboardCanvasBuilder() {
                                       className="dcb-added-chart-primary"
                                       onClick={() => selectChartListItem(item)}
                                     >
-                                      เลือก
+                                      ดูบน Canvas
                                     </button>
                                     <button
                                       type="button"
@@ -3519,6 +3562,7 @@ export default function DashboardCanvasBuilder() {
                   allowOverlap
                   isDraggable={!previewMode}
                   isResizable={!previewMode}
+                  transformScale={canvasScale}
                   draggableHandle=".dcb-widget-handle"
                   resizeHandles={previewMode ? [] : ["se", "e", "s"]}
                   onLayoutChange={handleLayoutChange}
@@ -3546,7 +3590,7 @@ export default function DashboardCanvasBuilder() {
                           zIndex: widget.zIndex,
                         }}
                       >
-                        {!previewMode ? (
+                        {!previewMode && widget.config?.showHeader !== false ? (
                           <div className="dcb-widget-handle">
                             <span>{chartWidgetDisplayTitle(widget, savedCharts)}</span>
                             <div onMouseDown={(event) => event.stopPropagation()}>
@@ -3674,48 +3718,17 @@ export default function DashboardCanvasBuilder() {
                 </div>
               ) : (
                 <div className="dcb-property-section">
-                  <h3>วิดเจ็ต</h3>
-                  <label>
-                    ประเภท
-                    <input value={WIDGET_LABELS[selectedWidget.type] ?? selectedWidget.type} readOnly />
-                  </label>
-                  <label>
-                    ชื่อ
-                    <input value={selectedWidget.title} onChange={(event) => updateWidget(selectedWidget.id, { title: event.target.value })} />
-                  </label>
-                  <div className="dcb-property-grid">
-                    <label>
-                      X
-                      <input type="number" value={selectedWidget.x} onChange={(event) => updateWidget(selectedWidget.id, { x: Number(event.target.value) })} />
-                    </label>
-                    <label>
-                      Y
-                      <input type="number" value={selectedWidget.y} onChange={(event) => updateWidget(selectedWidget.id, { y: Number(event.target.value) })} />
-                    </label>
-                    <label>
-                      W
-                      <input type="number" value={selectedWidget.w} onChange={(event) => updateWidget(selectedWidget.id, { w: Number(event.target.value) })} />
-                    </label>
-                    <label>
-                      H
-                      <input type="number" value={selectedWidget.h} onChange={(event) => updateWidget(selectedWidget.id, { h: Number(event.target.value) })} />
-                    </label>
-                  </div>
-                  <label>
-                    Background
-                    <input type="color" value={selectedWidget.background} onChange={(event) => updateWidget(selectedWidget.id, { background: event.target.value })} />
-                  </label>
-                  <label>
-                    Border
-                    <input type="color" value={selectedWidget.borderColor} onChange={(event) => updateWidget(selectedWidget.id, { borderColor: event.target.value })} />
-                  </label>
-                  <label>
-                    Radius
-                    <input type="range" min="0" max="16" value={selectedWidget.radius} onChange={(event) => updateWidget(selectedWidget.id, { radius: Number(event.target.value) })} />
-                  </label>
                   {selectedWidget.type === "chart" && selectedChartConfig ? (
                     <>
                       <h3>กราฟ</h3>
+                      <label className="dcb-check-row">
+                        <input
+                          type="checkbox"
+                          checked={selectedWidget.config?.showHeader !== false}
+                          onChange={(event) => updateWidgetConfig(selectedWidget.id, { showHeader: event.target.checked })}
+                        />
+                        แสดงแถบหัว Widget
+                      </label>
                       <label>
                         ชื่อกราฟ
                         <input
@@ -3734,6 +3747,22 @@ export default function DashboardCanvasBuilder() {
                           onChange={(event) => updateSelectedChartLegend(event.target.checked)}
                         />
                         แสดง Legend
+                      </label>
+                      <label className="dcb-check-row">
+                        <input
+                          type="checkbox"
+                          checked={selectedChartConfig.settings.axis.showXAxis}
+                          onChange={(event) => updateSelectedChartAxis("x", event.target.checked)}
+                        />
+                        แสดงแกน X
+                      </label>
+                      <label className="dcb-check-row">
+                        <input
+                          type="checkbox"
+                          checked={selectedChartConfig.settings.axis.showYAxis}
+                          onChange={(event) => updateSelectedChartAxis("y", event.target.checked)}
+                        />
+                        แสดงแกน Y
                       </label>
                       {selectedSavedChart ? (
                         <div className="dcb-chart-sync">
