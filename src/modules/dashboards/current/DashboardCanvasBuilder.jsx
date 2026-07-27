@@ -457,7 +457,9 @@ function defaultWidgetSize(type) {
 function minWidgetSize(type) {
   switch (type) {
     case "chart":
-      return { w: 18, h: 12 };
+      // Keep a useful visual footprint at the default 75% Canvas zoom while
+      // allowing a genuinely compact card (84 x 60 visible pixels).
+      return { w: 14, h: 10 };
     case "kpi":
       return { w: 23, h: 12 };
     case "table":
@@ -1078,6 +1080,37 @@ function WidgetContent({
   updateWidgetConfig,
   onExpandWidget,
 }) {
+  const chartViewportRef = useRef(null);
+  const [chartViewport, setChartViewport] = useState(null);
+
+  useEffect(() => {
+    const node = chartViewportRef.current;
+    if (widget.type !== "chart" || !node || typeof ResizeObserver === "undefined") return undefined;
+
+    let frameId = null;
+    const measure = () => {
+      const rect = node.getBoundingClientRect();
+      const next = {
+        width: Math.round(rect.width),
+        height: Math.round(rect.height),
+      };
+      setChartViewport((current) => (
+        current?.width === next.width && current?.height === next.height ? current : next
+      ));
+    };
+    const observer = new ResizeObserver(() => {
+      if (frameId !== null) cancelAnimationFrame(frameId);
+      frameId = requestAnimationFrame(measure);
+    });
+
+    measure();
+    observer.observe(node);
+    return () => {
+      observer.disconnect();
+      if (frameId !== null) cancelAnimationFrame(frameId);
+    };
+  }, [canvasZoom, widget.id, widget.type]);
+
   if (widget.type === "chart") {
     const chartConfig = resolveWidgetChartConfig(widget, savedCharts);
     if (!chartConfig) {
@@ -1114,9 +1147,14 @@ function WidgetContent({
       );
     }
 
-    const chartWidth = widget.w * GRID_UNIT;
-    const chartHeight = widget.h * GRID_UNIT;
-    if (chartWidth < 120 || chartHeight < 84) {
+    // Grid dimensions describe the unscaled editor layout. Density must follow
+    // the pixels the user can actually see after Canvas zoom is applied.
+    const zoomScale = canvasZoom / 100;
+    const chartWidth = chartViewport?.width ?? Math.round(widget.w * GRID_UNIT * zoomScale);
+    const chartHeight = chartViewport?.height ?? Math.round(widget.h * GRID_UNIT * zoomScale);
+    // A chart at the editor minimum is still a valid micro chart. Reserve the
+    // placeholder only for a collapsed, non-renderable container.
+    if (chartWidth < 1 || chartHeight < 1) {
       return (
         <div className="dcb-chart-compact-placeholder">
           <strong>ขยายวิดเจ็ตเพื่อดูกราฟ</strong>
@@ -1168,7 +1206,11 @@ function WidgetContent({
     };
 
     return (
-      <div className={`dcb-chart-widget ${density === "micro" ? "is-micro" : miniChart ? "is-mini" : compactChart ? "is-compact" : ""}`}>
+      <div
+        ref={chartViewportRef}
+        className={`dcb-chart-widget ${density === "micro" ? "is-micro" : miniChart ? "is-mini" : compactChart ? "is-compact" : ""}`}
+        data-chart-density={density}
+      >
         <ChartPreview
           config={dashboardChartConfig}
           datasetRows={chartData.rows}

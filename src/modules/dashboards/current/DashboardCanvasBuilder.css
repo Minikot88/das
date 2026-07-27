@@ -1879,7 +1879,7 @@ body:has(.dashboard-canvas-builder.is-preview) .mini-bi-ribbon-shell .main-conte
 }
 
 .dcb-chart-widget.is-micro {
-  padding: 1px 3px 3px;
+  padding: 0 2px 2px;
 }
 
 .dcb-widget-chart.is-compact-size .dcb-widget-handle {
@@ -1895,6 +1895,16 @@ body:has(.dashboard-canvas-builder.is-preview) .mini-bi-ribbon-shell .main-conte
 .dcb-widget-chart.is-compact-size .dcb-widget-handle button {
   width: 19px;
   height: 19px;
+}
+
+.dcb-widget-chart.is-compact-size:has(.dcb-chart-widget.is-micro) .dcb-widget-handle {
+  height: 20px;
+  flex-basis: 20px;
+  padding-inline: 6px 4px;
+}
+
+.dcb-widget-chart.is-compact-size:has(.dcb-chart-widget.is-micro) .dcb-widget-handle span {
+  font-size: 8px;
 }
 
 .dcb-chart-compact-placeholder {
