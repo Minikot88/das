@@ -3945,25 +3945,26 @@ export default function DashboardCanvasBuilder() {
             <header>
               <div>
                 <h2 id="share-title">แชร์ Dashboard</h2>
-                <p>ลิงก์ Local แบบอ่านอย่างเดียว ใช้ได้เฉพาะโปรไฟล์เบราว์เซอร์นี้ ไม่ใช่ลิงก์สาธารณะ</p>
+                <p>Server/Public read-only share</p>
               </div>
               <button type="button" onClick={() => setShareOpen(false)} aria-label="ปิด">×</button>
             </header>
             <label>
-              ลิงก์ Local แบบอ่านอย่างเดียว
+              Public share URL
               <div className="dcb-copy-row">
                 <input readOnly value={shareLink} />
                 <button type="button" onClick={copyShareLink}>คัดลอก</button>
               </div>
             </label>
             <label>
-              Embed code สำหรับทดสอบในเบราว์เซอร์เดียวกัน
+              Iframe embed code
               <div className="dcb-copy-row">
                 <input readOnly value={embedCode} />
                 <button type="button" onClick={copyEmbed}>คัดลอก</button>
               </div>
             </label>
-            <small>การเผยแพร่ข้ามอุปกรณ์ การกำหนดสิทธิ์ และ embed สำหรับผู้ชมจริงต้องใช้ backend ซึ่งยังไม่ได้เชื่อมต่อ</small>
+            {serverShare.status === "creating" ? <small>Creating secure server share…</small> : null}
+            {serverShare.status === "error" ? <small role="alert">{serverShare.error}</small> : null}
           </section>
         </div>
       ) : null}
