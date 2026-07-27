@@ -13,8 +13,7 @@ import {
   runExplicitDashboardSave,
   shouldWarnAboutUnsavedChanges,
 } from "@domain/dashboard/dashboardPersistence";
-import { createLocalReadonlyShare, createLocalShareUrl } from "@domain/shares/localShareContract";
-import { workspaceRepository } from "@infrastructure/persistence/workspace-repository/workspaceRepository";
+import { createPersistentDashboardShare } from "@modules/sharing/api/sharingApi";
 import { useWorkspaceSelector } from "@app/store/useWorkspaceSelector";
 import useNavigationControls from "@shared/hooks/useNavigationControls";
 import {
@@ -1318,6 +1317,7 @@ export default function DashboardCanvasBuilder() {
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
   const [templateConfirm, setTemplateConfirm] = useState(null);
   const [shareOpen, setShareOpen] = useState(false);
+  const [serverShare, setServerShare] = useState({ status: "idle", token: "", error: "" });
   const [pdfModalOpen, setPdfModalOpen] = useState(false);
   const [toast, setToast] = useState(() =>
     consumeStorageRecoveryMessage() || (initialState.recovered ? "กู้คืน layout ที่ไม่สมบูรณ์แล้ว" : "")
@@ -2446,49 +2446,36 @@ export default function DashboardCanvasBuilder() {
     });
   }, [autosave, buildLayoutPayload]);
 
-  const localShareId = `local-${activeDashboardId}`;
   const shareLink = useMemo(() => {
-    if (typeof window === "undefined" || !activeDashboardId) return "";
-    return createLocalShareUrl({
-      origin: window.location.origin,
-      dashboardId: activeDashboardId,
-      shareId: localShareId,
-      mode: "view",
-    });
-  }, [activeDashboardId, localShareId]);
+    if (typeof window === "undefined" || !activeDashboardId || !serverShare.token) return "";
+    return `${window.location.origin}/dashboard/${encodeURIComponent(activeDashboardId)}/view?share=${encodeURIComponent(serverShare.token)}`;
+  }, [activeDashboardId, serverShare.token]);
 
   const embedCode = useMemo(
     () => {
-      if (typeof window === "undefined" || !activeDashboardId) return "";
-      const embedUrl = createLocalShareUrl({
-        origin: window.location.origin,
-        dashboardId: activeDashboardId,
-        shareId: localShareId,
-        mode: "embed",
-        showHeader: false,
-      });
-      return `<iframe src="${embedUrl}" title="Mini BI Dashboard" width="1440" height="900"></iframe>`;
+      if (!shareLink) return "";
+      const embedUrl = shareLink.replace("/view?", "/embed?") + "&header=0";
+      return `<iframe src="${embedUrl}" title="Mini BI Dashboard" width="100%" height="640" style="border:0" loading="lazy" allowfullscreen></iframe>`;
     },
-    [activeDashboardId, localShareId]
+    [shareLink]
   );
 
-  const openLocalShare = useCallback(async () => {
+  const openServerShare = useCallback(async () => {
+    if (!activeDashboardId) return;
+    setServerShare({ status: "creating", token: "", error: "" });
     try {
-      const payload = buildLayoutPayload();
-      await autosave.flush(payload);
-      const project = workspaceSnapshot.projects.find((item) => item.id === payload.projectId);
-      if (!project) throw new Error("Project not found");
-      const share = createLocalReadonlyShare({
-        id: localShareId,
-        project,
-        dashboard: prepareDashboardForPersistence(payload),
-      });
-      workspaceRepository.upsertShare(project.id, share);
+      await autosave.flush(buildLayoutPayload());
+      const share = await createPersistentDashboardShare(activeDashboardId);
+      if (!share?.token) throw new Error("Share API returned no token");
+      setServerShare({ status: "ready", token: share.token, error: "" });
       setShareOpen(true);
-    } catch {
-      setToast("ไม่สามารถเตรียมลิงก์ Local ได้ กรุณาลองบันทึกอีกครั้ง");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to create server share";
+      setServerShare({ status: "error", token: "", error: message });
+      setShareOpen(true);
+      setToast("ไม่สามารถสร้างลิงก์แชร์จากเซิร์ฟเวอร์ได้");
     }
-  }, [autosave, buildLayoutPayload, localShareId, workspaceSnapshot.projects]);
+  }, [activeDashboardId, autosave, buildLayoutPayload]);
 
   const copyShareLink = useCallback(async () => {
     const copied = await copyText(shareLink);
@@ -2830,7 +2817,7 @@ export default function DashboardCanvasBuilder() {
         return;
       }
       if (detail.command === "share") {
-        void openLocalShare();
+        void openServerShare();
         return;
       }
       if (detail.command === "export") {
@@ -2842,7 +2829,7 @@ export default function DashboardCanvasBuilder() {
     return () => {
       window.removeEventListener("mini-bi:ribbon-command", onRibbonCommand);
     };
-  }, [arrangeAllWidgets, exportJson, openChartDesignerForCreate, openElementsModal, openLocalShare, openTemplateModal, saveDashboard]);
+  }, [arrangeAllWidgets, exportJson, openChartDesignerForCreate, openElementsModal, openServerShare, openTemplateModal, saveDashboard]);
 
   const handleImageUpload = useCallback((event) => {
     const file = event.target.files?.[0];
@@ -2926,7 +2913,7 @@ export default function DashboardCanvasBuilder() {
           ) : null}
           <button type="button" className="dcb-btn" onClick={() => navigate("/home")} title="กลับหน้าหลัก">หน้าหลัก</button>
           <button type="button" className="dcb-btn" onClick={openChartDesignerForCreate}>เปิดตัวสร้างกราฟ</button>
-          <button type="button" className="dcb-btn" onClick={openLocalShare}>แชร์</button>
+          <button type="button" className="dcb-btn" onClick={openServerShare}>แชร์</button>
           <button type="button" className="dcb-btn dcb-btn-primary" onClick={saveDashboard}>บันทึก</button>
         </div>
       </header>
@@ -2943,7 +2930,7 @@ export default function DashboardCanvasBuilder() {
             ))}
           </select>
           <button type="button" className="dcb-btn" onClick={exportPng}>PNG</button>
-          <button type="button" className="dcb-btn" onClick={openLocalShare}>แชร์</button>
+          <button type="button" className="dcb-btn" onClick={openServerShare}>แชร์</button>
           <button type="button" className="dcb-btn dcb-btn-primary" onClick={() => setPreviewMode(false)}>ออกจากโหมดนำเสนอ</button>
         </div>
       ) : (
