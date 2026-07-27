@@ -1,4 +1,5 @@
 import path from "node:path";
+import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
@@ -8,6 +9,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, __dirname, "");
+  const productionDeployment = (env.APP_ENV || process.env.APP_ENV) === "production";
+  const mockMode = env.VITE_USE_MOCK || process.env.VITE_USE_MOCK;
+  if (productionDeployment && mockMode !== "false") {
+    throw new Error("VITE_USE_MOCK must be explicitly set to false for production builds");
+  }
 
   return {
     plugins: [react()],
