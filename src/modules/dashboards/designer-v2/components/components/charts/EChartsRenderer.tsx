@@ -30,6 +30,7 @@ import { validateChartConfig } from "@modules/dashboards/designer-v2/components/
 type BuiltEChartsOption = ReturnType<typeof buildEChartsOption>;
 
 type SortDirection = "asc" | "desc";
+type ChartDensity = "standard" | "compact" | "mini";
 
 type EChartsRendererProps = {
   chartType: ChartType | null;
@@ -45,7 +46,62 @@ type EChartsRendererProps = {
   previewMode: boolean;
   deviceMode: DeviceMode;
   zoom: number;
+  density?: ChartDensity;
 };
+
+function mapOptionEntries<T>(value: T, transform: (entry: Record<string, unknown>) => Record<string, unknown>): T {
+  if (Array.isArray(value)) {
+    return value.map((entry) => transform((entry ?? {}) as Record<string, unknown>)) as T;
+  }
+  if (value && typeof value === "object") {
+    return transform(value as Record<string, unknown>) as T;
+  }
+  return value;
+}
+
+function applyChartDensity(option: BuiltEChartsOption, density: ChartDensity): BuiltEChartsOption {
+  if (density === "standard") return option;
+
+  const series = Array.isArray(option.series)
+    ? option.series.map((entry) => {
+        const item = (entry ?? {}) as Record<string, unknown>;
+        const label = item.label && typeof item.label === "object" ? item.label as Record<string, unknown> : {};
+        const labelLine = item.labelLine && typeof item.labelLine === "object" ? item.labelLine as Record<string, unknown> : {};
+        return {
+          ...item,
+          label: { ...label, show: false },
+          labelLine: { ...labelLine, show: false },
+        };
+      })
+    : option.series;
+
+  const compactOption: BuiltEChartsOption = {
+    ...option,
+    title: undefined,
+    legend: mapOptionEntries(option.legend, (entry) => ({ ...entry, show: false })),
+    series,
+  };
+
+  if (density !== "mini") return compactOption;
+
+  return {
+    ...compactOption,
+    xAxis: mapOptionEntries(option.xAxis, (entry) => ({ ...entry, show: false })),
+    yAxis: mapOptionEntries(option.yAxis, (entry) => ({ ...entry, show: false })),
+    grid: mapOptionEntries(option.grid, (entry) => ({
+      ...entry,
+      top: 6,
+      right: 6,
+      bottom: 6,
+      left: 6,
+      containLabel: false,
+      outerBoundsMode: undefined,
+      outerBoundsContain: undefined,
+    })),
+    visualMap: mapOptionEntries(option.visualMap, (entry) => ({ ...entry, show: false })),
+    dataZoom: mapOptionEntries(option.dataZoom, (entry) => ({ ...entry, show: false })),
+  };
+}
 
 function EmptyState({ title, message, requirements }: { title: string; message: string; requirements: string[] }) {
   return (
@@ -218,7 +274,7 @@ function TablePreview({ data, pivot = false }: { data: TransformedChartData; piv
   );
 }
 
-function EChartsCanvas({ option }: { option: BuiltEChartsOption }) {
+function EChartsCanvas({ option, zoom }: { option: BuiltEChartsOption; zoom: number }) {
   const elementRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<EChartsType | null>(null);
   const mountedRef = useRef(false);
@@ -260,11 +316,15 @@ function EChartsCanvas({ option }: { option: BuiltEChartsOption }) {
       };
     }
 
+    const renderPixelRatio = Math.min(
+      4,
+      Math.max(window.devicePixelRatio || 1, 2) * Math.max(1, zoom / 100)
+    );
     const chart = echarts.init(element, undefined, {
       renderer: "canvas",
-      // Dashboard canvas zoom uses a CSS transform. Rendering at least 2x
-      // prevents labels and lines from becoming soft at non-100% zoom levels.
-      devicePixelRatio: Math.max(window.devicePixelRatio || 1, 2),
+      // Dashboard zoom is a CSS transform. Render at the final visual scale so
+      // chart strokes and text remain crisp at fractional and enlarged zooms.
+      devicePixelRatio: renderPixelRatio,
     });
     chartRef.current = chart;
     setLatestEChartsInstance(chart);
@@ -301,7 +361,7 @@ function EChartsCanvas({ option }: { option: BuiltEChartsOption }) {
       }
       clearLatestEChartsInstance(chart);
     };
-  }, [cancelResizeFrame, scheduleResize]);
+  }, [cancelResizeFrame, scheduleResize, zoom]);
 
   useEffect(() => {
     const chart = getLiveChart();
@@ -356,6 +416,7 @@ function EChartsRenderer({
   previewMode,
   deviceMode,
   zoom,
+  density = "standard",
 }: EChartsRendererProps) {
   const config = useMemo(
     () => ({
@@ -383,13 +444,16 @@ function EChartsRenderer({
   const optionResult = useMemo(() => {
     try {
       return {
-        option: buildEChartsOption({
-          chartType,
-          transformedData,
-          fieldMappings,
-          chartSettings,
-          validationResult: validation,
-        }),
+        option: applyChartDensity(
+          buildEChartsOption({
+            chartType,
+            transformedData,
+            fieldMappings,
+            chartSettings,
+            validationResult: validation,
+          }),
+          density
+        ),
         error: "",
       };
     } catch (error) {
@@ -398,7 +462,7 @@ function EChartsRenderer({
       }
       return { option: null, error: error instanceof Error ? error.message : "ไม่สามารถสร้าง option ของ ECharts ได้" };
     }
-  }, [chartSettings, chartType, fieldMappings, transformedData, validation]);
+  }, [chartSettings, chartType, density, fieldMappings, transformedData, validation]);
 
   useEffect(() => {
     if (chartType === "table" || chartType === "pivot-table" || chartType === "kpi-card" || chartType === "metric-card" || chartType === "scorecard") {
@@ -438,7 +502,7 @@ function EChartsRenderer({
       data-zoom={zoom}
       sx={{ height: "100%", minHeight: 0 }}
     >
-      <EChartsCanvas option={optionResult.option} />
+      <EChartsCanvas option={optionResult.option} zoom={zoom} />
       <AccessibleChartTable
         data={transformedData}
         title={chartSettings.general.title || "Chart preview"}

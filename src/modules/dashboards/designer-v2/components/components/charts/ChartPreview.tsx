@@ -10,9 +10,10 @@ type ChartPreviewProps = {
   previewMode: boolean;
   deviceMode: DeviceMode;
   zoom: number;
+  density?: "standard" | "compact" | "mini";
 };
 
-function ChartPreview({ config, datasetRows, fields, previewMode, deviceMode, zoom }: ChartPreviewProps) {
+function ChartPreview({ config, datasetRows, fields, previewMode, deviceMode, zoom, density = "standard" }: ChartPreviewProps) {
   return (
     <EChartsRenderer
       chartType={config.chartType}
@@ -27,6 +28,7 @@ function ChartPreview({ config, datasetRows, fields, previewMode, deviceMode, zo
       previewMode={previewMode}
       deviceMode={deviceMode}
       zoom={zoom}
+      density={density}
     />
   );
 }

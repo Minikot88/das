@@ -457,7 +457,7 @@ function defaultWidgetSize(type) {
 function minWidgetSize(type) {
   switch (type) {
     case "chart":
-      return { w: 40, h: 28 };
+      return { w: 28, h: 20 };
     case "kpi":
       return { w: 23, h: 12 };
     case "table":
@@ -1068,6 +1068,7 @@ async function copyText(text) {
 
 function WidgetContent({
   widget,
+  canvasZoom,
   rows,
   savedCharts,
   workspaceSnapshot,
@@ -1115,7 +1116,7 @@ function WidgetContent({
 
     const chartWidth = widget.w * GRID_UNIT;
     const chartHeight = widget.h * GRID_UNIT;
-    if (chartWidth < 280 || chartHeight < 180) {
+    if (chartWidth < 200 || chartHeight < 140) {
       return (
         <div className="dcb-chart-compact-placeholder">
           <strong>ขยายวิดเจ็ตเพื่อดูกราฟ</strong>
@@ -1129,6 +1130,8 @@ function WidgetContent({
       );
     }
 
+    const compactChart = chartWidth < 520 || chartHeight < 280;
+    const miniChart = chartWidth < 320 || chartHeight < 200;
     const dashboardChartConfig = {
       ...chartConfig,
       settings: {
@@ -1139,19 +1142,40 @@ function WidgetContent({
           // second title inside a compact dashboard card wastes plot space.
           showTitle: false,
           showSubtitle: false,
+          padding: compactChart ? Math.min(finiteNumber(chartConfig.settings.general.padding, 12), 8) : chartConfig.settings.general.padding,
+        },
+        axis: {
+          ...chartConfig.settings.axis,
+          showXAxis: miniChart ? false : chartConfig.settings.axis.showXAxis,
+          showYAxis: miniChart ? false : chartConfig.settings.axis.showYAxis,
+          showAxisLabels: compactChart ? false : chartConfig.settings.axis.showAxisLabels,
+          numberFormat: compactChart ? "compact" : chartConfig.settings.axis.numberFormat,
+        },
+        labels: {
+          ...chartConfig.settings.labels,
+          showDataLabels: compactChart ? false : chartConfig.settings.labels.showDataLabels,
+        },
+        legend: {
+          ...chartConfig.settings.legend,
+          showLegend: compactChart ? false : chartConfig.settings.legend.showLegend,
+        },
+        grid: {
+          ...chartConfig.settings.grid,
+          showGrid: miniChart ? false : chartConfig.settings.grid.showGrid,
         },
       },
     };
 
     return (
-      <div className="dcb-chart-widget">
+      <div className={`dcb-chart-widget ${miniChart ? "is-mini" : compactChart ? "is-compact" : ""}`}>
         <ChartPreview
           config={dashboardChartConfig}
           datasetRows={chartData.rows}
           fields={chartData.fields}
           previewMode
           deviceMode="desktop"
-          zoom={100}
+          zoom={canvasZoom}
+          density={miniChart ? "mini" : compactChart ? "compact" : "standard"}
         />
       </div>
     );
@@ -3481,7 +3505,7 @@ export default function DashboardCanvasBuilder() {
                       onContextMenu={(event) => openWidgetContextMenu(event, widget)}
                     >
                       <section
-                        className={`dcb-widget dcb-widget-${widget.type}`}
+                        className={`dcb-widget dcb-widget-${widget.type}${widget.type === "chart" && (widget.w < 40 || widget.h < 26) ? " is-compact-size" : ""}`}
                         data-testid={`dashboard-widget-${widget.id}`}
                         data-widget-id={widget.id}
                         style={{
@@ -3513,6 +3537,7 @@ export default function DashboardCanvasBuilder() {
                         ) : null}
                         <WidgetContent
                           widget={widget}
+                          canvasZoom={canvasSettings.zoom}
                           rows={rows}
                           savedCharts={savedCharts}
                           workspaceSnapshot={workspaceSnapshot}
