@@ -64,6 +64,30 @@ describe('CoreDataService dataset query validation', () => {
     await expect(instance.archiveDataset(principal, 'dataset-1', 2)).rejects.toMatchObject({ code: 'REVISION_CONFLICT', currentRevision: 3 });
   });
 
+  it('updates only a catalog name with a current revision', async () => {
+    const update = vi.fn().mockResolvedValue({ id: 'dataset-1', name: 'Scopus affiliations', revision: 4 });
+    const prisma = {
+      biProjectMember: { findMany: vi.fn().mockResolvedValue([]) },
+      biProject: { findFirst: vi.fn().mockResolvedValue({ id: 'project-1', organizationId: 'org-default', ownerUserId: 'user-development' }) },
+      dataset: { findFirst: vi.fn().mockResolvedValue({ id: 'dataset-1', projectId: 'project-1', organizationId: 'org-default', revision: 3, sourceType: 'postgres_schema' }), update },
+    };
+    const instance = new CoreDataService(prisma as never, { assertProjectPermission: vi.fn().mockResolvedValue(undefined) } as never);
+    await expect(instance.updateDataset(principal, 'dataset-1', { name: 'Scopus affiliations', revision: 3 })).resolves.toMatchObject({ revision: 4 });
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({ data: { name: 'Scopus affiliations', revision: { increment: 1 } } }));
+  });
+
+  it('rejects stale catalog edits before changing metadata', async () => {
+    const update = vi.fn();
+    const prisma = {
+      biProjectMember: { findMany: vi.fn().mockResolvedValue([]) },
+      biProject: { findFirst: vi.fn().mockResolvedValue({ id: 'project-1', organizationId: 'org-default', ownerUserId: 'user-development' }) },
+      dataset: { findFirst: vi.fn().mockResolvedValue({ id: 'dataset-1', projectId: 'project-1', organizationId: 'org-default', revision: 3 }), update },
+    };
+    const instance = new CoreDataService(prisma as never, { assertProjectPermission: vi.fn().mockResolvedValue(undefined) } as never);
+    await expect(instance.updateDataset(principal, 'dataset-1', { name: 'Stale', revision: 2 })).rejects.toMatchObject({ code: 'REVISION_CONFLICT' });
+    expect(update).not.toHaveBeenCalled();
+  });
+
   it('rejects a stale dashboard archive before changing data', async () => {
     const prisma = {
       biProjectMember: { findMany: vi.fn().mockResolvedValue([]) },

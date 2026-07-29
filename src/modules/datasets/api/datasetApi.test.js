@@ -52,6 +52,16 @@ describe("datasetApi production repository", () => {
     });
   });
 
+  it("renames application catalog metadata through the API", async () => {
+    apiRequest.mockResolvedValue({ id: "dataset-1", name: "Scopus affiliations", revision: 4 });
+    const { renameDataset } = await import("./datasetApi");
+    await renameDataset("dataset-1", { name: "Scopus affiliations", revision: 3 });
+    expect(apiRequest).toHaveBeenCalledWith("/api/v1/datasets/dataset-1", {
+      method: "PATCH",
+      body: JSON.stringify({ name: "Scopus affiliations", revision: 3 }),
+    });
+  });
+
   it("normalizes PostgreSQL field types for chart role validation", async () => {
     apiRequest.mockResolvedValueOnce([
       { fieldKey: "year", dataType: "integer" },

@@ -187,6 +187,19 @@ export class CoreDataService {
     return { success: true };
   }
 
+  /** Updates application-owned catalog metadata only; source rows stay read-only. */
+  async updateDataset(principal: RequestPrincipal, id: string, input: JsonObject) {
+    const dataset = await this.dataset(principal, id);
+    await this.project(principal, dataset.projectId, 'write');
+    const revision = Number(input.revision);
+    if (!Number.isInteger(revision) || revision !== dataset.revision) {
+      throw new ApiError(409, 'REVISION_CONFLICT', 'Dataset has changed since it was loaded.', undefined, false, dataset.revision);
+    }
+    const name = String(input.name || '').trim();
+    if (!name || name.length > 180) throw new ApiError(400, 'INVALID_DATASET_NAME', 'Dataset name must contain between 1 and 180 characters.');
+    return this.prisma.dataset.update({ where: { id: dataset.id }, data: { name, revision: { increment: 1 } } });
+  }
+
   async listDashboards(principal: RequestPrincipal, projectId: string) {
     await this.project(principal, projectId);
     return this.prisma.biDashboard.findMany({ where: { organizationId: principal.organizationId, projectId, deletedAt: null }, orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }] });

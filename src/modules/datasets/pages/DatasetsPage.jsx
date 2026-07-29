@@ -20,6 +20,7 @@ import {
   listExternalColumns,
   previewExternalSource,
   createExternalDataset,
+  renameDataset,
 } from "@modules/datasets/api/datasetApi";
 
 function datasetColumns(dataset) {
@@ -100,6 +101,7 @@ export default function DatasetsPage() {
   const [externalSortDirection, setExternalSortDirection] = useState("asc");
   const [externalPage, setExternalPage] = useState(1);
   const [savedExternalDatasetId, setSavedExternalDatasetId] = useState("");
+  const [catalogName, setCatalogName] = useState("");
 
   const reloadDatasets = useCallback(async (preferredId = "") => {
     if (!activeProjectId) {
@@ -237,6 +239,24 @@ export default function DatasetsPage() {
   }, []);
 
   const selectedDataset = datasets.find((dataset) => dataset.id === selectedDatasetId) ?? null;
+
+  useEffect(() => {
+    setCatalogName(selectedDataset?.name ?? "");
+  }, [selectedDataset?.id, selectedDataset?.name]);
+
+  async function renameSelectedDataset() {
+    if (!selectedDataset || !catalogName.trim()) return;
+    try {
+      const updated = await renameDataset(selectedDataset.id, {
+        name: catalogName.trim(),
+        revision: selectedDataset.revision,
+      });
+      await reloadDatasets(updated?.id ?? selectedDataset.id);
+      setImportError("");
+    } catch (error) {
+      setImportError(error?.message || "ไม่สามารถบันทึกชื่อชุดข้อมูลได้");
+    }
+  }
   const previewRows = useMemo(
     () => parsedCsv?.rows ?? datasetRows,
     [datasetRows, parsedCsv?.rows]
@@ -389,7 +409,7 @@ export default function DatasetsPage() {
                 <p>เลือก schema และตารางที่ได้รับอนุญาต ข้อมูลต้นทางเป็นแบบอ่านอย่างเดียว</p>
               </div>
               <div className="datasets-source-browser__actions">
-                <button type="button" className="dashboard-toolbar-btn is-primary" disabled={!externalTable} onClick={saveExternalDataset}>Save live dataset</button>
+                <button type="button" className="dashboard-toolbar-btn is-primary" disabled={!externalTable} onClick={saveExternalDataset}>Create live dataset</button>
                 {savedExternalDatasetId ? <button type="button" className="dashboard-toolbar-btn" onClick={() => navigate(`/dashboard-v2?projectId=${encodeURIComponent(activeProjectId)}&datasetId=${encodeURIComponent(savedExternalDatasetId)}`)}>Create chart</button> : null}
               </div>
             </header>
@@ -429,6 +449,15 @@ export default function DatasetsPage() {
                 </button>
               ) : null}
             </div>
+            {!parsedCsv && selectedDataset ? (
+              <div className="datasets-catalog-editor" aria-label="Catalog editor">
+                <label>
+                  <span>Catalog dataset name</span>
+                  <input aria-label="Catalog dataset name" value={catalogName} onChange={(event) => setCatalogName(event.target.value)} maxLength={180} />
+                </label>
+                <button type="button" className="dashboard-toolbar-btn is-primary" disabled={!catalogName.trim() || catalogName.trim() === selectedDataset.name} onClick={renameSelectedDataset}>Save name</button>
+              </div>
+            ) : null}
             <div className="datasets-field-grid">
               {activeFields.map((field) => (
                 <div className="datasets-field-card" key={field.name}>

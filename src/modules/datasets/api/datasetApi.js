@@ -99,6 +99,14 @@ export async function archiveDataset(datasetId, revision) {
   });
 }
 
+export async function renameDataset(datasetId, { name, revision }) {
+  if (isMockMode()) throw new Error("Catalog editing is disabled in explicit mock mode.");
+  return apiRequest(`/api/v1/datasets/${encodeApiPathSegment(datasetId)}`, {
+    method: "PATCH",
+    body: JSON.stringify({ name, revision }),
+  });
+}
+
 export async function listExternalSources(projectId = activeProjectId()) {
   if (isMockMode() || !projectId) return { items: [] };
   return apiRequest(`/api/v1/external-sources?projectId=${encodeURIComponent(projectId)}`);

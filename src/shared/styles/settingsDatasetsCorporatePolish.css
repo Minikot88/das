@@ -518,6 +518,32 @@ body:has(.datasets-page) .datasets-field-grid {
   margin-top: 12px !important;
 }
 
+body:has(.datasets-page) .datasets-catalog-editor {
+  display: flex !important;
+  align-items: end !important;
+  gap: 8px !important;
+  margin-top: 12px !important;
+}
+
+body:has(.datasets-page) .datasets-catalog-editor label {
+  display: grid !important;
+  flex: 1 1 auto !important;
+  gap: 5px !important;
+  color: #4b5563 !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+}
+
+body:has(.datasets-page) .datasets-catalog-editor input {
+  min-height: 32px !important;
+  padding: 0 10px !important;
+  border: 1px solid #dbe1ea !important;
+  border-radius: 6px !important;
+  background: #ffffff !important;
+  color: #111827 !important;
+  font: inherit !important;
+}
+
 body:has(.datasets-page) .datasets-field-card {
   min-height: 60px !important;
   padding: 10px !important;

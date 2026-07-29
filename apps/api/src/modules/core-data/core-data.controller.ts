@@ -19,6 +19,7 @@ export class CoreDataController {
   @Get('external-sources/:schema/tables/:table/columns') columns(@CurrentPrincipal() p: RequestPrincipal, @Query('projectId') projectId: string, @Param('schema') schema: string, @Param('table') table: string) { return this.data.externalColumns(p, String(projectId || ''), schema, table); }
   @Post('external-sources/preview') @HttpCode(HttpStatus.OK) preview(@CurrentPrincipal() p: RequestPrincipal, @Body() body: Record<string, unknown>) { return this.data.previewExternal(p, body || {}); }
   @Post('datasets/external') createExternal(@CurrentPrincipal() p: RequestPrincipal, @Body() body: Record<string, unknown>) { return this.data.createExternalDataset(p, body || {}); }
+  @Patch('datasets/:id') updateDataset(@CurrentPrincipal() p: RequestPrincipal, @Param('id') id: string, @Body() body: Record<string, unknown>) { return this.data.updateDataset(p, id, body || {}); }
   @Delete('datasets/:id') archiveDataset(@CurrentPrincipal() p: RequestPrincipal, @Param('id') id: string, @Body() body: { revision?: number }) { return this.data.archiveDataset(p, id, Number(body?.revision)); }
   @Post('datasets/import') async importCsv(@CurrentPrincipal() p: RequestPrincipal, @Req() request: FastifyRequest) {
     const file = await request.file();

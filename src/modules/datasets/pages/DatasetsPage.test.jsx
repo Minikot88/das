@@ -5,8 +5,8 @@ import { describe, expect, it, vi } from "vitest";
 import DatasetsPage from "@modules/datasets/pages/DatasetsPage";
 
 const datasets = [
-  { id: "dataset-a", projectId: "project-a", name: "Project A dataset", fields: [], rows: [] },
-  { id: "dataset-b", projectId: "project-b", name: "Project B dataset", fields: [], rows: [] },
+  { id: "dataset-a", projectId: "project-a", name: "Project A dataset", revision: 1, fields: [], rows: [] },
+  { id: "dataset-b", projectId: "project-b", name: "Project B dataset", revision: 1, fields: [], rows: [] },
 ];
 const storeState = {
   importedDatasets: datasets,
@@ -46,6 +46,7 @@ vi.mock("@modules/datasets/api/datasetApi", () => ({
   listExternalColumns: vi.fn(async () => ({ items: [{ name: "id", dataType: "uuid", primaryKey: true }] })),
   previewExternalSource: vi.fn(async () => ({ rows: [{ id: "article-1" }] })),
   createExternalDataset: vi.fn(async () => ({ id: "dataset-scopus" })),
+  renameDataset: vi.fn(async () => ({ id: "dataset-a", name: "Renamed catalog", revision: 2 })),
 }));
 
 vi.mock("@shared/components/ui/EnterpriseDataTable", () => ({ default: () => null }));
@@ -64,8 +65,17 @@ describe("DatasetsPage project ownership", () => {
     expect(await screen.findByRole("region", { name: "PostgreSQL external source browser" })).toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole("combobox", { name: "Schema" })).toHaveValue("scopus"));
     await waitFor(() => expect(screen.getByRole("combobox", { name: "Table" })).toHaveValue("sc_articles"));
-    expect(screen.getByRole("button", { name: "Save live dataset" })).toBeEnabled();
-    fireEvent.click(screen.getByRole("button", { name: "Save live dataset" }));
+    expect(screen.getByRole("button", { name: "Create live dataset" })).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "Create live dataset" }));
     expect(await screen.findByRole("button", { name: "Create chart" })).toBeInTheDocument();
+  });
+
+  it("renames only the selected catalog metadata through the API", async () => {
+    const api = await import("@modules/datasets/api/datasetApi");
+    render(<MemoryRouter><DatasetsPage /></MemoryRouter>);
+    const input = await screen.findByRole("textbox", { name: "Catalog dataset name" });
+    fireEvent.change(input, { target: { value: "Renamed catalog" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save name" }));
+    await waitFor(() => expect(api.renameDataset).toHaveBeenCalledWith("dataset-a", { name: "Renamed catalog", revision: 1 }));
   });
 });
