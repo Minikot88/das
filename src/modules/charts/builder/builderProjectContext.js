@@ -9,8 +9,8 @@ export function normalizeProjectId(value) {
   return id && id !== "null" && id !== "undefined" ? id : null;
 }
 
-export function resolveBuilderProject(projects, requestedProjectId) {
-  const requestedId = normalizeProjectId(requestedProjectId);
+export function resolveBuilderProject(projects, requestedProjectId, activeProjectId = null) {
+  const requestedId = normalizeProjectId(requestedProjectId) ?? normalizeProjectId(activeProjectId);
   if (!requestedId) return null;
   return projects.find((project) => project.id === requestedId) ?? null;
 }

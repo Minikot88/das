@@ -11,4 +11,10 @@ describe("builder project route context", () => {
     expect(resolveBuilderProject(projects, "project-api")).toEqual(projects[0]);
     expect(resolveBuilderProject(projects, "legacy-project")).toBeNull();
   });
+
+  it("uses the API-validated active project when the ribbon route has no project query", () => {
+    const projects = [{ id: "project-api", name: "API project" }];
+    expect(resolveBuilderProject(projects, null, "project-api")).toEqual(projects[0]);
+    expect(resolveBuilderProject(projects, null, "legacy-project")).toBeNull();
+  });
 });

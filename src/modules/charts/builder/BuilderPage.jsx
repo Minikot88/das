@@ -86,8 +86,8 @@ export default function BuilderPage() {
   }, []);
 
   const apiProject = useMemo(
-    () => resolveBuilderProject(apiProjects, requestedProjectId),
-    [apiProjects, requestedProjectId],
+    () => resolveBuilderProject(apiProjects, requestedProjectId, activeProjectId),
+    [activeProjectId, apiProjects, requestedProjectId],
   );
 
   const apiContext = useMemo(() => {
