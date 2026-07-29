@@ -8,10 +8,9 @@ import { isInternalSingleUserMode } from "@infrastructure/http/client";
 const ROUTE_LOADERS = {
   "/builder": () => import("@modules/charts/pages/Builder.jsx"),
   "/dashboard": () => import("@modules/dashboards/current/DashboardCanvasBuilder.jsx"),
-  // V2 retains its public URL but uses the API-backed chart builder.  The
-  // previous designer module is local/demo-only and must not be loaded by a
-  // production route.
-  "/dashboard-v2": () => import("@modules/charts/pages/Builder.jsx"),
+  // Preserve the established designer surface.  Its production data path is
+  // API-backed; mock-only branches remain gated inside the module.
+  "/dashboard-v2": () => import("@modules/dashboards/designer-v2/pages/index.tsx"),
   "/dashboard-legacy": () => import("@modules/dashboards/legacy/pages/DashboardPage.jsx"),
   "/dashboard-public": () => import("@modules/sharing/pages/DashboardPublicPage.jsx"),
   "/connections": () => import("@modules/connections/pages/DatabaseConnectionPage.jsx"),

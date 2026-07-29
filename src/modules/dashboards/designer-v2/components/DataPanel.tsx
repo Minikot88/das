@@ -5,7 +5,6 @@ import KeyboardArrowRightRoundedIcon from "@mui/icons-material/KeyboardArrowRigh
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import TableChartRoundedIcon from "@mui/icons-material/TableChartRounded";
 import { Box, Button, InputAdornment, MenuItem, Paper, Select, Stack, TextField, Typography } from "@mui/material";
-import DemoHint from "@modules/dashboards/designer-v2/components/DemoHint";
 import DraggableField from "@modules/dashboards/designer-v2/components/DraggableField";
 import { dashboardV2Tokens as tokens } from "@modules/dashboards/designer-v2/components/theme";
 import type { DemoDatasource, DemoDatasetRow } from "@modules/dashboards/designer-v2/components/services/datasetService";
@@ -19,12 +18,10 @@ type DataPanelProps = {
   searchValue: string;
   selectedTable: string;
   selectedFieldId: string | null;
-  sqlSourceActive?: boolean;
   onSearchChange: (value: string) => void;
   onDatasourceChange: (datasourceId: string) => void;
   onSelectTable: (table: string) => void;
   onSelectField: (field: DataField) => void;
-  onRestoreDemoDataset?: () => void;
 };
 
 function ToggleIcon({ open }: { open: boolean }) {
@@ -39,12 +36,10 @@ function DataPanel({
   searchValue,
   selectedTable,
   selectedFieldId,
-  sqlSourceActive = false,
   onSearchChange,
   onDatasourceChange,
   onSelectTable,
   onSelectField,
-  onRestoreDemoDataset,
 }: DataPanelProps) {
   const [openDatabase, setOpenDatabase] = useState(true);
   const [openSchema, setOpenSchema] = useState(true);
@@ -144,11 +139,6 @@ function DataPanel({
             </MenuItem>
           ))}
         </Select>
-        <DemoHint
-          id="data-panel"
-          title="Demo tip"
-          description="ลากฟิลด์จากรายการนี้ไปวางใน Field Mapping เพื่อให้ Preview เปลี่ยนทันที"
-        />
       </Stack>
 
       <Box
@@ -344,16 +334,6 @@ function DataPanel({
               {rows.length.toLocaleString("th-TH")} rows · {fields.length} fields
             </Typography>
           </Stack>
-          {sqlSourceActive ? (
-            <Button
-              size="small"
-              variant="outlined"
-              onClick={onRestoreDemoDataset}
-              sx={{ alignSelf: "flex-start", mt: 0.25, height: 24, minHeight: 24, px: 0.75, fontSize: 10 }}
-            >
-              กลับไปใช้ Demo Dataset
-            </Button>
-          ) : null}
         </Stack>
       </Box>
     </Paper>

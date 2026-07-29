@@ -26,8 +26,6 @@ import {
   compactChartConfigForStorage,
   consumeStorageRecoveryMessage,
   safeSetLocalStorage,
-  setActiveDashboard as setStoredActiveDashboard,
-  setActiveProject as setStoredActiveProject,
 } from "@infrastructure/persistence/project-storage/projectStorage";
 import { useLocation } from "react-router-dom";
 import { isMockMode } from "@infrastructure/http/client";
@@ -455,16 +453,6 @@ function loadInitialDesignerSnapshot(chartId?: string | null) {
     loadedSavedChartId: savedChart?.id ?? null,
     requestedChartMissing: Boolean(chartId && !savedChart),
   };
-}
-
-function restoreDashboardContext(projectId?: string | null, dashboardId?: string | null) {
-  if (projectId) {
-    setStoredActiveProject(projectId, dashboardId || undefined);
-    return;
-  }
-  if (dashboardId) {
-    setStoredActiveDashboard(dashboardId);
-  }
 }
 
 function createFilterValue(field: DataField): FilterValue {
@@ -907,10 +895,6 @@ export function useDashboardDesignerState() {
   }, [activeSavedChartId, config, sqlQuery, sqlResult]);
 
   useEffect(() => {
-    restoreDashboardContext(returnProjectId, returnDashboardId);
-  }, [returnProjectId, returnDashboardId]);
-
-  useEffect(() => {
     if (mockMode) return undefined;
     let active = true;
     setIsLoading(true);
@@ -918,17 +902,24 @@ export function useDashboardDesignerState() {
       .then(async (response) => {
         const items = Array.isArray(response?.items) ? response.items : [];
         if (!active) return;
-        setRemoteDatasources(items.map((item: Record<string, unknown>) => ({
+        setRemoteDatasources(items.map((item: Record<string, unknown>) => {
+          const sourceConfig = item.sourceConfigJson && typeof item.sourceConfigJson === "object"
+            ? item.sourceConfigJson as Record<string, unknown>
+            : {};
+          const schema = String(sourceConfig.schemaName || "public");
+          const table = String(sourceConfig.tableName || item.name || item.id);
+          return {
           id: String(item.id),
           name: String(item.name || "Dataset"),
           database: "PostgreSQL",
-          schema: "public",
-          table: String(item.name || item.id),
+          schema,
+          table,
           rowCount: Number(item.rowCount || 0),
           fieldCount: Number(item.fieldCount || 0),
           lastUpdated: String(item.updatedAt || ""),
-          sourceType: "local",
-        })));
+          sourceType: String(item.sourceType || "postgres"),
+        };
+        }));
         if (!items.length) {
           setRows([]);
           setFields([]);
@@ -946,6 +937,16 @@ export function useDashboardDesignerState() {
           ...current,
           sourceType: "dataset",
           datasetId: dataset.id,
+          settings: current.datasetId
+            ? current.settings
+            : {
+                ...current.settings,
+                general: {
+                  ...current.settings.general,
+                  title: dataset.name || "Live dataset",
+                  subtitle: "Live PostgreSQL source",
+                },
+              },
           mappings: current.chartType
             ? applyChartTypeDefaults(current.mappings, current.chartType, nextFields)
             : current.mappings,
@@ -994,7 +995,6 @@ export function useDashboardDesignerState() {
         .finally(() => setIsLoading(false));
       return;
     }
-    restoreDashboardContext(returnProjectId, returnDashboardId);
     const snapshot = loadInitialDesignerSnapshot(requestedChartId);
     if (!snapshot.loadedSavedChartId) {
       setSnackbar("ไม่พบกราฟที่ต้องการแก้ไข");

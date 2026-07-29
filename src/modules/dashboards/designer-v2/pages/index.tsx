@@ -18,10 +18,6 @@ import { dashboardV2Theme, dashboardV2Tokens as tokens } from "@modules/dashboar
 import { DashboardDesignerProvider } from "@modules/dashboards/designer-v2/context/DashboardDesignerContext";
 import { useDashboardDesigner } from "@modules/dashboards/designer-v2/context/useDashboardDesigner";
 import type { ChartType } from "@modules/dashboards/designer-v2/components/types";
-import {
-  setActiveDashboard as setStoredActiveDashboard,
-  setActiveProject as setStoredActiveProject,
-} from "@infrastructure/persistence/project-storage/projectStorage";
 
 const PreviewCanvas = lazy(() => import("@modules/dashboards/designer-v2/components/PreviewCanvas"));
 const PropertyPanel = lazy(() => import("@modules/dashboards/designer-v2/components/PropertyPanel"));
@@ -81,25 +77,22 @@ function DashboardDesignerContent() {
     actions.setShareOpen(false);
     actions.setSqlPanelOpen(false);
   }, [actions]);
-  const restoreReturnContext = React.useCallback(() => {
-    if (returnContext.projectId) {
-      setStoredActiveProject(returnContext.projectId, returnContext.dashboardId || undefined);
-      return;
-    }
-    if (returnContext.dashboardId) {
-      setStoredActiveDashboard(returnContext.dashboardId);
-    }
+  const returnDashboardPath = React.useMemo(() => {
+    const params = new URLSearchParams();
+    if (returnContext.projectId) params.set("projectId", returnContext.projectId);
+    if (returnContext.dashboardId) params.set("dashboardId", returnContext.dashboardId);
+    const search = params.toString();
+    return `/dashboard${search ? `?${search}` : ""}`;
   }, [returnContext.dashboardId, returnContext.projectId]);
   const handleSaveChart = React.useCallback(() => {
     actions.saveChart();
     if (state.returnToDashboard) {
       actions.showMessage("บันทึกกราฟแล้ว กำลังกลับไปแดชบอร์ด");
-      restoreReturnContext();
       window.setTimeout(() => {
-        navigate("/dashboard");
+        navigate(returnDashboardPath);
       }, 350);
     }
-  }, [actions, navigate, restoreReturnContext, state.returnToDashboard]);
+  }, [actions, navigate, returnDashboardPath, state.returnToDashboard]);
 
   React.useEffect(() => {
     function handlePageHide() {
@@ -267,8 +260,7 @@ function DashboardDesignerContent() {
             component="button"
             type="button"
             onClick={() => {
-              restoreReturnContext();
-              navigate("/dashboard");
+              navigate(returnDashboardPath);
             }}
             sx={{
               height: 24,
@@ -322,12 +314,10 @@ function DashboardDesignerContent() {
             searchValue={state.searchValue}
             selectedTable={state.selectedTable}
             selectedFieldId={state.selectedFieldId}
-            sqlSourceActive={state.sqlSourceActive}
             onSearchChange={actions.setSearchValue}
             onDatasourceChange={actions.setActiveDatasourceId}
             onSelectTable={actions.setSelectedTable}
             onSelectField={actions.setSelectedField}
-            onRestoreDemoDataset={actions.activateDemoDataset}
           />
         </Box>
         ) : null}
