@@ -35,9 +35,16 @@ function datasetColumns(dataset) {
 function datasetSummary(dataset) {
   const estimatedRows = dataset?.sourceConfigJson?.estimatedRowCount;
   return {
-    rows: dataset?.rows?.length ?? dataset?.rowCount ?? estimatedRows ?? null,
+    rows: dataset?.rows?.length ?? (dataset?.sourceType === "postgres_schema" ? estimatedRows : dataset?.rowCount) ?? dataset?.rowCount ?? null,
     columns: dataset?.fields?.length ?? dataset?.fieldCount ?? dataset?.columnCount ?? 0,
   };
+}
+
+function liveDatasetLabel(dataset) {
+  const config = dataset?.sourceConfigJson;
+  return dataset?.sourceType === "postgres_schema" && config?.schemaName && config?.tableName
+    ? `${config.schemaName}.${config.tableName}`
+    : dataset?.source || "ชุดข้อมูลจากระบบ";
 }
 
 function uniqueCatalogDatasets(items = []) {
@@ -51,6 +58,11 @@ function uniqueCatalogDatasets(items = []) {
     seen.add(key);
     return true;
   });
+}
+
+function formatRowEstimate(value) {
+  const count = Number(value);
+  return Number.isFinite(count) && count >= 0 ? `${count}` : "ไม่ทราบจำนวน";
 }
 
 function createColumnStats(rows = [], fields = []) {
@@ -202,8 +214,24 @@ export default function DatasetsPage() {
   }, [activeProjectId, externalSources]);
   const externalTables = useMemo(() => externalTableCatalog[externalSchema] ?? EMPTY_TABLES, [externalSchema, externalTableCatalog]);
   useEffect(() => { setExternalTable((current) => externalTables.some((table) => table.name === current) ? current : (externalTables[0]?.name ?? "")); }, [externalTables]);
+  useEffect(() => {
+    setImportError("");
+    setExternalColumns([]);
+    setSelectedExternalFields([]);
+    setExternalPreview([]);
+    setExternalFilterField("");
+    setExternalSortField("");
+    setExternalPage(1);
+  }, [externalSchema, externalTable]);
   useEffect(() => { if (!externalSchema || !externalTable) return; listExternalColumns(externalSchema, externalTable, activeProjectId).then(result => { const items = result?.items ?? []; setExternalColumns(items); setSelectedExternalFields(items.map(column => column.name)); setExternalFilterField(items[0]?.name ?? ""); setExternalSortField(items[0]?.name ?? ""); setExternalPage(1); }).catch(error => setImportError(error.message)); }, [activeProjectId, externalSchema, externalTable]);
-  useEffect(() => { if (!externalSchema || !externalTable || !selectedExternalFields.length) return; previewExternalSource({ projectId: activeProjectId, schemaName: externalSchema, tableName: externalTable, select: selectedExternalFields, filters: externalFilterValue ? [{ field: externalFilterField, operator: "contains", value: externalFilterValue }] : [], sort: externalSortField ? { field: externalSortField, direction: externalSortDirection } : undefined, page: externalPage, pageSize: 50 }).then(result => setExternalPreview(result?.rows ?? [])).catch(error => setImportError(error.message)); }, [activeProjectId, externalFilterField, externalFilterValue, externalPage, externalSchema, externalSortDirection, externalSortField, externalTable, selectedExternalFields]);
+  useEffect(() => {
+    if (!externalSchema || !externalTable || !selectedExternalFields.length) return undefined;
+    let active = true;
+    previewExternalSource({ projectId: activeProjectId, schemaName: externalSchema, tableName: externalTable, select: selectedExternalFields, filters: externalFilterValue ? [{ field: externalFilterField, operator: "contains", value: externalFilterValue }] : [], sort: externalSortField ? { field: externalSortField, direction: externalSortDirection } : undefined, page: externalPage, pageSize: 50 })
+      .then(result => { if (active) setExternalPreview(result?.rows ?? []); })
+      .catch(error => { if (active) setImportError(error.message); });
+    return () => { active = false; };
+  }, [activeProjectId, externalFilterField, externalFilterValue, externalPage, externalSchema, externalSortDirection, externalSortField, externalTable, selectedExternalFields]);
 
   async function saveExternalDataset() {
     if (savingExternalDataset || !externalTable) return;
@@ -384,7 +412,8 @@ export default function DatasetsPage() {
                 onClick={() => setSelectedDatasetId(dataset.id)}
               >
                 <strong>{dataset.name}</strong>
-                <span>{dataset.source || "ชุดข้อมูลจากระบบ"}</span>
+                <span>{liveDatasetLabel(dataset)}</span>
+                {dataset.sourceType === "postgres_schema" ? <em>Live · อ่านอย่างเดียว</em> : null}
                 <small>{summary.rows == null || summary.rows < 0 ? "ไม่ทราบจำนวนแถว" : `${summary.rows} แถว`} / {summary.columns} คอลัมน์</small>
               </button>
             );
@@ -455,14 +484,14 @@ export default function DatasetsPage() {
                   const tables = (externalTableCatalog[source.schemaName] ?? []).filter((table) => `${source.schemaName}.${table.name}`.toLowerCase().includes(externalTableSearch.trim().toLowerCase()));
                   return <section className="datasets-source-table-catalog__schema" key={source.schemaName} role="treeitem" aria-label={source.displayName || source.schemaName}>
                     <header><strong>{source.displayName || source.schemaName}</strong><span>{tables.length} tables</span></header>
-                    {tables.length ? <div>{tables.map((table) => <button type="button" key={table.name} className={source.schemaName === externalSchema && table.name === externalTable ? "is-active" : ""} onClick={() => { setExternalSchema(source.schemaName); setExternalTable(table.name); setExternalPage(1); }}><span>{table.name}</span><small>{table.objectType || "table"} · {table.rowCountEstimate ?? "?"} rows · read only</small></button>)}</div> : <p>No matching tables.</p>}
+                    {tables.length ? <div>{tables.map((table) => <button type="button" key={table.name} className={source.schemaName === externalSchema && table.name === externalTable ? "is-active" : ""} onClick={() => { setExternalSchema(source.schemaName); setExternalTable(table.name); setExternalPage(1); }}><span>{table.name}</span><small>{table.objectType || "table"} · {formatRowEstimate(table.rowCountEstimate)} rows · read only</small></button>)}</div> : <p>No matching tables.</p>}
                   </section>;
                 })}
               </div>
             </section>
             <div className="datasets-source-browser__controls">
               <label><span>Schema</span><select value={externalSchema} onChange={(event) => setExternalSchema(event.target.value)}>{externalSources.map(source => <option key={source.schemaName} value={source.schemaName}>{source.displayName}</option>)}</select></label>
-              <label><span>Table</span><select value={externalTable} onChange={(event) => setExternalTable(event.target.value)}>{externalTables.map(table => <option key={table.name} value={table.name}>{table.name} ({table.rowCountEstimate ?? "?"})</option>)}</select></label>
+              <label><span>Table</span><select value={externalTable} onChange={(event) => setExternalTable(event.target.value)}>{externalTables.map(table => <option key={table.name} value={table.name}>{table.name} ({formatRowEstimate(table.rowCountEstimate)})</option>)}</select></label>
               <label><span>Filter column</span><select value={externalFilterField} onChange={(event) => { setExternalFilterField(event.target.value); setExternalPage(1); }}>{externalColumns.map(column => <option key={column.name} value={column.name}>{column.name}</option>)}</select></label>
               <label><span>Contains</span><input value={externalFilterValue} onChange={(event) => { setExternalFilterValue(event.target.value); setExternalPage(1); }} /></label>
               <label><span>Sort</span><select value={externalSortField} onChange={(event) => setExternalSortField(event.target.value)}>{externalColumns.map(column => <option key={column.name} value={column.name}>{column.name}</option>)}</select></label>

@@ -5,7 +5,17 @@ import { describe, expect, it, vi } from "vitest";
 import DatasetsPage from "@modules/datasets/pages/DatasetsPage";
 
 const datasets = [
-  { id: "dataset-a", projectId: "project-a", name: "Project A dataset", revision: 1, fields: [], rows: [] },
+  {
+    id: "dataset-a",
+    projectId: "project-a",
+    name: "Project A dataset",
+    revision: 1,
+    fields: [],
+    rows: [],
+    sourceType: "postgres_schema",
+    sourceConfigJson: { schemaName: "scopus", tableName: "sc_articles", estimatedRowCount: 6004 },
+    fieldCount: 6,
+  },
   { id: "dataset-b", projectId: "project-b", name: "Project B dataset", revision: 1, fields: [], rows: [] },
 ];
 const storeState = {
@@ -42,7 +52,7 @@ vi.mock("@modules/datasets/api/datasetApi", () => ({
   importDatasetCsv: vi.fn(),
   archiveDataset: vi.fn(),
   listExternalSources: vi.fn(async () => ({ items: [{ schemaName: "scopus", displayName: "Scopus" }] })),
-  listExternalTables: vi.fn(async () => ({ items: [{ name: "sc_articles", objectType: "table", rowCountEstimate: 10, readOnly: true, capabilities: { canRead: true, canInsert: false, canUpdate: false, canDelete: false, canExport: true } }, { name: "sc_authors", objectType: "table", rowCountEstimate: 4, readOnly: true, capabilities: { canRead: true, canInsert: false, canUpdate: false, canDelete: false, canExport: true } }] })),
+  listExternalTables: vi.fn(async () => ({ items: [{ name: "sc_articles", objectType: "table", rowCountEstimate: 10, readOnly: true, capabilities: { canRead: true, canInsert: false, canUpdate: false, canDelete: false, canExport: true } }, { name: "sc_authors", objectType: "table", rowCountEstimate: -1, readOnly: true, capabilities: { canRead: true, canInsert: false, canUpdate: false, canDelete: false, canExport: true } }] })),
   listExternalColumns: vi.fn(async () => ({ items: [{ name: "id", dataType: "uuid", primaryKey: true }] })),
   previewExternalSource: vi.fn(async () => ({ rows: [{ id: "article-1" }] })),
   createExternalDataset: vi.fn(async () => ({ id: "dataset-scopus" })),
@@ -56,6 +66,8 @@ describe("DatasetsPage project ownership", () => {
     render(<MemoryRouter><DatasetsPage /></MemoryRouter>);
 
     expect((await screen.findAllByText("Project A dataset")).length).toBeGreaterThan(0);
+    expect(screen.getByText("scopus.sc_articles")).toBeInTheDocument();
+    expect(screen.getByText("Live · อ่านอย่างเดียว")).toBeInTheDocument();
     expect(screen.queryByText("Project B dataset")).not.toBeInTheDocument();
   });
 
@@ -64,6 +76,8 @@ describe("DatasetsPage project ownership", () => {
 
     expect(await screen.findByRole("region", { name: "PostgreSQL external source browser" })).toBeInTheDocument();
     expect(screen.getByText("Read only")).toBeInTheDocument();
+    expect(await screen.findByText(/ไม่ทราบจำนวน rows/)).toBeInTheDocument();
+    expect(screen.queryByText(/-1 rows/)).not.toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole("combobox", { name: "Schema" })).toHaveValue("scopus"));
     await waitFor(() => expect(screen.getByRole("combobox", { name: "Table" })).toHaveValue("sc_articles"));
     await waitFor(() => expect(screen.getByRole("button", { name: "Create live dataset" })).toBeEnabled());
@@ -93,6 +107,8 @@ describe("DatasetsPage project ownership", () => {
     const authors = await screen.findByRole("button", { name: /sc_authors/ });
     fireEvent.click(authors);
     await waitFor(() => expect(screen.getByRole("combobox", { name: "Table" })).toHaveValue("sc_authors"));
+    await waitFor(() => expect(screen.getByRole("combobox", { name: "Filter column" })).toHaveValue("id"));
+    expect(screen.queryByText("External column is not allowed.")).not.toBeInTheDocument();
   });
 
   it("renames only the selected catalog metadata through the API", async () => {
