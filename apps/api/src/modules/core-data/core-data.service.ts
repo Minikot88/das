@@ -6,6 +6,7 @@ import { PrismaService } from '../../infrastructure/database/prisma.service.js';
 import { ApiError } from '../../shared/http/api-error.js';
 import type { RequestPrincipal } from '../projects/application/project.service.js';
 import { AuthorizationService, type ProjectPermission } from '../auth/application/authorization.service.js';
+import { ExternalSourcesService } from '../external-sources/external-sources.service.js';
 
 type JsonObject = Record<string, unknown>;
 type QueryFilter = { field: string; operator: string; value?: unknown };
@@ -13,7 +14,7 @@ type Aggregate = { field: string; operation: string; alias?: string };
 
 @Injectable()
 export class CoreDataService {
-  constructor(private readonly prisma: PrismaService, private readonly authorization: AuthorizationService) {}
+  constructor(private readonly prisma: PrismaService, private readonly authorization: AuthorizationService, private readonly external: ExternalSourcesService = {} as ExternalSourcesService) {}
 
   private async project(principal: RequestPrincipal, projectId: string, permission: ProjectPermission = 'read') {
     await this.authorization.assertProjectPermission(principal as never, projectId, permission);
@@ -115,6 +116,13 @@ export class CoreDataService {
 
   async queryDataset(principal: RequestPrincipal, id: string, input: JsonObject) {
     const dataset = await this.dataset(principal, id);
+    if (dataset.sourceType === 'postgres_schema') {
+      const config = dataset.sourceConfigJson as JsonObject | null;
+      if (!config) throw new ApiError(409, 'EXTERNAL_SOURCE_CONFIG_MISSING', 'External dataset configuration is missing.');
+      const result = await this.external.run({ ...config, ...input });
+      await this.prisma.auditLog.create({ data: { organizationId: principal.organizationId, projectId: dataset.projectId, actorUserId: principal.userId, requestId: `external-${randomUUID()}`, entityType: 'dataset', entityId: dataset.id, action: 'external.dataset.query', outcome: 'succeeded', metadataJson: { schema: String(config.schemaName), table: String(config.tableName), rowCount: result.rows.length } } });
+      return result;
+    }
     if (dataset.status !== 'ready') throw new ApiError(409, 'DATASET_NOT_READY', 'Dataset is not ready for queries.');
     const fields = await this.fields(principal, id);
     const allowed = new Set(fields.map(field => field.fieldKey));
@@ -140,6 +148,23 @@ export class CoreDataService {
     const page = bounded(Number(input.page || 1), 1, 1_000_000);
     rows = rows.slice((page - 1) * pageSize, page * pageSize);
     return { rows, total, page, pageSize, truncated: total > page * pageSize };
+  }
+
+  async externalSources(principal: RequestPrincipal, projectId: string) { await this.project(principal, projectId); return this.external.sources(); }
+  async externalTables(principal: RequestPrincipal, projectId: string, schemaName: string) { await this.project(principal, projectId); return this.external.tables(schemaName); }
+  async externalColumns(principal: RequestPrincipal, projectId: string, schemaName: string, tableName: string) { await this.project(principal, projectId); return this.external.columns(schemaName, tableName); }
+  async previewExternal(principal: RequestPrincipal, input: JsonObject) { await this.project(principal, String(input.projectId || '')); return this.external.preview(input); }
+  async createExternalDataset(principal: RequestPrincipal, input: JsonObject) {
+    const projectId = String(input.projectId || ''); await this.project(principal, projectId, 'write');
+    const schemaName = String(input.schemaName || ''); const tableName = String(input.tableName || ''); const columns = await this.external.columns(schemaName, tableName);
+    const selected = Array.isArray(input.selectedFields) && input.selectedFields.length ? input.selectedFields.map(String) : columns.items.map((column: { name: string }) => column.name);
+    const allowed = new Set(columns.items.map((column: { name: string }) => column.name)); if (selected.some(field => !allowed.has(field))) throw new ApiError(400, 'INVALID_COLUMN', 'Selected field is not allowed.');
+    const id = `dataset-${randomUUID()}`; const config = { sourceMode: 'live', connectionId: 'application-postgres', schemaName, tableName, select: selected, filters: Array.isArray(input.filters) ? input.filters : [], groupBy: Array.isArray(input.groupBy) ? input.groupBy : [], aggregates: Array.isArray(input.aggregates) ? input.aggregates : [], sort: input.sort || null };
+    return this.prisma.$transaction(async tx => {
+      const dataset = await tx.dataset.create({ data: { id, organizationId: principal.organizationId, projectId, name: String(input.name || tableName).slice(0, 180), sourceType: 'postgres_schema', sourceConfigJson: config, status: 'ready', fieldCount: selected.length, revision: 1 } });
+      await tx.datasetField.createMany({ data: columns.items.filter((column: { name: string }) => selected.includes(column.name)).map((column: { name: string; dataType: string; nullable: boolean; ordinal: number }) => ({ id: `field-${randomUUID()}`, datasetId: id, fieldKey: column.name, name: column.name, label: column.name, dataType: column.dataType, nullable: column.nullable, ordinal: column.ordinal })) });
+      await tx.datasetVersion.create({ data: { id: `dataset-version-${randomUUID()}`, datasetId: id, version: 1, schemaJson: config, rowCount: 0 } }); return dataset;
+    });
   }
 
   async archiveDataset(principal: RequestPrincipal, id: string, revision: number) {

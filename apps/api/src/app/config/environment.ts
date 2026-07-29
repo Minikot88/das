@@ -21,6 +21,7 @@ export type RuntimeEnvironment = {
   databasePoolMax: number;
   logLevel: typeof LOG_LEVELS[number];
   connectorNetworkAllowlist: string[];
+  externalSourceSchemas: string[];
   cookieSecure: boolean;
   publicRegistrationEnabled: boolean;
   sessionIdleTimeoutSeconds: number;
@@ -186,6 +187,7 @@ export function parseEnvironment(input: NodeJS.ProcessEnv | Record<string, strin
     databasePoolMax: parseBoundedInteger('DATABASE_POOL_MAX', input.DATABASE_POOL_MAX, 10, 1, 50),
     logLevel,
     connectorNetworkAllowlist: String(input.CONNECTOR_NETWORK_ALLOWLIST || '').split(',').map(value => value.trim()).filter(Boolean),
+    externalSourceSchemas: String(input.EXTERNAL_SOURCE_SCHEMAS || 'scopus').split(',').map(value => value.trim().toLowerCase()).filter(value => /^[a-z_][a-z0-9_]*$/.test(value) && !['public', 'pg_catalog', 'information_schema'].includes(value)),
     cookieSecure,
     publicRegistrationEnabled,
     sessionIdleTimeoutSeconds,

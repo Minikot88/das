@@ -31,6 +31,11 @@ vi.mock("@modules/datasets/api/datasetApi", () => ({
   queryDataset: vi.fn(async () => ({ rows: [], total: 0 })),
   importDatasetCsv: vi.fn(),
   archiveDataset: vi.fn(),
+  listExternalSources: vi.fn(async () => ({ items: [] })),
+  listExternalTables: vi.fn(async () => ({ items: [] })),
+  listExternalColumns: vi.fn(async () => ({ items: [] })),
+  previewExternalSource: vi.fn(async () => ({ rows: [] })),
+  createExternalDataset: vi.fn(),
 }));
 
 vi.mock("@shared/components/ui/EnterpriseDataTable", () => ({ default: () => null }));

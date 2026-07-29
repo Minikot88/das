@@ -14,6 +14,11 @@ export class CoreDataController {
   @Get('datasets/:id') dataset(@CurrentPrincipal() p: RequestPrincipal, @Param('id') id: string) { return this.data.dataset(p, id); }
   @Get('datasets/:id/fields') fields(@CurrentPrincipal() p: RequestPrincipal, @Param('id') id: string) { return this.data.fields(p, id); }
   @Post('datasets/:id/query') @HttpCode(HttpStatus.OK) queryDataset(@CurrentPrincipal() p: RequestPrincipal, @Param('id') id: string, @Body() body: Record<string, unknown>) { return this.data.queryDataset(p, id, body || {}); }
+  @Get('external-sources') sources(@CurrentPrincipal() p: RequestPrincipal, @Query('projectId') projectId: string) { return this.data.externalSources(p, String(projectId || '')); }
+  @Get('external-sources/:schema/tables') tables(@CurrentPrincipal() p: RequestPrincipal, @Query('projectId') projectId: string, @Param('schema') schema: string) { return this.data.externalTables(p, String(projectId || ''), schema); }
+  @Get('external-sources/:schema/tables/:table/columns') columns(@CurrentPrincipal() p: RequestPrincipal, @Query('projectId') projectId: string, @Param('schema') schema: string, @Param('table') table: string) { return this.data.externalColumns(p, String(projectId || ''), schema, table); }
+  @Post('external-sources/preview') @HttpCode(HttpStatus.OK) preview(@CurrentPrincipal() p: RequestPrincipal, @Body() body: Record<string, unknown>) { return this.data.previewExternal(p, body || {}); }
+  @Post('datasets/external') createExternal(@CurrentPrincipal() p: RequestPrincipal, @Body() body: Record<string, unknown>) { return this.data.createExternalDataset(p, body || {}); }
   @Delete('datasets/:id') archiveDataset(@CurrentPrincipal() p: RequestPrincipal, @Param('id') id: string, @Body() body: { revision?: number }) { return this.data.archiveDataset(p, id, Number(body?.revision)); }
   @Post('datasets/import') async importCsv(@CurrentPrincipal() p: RequestPrincipal, @Req() request: FastifyRequest) {
     const file = await request.file();

@@ -10,6 +10,11 @@ import {
   importDatasetCsv,
   listDatasets,
   queryDataset,
+  listExternalSources,
+  listExternalTables,
+  listExternalColumns,
+  previewExternalSource,
+  createExternalDataset,
 } from "@modules/datasets/api/datasetApi";
 
 function datasetColumns(dataset) {
@@ -76,6 +81,12 @@ export default function DatasetsPage() {
   const [fileName, setFileName] = useState("");
   const [datasetName, setDatasetName] = useState("");
   const [importError, setImportError] = useState("");
+  const [externalSources, setExternalSources] = useState([]);
+  const [externalSchema, setExternalSchema] = useState("");
+  const [externalTables, setExternalTables] = useState([]);
+  const [externalTable, setExternalTable] = useState("");
+  const [externalColumns, setExternalColumns] = useState([]);
+  const [externalPreview, setExternalPreview] = useState([]);
 
   const reloadDatasets = useCallback(async (preferredId = "") => {
     setLoading(true);
@@ -100,6 +111,13 @@ export default function DatasetsPage() {
   useEffect(() => {
     void reloadDatasets();
   }, [reloadDatasets]);
+
+  useEffect(() => { if (!activeProjectId) return; listExternalSources(activeProjectId).then(result => { const items = result?.items ?? []; setExternalSources(items); setExternalSchema(items[0]?.schemaName ?? ""); }).catch(() => setExternalSources([])); }, [activeProjectId]);
+  useEffect(() => { if (!externalSchema) return; listExternalTables(externalSchema, activeProjectId).then(result => { const items = result?.items ?? []; setExternalTables(items); setExternalTable(items[0]?.name ?? ""); }).catch(error => setImportError(error.message)); }, [activeProjectId, externalSchema]);
+  useEffect(() => { if (!externalSchema || !externalTable) return; listExternalColumns(externalSchema, externalTable, activeProjectId).then(result => setExternalColumns(result?.items ?? [])).catch(error => setImportError(error.message)); }, [activeProjectId, externalSchema, externalTable]);
+  useEffect(() => { if (!externalSchema || !externalTable) return; previewExternalSource({ projectId: activeProjectId, schemaName: externalSchema, tableName: externalTable, pageSize: 50 }).then(result => setExternalPreview(result?.rows ?? [])).catch(error => setImportError(error.message)); }, [activeProjectId, externalSchema, externalTable]);
+
+  async function saveExternalDataset() { try { const dataset = await createExternalDataset({ projectId: activeProjectId, name: `${externalSchema}.${externalTable}`, schemaName: externalSchema, tableName: externalTable, selectedFields: externalColumns.map(column => column.name) }); await reloadDatasets(dataset.id); } catch (error) { setImportError(error.message); } }
 
   useEffect(() => {
     if (!selectedDatasetId) {
@@ -287,6 +305,16 @@ export default function DatasetsPage() {
                 {parsedCsv.validation.warnings.map((warning) => <span key={warning}>{warning}</span>)}
               </div>
             ) : null}
+          </section>
+          <section className="datasets-import-panel" aria-label="PostgreSQL external source browser">
+            <div className="datasets-import-copy"><span>PostgreSQL source</span><h2>External schema browser</h2><p>เลือก schema และตารางที่ได้รับอนุญาต ข้อมูลต้นทางเป็นแบบอ่านอย่างเดียว</p></div>
+            <div className="datasets-import-controls">
+              <label><span>Schema</span><select value={externalSchema} onChange={(event) => setExternalSchema(event.target.value)}>{externalSources.map(source => <option key={source.schemaName} value={source.schemaName}>{source.displayName}</option>)}</select></label>
+              <label><span>Table</span><select value={externalTable} onChange={(event) => setExternalTable(event.target.value)}>{externalTables.map(table => <option key={table.name} value={table.name}>{table.name} ({table.rowCountEstimate ?? "?"})</option>)}</select></label>
+              <button type="button" className="dashboard-toolbar-btn is-primary" disabled={!externalTable} onClick={saveExternalDataset}>Save live dataset</button>
+            </div>
+            <div className="datasets-field-grid">{externalColumns.map(column => <div className="datasets-field-card" key={column.name}><strong>{column.name}</strong><small>{column.dataType}{column.primaryKey ? " · PK" : ""}</small></div>)}</div>
+            {externalPreview.length ? <EnterpriseDataTable title={`Preview ${externalSchema}.${externalTable}`} rows={externalPreview} columns={Object.keys(externalPreview[0]).map(key => ({ key, label: key }))} density={appSettings.density} /> : <div className="datasets-empty-state">No rows to preview.</div>}
           </section>
 
           <section className="datasets-schema-panel">

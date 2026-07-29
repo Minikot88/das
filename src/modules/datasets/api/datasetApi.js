@@ -88,3 +88,20 @@ export async function archiveDataset(datasetId, revision) {
     body: JSON.stringify({ revision }),
   });
 }
+
+export async function listExternalSources(projectId = activeProjectId()) {
+  if (isMockMode() || !projectId) return { items: [] };
+  return apiRequest(`/api/v1/external-sources?projectId=${encodeURIComponent(projectId)}`);
+}
+export async function listExternalTables(schemaName, projectId = activeProjectId()) {
+  return apiRequest(`/api/v1/external-sources/${encodeApiPathSegment(schemaName)}/tables?projectId=${encodeURIComponent(projectId)}`);
+}
+export async function listExternalColumns(schemaName, tableName, projectId = activeProjectId()) {
+  return apiRequest(`/api/v1/external-sources/${encodeApiPathSegment(schemaName)}/tables/${encodeApiPathSegment(tableName)}/columns?projectId=${encodeURIComponent(projectId)}`);
+}
+export async function previewExternalSource(input) {
+  return apiRequest('/api/v1/external-sources/preview', { method: 'POST', body: JSON.stringify(input) });
+}
+export async function createExternalDataset(input) {
+  return apiRequest('/api/v1/datasets/external', { method: 'POST', body: JSON.stringify(input) });
+}

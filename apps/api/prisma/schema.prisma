@@ -569,6 +569,7 @@ model Dataset {
   rowCount                   Int                       @default(0) @map("row_count")
   fieldCount                 Int                       @default(0) @map("field_count")
   sourceFileId               String?                   @map("source_file_id") @db.VarChar(64)
+  sourceConfigJson           Json?                     @map("source_config_json")
   statisticsJson             Json?                     @map("statistics_json")
   revision                   Int                       @default(0)
   createdAt                  DateTime                  @default(now()) @map("created_at") @db.Timestamptz(3)
