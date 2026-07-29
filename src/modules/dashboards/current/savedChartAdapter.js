@@ -24,3 +24,9 @@ export function buildSavedChartConfigInput(savedChart = {}) {
     updatedAt: savedChart.updatedAt ?? config.updatedAt,
   };
 }
+
+export function savedChartSourceDiffers(copiedConfig, savedConfig) {
+  if (!copiedConfig || !savedConfig) return true;
+  return copiedConfig.datasetId !== savedConfig.datasetId
+    || copiedConfig.sourceType !== savedConfig.sourceType;
+}

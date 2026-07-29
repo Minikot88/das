@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import ChartPreview from "@modules/dashboards/designer-v2/components/components/charts/ChartPreview";
 import { chartWidgetDensity } from "./chartWidgetDensity";
 import { normalizeDashboardChartFields, toDashboardMappingSlots } from "./chartMappingAdapter";
-import { buildSavedChartConfigInput } from "./savedChartAdapter";
+import { buildSavedChartConfigInput, savedChartSourceDiffers } from "./savedChartAdapter";
 import { createDefaultConfig, dataFields, defaultChartSettings } from "@modules/dashboards/designer-v2/components/mockData";
 import { getDatasetRows } from "@modules/dashboards/designer-v2/components/services/datasetService";
 import { loadDataset } from "@modules/datasets/public/api";
@@ -308,7 +308,11 @@ function resolveWidgetChartConfig(widget, savedCharts = []) {
   const savedConfig = normalizeChartConfig(buildSavedChartConfigInput(savedChart));
   const copiedUpdatedAt = Date.parse(copiedConfig?.updatedAt ?? "");
   const savedUpdatedAt = Date.parse(savedChart.updatedAt ?? savedConfig.updatedAt ?? "");
-  if (!copiedConfig || (Number.isFinite(savedUpdatedAt) && savedUpdatedAt > (Number.isFinite(copiedUpdatedAt) ? copiedUpdatedAt : 0))) {
+  if (
+    !copiedConfig
+    || savedChartSourceDiffers(copiedConfig, savedConfig)
+    || (Number.isFinite(savedUpdatedAt) && savedUpdatedAt > (Number.isFinite(copiedUpdatedAt) ? copiedUpdatedAt : 0))
+  ) {
     return savedConfig;
   }
   return copiedConfig;
