@@ -12,6 +12,7 @@ import type { DataField } from "@modules/dashboards/designer-v2/components/types
 
 type DataPanelProps = {
   datasources: DemoDatasource[];
+  schemaCatalog?: Array<{ schemaName: string; displayName: string; tables: Array<{ name: string; rowCountEstimate?: number }> }>;
   activeDatasourceId: string;
   fields: DataField[];
   rows: DemoDatasetRow[];
@@ -30,6 +31,7 @@ function ToggleIcon({ open }: { open: boolean }) {
 
 function DataPanel({
   datasources,
+  schemaCatalog = [],
   activeDatasourceId,
   fields,
   rows,
@@ -192,6 +194,27 @@ function DataPanel({
 
           {openDatabase ? (
             <Box sx={{ pl: 1.75 }}>
+              {schemaCatalog.map((schema) => (
+                <Box key={schema.schemaName} sx={{ mb: 0.5 }}>
+                  <Stack direction="row" alignItems="center" gap={0.75} sx={{ minHeight: 24, px: 0.75, color: "text.secondary" }}>
+                    <TableChartRoundedIcon fontSize="small" />
+                    <Typography variant="body2" fontWeight={500} noWrap>{schema.displayName}</Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ ml: "auto" }}>{schema.tables.length}</Typography>
+                  </Stack>
+                  <Box sx={{ pl: 1.75, display: "grid", gap: 0.125 }}>
+                    {schema.tables.map((table) => {
+                      const activeTable = schema.schemaName === datasource.schema && table.name === datasource.table;
+                      return (
+                        <Box key={table.name} component="button" type="button" onClick={() => { if (activeTable) onSelectTable(table.name); }} aria-current={activeTable ? "true" : undefined} sx={{ appearance: "none", border: "1px solid", borderColor: activeTable ? tokens.color.selectedBorder : "transparent", borderLeft: `2px solid ${activeTable ? tokens.color.primary : "transparent"}`, bgcolor: activeTable ? tokens.color.selectedSurface : "transparent", minHeight: 24, px: 0.75, display: "grid", gridTemplateColumns: "16px minmax(0, 1fr) auto", alignItems: "center", gap: 0.75, textAlign: "left", color: "text.primary", borderRadius: `${tokens.radius.control}px`, cursor: activeTable ? "pointer" : "default" }}>
+                          <TableChartRoundedIcon color={activeTable ? "primary" : "inherit"} fontSize="small" />
+                          <Typography variant="body2" fontWeight={activeTable ? 600 : 400} noWrap>{table.name}</Typography>
+                          <Typography variant="caption" color="text.secondary" noWrap>{Number(table.rowCountEstimate ?? 0).toLocaleString("th-TH")}</Typography>
+                        </Box>
+                      );
+                    })}
+                  </Box>
+                </Box>
+              ))}
               <Box
                 component="button"
                 type="button"

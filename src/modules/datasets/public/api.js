@@ -6,5 +6,7 @@ export {
   listDatasets,
   loadDataset,
   loadDefaultProjectDataset,
+  listExternalSources,
+  listExternalTables,
   queryDataset,
 } from "@modules/datasets/api/datasetApi.js";

@@ -308,6 +308,7 @@ function DashboardDesignerContent() {
         <Box sx={{ minHeight: 0, display: { xs: mobileTab === "data" ? "block" : "none", md: "block" } }}>
           <DataPanel
             datasources={state.datasources}
+            schemaCatalog={state.externalSchemaCatalog}
             activeDatasourceId={state.activeDatasourceId}
             fields={state.fields}
             rows={state.rows}

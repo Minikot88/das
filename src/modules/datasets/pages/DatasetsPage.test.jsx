@@ -65,7 +65,7 @@ describe("DatasetsPage project ownership", () => {
     expect(await screen.findByRole("region", { name: "PostgreSQL external source browser" })).toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole("combobox", { name: "Schema" })).toHaveValue("scopus"));
     await waitFor(() => expect(screen.getByRole("combobox", { name: "Table" })).toHaveValue("sc_articles"));
-    expect(screen.getByRole("button", { name: "Create live dataset" })).toBeEnabled();
+    await waitFor(() => expect(screen.getByRole("button", { name: "Create live dataset" })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: "Create live dataset" }));
     expect(await screen.findByRole("button", { name: "Create chart" })).toBeInTheDocument();
   });

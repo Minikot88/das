@@ -30,7 +30,7 @@ import {
 import { useLocation } from "react-router-dom";
 import { isMockMode } from "@infrastructure/http/client";
 import { getChartById, createChart, updateChart } from "@modules/charts/public/api";
-import { listDatasets, loadDataset } from "@modules/datasets/public/api";
+import { listDatasets, listExternalSources, listExternalTables, loadDataset } from "@modules/datasets/public/api";
 import type {
   Aggregation,
   ChartCategory,
@@ -801,6 +801,7 @@ export function useDashboardDesignerState() {
   const mockMode = isMockMode();
   const workspaceSnapshot = useWorkspaceSelector((snapshot: Parameters<typeof getDatasources>[0]) => snapshot);
   const [remoteDatasources, setRemoteDatasources] = useState<DemoDatasource[]>([]);
+  const [externalSchemaCatalog, setExternalSchemaCatalog] = useState<Array<{ schemaName: string; displayName: string; tables: Array<{ name: string; rowCountEstimate?: number }> }>>([]);
   const availableDatasources = useMemo(
     () => (mockMode ? getDatasources(workspaceSnapshot) : remoteDatasources),
     [mockMode, remoteDatasources, workspaceSnapshot],
@@ -961,6 +962,23 @@ export function useDashboardDesignerState() {
     return () => {
       active = false;
     };
+  }, [mockMode, returnProjectId]);
+
+  useEffect(() => {
+    if (mockMode) { setExternalSchemaCatalog([]); return undefined; }
+    let active = true;
+    listExternalSources(returnProjectId ?? undefined)
+      .then(async (result) => {
+        const sources = Array.isArray(result?.items) ? result.items : [];
+        const entries = await Promise.all(sources.map(async (source: { schemaName?: unknown; displayName?: unknown }) => {
+          const schemaName = String(source.schemaName || "");
+          const tables = schemaName ? (await listExternalTables(schemaName, returnProjectId ?? undefined))?.items ?? [] : [];
+          return { schemaName, displayName: String(source.displayName || schemaName), tables };
+        }));
+        if (active) setExternalSchemaCatalog(entries.filter((entry) => entry.schemaName));
+      })
+      .catch(() => { if (active) setExternalSchemaCatalog([]); });
+    return () => { active = false; };
   }, [mockMode, returnProjectId]);
 
   useEffect(() => {
@@ -1737,6 +1755,7 @@ export function useDashboardDesignerState() {
       rows,
       fields,
       datasources,
+      externalSchemaCatalog,
       transformedData,
       validation,
       templates: demoTemplates,

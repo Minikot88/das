@@ -23,9 +23,11 @@ const loadDataset = vi.fn().mockResolvedValue({
   ],
   rows: [{ publication_year: 2025, title: "Real source row" }],
 });
+const listExternalSources = vi.fn().mockResolvedValue({ items: [{ schemaName: "scopus", displayName: "scopus" }] });
+const listExternalTables = vi.fn().mockResolvedValue({ items: [{ name: "sc_articles", rowCountEstimate: 6004 }, { name: "sc_authors", rowCountEstimate: 16299 }] });
 
 vi.mock("@infrastructure/http/client", () => ({ isMockMode: () => false }));
-vi.mock("@modules/datasets/public/api", () => ({ listDatasets, loadDataset }));
+vi.mock("@modules/datasets/public/api", () => ({ listDatasets, loadDataset, listExternalSources, listExternalTables }));
 vi.mock("@modules/charts/public/api", () => ({ getChartById: vi.fn(), createChart: vi.fn(), updateChart: vi.fn() }));
 
 function Wrapper({ children }: PropsWithChildren) {
@@ -45,6 +47,9 @@ describe("useDashboardDesignerState API source", () => {
       expect.objectContaining({ schema: "scopus", table: "sc_articles" }),
     ]));
     expect(result.current.state.rows).toEqual([{ publication_year: 2025, title: "Real source row" }]);
+    await waitFor(() => expect(result.current.state.externalSchemaCatalog).toEqual([
+      expect.objectContaining({ schemaName: "scopus", tables: expect.arrayContaining([expect.objectContaining({ name: "sc_articles" }), expect.objectContaining({ name: "sc_authors" })]) }),
+    ]));
     expect(window.localStorage.getItem("mini-bi-active-project-id")).toBeNull();
   });
 });
