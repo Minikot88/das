@@ -17,7 +17,11 @@ import {
   runExplicitDashboardSave,
   shouldWarnAboutUnsavedChanges,
 } from "@domain/dashboard/dashboardPersistence";
-import { createPersistentDashboardShare, revokePersistentDashboardShare } from "@modules/sharing";
+import {
+  createPersistentDashboardShare,
+  exportNodeAsPdf,
+  revokePersistentDashboardShare,
+} from "@modules/sharing";
 import { useWorkspaceSelector } from "@app/store/useWorkspaceSelector";
 import { useStore } from "@app/store/useStore";
 import useNavigationControls from "@shared/hooks/useNavigationControls";
@@ -2760,6 +2764,23 @@ export default function DashboardCanvasBuilder() {
     setToast("ส่งออก PNG แล้ว");
   }, [canvasSettings.height, canvasSettings.width, theme, widgets]);
 
+  const exportPdf = useCallback(async () => {
+    if (!canvasRef.current) {
+      setToast("ไม่พบพื้นที่ Dashboard สำหรับส่งออก PDF");
+      return;
+    }
+    try {
+      await exportNodeAsPdf(canvasRef.current, {
+        filename: `dashboard-${activeDashboardIdRef.current || "canvas"}`,
+        backgroundColor: theme === "dark" ? "#10131c" : "#ffffff",
+      });
+      setPdfModalOpen(false);
+      setToast("ส่งออก PDF แล้ว");
+    } catch (error) {
+      setToast(error instanceof Error ? `ส่งออก PDF ไม่สำเร็จ: ${error.message}` : "ส่งออก PDF ไม่สำเร็จ");
+    }
+  }, [theme]);
+
   const saveDashboard = useCallback(() => {
     void runExplicitDashboardSave({
       autosave,
@@ -4347,11 +4368,14 @@ export default function DashboardCanvasBuilder() {
             <header>
               <div>
                 <h2 id="pdf-title">PDF export</h2>
-                <p>PDF export จะพร้อมใช้งานใน Production build พร้อม backend export service</p>
+                <p>ดาวน์โหลด Dashboard ปัจจุบันเป็นไฟล์ PDF แบบ read-only</p>
               </div>
               <button type="button" onClick={() => setPdfModalOpen(false)} aria-label="ปิด">×</button>
             </header>
-            <button type="button" className="dcb-btn dcb-btn-primary" onClick={() => setPdfModalOpen(false)}>รับทราบ</button>
+            <div className="dcb-modal-actions">
+              <button type="button" className="dcb-btn" onClick={() => setPdfModalOpen(false)}>ยกเลิก</button>
+              <button type="button" className="dcb-btn dcb-btn-primary" onClick={exportPdf}>ดาวน์โหลด PDF</button>
+            </div>
           </section>
         </div>
       ) : null}
