@@ -17,6 +17,9 @@ import ChartSettingsPanel from "@modules/charts/builder/ChartSettingsPanel";
 import ChartAnalyticsPanel from "@modules/charts/builder/ChartAnalyticsPanel";
 import ChartSavePanel from "@modules/charts/builder/ChartSavePanel";
 import useChartBuilder from "@modules/charts/builder/hooks/useChartBuilder";
+import { createProject, getProjects } from "@modules/projects";
+import { isMockMode } from "@infrastructure/http/client";
+import { normalizeProjectId, resolveBuilderProject } from "@modules/charts/builder/builderProjectContext";
 
 function getBuilderContextFromRoute(locationState, fallbackContext) {
   return locationState?.builderContext ?? fallbackContext ?? null;
@@ -48,6 +51,10 @@ export default function BuilderPage() {
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [sqlPanelHeight, setSqlPanelHeight] = useState(SQL_PANEL_DEFAULT_HEIGHT);
   const [isSqlPanelCollapsed, setIsSqlPanelCollapsed] = useState(false);
+  const [apiProjects, setApiProjects] = useState([]);
+  const [projectState, setProjectState] = useState({ status: isMockMode() ? "ready" : "loading", error: "" });
+  const requestedProjectId = normalizeProjectId(searchParams.get("projectId"));
+  const requestedDashboardId = searchParams.get("dashboardId") || "";
 
   const fallbackContext = useMemo(
     () =>
@@ -60,12 +67,56 @@ export default function BuilderPage() {
     [activeDashboardId, activeProjectId, activeSheetId]
   );
 
-  const builderContext = useMemo(
-    () => getBuilderContextFromRoute(location.state, builderNavigationContext ?? fallbackContext),
-    [builderNavigationContext, fallbackContext, location.state]
+  useEffect(() => {
+    if (isMockMode()) return undefined;
+    let current = true;
+    const controller = new AbortController();
+    setProjectState({ status: "loading", error: "" });
+    getProjects({ signal: controller.signal })
+      .then((projects) => {
+        if (!current) return;
+        setApiProjects(Array.isArray(projects) ? projects : []);
+        setProjectState({ status: "ready", error: "" });
+      })
+      .catch((error) => {
+        if (!current) return;
+        setProjectState({ status: "error", error: error?.message || "Unable to load projects." });
+      });
+    return () => { current = false; controller.abort(); };
+  }, []);
+
+  const apiProject = useMemo(
+    () => resolveBuilderProject(apiProjects, requestedProjectId),
+    [apiProjects, requestedProjectId],
   );
 
+  const apiContext = useMemo(() => {
+    if (isMockMode() || !apiProject) return null;
+    return {
+      projectId: apiProject.id,
+      dashboardId: requestedDashboardId,
+      sheetId: "",
+      returnTo: `/dashboard?projectId=${encodeURIComponent(apiProject.id)}${requestedDashboardId ? `&dashboardId=${encodeURIComponent(requestedDashboardId)}` : ""}`,
+    };
+  }, [apiProject, requestedDashboardId]);
+
+  const builderContext = useMemo(() => {
+    if (!isMockMode()) return apiContext;
+    return getBuilderContextFromRoute(location.state, builderNavigationContext ?? fallbackContext);
+  }, [apiContext, builderNavigationContext, fallbackContext, location.state]);
+
   const builder = useChartBuilder(builderContext, editingChartId);
+
+  async function handleCreateProject() {
+    try {
+      const project = await createProject("New project");
+      if (!project?.id) throw new Error("Project creation returned no project id.");
+      setApiProjects((current) => [...current, project]);
+      navigate(`/dashboard-v2?projectId=${encodeURIComponent(project.id)}${requestedDashboardId ? `&dashboardId=${encodeURIComponent(requestedDashboardId)}` : ""}`, { replace: true });
+    } catch (error) {
+      setProjectState({ status: "error", error: error?.message || "Unable to create project." });
+    }
+  }
   const mappedFieldNames = useMemo(
     () =>
       Array.from(
@@ -181,6 +232,27 @@ export default function BuilderPage() {
       ) : null}
     </section>
   );
+
+  if (!isMockMode() && projectState.status === "loading") {
+    return <PageContainer className="builder-shell"><p role="status">Loading project…</p></PageContainer>;
+  }
+
+  if (!isMockMode() && projectState.status === "error") {
+    return <PageContainer className="builder-shell"><p role="alert">{projectState.error}</p><button type="button" onClick={() => window.location.reload()}>Retry</button></PageContainer>;
+  }
+
+  if (!isMockMode() && !apiProject) {
+    return (
+      <PageContainer className="builder-shell">
+        <section className="builder-empty-state" aria-labelledby="builder-project-empty-title">
+          <h1 id="builder-project-empty-title">Select a project before creating a chart</h1>
+          <p>{requestedProjectId ? "The requested project is unavailable." : "Create a project to import data and build a chart."}</p>
+          {!requestedProjectId ? <button type="button" onClick={handleCreateProject}>Create project</button> : null}
+          {requestedProjectId ? <button type="button" onClick={() => navigate("/dashboard")}>Back to dashboard</button> : null}
+        </section>
+      </PageContainer>
+    );
+  }
 
   return (
     <PageContainer

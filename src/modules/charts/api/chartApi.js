@@ -90,14 +90,14 @@ function createSavedChartRecord(payload = {}) {
   };
 }
 
-export async function getDataset() {
+export async function getDataset(projectId) {
   if (isMockMode()) return mockData;
-  return loadDefaultProjectDataset();
+  return loadDefaultProjectDataset(projectId);
 }
 
-export async function getDatasetSchema() {
+export async function getDatasetSchema(projectId) {
   if (isMockMode()) return mockSchema;
-  const dataset = await loadDefaultProjectDataset();
+  const dataset = await loadDefaultProjectDataset(projectId);
   return dataset
     ? { datasetId: dataset.id, name: dataset.name, fields: dataset.fields ?? [] }
     : { datasetId: null, name: "", fields: [] };

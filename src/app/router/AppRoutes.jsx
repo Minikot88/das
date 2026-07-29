@@ -8,7 +8,10 @@ import { isInternalSingleUserMode } from "@infrastructure/http/client";
 const ROUTE_LOADERS = {
   "/builder": () => import("@modules/charts/pages/Builder.jsx"),
   "/dashboard": () => import("@modules/dashboards/current/DashboardCanvasBuilder.jsx"),
-  "/dashboard-v2": () => import("@modules/dashboards/designer-v2/pages"),
+  // V2 retains its public URL but uses the API-backed chart builder.  The
+  // previous designer module is local/demo-only and must not be loaded by a
+  // production route.
+  "/dashboard-v2": () => import("@modules/charts/pages/Builder.jsx"),
   "/dashboard-legacy": () => import("@modules/dashboards/legacy/pages/DashboardPage.jsx"),
   "/dashboard-public": () => import("@modules/sharing/pages/DashboardPublicPage.jsx"),
   "/connections": () => import("@modules/connections/pages/DatabaseConnectionPage.jsx"),
@@ -22,12 +25,7 @@ const ROUTE_LOADERS = {
 
 const ROUTE_PRELOADERS = {
   ...ROUTE_LOADERS,
-  "/dashboard-v2": () =>
-    Promise.all([
-      ROUTE_LOADERS["/dashboard-v2"](),
-      import("@modules/dashboards/designer-v2/components/PreviewCanvas"),
-      import("@modules/dashboards/designer-v2/components/PropertyPanel"),
-    ]),
+  "/dashboard-v2": () => ROUTE_LOADERS["/dashboard-v2"](),
 };
 
 const BuilderPage = lazy(ROUTE_LOADERS["/builder"]);

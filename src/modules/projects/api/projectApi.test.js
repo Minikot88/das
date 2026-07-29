@@ -30,7 +30,7 @@ describe("projectApi production contract", () => {
     const { createProject, getProjects } = await import("./projectApi");
     await getProjects();
     await createProject("API project");
-    expect(apiRequest).toHaveBeenNthCalledWith(1, "/api/v1/projects");
+    expect(apiRequest).toHaveBeenNthCalledWith(1, "/api/v1/projects", undefined);
     expect(apiRequest).toHaveBeenNthCalledWith(2, "/api/v1/projects", {
       method: "POST",
       body: JSON.stringify({ name: "API project" }),

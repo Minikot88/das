@@ -2001,8 +2001,8 @@ export default function DashboardCanvasBuilder() {
   }, []);
 
   const preserveActiveContext = useCallback(() => {
-    setStoredActiveProject(activeProjectIdRef.current, activeDashboardIdRef.current);
-  }, []);
+    if (mockMode) setStoredActiveProject(activeProjectIdRef.current, activeDashboardIdRef.current);
+  }, [mockMode]);
 
   const openChartDesignerForCreate = useCallback(() => {
     persistLayout();

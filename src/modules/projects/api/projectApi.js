@@ -10,9 +10,9 @@ export function resolveApiActiveProject(projects, preferredProjectId, activeProj
     ?? null;
 }
 
-export async function getProjects() {
+export async function getProjects({ signal } = {}) {
   if (isMockMode()) return useStore.getState().projects;
-  return apiRequest("/api/v1/projects");
+  return apiRequest("/api/v1/projects", signal ? { signal } : undefined);
 }
 
 export async function createProject(name) {

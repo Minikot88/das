@@ -16,6 +16,8 @@ import {
   DEFAULT_SQL_NAMESPACE,
 } from "@modules/charts/lib/mockSqlEngine";
 import { loadBuilderDraft, saveBuilderDraft } from "@infrastructure/persistence/workspace-ui/storage";
+import { isMockMode } from "@infrastructure/http/client";
+import { loadDataset } from "@modules/datasets/public/api";
 
 const BASE_SETTINGS = {
   title: "",
@@ -495,7 +497,7 @@ export default function useChartBuilder(builderContext, editingChartId = "") {
       try {
         setState((current) => ({ ...current, loading: true, error: "" }));
         const [dataset, templates] = await Promise.all([
-          getDataset(),
+          getDataset(builderContext?.projectId),
           getChartTemplates(),
         ]);
         const schema = dataset
@@ -520,12 +522,24 @@ export default function useChartBuilder(builderContext, editingChartId = "") {
             }));
             return;
           }
-
-          setState(createEditingState(chart, templates, dataset, schema));
+          // A chart can legitimately use a different dataset than the first
+          // dataset in its project. Reload its own persisted reference rather
+          // than silently substituting the project default on edit/reload.
+          const chartDataset = !isMockMode() && chart.datasetId && chart.datasetId !== dataset?.id
+            ? await loadDataset(chart.datasetId)
+            : dataset;
+          if (!isActive) return;
+          const chartSchema = chartDataset
+            ? { datasetId: chartDataset.id, name: chartDataset.name, fields: chartDataset.fields ?? [] }
+            : schema;
+          setState(createEditingState(chart, templates, chartDataset, chartSchema));
           return;
         }
 
-        const draft = loadBuilderDraft();
+        // Local drafts are a mock-mode convenience only. Production chart
+        // creation must begin from the selected PostgreSQL project, never a
+        // browser-owned chart configuration.
+        const draft = isMockMode() ? loadBuilderDraft() : null;
         const defaultTemplate = templates.find((template) => template.id === "bar-vertical") ?? templates[0];
         const prefillTemplate =
           templates.find((template) => template.id === builderContext?.prefillTemplateId) ?? null;
@@ -716,7 +730,7 @@ export default function useChartBuilder(builderContext, editingChartId = "") {
   ]);
 
   useEffect(() => {
-    if (!builderContext || !selectedTemplate || state.loading || state.isEditing) return;
+    if (!isMockMode() || !builderContext || !selectedTemplate || state.loading || state.isEditing) return;
     saveBuilderDraft(createDraftPayload(builderContext, state));
   }, [builderContext, selectedTemplate, state]);
 
