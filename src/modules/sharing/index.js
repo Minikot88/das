@@ -4,6 +4,7 @@ export {
   createPersistentDashboardShare,
   importWorkspaceForServerShare,
   resolvePersistentDashboardShare,
+  revokePersistentDashboardShare,
 } from "@modules/sharing/api/sharingApi.js";
 export { buildServerShareWorkspace } from "@modules/sharing/lib/serverShareWorkspace.js";
 export * from "@modules/sharing/public/dashboardExport.js";

@@ -17,7 +17,7 @@ import {
   runExplicitDashboardSave,
   shouldWarnAboutUnsavedChanges,
 } from "@domain/dashboard/dashboardPersistence";
-import { createPersistentDashboardShare } from "@modules/sharing";
+import { createPersistentDashboardShare, revokePersistentDashboardShare } from "@modules/sharing";
 import { useWorkspaceSelector } from "@app/store/useWorkspaceSelector";
 import { useStore } from "@app/store/useStore";
 import useNavigationControls from "@shared/hooks/useNavigationControls";
@@ -1409,7 +1409,14 @@ export default function DashboardCanvasBuilder() {
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
   const [templateConfirm, setTemplateConfirm] = useState(null);
   const [shareOpen, setShareOpen] = useState(false);
-  const [serverShare, setServerShare] = useState({ status: "idle", token: "", dashboardId: "", error: "" });
+  const [serverShare, setServerShare] = useState({
+    status: "idle",
+    id: "",
+    token: "",
+    dashboardId: "",
+    revision: 0,
+    error: "",
+  });
   const [pdfModalOpen, setPdfModalOpen] = useState(false);
   const [toast, setToast] = useState(() =>
     consumeStorageRecoveryMessage() || (initialState.recovered ? "กู้คืน layout ที่ไม่สมบูรณ์แล้ว" : "")
@@ -2778,20 +2785,46 @@ export default function DashboardCanvasBuilder() {
 
   const openServerShare = useCallback(async () => {
     if (!activeDashboardId) return;
-    setServerShare({ status: "creating", token: "", dashboardId: "", error: "" });
+    setServerShare({ status: "creating", id: "", token: "", dashboardId: "", revision: 0, error: "" });
     try {
       await autosave.flush(buildLayoutPayload());
       const share = await createPersistentDashboardShare(activeDashboardId);
       if (!share?.token) throw new Error("Share API returned no token");
-      setServerShare({ status: "ready", token: share.token, dashboardId: activeDashboardId, error: "" });
+      setServerShare({
+        status: "ready",
+        id: share.id,
+        token: share.token,
+        dashboardId: activeDashboardId,
+        revision: Number(share.revision || 0),
+        error: "",
+      });
       setShareOpen(true);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to create server share";
-      setServerShare({ status: "error", token: "", dashboardId: "", error: message });
+      setServerShare({ status: "error", id: "", token: "", dashboardId: "", revision: 0, error: message });
       setShareOpen(true);
       setToast("ไม่สามารถสร้างลิงก์แชร์จากเซิร์ฟเวอร์ได้");
     }
   }, [activeDashboardId, autosave, buildLayoutPayload]);
+
+  const revokeServerShare = useCallback(async () => {
+    if (!serverShare.id || serverShare.status !== "ready") return;
+    setServerShare((current) => ({ ...current, status: "revoking", error: "" }));
+    try {
+      const revoked = await revokePersistentDashboardShare(serverShare.id, serverShare.revision);
+      setServerShare((current) => ({
+        ...current,
+        status: "revoked",
+        revision: Number(revoked?.revision ?? current.revision + 1),
+        token: "",
+      }));
+      setToast("ยกเลิกลิงก์แชร์แล้ว");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to revoke server share";
+      setServerShare((current) => ({ ...current, status: "error", error: message }));
+      setToast("ไม่สามารถยกเลิกลิงก์แชร์ได้");
+    }
+  }, [serverShare.id, serverShare.revision, serverShare.status]);
 
   const copyShareLink = useCallback(async () => {
     const copied = await copyText(shareLink);
@@ -4296,7 +4329,14 @@ export default function DashboardCanvasBuilder() {
               </div>
             </label>
             {serverShare.status === "creating" ? <small>Creating secure server share…</small> : null}
+            {serverShare.status === "revoking" ? <small>Revoking secure server share…</small> : null}
+            {serverShare.status === "revoked" ? <small role="status">Share revoked.</small> : null}
             {serverShare.status === "error" ? <small role="alert">{serverShare.error}</small> : null}
+            {serverShare.status === "ready" ? (
+              <div className="dcb-modal-actions">
+                <button type="button" className="dcb-btn dcb-btn-danger" onClick={revokeServerShare}>ยกเลิกลิงก์แชร์</button>
+              </div>
+            ) : null}
           </section>
         </div>
       ) : null}
