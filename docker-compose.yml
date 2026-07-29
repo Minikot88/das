@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:17-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193
+    image: postgres:16-alpine
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-dashboard_mini_bi}
       POSTGRES_USER: ${POSTGRES_MIGRATION_USER:-dashboard_migrator}
@@ -20,7 +20,7 @@ services:
       - -c
       - statement_timeout=120000
     volumes:
-      - dashboard_mini_bi_postgres:/var/lib/postgresql/data
+      - dashboard_mini_bi_postgres16:/var/lib/postgresql/data
       - dashboard_mini_bi_backups:/backups
       - ./infrastructure/database/postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
@@ -117,6 +117,7 @@ volumes:
   # Retained intentionally so an existing MariaDB/MySQL volume is never deleted by this migration.
   dashboard_mini_bi_database:
   dashboard_mini_bi_postgres:
+  dashboard_mini_bi_postgres16:
   dashboard_mini_bi_uploads:
   dashboard_mini_bi_exports:
   dashboard_mini_bi_backups:
