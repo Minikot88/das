@@ -231,7 +231,7 @@ body:has(.settings-page) .settings-toggle input {
 
 body:has(.datasets-page) .datasets-layout {
   display: grid !important;
-  grid-template-columns: minmax(240px, 280px) minmax(0, 1fr) !important;
+  grid-template-columns: minmax(0, 1fr) !important;
   align-items: start !important;
   gap: 16px !important;
 }

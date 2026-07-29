@@ -65,9 +65,8 @@ describe("DatasetsPage project ownership", () => {
   it("shows datasets returned by the active project API only", async () => {
     render(<MemoryRouter><DatasetsPage /></MemoryRouter>);
 
-    expect((await screen.findAllByText("Project A dataset")).length).toBeGreaterThan(0);
-    expect(screen.getByText("scopus.sc_articles")).toBeInTheDocument();
-    expect(screen.getByText("Live · อ่านอย่างเดียว")).toBeInTheDocument();
+    expect(screen.queryByText("แคตตาล็อก")).not.toBeInTheDocument();
+    expect(screen.queryByText("Project A dataset")).not.toBeInTheDocument();
     expect(screen.queryByText("Project B dataset")).not.toBeInTheDocument();
   });
 

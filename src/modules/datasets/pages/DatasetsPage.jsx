@@ -25,26 +25,18 @@ import {
 
 const EMPTY_TABLES = [];
 
+function datasetSummary(dataset) {
+  return {
+    rows: dataset?.rows?.length ?? dataset?.rowCount ?? null,
+    columns: dataset?.fields?.length ?? dataset?.fieldCount ?? dataset?.columnCount ?? 0,
+  };
+}
+
 function datasetColumns(dataset) {
   return (dataset?.fields ?? []).map((field) => ({
     key: field.name,
     label: field.label || field.name,
   }));
-}
-
-function datasetSummary(dataset) {
-  const estimatedRows = dataset?.sourceConfigJson?.estimatedRowCount;
-  return {
-    rows: dataset?.rows?.length ?? (dataset?.sourceType === "postgres_schema" ? estimatedRows : dataset?.rowCount) ?? dataset?.rowCount ?? null,
-    columns: dataset?.fields?.length ?? dataset?.fieldCount ?? dataset?.columnCount ?? 0,
-  };
-}
-
-function liveDatasetLabel(dataset) {
-  const config = dataset?.sourceConfigJson;
-  return dataset?.sourceType === "postgres_schema" && config?.schemaName && config?.tableName
-    ? `${config.schemaName}.${config.tableName}`
-    : dataset?.source || "ชุดข้อมูลจากระบบ";
 }
 
 function uniqueCatalogDatasets(items = []) {
@@ -110,7 +102,6 @@ export default function DatasetsPage() {
   const [selectedDatasetId, setSelectedDatasetId] = useState("");
   const [datasetRows, setDatasetRows] = useState([]);
   const [datasetFields, setDatasetFields] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [parsedCsv, setParsedCsv] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [fileName, setFileName] = useState("");
@@ -138,7 +129,6 @@ export default function DatasetsPage() {
       return;
     }
 
-    setLoading(true);
     try {
       const response = await listDatasets({ projectId: activeProjectId });
       const items = Array.isArray(response?.items) ? response.items : [];
@@ -152,8 +142,6 @@ export default function DatasetsPage() {
       setDatasets([]);
       setSelectedDatasetId("");
       setImportError(error?.message || "ไม่สามารถโหลดชุดข้อมูลได้");
-    } finally {
-      setLoading(false);
     }
   }, [activeProjectId]);
 
@@ -175,7 +163,6 @@ export default function DatasetsPage() {
           setActiveProjectId(null);
           setDatasets([]);
           setExternalSources([]);
-          setLoading(false);
           return;
         }
 
@@ -188,7 +175,6 @@ export default function DatasetsPage() {
         setActiveProjectId(null);
         setDatasets([]);
         setExternalSources([]);
-        setLoading(false);
         setImportError(error?.message || "ไม่สามารถโหลดโปรเจกต์ได้");
       });
 
@@ -397,29 +383,6 @@ export default function DatasetsPage() {
       />
 
       <div className="datasets-layout">
-        <aside className="datasets-sidebar">
-          <div className="datasets-sidebar-head">
-            <span>แคตตาล็อก</span>
-            <strong>{loading ? "กำลังโหลด…" : `${datasets.length} ชุดข้อมูล`}</strong>
-          </div>
-          {datasets.map((dataset) => {
-            const summary = datasetSummary(dataset);
-            return (
-              <button
-                key={dataset.id}
-                type="button"
-                className={`dataset-list-card${dataset.id === selectedDataset?.id ? " is-active" : ""}`}
-                onClick={() => setSelectedDatasetId(dataset.id)}
-              >
-                <strong>{dataset.name}</strong>
-                <span>{liveDatasetLabel(dataset)}</span>
-                {dataset.sourceType === "postgres_schema" ? <em>Live · อ่านอย่างเดียว</em> : null}
-                <small>{summary.rows == null || summary.rows < 0 ? "ไม่ทราบจำนวนแถว" : `${summary.rows} แถว`} / {summary.columns} คอลัมน์</small>
-              </button>
-            );
-          })}
-        </aside>
-
         <section className="datasets-main" aria-label="รายการชุดข้อมูล">
           <section className="datasets-import-panel">
             <div className="datasets-import-copy">
