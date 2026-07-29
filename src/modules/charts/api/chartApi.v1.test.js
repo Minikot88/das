@@ -9,7 +9,7 @@ vi.mock("@infrastructure/http/client", () => ({
 vi.mock("@infrastructure/mock/mockData", () => ({ mockData: {}, mockRows: [] }));
 vi.mock("@modules/charts/data/mockSchema", () => ({ mockSchema: [] }));
 vi.mock("@modules/charts/lib/chartTemplates", () => ({
-  chartJsTemplates: [],
+  chartJsTemplates: [{ id: "bar-vertical", defaultSettings: {}, defaultMapping: {}, name: "Bar", type: "bar" }],
   getChartJsTemplateById: () => ({ defaultSettings: {}, defaultMapping: {}, id: "bar", name: "Bar", type: "bar" }),
   getChartTypes: () => [],
 }));
@@ -42,5 +42,13 @@ describe("chart API v1 repository", () => {
     const { getCharts } = await import("./chartApi");
     await expect(getCharts(null)).resolves.toEqual([]);
     expect(apiRequest).not.toHaveBeenCalled();
+  });
+
+  it("uses the bundled product template registry when the optional database catalog is empty", async () => {
+    apiRequest.mockResolvedValue([]);
+    const { getChartTemplates } = await import("./chartApi");
+    await expect(getChartTemplates()).resolves.toEqual([
+      expect.objectContaining({ id: "bar-vertical", type: "bar" }),
+    ]);
   });
 });

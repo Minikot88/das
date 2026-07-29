@@ -110,7 +110,11 @@ export async function getChartTypes() {
 
 export async function getChartTemplates() {
   if (isMockMode()) return chartJsTemplates;
-  return apiRequest("/api/v1/chart-templates");
+  const templates = await apiRequest("/api/v1/chart-templates");
+  // Chart templates are product capabilities, not business/demo data. Keep
+  // the bundled registry available when an installation has not seeded the
+  // optional chart_templates catalog yet.
+  return Array.isArray(templates) && templates.length ? templates : chartJsTemplates;
 }
 
 export async function getChartTemplateById(id) {
