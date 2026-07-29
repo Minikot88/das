@@ -19,6 +19,7 @@ import {
   resolveApiActiveProject,
 } from "@modules/projects/api/projectApi";
 import { isMockMode } from "@infrastructure/http/client";
+import { resolveChartDesignerNavigation } from "./appHeaderNavigation";
 
 const preloadedRoutes = new Set();
 
@@ -529,10 +530,11 @@ export default function AppHeader() {
   const setActiveProject = useCallback((projectId) => {
     if (isMockMode()) {
       setStoredActiveProject(projectId);
+      useStore.setState({ activeProjectId: projectId });
     } else {
       window.localStorage.setItem(API_ACTIVE_PROJECT_KEY, projectId);
+      useStore.setState({ activeProjectId: projectId, activeDashboardId: null });
     }
-    useStore.setState({ activeProjectId: projectId });
   }, []);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [datasetExplorerOpen, setDatasetExplorerOpen] = useState(false);
@@ -810,17 +812,17 @@ export default function AppHeader() {
   }, []);
 
   const resolveNavigationRoute = useCallback((route) => {
-    if (route !== "/dashboard-v2" || location.pathname !== "/dashboard") return route;
-    const project = getStoredActiveProject();
-    const dashboard = getStoredActiveDashboard();
-    const search = new URLSearchParams({
-      from: "dashboard",
-      mode: "create",
+    const mockMode = isMockMode();
+    return resolveChartDesignerNavigation({
+      route,
+      pathname: location.pathname,
+      mockMode,
+      activeProjectId,
+      activeDashboardId,
+      storedProjectId: mockMode ? getStoredActiveProject()?.id : null,
+      storedDashboardId: mockMode ? getStoredActiveDashboard()?.id : null,
     });
-    if (project?.id) search.set("projectId", project.id);
-    if (dashboard?.id) search.set("dashboardId", dashboard.id);
-    return `/dashboard-v2?${search.toString()}`;
-  }, [location.pathname]);
+  }, [activeDashboardId, activeProjectId, location.pathname]);
 
   const saveDashboardBeforeChartDesigner = useCallback((route) => {
     if (route !== "/dashboard-v2" || location.pathname !== "/dashboard") return;

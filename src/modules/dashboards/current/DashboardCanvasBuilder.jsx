@@ -1450,6 +1450,10 @@ export default function DashboardCanvasBuilder() {
   }, [activeProjectId]);
 
   useEffect(() => {
+    if (!mockMode) useStore.setState({ activeDashboardId });
+  }, [activeDashboardId, mockMode]);
+
+  useEffect(() => {
     if (mockMode || projectBootstrapStatus !== "ready" || !storeActiveProjectId || storeActiveProjectId === activeProjectIdRef.current) return;
     if (!availableProjectIdsRef.current.has(storeActiveProjectId)) return;
     activeProjectIdRef.current = storeActiveProjectId;
