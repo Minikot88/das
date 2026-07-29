@@ -68,6 +68,7 @@ export async function loadDashboardContext(dashboardId, context = {}) {
     return getDashboardContext(useStore.getState(), dashboardId, context);
   }
 
+  if (!dashboardId) return null;
   return apiRequest(`/api/v1/dashboards/${encodeApiPathSegment(dashboardId)}`);
 }
 

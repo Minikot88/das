@@ -29,6 +29,12 @@ describe("dashboard API v1 repository", () => {
     expect(apiRequest).not.toHaveBeenCalled();
   });
 
+  it("does not request a dashboard before an active dashboard is resolved", async () => {
+    const { loadDashboardContext } = await import("./dashboardApi");
+    await expect(loadDashboardContext(null)).resolves.toBeNull();
+    expect(apiRequest).not.toHaveBeenCalled();
+  });
+
   it("sends the current revision when updating a dashboard", async () => {
     apiRequest.mockResolvedValue({ id: "dash-1", revision: 3 });
     const { updateDashboard } = await import("./dashboardApi");
