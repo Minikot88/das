@@ -49,3 +49,7 @@ export async function testServerConnection(form, profileId = "") {
 export async function deleteServerConnection(profile) {
   return apiRequest(`/api/v1/connections/${encodeApiPathSegment(profile.id)}`, { method: "DELETE", body: JSON.stringify({ revision: profile.revision }) });
 }
+
+export async function discoverConnectionSchema(connectionId) {
+  return apiRequest(`/api/v1/connections/${encodeApiPathSegment(connectionId)}/schema`);
+}

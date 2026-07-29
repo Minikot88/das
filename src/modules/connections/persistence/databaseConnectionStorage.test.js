@@ -34,11 +34,9 @@ function unsafeProfile() {
 }
 
 describe("database connection metadata safety", () => {
-  it("does not ship an absolute developer-machine path as a connection default", () => {
-    const sqlite = DATABASE_TYPE_OPTIONS.find((type) => type.id === "sqlite");
-
-    expect(sqlite.defaults.filePath).toBe("mini-bi.db");
-    expect(sqlite.defaults.filePath).not.toMatch(/^(?:[A-Za-z]:[\\/]|\/Users\/|\/home\/)/);
+  it("ships PostgreSQL only and no local demo database connector", () => {
+    expect(DATABASE_TYPE_OPTIONS.map((type) => type.id)).toEqual(["postgresql"]);
+    expect(JSON.stringify(DATABASE_TYPE_OPTIONS)).not.toMatch(/(?:[A-Za-z]:[\\/]|\/Users\/|\/home\/)/);
   });
 
   it("fails safely when browser storage access is denied", () => {

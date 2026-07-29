@@ -1363,3 +1363,52 @@ html[data-theme="dark"] .db-json-preview {
 html[data-theme="dark"] .db-modal-backdrop {
   background: rgba(0, 0, 0, 0.72) !important;
 }
+
+.db-schema-explorer {
+  margin-top: 14px;
+  border: 1px solid var(--ui-border, #dbe3ef);
+  border-radius: 10px;
+  background: var(--ui-surface, #fff);
+  overflow: hidden;
+}
+
+.db-schema-explorer > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--ui-border, #dbe3ef);
+}
+
+.db-schema-explorer header span,
+.db-schema-explorer summary small,
+.db-schema-explorer li span {
+  color: var(--ui-text-muted, #64748b);
+  font-size: 12px;
+}
+
+.db-schema-explorer h3,
+.db-schema-explorer h4 { margin: 2px 0 0; font-size: 14px; }
+.db-schema-explorer > header > strong { font-size: 12px; color: var(--ui-accent, #2563eb); }
+.db-schema-explorer__schema { padding: 12px 14px; border-bottom: 1px solid var(--ui-border, #e5e7eb); }
+.db-schema-explorer__schema:last-child { border-bottom: 0; }
+.db-schema-explorer__tables { display: grid; gap: 6px; margin-top: 8px; }
+.db-schema-explorer details { border: 1px solid var(--ui-border, #e5e7eb); border-radius: 7px; background: var(--ui-surface-subtle, #f8fafc); }
+.db-schema-explorer summary { cursor: pointer; padding: 8px 10px; font-size: 13px; font-weight: 600; }
+.db-schema-explorer summary small { float: right; font-weight: 400; }
+.db-schema-explorer ul { margin: 0; padding: 0 10px 8px; list-style: none; }
+.db-schema-explorer li { display: flex; justify-content: space-between; gap: 10px; padding: 5px 0; border-top: 1px solid var(--ui-border, #e5e7eb); font-size: 12px; }
+.db-schema-explorer li strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.db-schema-explorer li span { text-align: right; }
+
+html[data-theme="dark"] .db-schema-explorer,
+html[data-theme="dark"] .db-schema-explorer > header,
+html[data-theme="dark"] .db-schema-explorer__schema,
+html[data-theme="dark"] .db-schema-explorer details,
+html[data-theme="dark"] .db-schema-explorer li { border-color: #333 !important; }
+html[data-theme="dark"] .db-schema-explorer,
+html[data-theme="dark"] .db-schema-explorer details { background: #181818 !important; }
+html[data-theme="dark"] .db-schema-explorer h3,
+html[data-theme="dark"] .db-schema-explorer h4,
+html[data-theme="dark"] .db-schema-explorer li strong { color: #f9fafb !important; }

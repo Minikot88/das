@@ -8,47 +8,24 @@ import {
   createDefaultConnectionForm,
   getDatabaseType,
 } from "@modules/connections/config/databaseConnectionDefaults";
-import {
-  createConnectionProfile,
-  deleteDatabaseConnection,
-  loadDatabaseConnections,
-  sanitizeConnectionMetadata,
-  sanitizeConnectionUrl,
-  upsertDatabaseConnection,
-} from "@modules/connections/persistence/databaseConnectionStorage";
-import { createServerConnection, deleteServerConnection, listConnectionProfiles, testServerConnection } from "@modules/connections/api/connectionApi";
-import { isMockMode } from "@infrastructure/http/client";
+import { sanitizeConnectionMetadata, sanitizeConnectionUrl } from "@modules/connections/persistence/databaseConnectionStorage";
+import { createServerConnection, deleteServerConnection, discoverConnectionSchema, listConnectionProfiles, testServerConnection } from "@modules/connections/api/connectionApi";
 import { useStore } from "@app/store/useStore";
+import { API_ACTIVE_PROJECT_KEY, getProjects, resolveApiActiveProject } from "@modules/projects";
 import "@shared/styles/databaseConnection.css";
 
 const AUTH_OPTIONS = [
   { value: "username-password", label: "Username / Password" },
-  { value: "none", label: "No Authentication" },
-  { value: "token", label: "Token" },
-  { value: "oauth", label: "OAuth / Service Account" },
 ];
 
 const SSL_MODES = ["Disable", "Allow", "Prefer", "Require", "Verify CA", "Verify Full"];
-const DATABASE_GROUPS = [
-  { label: "Relational", ids: ["postgresql", "mysql", "mariadb", "sqlserver", "sqlite", "oracle"] },
-  { label: "NoSQL", ids: ["mongodb"] },
-  { label: "Files / Cloud", ids: ["google-sheets", "csv-excel"] },
-];
 const TAB_HELP = {
   main: "กำหนด endpoint และข้อมูลยืนยันตัวตนของ connection profile",
-  advanced: "ตั้งค่าพฤติกรรมการอ่านข้อมูลและ timeout สำหรับ demo connector",
-  ssl: "กำหนด SSL certificate และ mode ก่อนเชื่อมต่อจริงใน backend phase",
+  advanced: "ตั้งค่าพฤติกรรมการอ่านข้อมูลและ timeout สำหรับ PostgreSQL",
+  ssl: "กำหนด SSL certificate และ mode ก่อนเชื่อมต่อ PostgreSQL",
   ssh: "ตั้งค่า tunnel สำหรับ environment ที่ต้องเข้าผ่าน bastion host",
-  driver: "ตรวจสอบ driver metadata และ action ที่ต้องใช้ backend ในอนาคต",
   preview: "ตรวจสอบ config ที่จะบันทึกก่อนนำไปใช้กับ dataset",
 };
-
-function getGroupedDatabaseTypes() {
-  return DATABASE_GROUPS.map((group) => ({
-    ...group,
-    items: group.ids.map((id) => DATABASE_TYPE_OPTIONS.find((type) => type.id === id)).filter(Boolean),
-  })).filter((group) => group.items.length);
-}
 
 function updateNested(object, key, value) {
   return {
@@ -88,7 +65,7 @@ function buildPreviewConfig(form, type, status) {
     host: form.host,
     port: form.port,
     database: form.database,
-    url: buildConnectionUrl(form, type),
+    url: buildConnectionUrl(form),
     filePath: form.filePath,
     sheetUrl: form.sheetUrl,
     authType: form.authType,
@@ -100,7 +77,7 @@ function buildPreviewConfig(form, type, status) {
     workspace: form.workspace,
     tags: form.tags,
     status: status?.type ?? "draft",
-    note: "Demo mode: ยังไม่ได้เชื่อมต่อ backend จริง",
+    note: "PostgreSQL connection profile; credentials are stored by the backend.",
   });
 }
 
@@ -117,20 +94,12 @@ function validateConnection(form, type) {
     if (!form.database.trim()) errors.database = "Database จำเป็นต้องระบุ";
   }
 
-  if ((form.connectionMode === "url" || type.mode === "connectionString") && !form.url.trim()) {
-    errors.url = "Connection URL จำเป็นต้องระบุ";
-  }
-
-  if (type.mode === "file" && !form.filePath.trim()) errors.filePath = "File path จำเป็นต้องระบุ";
-  if (type.mode === "sheet" && !form.sheetUrl.trim()) errors.sheetUrl = "Google Sheet URL จำเป็นต้องระบุ";
-  if (type.mode === "upload" && !form.filePath.trim()) errors.filePath = "เลือกไฟล์หรือระบุ path สำหรับ demo";
-
   if (form.authType === "username-password" && !form.username.trim()) {
     errors.username = "Username จำเป็นสำหรับการยืนยันตัวตนแบบ Username / Password";
   }
 
   if (form.authType === "username-password" && !form.password.trim()) {
-    warnings.push("ยังไม่ได้ใส่ password: demo mode อนุญาตให้ทดสอบ localhost ได้ แต่จะไม่บันทึกรหัสผ่านจริง");
+    errors.password = "Password จำเป็นสำหรับการเชื่อมต่อ PostgreSQL";
   }
 
   if (form.ssl.enabled && form.ssl.mode === "Verify Full" && !form.ssl.caCertificate.trim()) {
@@ -173,33 +142,49 @@ function Field({ label, error, helper, children }) {
 }
 
 function statusLabel(status) {
-  if (status?.type === "success") return "Demo success";
+  if (status?.type === "success") return "Ready";
   if (status?.type === "error") return "Failed";
-  if (status?.type === "demo") return "Demo";
   return "Not tested";
 }
 
 function statusClass(status) {
   if (status?.type === "success") return "is-success";
   if (status?.type === "error") return "is-error";
-  if (status?.type === "demo") return "is-demo";
   return "is-idle";
 }
 
 export default function DatabaseConnectionPage() {
   const navigate = useNavigate();
-  const activeProjectId = useStore((state) => state.activeProjectId);
+  const storeActiveProjectId = useStore((state) => state.activeProjectId);
+  const [activeProjectId, setActiveProjectId] = useState(null);
   const [selectedTypeId, setSelectedTypeId] = useState("postgresql");
   const [activeTab, setActiveTab] = useState("main");
   const [form, setForm] = useState(() => createDefaultConnectionForm("postgresql"));
-  const [savedConnections, setSavedConnections] = useState(() => isMockMode() ? loadDatabaseConnections() : []);
+  const [savedConnections, setSavedConnections] = useState([]);
   const [validation, setValidation] = useState({ errors: {}, warnings: [], valid: true });
   const [testStatus, setTestStatus] = useState(null);
   const [notice, setNotice] = useState(null);
   const [passwordVisible, setPasswordVisible] = useState(false);
+  const [schemaExplorer, setSchemaExplorer] = useState(null);
+  const [schemaLoadingId, setSchemaLoadingId] = useState("");
 
   useEffect(() => {
-    if (isMockMode() || !activeProjectId) return undefined;
+    let active = true;
+    getProjects()
+      .then((items) => {
+        if (!active) return;
+        const selected = resolveApiActiveProject(Array.isArray(items) ? items : [], window.localStorage.getItem(API_ACTIVE_PROJECT_KEY), storeActiveProjectId);
+        if (!selected) { setActiveProjectId(null); setSavedConnections([]); return; }
+        window.localStorage.setItem(API_ACTIVE_PROJECT_KEY, selected.id);
+        useStore.setState?.({ activeProjectId: selected.id });
+        setActiveProjectId(selected.id);
+      })
+      .catch((error) => { if (active) { setActiveProjectId(null); setSavedConnections([]); setNotice({ title: "โหลด project ไม่สำเร็จ", message: error.message }); } });
+    return () => { active = false; };
+  }, [storeActiveProjectId]);
+
+  useEffect(() => {
+    if (!activeProjectId) return undefined;
     let active = true;
     listConnectionProfiles(activeProjectId)
       .then((profiles) => { if (active) setSavedConnections(profiles ?? []); })
@@ -212,11 +197,10 @@ export default function DatabaseConnectionPage() {
     () => buildPreviewConfig(form, selectedType, testStatus),
     [form, selectedType, testStatus]
   );
-  const connectionUrl = sanitizeConnectionUrl(buildConnectionUrl(form, selectedType));
-  const groupedDatabaseTypes = useMemo(() => getGroupedDatabaseTypes(), []);
+  const connectionUrl = sanitizeConnectionUrl(buildConnectionUrl(form));
   const profileSummary = useMemo(() => ([
     ["Database type", selectedType.name],
-    ["Host", form.host || form.filePath || form.sheetUrl || "-"],
+    ["Host", form.host || "-"],
     ["Port", form.port || "-"],
     ["Database", form.database || "-"],
     ["Authentication", AUTH_OPTIONS.find((option) => option.value === form.authType)?.label ?? form.authType],
@@ -253,31 +237,14 @@ export default function DatabaseConnectionPage() {
       return false;
     }
 
-    if (!isMockMode()) {
-      if (targetType.id !== "postgresql") {
-        setTestStatus({ type: "error", title: "ยังไม่รองรับ connector นี้", message: "Production mode รองรับ PostgreSQL เท่านั้น" });
-        return false;
-      }
-      try {
-        const resultStatus = await testServerConnection(targetForm, targetForm.id);
-        setTestStatus({ type: "success", title: "เชื่อมต่อสำเร็จ", message: "PostgreSQL ตอบสนองและผ่านนโยบายเครือข่าย", latency: `${resultStatus.durationMs}ms`, server: `${targetForm.host}:${targetForm.port}`, database: targetForm.database, warnings: result.warnings });
-        return true;
-      } catch (error) {
-        setTestStatus({ type: "error", title: "ทดสอบการเชื่อมต่อไม่ผ่าน", message: error.message });
-        return false;
-      }
+    try {
+      const resultStatus = await testServerConnection(targetForm, targetForm.id);
+      setTestStatus({ type: "success", title: "เชื่อมต่อสำเร็จ", message: "PostgreSQL ตอบสนองและผ่านนโยบายเครือข่าย", latency: `${resultStatus.durationMs}ms`, server: `${targetForm.host}:${targetForm.port}`, database: targetForm.database, warnings: result.warnings });
+      return true;
+    } catch (error) {
+      setTestStatus({ type: "error", title: "ทดสอบการเชื่อมต่อไม่ผ่าน", message: error.message });
+      return false;
     }
-
-    setTestStatus({
-      type: "demo",
-      title: "เชื่อมต่อสำเร็จ",
-      message: "การจำลองการเชื่อมต่อสำเร็จ · 42ms เป็นค่าตัวอย่าง",
-      latency: "42ms (ตัวอย่าง)",
-      server: targetType.mode === "host" ? `${targetForm.host}:${targetForm.port}` : sanitizeConnectionUrl(buildConnectionUrl(targetForm, targetType)),
-      database: targetType.name,
-      warnings: result.warnings,
-    });
-    return true;
   }
 
   async function handleSaveProfile() {
@@ -292,38 +259,13 @@ export default function DatabaseConnectionPage() {
       return;
     }
 
-    if (!isMockMode()) {
-      if (!activeProjectId) { setNotice({ title: "ยังบันทึกไม่ได้", message: "กรุณาเลือก Project ก่อนบันทึก connection" }); return; }
-      if (selectedType.id !== "postgresql") { setNotice({ title: "ยังไม่รองรับ connector นี้", message: "Production mode รองรับ PostgreSQL เท่านั้น" }); return; }
-      try {
-        const profile = await createServerConnection(form, activeProjectId);
-        setSavedConnections((current) => [profile, ...current.filter((item) => item.id !== profile.id)]);
-        patchForm({ id: profile.id, createdAt: profile.createdAt, password: "" });
-        setNotice({ title: "บันทึก connection profile แล้ว", message: "Secret ถูกเข้ารหัสและเก็บที่ Backend โดยไม่บันทึกใน localStorage" });
-      } catch (error) { setNotice({ title: "บันทึก connection profile ไม่สำเร็จ", message: error.message }); }
-      return;
-    }
-
-    const profile = createConnectionProfile({
-      form,
-      type: selectedType,
-      status: "demo",
-      lastTestedAt: testStatus?.type === "success" ? new Date().toISOString() : null,
-    });
-    const nextConnections = upsertDatabaseConnection(profile);
-    if (!nextConnections) {
-      setNotice({
-        title: "บันทึก connection profile ไม่สำเร็จ",
-        message: "เบราว์เซอร์ไม่อนุญาตให้เข้าถึงพื้นที่จัดเก็บ โปรดลองอีกครั้งหลังเปิดสิทธิ์ site data",
-      });
-      return;
-    }
-    setSavedConnections(nextConnections);
-    patchForm({ id: profile.id, createdAt: profile.createdAt });
-    setNotice({
-      title: "บันทึก connection profile แล้ว",
-      message: "โปรไฟล์ถูกเก็บในเครื่องสำหรับ demo และยังไม่ได้ส่งไป backend",
-    });
+    if (!activeProjectId) { setNotice({ title: "ยังบันทึกไม่ได้", message: "กรุณาเลือก Project ก่อนบันทึก connection" }); return; }
+    try {
+      const profile = await createServerConnection(form, activeProjectId);
+      setSavedConnections((current) => [profile, ...current.filter((item) => item.id !== profile.id)]);
+      patchForm({ id: profile.id, createdAt: profile.createdAt, password: "" });
+      setNotice({ title: "บันทึก connection profile แล้ว", message: "Secret ถูกเข้ารหัสและเก็บที่ Backend โดยไม่บันทึกใน localStorage" });
+    } catch (error) { setNotice({ title: "บันทึก connection profile ไม่สำเร็จ", message: error.message }); }
   }
 
   function handleLoadProfile(profile) {
@@ -331,31 +273,7 @@ export default function DatabaseConnectionPage() {
     setSelectedTypeId(nextType.id);
     setForm(createFormFromProfile(profile));
     setActiveTab("main");
-    setTestStatus({
-      type: "success",
-      title: "โหลด profile แล้ว",
-      message: `${profile.name} พร้อมสำหรับทดสอบแบบ demo`,
-      latency: null,
-      server: profile.host ? `${profile.host}:${profile.port}` : profile.url || profile.filePath || profile.sheetUrl,
-      database: nextType.name,
-    });
-  }
-
-  function handleDuplicateProfile(profile) {
-    const duplicated = {
-      ...profile,
-      id: `db-${Date.now()}`,
-      name: `${profile.name} Copy`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    const nextConnections = upsertDatabaseConnection(duplicated);
-    if (!nextConnections) {
-      setNotice({ title: "ทำสำเนาไม่สำเร็จ", message: "ไม่สามารถเขียนข้อมูลลงพื้นที่จัดเก็บของเบราว์เซอร์" });
-      return;
-    }
-    setSavedConnections(nextConnections);
-    setNotice({ title: "ทำสำเนา profile แล้ว", message: duplicated.name });
+    setTestStatus(null);
   }
 
   async function handleTestProfile(profile) {
@@ -368,20 +286,23 @@ export default function DatabaseConnectionPage() {
   }
 
   async function handleDeleteProfile(profileId) {
-    if (!isMockMode()) {
-      const profile = savedConnections.find((item) => item.id === profileId);
-      if (!profile) return;
-      try { await deleteServerConnection(profile); setSavedConnections((current) => current.filter((item) => item.id !== profileId)); setNotice({ title: "ลบ connection profile แล้ว", message: "Profile ถูกปิดใช้งานบน Backend" }); }
-      catch (error) { setNotice({ title: "ลบ profile ไม่สำเร็จ", message: error.message }); }
-      return;
+    const profile = savedConnections.find((item) => item.id === profileId);
+    if (!profile) return;
+    try { await deleteServerConnection(profile); setSavedConnections((current) => current.filter((item) => item.id !== profileId)); setSchemaExplorer((current) => current?.connectionId === profileId ? null : current); setNotice({ title: "ลบ connection profile แล้ว", message: "Profile ถูกปิดใช้งานบน Backend" }); }
+    catch (error) { setNotice({ title: "ลบ profile ไม่สำเร็จ", message: error.message }); }
+  }
+
+  async function handleBrowseSchema(profile) {
+    setSchemaLoadingId(profile.id);
+    try {
+      const schemas = await discoverConnectionSchema(profile.id);
+      setSchemaExplorer({ connectionId: profile.id, connectionName: profile.name, schemas: Array.isArray(schemas) ? schemas : [] });
+      setNotice(null);
+    } catch (error) {
+      setNotice({ title: "ไม่สามารถอ่าน schema ได้", message: error.message });
+    } finally {
+      setSchemaLoadingId("");
     }
-    const nextConnections = deleteDatabaseConnection(profileId);
-    if (!nextConnections) {
-      setNotice({ title: "ลบ profile ไม่สำเร็จ", message: "ไม่สามารถเขียนข้อมูลลงพื้นที่จัดเก็บของเบราว์เซอร์" });
-      return;
-    }
-    setSavedConnections(nextConnections);
-    setNotice({ title: "ลบ connection profile แล้ว", message: "ลบเฉพาะข้อมูล demo ในเครื่อง" });
   }
 
   async function handleCopyConfig() {
@@ -400,29 +321,11 @@ export default function DatabaseConnectionPage() {
   }
 
   function renderMainTab() {
-    const mode = selectedType.mode;
     const errors = validation.errors;
-    const showHostFields = mode === "host" && form.connectionMode === "host";
-    const showUrlField = form.connectionMode === "url" || mode === "connectionString";
 
     return (
       <div className="db-tab-panel">
-        {mode === "host" ? (
-          <fieldset className="db-radio-row">
-            <legend>Connection mode</legend>
-            <label>
-              <input type="radio" checked={form.connectionMode === "host"} onChange={() => patchForm({ connectionMode: "host" })} />
-              Host
-            </label>
-            <label>
-              <input type="radio" checked={form.connectionMode === "url"} onChange={() => patchForm({ connectionMode: "url" })} />
-              URL
-            </label>
-          </fieldset>
-        ) : null}
-
-        {showHostFields ? (
-          <div className="db-form-grid">
+        <div className="db-form-grid">
             <Field label="Host" error={errors.host} helper="เช่น localhost หรือ db.company.local">
               <input value={form.host} onChange={(event) => patchForm({ host: event.target.value })} />
             </Field>
@@ -432,35 +335,7 @@ export default function DatabaseConnectionPage() {
             <Field label="Database" error={errors.database}>
               <input value={form.database} onChange={(event) => patchForm({ database: event.target.value })} />
             </Field>
-            <label className="db-check-row">
-              <input type="checkbox" checked={form.showAllDatabases} onChange={(event) => patchForm({ showAllDatabases: event.target.checked })} />
-              <span>แสดงฐานข้อมูลทั้งหมดเมื่อเชื่อมต่อจริง</span>
-            </label>
-          </div>
-        ) : null}
-
-        {showUrlField ? (
-          <Field label={selectedType.id === "mongodb" ? "Connection string" : "JDBC / Connection URL"} error={errors.url} helper={connectionUrl}>
-            <input value={form.url} onChange={(event) => patchForm({ url: event.target.value })} />
-          </Field>
-        ) : null}
-
-        {mode === "file" || mode === "upload" ? (
-          <Field label={mode === "file" ? "Database file path" : "CSV / Excel file"} error={errors.filePath} helper="Demo mode ใช้ path เป็น placeholder ยังไม่อ่านไฟล์จริงจากหน้านี้">
-            <div className="db-inline-input">
-              <input value={form.filePath} onChange={(event) => patchForm({ filePath: event.target.value })} />
-              <button type="button" onClick={() => setNotice({ title: "เลือกไฟล์", message: "File picker จริงจะเชื่อมต่อใน backend/file connector phase" })}>
-                เลือกไฟล์
-              </button>
-            </div>
-          </Field>
-        ) : null}
-
-        {mode === "sheet" ? (
-          <Field label="Google Sheet URL" error={errors.sheetUrl} helper="วาง URL ของ spreadsheet สำหรับ demo profile">
-            <input value={form.sheetUrl} onChange={(event) => patchForm({ sheetUrl: event.target.value })} />
-          </Field>
-        ) : null}
+        </div>
 
         <div className="db-section-title">Authentication</div>
         <div className="db-form-grid">
@@ -620,26 +495,6 @@ export default function DatabaseConnectionPage() {
     );
   }
 
-  function renderDriverTab() {
-    return (
-      <div className="db-tab-panel">
-        <section className="db-driver-card">
-          <dl className="db-driver-list">
-            <div><dt>Driver name</dt><dd>{selectedType.defaults.driverName}</dd></div>
-            <div><dt>Driver version</dt><dd>{selectedType.defaults.driverVersion}</dd></div>
-            <div><dt>Class name</dt><dd>{selectedType.defaults.className}</dd></div>
-            <div><dt>Driver status</dt><dd>Demo metadata only</dd></div>
-          </dl>
-        </section>
-        <div className="db-driver-actions">
-          <button type="button" onClick={() => setNotice({ title: "Driver Settings", message: "การตั้งค่า driver จริงจะเปิดใน backend integration phase" })}>Driver Settings</button>
-          <button type="button" onClick={() => setNotice({ title: "Download Driver", message: "ยังไม่ดาวน์โหลด driver จริงใน demo frontend" })}>Download Driver</button>
-          <button type="button" onClick={() => setNotice({ title: "Driver License", message: "ข้อมูล license จะแสดงจาก driver registry ใน production" })}>Driver License</button>
-        </div>
-      </div>
-    );
-  }
-
   function renderPreviewTab() {
     return (
       <div className="db-tab-panel">
@@ -670,7 +525,6 @@ export default function DatabaseConnectionPage() {
     if (activeTab === "advanced") return renderAdvancedTab();
     if (activeTab === "ssl") return renderSslTab();
     if (activeTab === "ssh") return renderSshTab();
-    if (activeTab === "driver") return renderDriverTab();
     if (activeTab === "preview") return renderPreviewTab();
     return renderMainTab();
   }
@@ -680,49 +534,31 @@ export default function DatabaseConnectionPage() {
       <PageHeader
         kicker="Database Connection"
         title="เชื่อมต่อฐานข้อมูล"
-        subtitle="สร้าง profile และจำลองการทดสอบการเชื่อมต่อสำหรับชุดข้อมูลและแดชบอร์ด"
+        subtitle="บันทึก PostgreSQL connection แล้วอ่าน schema และตารางจริงผ่าน Backend"
         className="db-page-header"
         actions={(
           <div className="db-header-actions">
             <button type="button" onClick={() => navigate("/datasets")}>กลับไปชุดข้อมูล</button>
             <button type="button" className="is-primary" onClick={handleSaveProfile}>บันทึกโปรไฟล์</button>
-            <button type="button" onClick={() => runConnectionTest()}>จำลองการทดสอบการเชื่อมต่อ</button>
+            <button type="button" onClick={() => runConnectionTest()}>ทดสอบการเชื่อมต่อ</button>
           </div>
         )}
       >
-        <div className="db-header-strip">
-          <span className="db-demo-badge">Demo Mode</span>
-          <span>Database Connection Studio</span>
-          <span>{selectedType.name}</span>
-        </div>
+        <div className="db-header-strip"><span>Database Connection Studio</span><span>{selectedType.name}</span><span>Backend-managed credentials</span></div>
       </PageHeader>
 
       <div className="db-connection-layout">
         <aside className="db-type-panel">
           <div className="db-panel-head">
             <span>ประเภทฐานข้อมูล</span>
-            <strong>{DATABASE_TYPE_OPTIONS.length} connectors</strong>
+            <strong>{DATABASE_TYPE_OPTIONS.length} connector</strong>
           </div>
           <div className="db-type-list">
-            {groupedDatabaseTypes.map((group) => (
-              <section className="db-type-group" key={group.label}>
-                <span className="db-type-group-label">{group.label}</span>
-                {group.items.map((type) => (
-                  <button
-                    key={type.id}
-                    type="button"
-                    className={`db-type-card${type.id === selectedTypeId ? " is-active" : ""}`}
-                    onClick={() => handleTypeChange(type.id)}
-                  >
-                    <span className="db-type-icon" aria-hidden="true">{type.icon}</span>
-                    <span className="db-type-copy">
-                      <strong>{type.name}</strong>
-                      <small>{type.description}</small>
-                    </span>
-                    <span className={`db-status-badge${type.status === "Future" ? " is-muted" : ""}`}>{type.status}</span>
-                  </button>
-                ))}
-              </section>
+            {DATABASE_TYPE_OPTIONS.map((type) => (
+              <button key={type.id} type="button" className={`db-type-card${type.id === selectedTypeId ? " is-active" : ""}`} onClick={() => handleTypeChange(type.id)}>
+                <span className="db-type-icon" aria-hidden="true">{type.icon}</span>
+                <span className="db-type-copy"><strong>{type.name}</strong><small>{type.description}</small></span>
+              </button>
             ))}
           </div>
 
@@ -742,8 +578,8 @@ export default function DatabaseConnectionPage() {
                     </div>
                     <div className="db-saved-actions">
                       <button type="button" onClick={() => handleLoadProfile(profile)}>Load</button>
-                      <button type="button" onClick={() => handleDuplicateProfile(profile)}>Duplicate</button>
                       <button type="button" onClick={() => handleTestProfile(profile)}>Test</button>
+                      <button type="button" onClick={() => handleBrowseSchema(profile)} disabled={schemaLoadingId === profile.id}>{schemaLoadingId === profile.id ? "Loading…" : "Browse tables"}</button>
                       <button type="button" onClick={() => handleDeleteProfile(profile.id)}>Delete</button>
                     </div>
                   </article>
@@ -753,6 +589,27 @@ export default function DatabaseConnectionPage() {
               <div className="db-empty-state">ยังไม่มี connection profile</div>
             )}
           </section>
+          {schemaExplorer ? (
+            <section className="db-schema-explorer" aria-label="PostgreSQL schema explorer">
+              <header>
+                <div><span>Database schema</span><h3>{schemaExplorer.connectionName}</h3></div>
+                <strong>{schemaExplorer.schemas.reduce((count, schema) => count + schema.tables.length, 0)} tables</strong>
+              </header>
+              {schemaExplorer.schemas.length ? schemaExplorer.schemas.map((schema) => (
+                <section className="db-schema-explorer__schema" key={schema.name}>
+                  <h4>{schema.name}</h4>
+                  <div className="db-schema-explorer__tables">
+                    {schema.tables.map((table) => (
+                      <details key={table.name}>
+                        <summary>{table.name} <small>{table.columns.length} columns</small></summary>
+                        <ul>{table.columns.map((column) => <li key={column.name}><strong>{column.name}</strong><span>{column.dataType}{column.nullable ? " · nullable" : ""}</span></li>)}</ul>
+                      </details>
+                    ))}
+                  </div>
+                </section>
+              )) : <div className="db-empty-state">No accessible tables.</div>}
+            </section>
+          ) : null}
         </aside>
 
         <section className="db-settings-panel" aria-label="ตั้งค่าการเชื่อมต่อข้อมูล">
@@ -796,12 +653,11 @@ export default function DatabaseConnectionPage() {
                 </dl>
               ) : null}
               {testStatus.warnings?.map((warning) => <small key={warning}>{warning}</small>)}
-              <small>Demo Mode: การทดสอบนี้จำลองผลลัพธ์ในหน้าเว็บ ยังไม่ได้เชื่อมต่อฐานข้อมูลจริง</small>
             </section>
           ) : (
             <section className="db-demo-note">
-              <strong>Demo Mode</strong>
-              <span>การทดสอบนี้จำลองผลลัพธ์ในหน้าเว็บ ยังไม่ได้เชื่อมต่อฐานข้อมูลจริง</span>
+              <strong>PostgreSQL connection</strong>
+              <span>บันทึกหรือเลือก connection profile แล้วทดสอบและเปิดดู schema/table ผ่าน Backend</span>
             </section>
           )}
 
@@ -824,7 +680,7 @@ export default function DatabaseConnectionPage() {
           <section className={`db-status-card ${statusClass(testStatus)}`}>
             <small>Status</small>
             <strong>{statusLabel(testStatus)}</strong>
-            <span>{testStatus?.message ?? "Demo profile ยังไม่ได้ทดสอบ"}</span>
+            <span>{testStatus?.message ?? "ยังไม่ได้ทดสอบ connection profile"}</span>
           </section>
 
           <dl className="db-summary-list">
@@ -837,7 +693,7 @@ export default function DatabaseConnectionPage() {
             <section className="db-mini-result">
               <strong>เชื่อมต่อสำเร็จ</strong>
               <span>Latency {testStatus.latency} · {testStatus.server}</span>
-              <small>ผลลัพธ์นี้เป็นการจำลองในโหมด Demo</small>
+              <small>ผลลัพธ์นี้มาจากการทดสอบ PostgreSQL ผ่าน Backend</small>
             </section>
           ) : null}
 
