@@ -44,6 +44,20 @@ describe("dashboard chart mapping compatibility", () => {
     }
   });
 
+  it("maps Chart.js label/value fields for a persisted donut", () => {
+    const fields = normalizeDashboardChartFields([
+      { name: "year", dataType: "integer" },
+      { name: "cited_by_count", dataType: "integer" },
+    ]);
+    const slots = toDashboardMappingSlots({
+      chartType: "donut",
+      mappings: { label: "year", value: "cited_by_count" },
+    }, fields);
+
+    expect(slots.find((slot) => slot.id === "category")?.fields[0]?.id).toBe("year");
+    expect(slots.find((slot) => slot.id === "value")?.fields[0]?.id).toBe("cited_by_count");
+  });
+
   it("preserves native V2 mapping slots", () => {
     const fields = normalizeDashboardChartFields(apiFields);
     const native = [{

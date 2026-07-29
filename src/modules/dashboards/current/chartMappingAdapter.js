@@ -98,7 +98,7 @@ export function toDashboardMappingSlots(config = {}, fields = []) {
 
   if (chartType === "pie" || chartType === "donut") {
     return [
-      slot("category", "Category", findField(fields, mapping.category) || xField),
+      slot("category", "Category", findField(fields, mapping.category ?? mapping.label) || xField),
       slot("value", "Value", findField(fields, mapping.value) || yField, aggregation),
       slot("legend", "Legend", groupField),
     ];

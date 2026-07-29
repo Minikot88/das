@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import ChartPreview from "@modules/dashboards/designer-v2/components/components/charts/ChartPreview";
 import { chartWidgetDensity } from "./chartWidgetDensity";
 import { normalizeDashboardChartFields, toDashboardMappingSlots } from "./chartMappingAdapter";
+import { buildSavedChartConfigInput } from "./savedChartAdapter";
 import { createDefaultConfig, dataFields, defaultChartSettings } from "@modules/dashboards/designer-v2/components/mockData";
 import { getDatasetRows } from "@modules/dashboards/designer-v2/components/services/datasetService";
 import { loadDataset } from "@modules/datasets/public/api";
@@ -233,7 +234,11 @@ function normalizeChartConfig(rawConfig) {
     ? rawConfig.mappings
     : Array.isArray(rawConfig.fieldMappings)
       ? rawConfig.fieldMappings
-      : fallback.mappings;
+      : rawConfig.mappings && typeof rawConfig.mappings === "object"
+        ? rawConfig.mappings
+        : rawConfig.mapping && typeof rawConfig.mapping === "object"
+          ? rawConfig.mapping
+          : fallback.mappings;
 
   return {
     ...fallback,
@@ -300,7 +305,7 @@ function resolveWidgetChartConfig(widget, savedCharts = []) {
 
   if (!savedChart?.config) return copiedConfig;
 
-  const savedConfig = normalizeChartConfig(savedChart.config);
+  const savedConfig = normalizeChartConfig(buildSavedChartConfigInput(savedChart));
   const copiedUpdatedAt = Date.parse(copiedConfig?.updatedAt ?? "");
   const savedUpdatedAt = Date.parse(savedChart.updatedAt ?? savedConfig.updatedAt ?? "");
   if (!copiedConfig || (Number.isFinite(savedUpdatedAt) && savedUpdatedAt > (Number.isFinite(copiedUpdatedAt) ? copiedUpdatedAt : 0))) {
@@ -841,7 +846,7 @@ function nextWidgetZ(widgets) {
 }
 
 function createChartWidget(savedChart, overrides = {}) {
-  const config = normalizeChartConfig(savedChart?.config ?? buildSampleChartConfig());
+  const config = normalizeChartConfig(savedChart ? buildSavedChartConfigInput(savedChart) : buildSampleChartConfig());
   const sourceChartId = savedChart?.id || config.chartId;
   return createWidget("chart", {
     title: savedChart?.title || chartTitle(config),
@@ -1748,7 +1753,7 @@ export default function DashboardCanvasBuilder() {
       const savedChart = sourceChartId ? savedById.get(sourceChartId) : null;
       if (!savedChart?.config) return widget;
 
-      const savedConfig = normalizeChartConfig(savedChart.config);
+      const savedConfig = normalizeChartConfig(buildSavedChartConfigInput(savedChart));
       const currentSnapshot = widget.chartConfigSnapshot && typeof widget.chartConfigSnapshot === "object"
         ? normalizeChartConfig(widget.chartConfigSnapshot)
         : widget.config?.chartConfig && typeof widget.config.chartConfig === "object"
@@ -2341,7 +2346,7 @@ export default function DashboardCanvasBuilder() {
       setToast("ไม่พบกราฟที่บันทึกไว้");
       return;
     }
-    const nextConfig = normalizeChartConfig(savedChart.config);
+    const nextConfig = normalizeChartConfig(buildSavedChartConfigInput(savedChart));
     updateWidget(targetWidget.id, {
       title: savedChart.title,
       sourceChartId: savedChart.id,

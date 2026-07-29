@@ -18,6 +18,7 @@ import {
 import { loadBuilderDraft, saveBuilderDraft } from "@infrastructure/persistence/workspace-ui/storage";
 import { isMockMode } from "@infrastructure/http/client";
 import { loadDataset } from "@modules/datasets/public/api";
+import { createVisualDatasetContract } from "@modules/charts/builder/chartPersistence";
 
 const BASE_SETTINGS = {
   title: "",
@@ -483,6 +484,11 @@ function createChartPayload({
     lastExecutedSql: state.lastExecutedSql,
     queryResult: state.queryResult,
     datasetId: state.dataset?.id ?? null,
+    dataContract: createVisualDatasetContract({
+      dataset: state.dataset,
+      schema: effectiveSchema,
+      queryMode: state.queryMode,
+    }),
     revision: state.editingRevision,
   };
 }
