@@ -42,7 +42,7 @@ vi.mock("@modules/datasets/api/datasetApi", () => ({
   importDatasetCsv: vi.fn(),
   archiveDataset: vi.fn(),
   listExternalSources: vi.fn(async () => ({ items: [{ schemaName: "scopus", displayName: "Scopus" }] })),
-  listExternalTables: vi.fn(async () => ({ items: [{ name: "sc_articles", rowCountEstimate: 10 }] })),
+  listExternalTables: vi.fn(async () => ({ items: [{ name: "sc_articles", rowCountEstimate: 10 }, { name: "sc_authors", rowCountEstimate: 4 }] })),
   listExternalColumns: vi.fn(async () => ({ items: [{ name: "id", dataType: "uuid", primaryKey: true }] })),
   previewExternalSource: vi.fn(async () => ({ rows: [{ id: "article-1" }] })),
   createExternalDataset: vi.fn(async () => ({ id: "dataset-scopus" })),
@@ -68,6 +68,15 @@ describe("DatasetsPage project ownership", () => {
     expect(screen.getByRole("button", { name: "Create live dataset" })).toBeEnabled();
     fireEvent.click(screen.getByRole("button", { name: "Create live dataset" }));
     expect(await screen.findByRole("button", { name: "Create chart" })).toBeInTheDocument();
+  });
+
+  it("lists every table in each allowed schema and selects one for live preview", async () => {
+    render(<MemoryRouter><DatasetsPage /></MemoryRouter>);
+    expect(await screen.findByRole("tree", { name: "External schema tables" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /sc_articles/ })).toBeInTheDocument();
+    const authors = await screen.findByRole("button", { name: /sc_authors/ });
+    fireEvent.click(authors);
+    await waitFor(() => expect(screen.getByRole("combobox", { name: "Table" })).toHaveValue("sc_authors"));
   });
 
   it("renames only the selected catalog metadata through the API", async () => {

@@ -23,6 +23,8 @@ import {
   renameDataset,
 } from "@modules/datasets/api/datasetApi";
 
+const EMPTY_TABLES = [];
+
 function datasetColumns(dataset) {
   return (dataset?.fields ?? []).map((field) => ({
     key: field.name,
@@ -90,7 +92,8 @@ export default function DatasetsPage() {
   const [importError, setImportError] = useState("");
   const [externalSources, setExternalSources] = useState([]);
   const [externalSchema, setExternalSchema] = useState("");
-  const [externalTables, setExternalTables] = useState([]);
+  const [externalTableCatalog, setExternalTableCatalog] = useState({});
+  const [externalTableSearch, setExternalTableSearch] = useState("");
   const [externalTable, setExternalTable] = useState("");
   const [externalColumns, setExternalColumns] = useState([]);
   const [externalPreview, setExternalPreview] = useState([]);
@@ -174,7 +177,16 @@ export default function DatasetsPage() {
   }, [activeProjectId, reloadDatasets]);
 
   useEffect(() => { if (!activeProjectId) return; listExternalSources(activeProjectId).then(result => { const items = result?.items ?? []; setExternalSources(items); setExternalSchema(items[0]?.schemaName ?? ""); }).catch(() => setExternalSources([])); }, [activeProjectId]);
-  useEffect(() => { if (!externalSchema) return; listExternalTables(externalSchema, activeProjectId).then(result => { const items = result?.items ?? []; setExternalTables(items); setExternalTable(items[0]?.name ?? ""); }).catch(error => setImportError(error.message)); }, [activeProjectId, externalSchema]);
+  useEffect(() => {
+    if (!activeProjectId || !externalSources.length) { setExternalTableCatalog({}); return undefined; }
+    let active = true;
+    Promise.all(externalSources.map(async (source) => [source.schemaName, (await listExternalTables(source.schemaName, activeProjectId))?.items ?? []]))
+      .then((entries) => { if (active) setExternalTableCatalog(Object.fromEntries(entries)); })
+      .catch((error) => { if (active) setImportError(error?.message || "ไม่สามารถโหลดรายการตารางได้"); });
+    return () => { active = false; };
+  }, [activeProjectId, externalSources]);
+  const externalTables = useMemo(() => externalTableCatalog[externalSchema] ?? EMPTY_TABLES, [externalSchema, externalTableCatalog]);
+  useEffect(() => { setExternalTable((current) => externalTables.some((table) => table.name === current) ? current : (externalTables[0]?.name ?? "")); }, [externalTables]);
   useEffect(() => { if (!externalSchema || !externalTable) return; listExternalColumns(externalSchema, externalTable, activeProjectId).then(result => { const items = result?.items ?? []; setExternalColumns(items); setSelectedExternalFields(items.map(column => column.name)); setExternalFilterField(items[0]?.name ?? ""); setExternalSortField(items[0]?.name ?? ""); setExternalPage(1); }).catch(error => setImportError(error.message)); }, [activeProjectId, externalSchema, externalTable]);
   useEffect(() => { if (!externalSchema || !externalTable || !selectedExternalFields.length) return; previewExternalSource({ projectId: activeProjectId, schemaName: externalSchema, tableName: externalTable, select: selectedExternalFields, filters: externalFilterValue ? [{ field: externalFilterField, operator: "contains", value: externalFilterValue }] : [], sort: externalSortField ? { field: externalSortField, direction: externalSortDirection } : undefined, page: externalPage, pageSize: 50 }).then(result => setExternalPreview(result?.rows ?? [])).catch(error => setImportError(error.message)); }, [activeProjectId, externalFilterField, externalFilterValue, externalPage, externalSchema, externalSortDirection, externalSortField, externalTable, selectedExternalFields]);
 
@@ -413,6 +425,21 @@ export default function DatasetsPage() {
                 {savedExternalDatasetId ? <button type="button" className="dashboard-toolbar-btn" onClick={() => navigate(`/dashboard-v2?projectId=${encodeURIComponent(activeProjectId)}&datasetId=${encodeURIComponent(savedExternalDatasetId)}`)}>Create chart</button> : null}
               </div>
             </header>
+            <section className="datasets-source-table-catalog" aria-label="Allowed schema table catalog">
+              <div className="datasets-source-table-catalog__head">
+                <strong>Tables in allowed schemas</strong>
+                <label><span>Search tables</span><input value={externalTableSearch} onChange={(event) => setExternalTableSearch(event.target.value)} placeholder="Search table" /></label>
+              </div>
+              <div className="datasets-source-table-catalog__tree" role="tree" aria-label="External schema tables">
+                {externalSources.map((source) => {
+                  const tables = (externalTableCatalog[source.schemaName] ?? []).filter((table) => `${source.schemaName}.${table.name}`.toLowerCase().includes(externalTableSearch.trim().toLowerCase()));
+                  return <section className="datasets-source-table-catalog__schema" key={source.schemaName} role="treeitem" aria-label={source.displayName || source.schemaName}>
+                    <header><strong>{source.displayName || source.schemaName}</strong><span>{tables.length} tables</span></header>
+                    {tables.length ? <div>{tables.map((table) => <button type="button" key={table.name} className={source.schemaName === externalSchema && table.name === externalTable ? "is-active" : ""} onClick={() => { setExternalSchema(source.schemaName); setExternalTable(table.name); setExternalPage(1); }}>{table.name}<small>{table.rowCountEstimate ?? "?"} rows</small></button>)}</div> : <p>No matching tables.</p>}
+                  </section>;
+                })}
+              </div>
+            </section>
             <div className="datasets-source-browser__controls">
               <label><span>Schema</span><select value={externalSchema} onChange={(event) => setExternalSchema(event.target.value)}>{externalSources.map(source => <option key={source.schemaName} value={source.schemaName}>{source.displayName}</option>)}</select></label>
               <label><span>Table</span><select value={externalTable} onChange={(event) => setExternalTable(event.target.value)}>{externalTables.map(table => <option key={table.name} value={table.name}>{table.name} ({table.rowCountEstimate ?? "?"})</option>)}</select></label>
