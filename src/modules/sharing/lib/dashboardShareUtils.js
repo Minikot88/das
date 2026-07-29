@@ -244,7 +244,7 @@ function concatBytes(parts) {
   return output;
 }
 
-function createSingleImagePdf({ imageBytes, width, height }) {
+export function createSingleImagePdf({ imageBytes, width, height }) {
   const pageWidth = Math.max(320, Math.round(width));
   const pageHeight = Math.max(240, Math.round(height));
   const objects = [
@@ -308,7 +308,17 @@ export async function exportNodeAsPdf(node, {
   pixelRatio = 1.4,
 } = {}) {
   const canvas = await nodeToCanvas(node, { backgroundColor, pixelRatio });
-  const imageDataUrl = canvas.toDataURL("image/jpeg", 0.92);
+  exportCanvasAsPdf(canvas, { filename });
+}
+
+export function exportCanvasAsPdf(canvas, {
+  filename = "dashboard",
+  quality = 0.92,
+} = {}) {
+  if (!(canvas instanceof HTMLCanvasElement)) {
+    throw new Error("Dashboard canvas is unavailable.");
+  }
+  const imageDataUrl = canvas.toDataURL("image/jpeg", quality);
   const imageBytes = dataUrlToBytes(imageDataUrl);
   const pdfBytes = createSingleImagePdf({
     imageBytes,

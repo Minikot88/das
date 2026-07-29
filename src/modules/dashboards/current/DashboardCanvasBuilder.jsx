@@ -19,7 +19,7 @@ import {
 } from "@domain/dashboard/dashboardPersistence";
 import {
   createPersistentDashboardShare,
-  exportNodeAsPdf,
+  exportCanvasAsPdf,
   revokePersistentDashboardShare,
 } from "@modules/sharing";
 import { useWorkspaceSelector } from "@app/store/useWorkspaceSelector";
@@ -2727,6 +2727,35 @@ export default function DashboardCanvasBuilder() {
     setToast("ส่งออก JSON แล้ว");
   }, [buildLayoutPayload]);
 
+  const createDashboardExportCanvas = useCallback(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = canvasSettings.width;
+    canvas.height = canvasSettings.height;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Canvas export is unavailable.");
+
+    context.fillStyle = theme === "dark" ? "#0F172A" : "#FFFFFF";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    widgets.forEach((widget) => {
+      const x = widget.x * GRID_UNIT;
+      const y = widget.y * GRID_UNIT;
+      const width = widget.w * GRID_UNIT;
+      const height = widget.h * GRID_UNIT;
+      context.fillStyle = widget.background || "#FFFFFF";
+      context.strokeStyle = widget.borderColor || "#E6EAF0";
+      context.lineWidth = 1;
+      context.fillRect(x, y, width, height);
+      context.strokeRect(x, y, width, height);
+      context.fillStyle = "#172033";
+      context.font = "500 18px IBM Plex Sans Thai, system-ui, sans-serif";
+      context.fillText(widget.title || WIDGET_LABELS[widget.type] || "Widget", x + 16, y + 28);
+      context.fillStyle = "#64748B";
+      context.font = "400 13px IBM Plex Sans Thai, system-ui, sans-serif";
+      context.fillText(WIDGET_LABELS[widget.type] || widget.type, x + 16, y + 50);
+    });
+    return canvas;
+  }, [canvasSettings.height, canvasSettings.width, theme, widgets]);
+
   const exportPng = useCallback(() => {
     const width = canvasSettings.width;
     const height = canvasSettings.height;
@@ -2770,16 +2799,15 @@ export default function DashboardCanvasBuilder() {
       return;
     }
     try {
-      await exportNodeAsPdf(canvasRef.current, {
+      exportCanvasAsPdf(createDashboardExportCanvas(), {
         filename: `dashboard-${activeDashboardIdRef.current || "canvas"}`,
-        backgroundColor: theme === "dark" ? "#10131c" : "#ffffff",
       });
       setPdfModalOpen(false);
       setToast("ส่งออก PDF แล้ว");
     } catch (error) {
       setToast(error instanceof Error ? `ส่งออก PDF ไม่สำเร็จ: ${error.message}` : "ส่งออก PDF ไม่สำเร็จ");
     }
-  }, [theme]);
+  }, [createDashboardExportCanvas]);
 
   const saveDashboard = useCallback(() => {
     void runExplicitDashboardSave({
