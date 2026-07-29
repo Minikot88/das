@@ -8,13 +8,14 @@ import { PrismaService } from '../../infrastructure/database/prisma.service.js';
 import { ApiError } from '../../shared/http/api-error.js';
 import type { RequestPrincipal } from '../projects/application/project.service.js';
 import { AuthorizationService } from '../auth/application/authorization.service.js';
+import { ExternalSourcesService } from '../external-sources/external-sources.service.js';
 
 type JsonObject = Record<string, unknown>;
 
 @Injectable()
 export class ExportsService {
   private readonly root: string;
-  constructor(private readonly prisma: PrismaService, @Inject(ENVIRONMENT) environment: RuntimeEnvironment, private readonly authorization: AuthorizationService) { this.root = resolve(dirname(environment.fileStoragePath), 'exports'); }
+  constructor(private readonly prisma: PrismaService, @Inject(ENVIRONMENT) environment: RuntimeEnvironment, private readonly authorization: AuthorizationService, private readonly external: ExternalSourcesService) { this.root = resolve(dirname(environment.fileStoragePath), 'exports'); }
 
   private async project(principal: RequestPrincipal, projectId: string) {
     await this.authorization.assertProjectPermission(principal as never, projectId, 'export');
@@ -42,7 +43,10 @@ export class ExportsService {
     } else {
       const dataset = await this.prisma.dataset.findFirst({ where: { id: entityId, projectId, organizationId: principal.organizationId, status: 'ready', deletedAt: null } });
       if (!dataset) throw new ApiError(404, 'DATASET_NOT_FOUND', 'Dataset was not found.');
-      const [fields, rows] = await Promise.all([this.prisma.datasetField.findMany({ where: { datasetId: entityId }, orderBy: { ordinal: 'asc' } }), this.prisma.datasetRow.findMany({ where: { datasetId: entityId }, orderBy: { rowNumber: 'asc' }, take: 50_000 })]);
+      const [fields, storedRows] = await Promise.all([this.prisma.datasetField.findMany({ where: { datasetId: entityId }, orderBy: { ordinal: 'asc' } }), this.prisma.datasetRow.findMany({ where: { datasetId: entityId }, orderBy: { rowNumber: 'asc' }, take: 50_000 })]);
+      const rows = dataset.sourceType === 'postgres_schema' && dataset.sourceConfigJson
+        ? (await this.external.run({ ...(dataset.sourceConfigJson as JsonObject), page: 1, pageSize: 10_000 })).rows.map(rowJson => ({ rowJson }))
+        : storedRows;
       const keys = fields.map(field => field.fieldKey);
       const csv = [keys.map(csvCell).join(','), ...rows.map(item => keys.map(key => csvCell((item.rowJson as JsonObject)[key])).join(','))].join('\r\n');
       bytes = Buffer.from(`\uFEFF${csv}`, 'utf8'); baseName = dataset.name; mimeType = 'text/csv; charset=utf-8';

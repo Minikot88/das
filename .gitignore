@@ -24,6 +24,7 @@ apps/api/coverage/
 .tmp-production-secrets/
 tmp-chrome-builder-audit/
 *.local
+/database/imports/*.backup
 
 # Editor directories and files
 .vscode/*

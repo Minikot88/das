@@ -33,6 +33,19 @@ describe('CoreDataService dataset query validation', () => {
     await expect(service().queryDataset(principal, 'dataset-1', { select: ['region'], page: 1, pageSize: 10 })).resolves.toMatchObject({ rows: [{ region: 'North' }], total: 1, page: 1, pageSize: 10 });
   });
 
+  it('keeps a live dataset bound to its saved schema and table', async () => {
+    const prisma = {
+      biProjectMember: { findMany: vi.fn().mockResolvedValue([]) },
+      biProject: { findFirst: vi.fn().mockResolvedValue({ id: 'project-1', organizationId: 'org-default', ownerUserId: 'user-development' }) },
+      dataset: { findFirst: vi.fn().mockResolvedValue({ id: 'dataset-live', projectId: 'project-1', organizationId: 'org-default', sourceType: 'postgres_schema', sourceConfigJson: { schemaName: 'scopus', tableName: 'sc_articles', select: ['title'] } }) },
+      auditLog: { create: vi.fn().mockResolvedValue({}) },
+    };
+    const external = { run: vi.fn().mockResolvedValue({ rows: [{ title: 'Article' }], page: 1, pageSize: 10, truncated: false }) };
+    const instance = new CoreDataService(prisma as never, { assertProjectPermission: vi.fn().mockResolvedValue(undefined) } as never, external as never);
+    await instance.queryDataset(principal, 'dataset-live', { schemaName: 'public', tableName: 'users', pageSize: 10 });
+    expect(external.run).toHaveBeenCalledWith(expect.objectContaining({ schemaName: 'scopus', tableName: 'sc_articles' }));
+  });
+
   it('rejects a viewer attempting to create a dashboard', async () => {
     const prisma = {} as never;
     const authorization = { assertProjectPermission: vi.fn().mockRejectedValue({ status: 403, code: 'FORBIDDEN' }) };

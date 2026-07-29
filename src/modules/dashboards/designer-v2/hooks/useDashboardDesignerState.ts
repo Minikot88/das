@@ -115,10 +115,14 @@ function cloneConfig(config: ChartConfig): ChartConfig {
 
 function toDesignerFields(fields: Array<Record<string, unknown>>, table = "dataset"): DataField[] {
   return fields.map((field) => {
-    const rawType = String(field.type || field.dataType || "string");
-    const type: DataField["type"] = rawType === "number" || rawType === "date" || rawType === "boolean"
-      ? rawType
-      : "text";
+    const rawType = String(field.type || field.dataType || "string").toLowerCase();
+    const type: DataField["type"] = /int|numeric|decimal|double|real|money/.test(rawType)
+      ? "number"
+      : /date|time/.test(rawType)
+        ? "date"
+        : rawType === "boolean"
+          ? "boolean"
+          : "text";
     const name = String(field.name || field.fieldKey || "");
     const isMeasure = type === "number";
     return {

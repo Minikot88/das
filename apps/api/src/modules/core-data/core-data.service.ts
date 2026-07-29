@@ -119,7 +119,7 @@ export class CoreDataService {
     if (dataset.sourceType === 'postgres_schema') {
       const config = dataset.sourceConfigJson as JsonObject | null;
       if (!config) throw new ApiError(409, 'EXTERNAL_SOURCE_CONFIG_MISSING', 'External dataset configuration is missing.');
-      const result = await this.external.run({ ...config, ...input });
+      const result = await this.external.run({ ...config, ...input, schemaName: config.schemaName, tableName: config.tableName });
       await this.prisma.auditLog.create({ data: { organizationId: principal.organizationId, projectId: dataset.projectId, actorUserId: principal.userId, requestId: `external-${randomUUID()}`, entityType: 'dataset', entityId: dataset.id, action: 'external.dataset.query', outcome: 'succeeded', metadataJson: { schema: String(config.schemaName), table: String(config.tableName), rowCount: result.rows.length } } });
       return result;
     }

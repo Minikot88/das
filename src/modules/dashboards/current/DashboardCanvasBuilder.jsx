@@ -6,6 +6,7 @@ import { chartWidgetDensity } from "./chartWidgetDensity";
 import { normalizeDashboardChartFields, toDashboardMappingSlots } from "./chartMappingAdapter";
 import { createDefaultConfig, dataFields, defaultChartSettings } from "@modules/dashboards/designer-v2/components/mockData";
 import { getDatasetRows } from "@modules/dashboards/designer-v2/components/services/datasetService";
+import { loadDataset } from "@modules/datasets/public/api";
 import { resolveChartData } from "@domain/charts/chartDataContract";
 import {
   createBeforeUnloadHandler,
@@ -1390,6 +1391,10 @@ export default function DashboardCanvasBuilder() {
   const [selectedWidgetId, setSelectedWidgetId] = useState(null);
   const [previewMode, setPreviewMode] = useState(false);
   const [savedCharts, setSavedCharts] = useState(() => (mockMode ? readSavedCharts() : []));
+  const [remoteDatasets, setRemoteDatasets] = useState([]);
+  const chartWorkspaceSnapshot = useMemo(() => mockMode ? workspaceSnapshot : {
+    projects: [{ id: activeProjectId, datasets: remoteDatasets }],
+  }, [activeProjectId, mockMode, remoteDatasets, workspaceSnapshot]);
   const [elementsModalOpen, setElementsModalOpen] = useState(false);
   const [suggestedElementType, setSuggestedElementType] = useState(null);
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
@@ -1516,6 +1521,10 @@ export default function DashboardCanvasBuilder() {
       getCharts(activeProjectId),
     ]).then(async ([dashboardItems, chartItems]) => {
       if (!active) return;
+      const datasetIds = [...new Set((chartItems ?? []).map((chart) => chart.datasetId).filter(Boolean))];
+      const loadedDatasets = await Promise.all(datasetIds.map((datasetId) => loadDataset(datasetId)));
+      if (!active) return;
+      setRemoteDatasets(loadedDatasets);
       const availableDashboards = Array.isArray(dashboardItems) ? dashboardItems : [];
       const selectedDashboard = availableDashboards.find((item) => item.id === activeDashboardIdRef.current)
         ?? availableDashboards[0]
@@ -3853,7 +3862,7 @@ export default function DashboardCanvasBuilder() {
                           canvasZoom={canvasSettings.zoom}
                           rows={rows}
                           savedCharts={savedCharts}
-                          workspaceSnapshot={workspaceSnapshot}
+                          workspaceSnapshot={chartWorkspaceSnapshot}
                           selected={selectedWidgetId === widget.id}
                           editingTextId={editingTextId}
                           setEditingTextId={setEditingTextId}

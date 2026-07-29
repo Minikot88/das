@@ -7,12 +7,13 @@ import { ensureRequestId } from '../../shared/http/request-id.js';
 import type { RequestPrincipal } from '../projects/application/project.service.js';
 import { createShareToken, hashShareToken } from './domain/share-token.js';
 import { AuthorizationService } from '../auth/application/authorization.service.js';
+import { ExternalSourcesService } from '../external-sources/external-sources.service.js';
 
 type JsonObject = Record<string, unknown>;
 
 @Injectable()
 export class SharingService {
-  constructor(private readonly prisma: PrismaService, private readonly authorization: AuthorizationService) {}
+  constructor(private readonly prisma: PrismaService, private readonly authorization: AuthorizationService, private readonly external: ExternalSourcesService) {}
 
   private async accessibleDashboard(principal: RequestPrincipal, dashboardId: string) {
     const memberships = (await this.prisma.biProjectMember.findMany({ where: { organizationId: principal.organizationId, userId: principal.userId }, select: { projectId: true } })).map(item => item.projectId);
@@ -35,6 +36,7 @@ export class SharingService {
     const chartIds = widgets.map(item => item.chartId).filter((id): id is string => Boolean(id));
     const charts = chartIds.length ? await this.prisma.chart.findMany({ where: { id: { in: chartIds }, projectId: dashboard.projectId, organizationId: principal.organizationId, deletedAt: null } }) : [];
     const datasetIds = charts.map(item => item.datasetId).filter((id): id is string => Boolean(id));
+    const datasets = datasetIds.length ? await this.prisma.dataset.findMany({ where: { id: { in: datasetIds }, organizationId: principal.organizationId, projectId: dashboard.projectId, deletedAt: null } }) : [];
     const [datasetFields, datasetRows] = datasetIds.length ? await Promise.all([
       this.prisma.datasetField.findMany({ where: { datasetId: { in: datasetIds } }, orderBy: { ordinal: 'asc' } }),
       this.prisma.datasetRow.findMany({ where: { datasetId: { in: datasetIds } }, orderBy: { rowNumber: 'asc' }, take: 50_000 }),
@@ -43,6 +45,11 @@ export class SharingService {
     const rowsByDataset = new Map<string, unknown[]>();
     for (const field of datasetFields) fieldsByDataset.set(field.datasetId, [...(fieldsByDataset.get(field.datasetId) || []), field]);
     for (const row of datasetRows) rowsByDataset.set(row.datasetId, [...(rowsByDataset.get(row.datasetId) || []), row.rowJson]);
+    for (const dataset of datasets) {
+      if (dataset.sourceType !== 'postgres_schema' || !dataset.sourceConfigJson) continue;
+      const result = await this.external.run({ ...(dataset.sourceConfigJson as JsonObject), page: 1, pageSize: 10_000 });
+      rowsByDataset.set(dataset.id, result.rows);
+    }
     const chartById = new Map(charts.map(item => [item.id, toPublicSnapshotChart(item, fieldsByDataset, rowsByDataset)]));
     const snapshot = {
       dashboardId: dashboard.id,

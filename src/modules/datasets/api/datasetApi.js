@@ -57,7 +57,7 @@ export async function loadDataset(datasetId) {
   const [dataset, fields, result] = await Promise.all([
     getDatasetDetail(datasetId),
     getDatasetFields(datasetId),
-    queryDataset(datasetId, { page: 1, pageSize: 5000 }),
+    queryDataset(datasetId, { page: 1, pageSize: 10000 }),
   ]);
   return { ...dataset, fields, rows: result?.rows ?? [] };
 }
