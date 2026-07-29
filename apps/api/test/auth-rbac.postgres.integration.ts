@@ -1,5 +1,5 @@
 import { randomBytes, randomUUID } from 'node:crypto';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { createApplication } from '../src/app/bootstrap/create-application.js';
 import { PrismaService } from '../src/infrastructure/database/prisma.service.js';
@@ -365,18 +365,20 @@ describe('PostgreSQL authentication and RBAC boundaries', () => {
     expect(revoked.statusCode).toBe(200);
     expect((await app.inject({ method: 'GET', url: `/api/v1/shares/${share.token}` })).statusCode).toBe(404);
 
-    await prisma.$executeRawUnsafe(`CREATE FUNCTION reject_integration_share_snapshot() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'controlled snapshot failure'; END $$`);
-    await prisma.$executeRawUnsafe(`CREATE TRIGGER reject_integration_share_snapshot BEFORE INSERT ON dashboard_share_snapshots FOR EACH ROW EXECUTE FUNCTION reject_integration_share_snapshot()`);
+    const existingSnapshot = await prisma.dashboardShareSnapshot.findUniqueOrThrow({ where: { shareId: share.id } });
+    const createSnapshot = prisma.dashboardShareSnapshot.create.bind(prisma.dashboardShareSnapshot);
+    const createSnapshotSpy = vi.spyOn(prisma.dashboardShareSnapshot, 'create').mockImplementationOnce((args) =>
+      createSnapshot({ ...args, data: { ...args.data, id: existingSnapshot.id } }),
+    );
     const before = await prisma.dashboardShareLink.count({ where: { organizationId, dashboardId } });
     try {
       const failed = await app.inject({ method: 'POST', url: '/api/v1/shares', headers: login.mutationHeaders, payload: { dashboardId } });
       expect(failed.statusCode).toBe(500);
       expect(failed.json()).toMatchObject({ code: 'INTERNAL_ERROR', message: 'An unexpected error occurred.' });
-      expect(failed.body).not.toMatch(/controlled snapshot failure|dashboard_share_snapshots|prisma/i);
+      expect(failed.body).not.toMatch(/unique constraint|dashboard_share_snapshots|prisma/i);
       expect(await prisma.dashboardShareLink.count({ where: { organizationId, dashboardId } })).toBe(before);
     } finally {
-      await prisma.$executeRawUnsafe('DROP TRIGGER IF EXISTS reject_integration_share_snapshot ON dashboard_share_snapshots');
-      await prisma.$executeRawUnsafe('DROP FUNCTION IF EXISTS reject_integration_share_snapshot()');
+      createSnapshotSpy.mockRestore();
     }
   });
 
