@@ -280,6 +280,25 @@ function createCompatibleMappingForTemplate(template, currentMapping = {}, schem
   );
 }
 
+export function suggestVisualMapping(template, schema = null, currentMapping = {}) {
+  const fields = Array.isArray(schema?.fields) ? schema.fields : [];
+  const numeric = fields.filter((field) => normalizeSchemaFieldType(field.type) === "number");
+  const dimension = fields.filter((field) => {
+    const type = normalizeSchemaFieldType(field.type);
+    return type === "category" || type === "date" || type === "string";
+  });
+  return Object.fromEntries((template?.roles ?? []).map((role) => {
+    const current = currentMapping[role.key];
+    const values = (Array.isArray(current) ? current : [current]).filter(Boolean);
+    const compatible = values.filter((name) => isFieldCompatibleWithRole(schema, role, name));
+    if (compatible.length) return [role.key, role.multiple ? compatible : compatible[0]];
+    const preferred = /^(x|label|category|dimension)$/i.test(role.key) ? dimension : /^(y|value|measure|measures|size)$/i.test(role.key) ? numeric : fields;
+    const candidate = preferred.find((field) => isFieldCompatibleWithRole(schema, role, field.name))
+      ?? fields.find((field) => isFieldCompatibleWithRole(schema, role, field.name));
+    return [role.key, role.multiple ? (candidate ? [candidate.name] : []) : candidate?.name ?? null];
+  }));
+}
+
 function normalizeTemplateState(template, savedState = {}) {
   return {
     mapping: {
@@ -578,7 +597,7 @@ export default function useChartBuilder(builderContext, editingChartId = "") {
           templates,
           loading: false,
           selectedTemplateId: template.id,
-          mapping: normalizedDefaults.mapping,
+          mapping: suggestVisualMapping(template, schema, normalizedDefaults.mapping),
           settings: normalizedDefaults.settings,
           queryMode,
           customSql: startingCustomSql,
