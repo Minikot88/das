@@ -35,6 +35,13 @@ describe("dashboard API v1 repository", () => {
     expect(apiRequest).not.toHaveBeenCalled();
   });
 
+  it("saves a chart to the project library without calling a missing dashboard", async () => {
+    const { addSavedChartToDashboard } = await import("./dashboardApi");
+    await expect(addSavedChartToDashboard({ chartId: "chart-1", projectId: "project-1", dashboardId: "" }))
+      .resolves.toEqual({ layoutItem: null, skipped: true });
+    expect(apiRequest).not.toHaveBeenCalled();
+  });
+
   it.each(["null", "undefined", "  null  "])("does not serialize unresolved dashboard id %s into an API request", async (dashboardId) => {
     const { loadDashboardContext } = await import("./dashboardApi");
     await expect(loadDashboardContext(dashboardId)).resolves.toBeNull();

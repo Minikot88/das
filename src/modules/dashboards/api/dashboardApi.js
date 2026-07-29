@@ -57,6 +57,7 @@ export async function addSavedChartToDashboard({ chartId, projectId, sheetId, da
     return { layoutItem };
   }
 
+  if (!dashboardId) return { layoutItem: null, skipped: true };
   return apiRequest(`/api/v1/dashboards/${encodeApiPathSegment(dashboardId)}/charts`, {
     method: "POST",
     body: JSON.stringify({ chartId }),
