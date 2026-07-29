@@ -50,11 +50,15 @@ export default function BuilderPage() {
   const editingChartId = searchParams.get("chartId") ?? "";
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [sqlPanelHeight, setSqlPanelHeight] = useState(SQL_PANEL_DEFAULT_HEIGHT);
-  const [isSqlPanelCollapsed, setIsSqlPanelCollapsed] = useState(false);
+  // The original designer kept SQL as an on-demand tool.  Keep it available
+  // for the API-backed builder, but do not let an empty editor displace the
+  // field mapping and live preview on first load.
+  const [isSqlPanelCollapsed, setIsSqlPanelCollapsed] = useState(true);
   const [apiProjects, setApiProjects] = useState([]);
   const [projectState, setProjectState] = useState({ status: isMockMode() ? "ready" : "loading", error: "" });
   const requestedProjectId = normalizeProjectId(searchParams.get("projectId"));
   const requestedDashboardId = searchParams.get("dashboardId") || "";
+  const requestedDatasetId = normalizeProjectId(searchParams.get("datasetId"));
 
   const fallbackContext = useMemo(
     () =>
@@ -96,9 +100,10 @@ export default function BuilderPage() {
       projectId: apiProject.id,
       dashboardId: requestedDashboardId,
       sheetId: "",
+      datasetId: requestedDatasetId,
       returnTo: `/dashboard?projectId=${encodeURIComponent(apiProject.id)}${requestedDashboardId ? `&dashboardId=${encodeURIComponent(requestedDashboardId)}` : ""}`,
     };
-  }, [apiProject, requestedDashboardId]);
+  }, [apiProject, requestedDashboardId, requestedDatasetId]);
 
   const builderContext = useMemo(() => {
     if (!isMockMode()) return apiContext;
@@ -166,6 +171,19 @@ export default function BuilderPage() {
 
     window.addEventListener("resize", handleViewportResize);
     return () => window.removeEventListener("resize", handleViewportResize);
+  }, []);
+
+  useEffect(() => {
+    function handleRibbonCommand(event) {
+      const detail = event.detail;
+      if (detail?.scope === "chart" && detail?.command === "sql") {
+        setIsSqlPanelCollapsed(false);
+        document.getElementById("builder-sql-panel")?.scrollIntoView({ block: "nearest" });
+      }
+    }
+
+    window.addEventListener("mini-bi:ribbon-command", handleRibbonCommand);
+    return () => window.removeEventListener("mini-bi:ribbon-command", handleRibbonCommand);
   }, []);
 
   function handleSqlResize(_event, data) {
@@ -279,11 +297,6 @@ export default function BuilderPage() {
         <div className="builder-v3-column builder-v3-column-main">
           <div className="builder-v3-center-scroll">
             <div className="builder-v3-chart-builder-stack">
-              <ChartTypePicker
-                templates={builder.templates}
-                selectedTemplateId={builder.selectedTemplateId}
-                onChange={builder.setSelectedTemplate}
-              />
               <ChartMappingPanel
                 template={builder.selectedTemplate}
                 mapping={builder.mapping}
@@ -292,6 +305,11 @@ export default function BuilderPage() {
                 onDropField={builder.assignField}
                 onRemoveField={builder.removeField}
                 canAssignField={builder.canAssignField}
+              />
+              <ChartTypePicker
+                templates={builder.templates}
+                selectedTemplateId={builder.selectedTemplateId}
+                onChange={builder.setSelectedTemplate}
               />
             </div>
             <ChartPreviewPanel

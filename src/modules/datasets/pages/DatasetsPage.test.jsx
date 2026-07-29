@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import DatasetsPage from "@modules/datasets/pages/DatasetsPage";
@@ -41,11 +41,11 @@ vi.mock("@modules/datasets/api/datasetApi", () => ({
   queryDataset: vi.fn(async () => ({ rows: [], total: 0 })),
   importDatasetCsv: vi.fn(),
   archiveDataset: vi.fn(),
-  listExternalSources: vi.fn(async () => ({ items: [] })),
-  listExternalTables: vi.fn(async () => ({ items: [] })),
-  listExternalColumns: vi.fn(async () => ({ items: [] })),
-  previewExternalSource: vi.fn(async () => ({ rows: [] })),
-  createExternalDataset: vi.fn(),
+  listExternalSources: vi.fn(async () => ({ items: [{ schemaName: "scopus", displayName: "Scopus" }] })),
+  listExternalTables: vi.fn(async () => ({ items: [{ name: "sc_articles", rowCountEstimate: 10 }] })),
+  listExternalColumns: vi.fn(async () => ({ items: [{ name: "id", dataType: "uuid", primaryKey: true }] })),
+  previewExternalSource: vi.fn(async () => ({ rows: [{ id: "article-1" }] })),
+  createExternalDataset: vi.fn(async () => ({ id: "dataset-scopus" })),
 }));
 
 vi.mock("@shared/components/ui/EnterpriseDataTable", () => ({ default: () => null }));
@@ -56,5 +56,16 @@ describe("DatasetsPage project ownership", () => {
 
     expect((await screen.findAllByText("Project A dataset")).length).toBeGreaterThan(0);
     expect(screen.queryByText("Project B dataset")).not.toBeInTheDocument();
+  });
+
+  it("keeps the live external source controls available beside API-backed datasets", async () => {
+    render(<MemoryRouter><DatasetsPage /></MemoryRouter>);
+
+    expect(await screen.findByRole("region", { name: "PostgreSQL external source browser" })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("combobox", { name: "Schema" })).toHaveValue("scopus"));
+    await waitFor(() => expect(screen.getByRole("combobox", { name: "Table" })).toHaveValue("sc_articles"));
+    expect(screen.getByRole("button", { name: "Save live dataset" })).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "Save live dataset" }));
+    expect(await screen.findByRole("button", { name: "Create chart" })).toBeInTheDocument();
   });
 });

@@ -99,6 +99,7 @@ export default function DatasetsPage() {
   const [externalSortField, setExternalSortField] = useState("");
   const [externalSortDirection, setExternalSortDirection] = useState("asc");
   const [externalPage, setExternalPage] = useState(1);
+  const [savedExternalDatasetId, setSavedExternalDatasetId] = useState("");
 
   const reloadDatasets = useCallback(async (preferredId = "") => {
     if (!activeProjectId) {
@@ -175,7 +176,23 @@ export default function DatasetsPage() {
   useEffect(() => { if (!externalSchema || !externalTable) return; listExternalColumns(externalSchema, externalTable, activeProjectId).then(result => { const items = result?.items ?? []; setExternalColumns(items); setSelectedExternalFields(items.map(column => column.name)); setExternalFilterField(items[0]?.name ?? ""); setExternalSortField(items[0]?.name ?? ""); setExternalPage(1); }).catch(error => setImportError(error.message)); }, [activeProjectId, externalSchema, externalTable]);
   useEffect(() => { if (!externalSchema || !externalTable || !selectedExternalFields.length) return; previewExternalSource({ projectId: activeProjectId, schemaName: externalSchema, tableName: externalTable, select: selectedExternalFields, filters: externalFilterValue ? [{ field: externalFilterField, operator: "contains", value: externalFilterValue }] : [], sort: externalSortField ? { field: externalSortField, direction: externalSortDirection } : undefined, page: externalPage, pageSize: 50 }).then(result => setExternalPreview(result?.rows ?? [])).catch(error => setImportError(error.message)); }, [activeProjectId, externalFilterField, externalFilterValue, externalPage, externalSchema, externalSortDirection, externalSortField, externalTable, selectedExternalFields]);
 
-  async function saveExternalDataset() { try { const dataset = await createExternalDataset({ projectId: activeProjectId, name: `${externalSchema}.${externalTable}`, schemaName: externalSchema, tableName: externalTable, selectedFields: selectedExternalFields, filters: externalFilterValue ? [{ field: externalFilterField, operator: "contains", value: externalFilterValue }] : [], sort: externalSortField ? { field: externalSortField, direction: externalSortDirection } : undefined }); await reloadDatasets(dataset.id); } catch (error) { setImportError(error.message); } }
+  async function saveExternalDataset() {
+    try {
+      const dataset = await createExternalDataset({
+        projectId: activeProjectId,
+        name: `${externalSchema}.${externalTable}`,
+        schemaName: externalSchema,
+        tableName: externalTable,
+        selectedFields: selectedExternalFields,
+        filters: externalFilterValue ? [{ field: externalFilterField, operator: "contains", value: externalFilterValue }] : [],
+        sort: externalSortField ? { field: externalSortField, direction: externalSortDirection } : undefined,
+      });
+      setSavedExternalDatasetId(dataset?.id ?? "");
+      await reloadDatasets(dataset?.id ?? "");
+    } catch (error) {
+      setImportError(error.message);
+    }
+  }
 
   useEffect(() => {
     if (!selectedDatasetId) {
@@ -364,20 +381,29 @@ export default function DatasetsPage() {
               </div>
             ) : null}
           </section>
-          <section className="datasets-import-panel" aria-label="PostgreSQL external source browser">
-            <div className="datasets-import-copy"><span>PostgreSQL source</span><h2>External schema browser</h2><p>เลือก schema และตารางที่ได้รับอนุญาต ข้อมูลต้นทางเป็นแบบอ่านอย่างเดียว</p></div>
-            <div className="datasets-import-controls">
+          <section className="datasets-source-browser" aria-label="PostgreSQL external source browser">
+            <header className="datasets-source-browser__head">
+              <div>
+                <span>PostgreSQL source</span>
+                <h2>External schema browser</h2>
+                <p>เลือก schema และตารางที่ได้รับอนุญาต ข้อมูลต้นทางเป็นแบบอ่านอย่างเดียว</p>
+              </div>
+              <div className="datasets-source-browser__actions">
+                <button type="button" className="dashboard-toolbar-btn is-primary" disabled={!externalTable} onClick={saveExternalDataset}>Save live dataset</button>
+                {savedExternalDatasetId ? <button type="button" className="dashboard-toolbar-btn" onClick={() => navigate(`/dashboard-v2?projectId=${encodeURIComponent(activeProjectId)}&datasetId=${encodeURIComponent(savedExternalDatasetId)}`)}>Create chart</button> : null}
+              </div>
+            </header>
+            <div className="datasets-source-browser__controls">
               <label><span>Schema</span><select value={externalSchema} onChange={(event) => setExternalSchema(event.target.value)}>{externalSources.map(source => <option key={source.schemaName} value={source.schemaName}>{source.displayName}</option>)}</select></label>
               <label><span>Table</span><select value={externalTable} onChange={(event) => setExternalTable(event.target.value)}>{externalTables.map(table => <option key={table.name} value={table.name}>{table.name} ({table.rowCountEstimate ?? "?"})</option>)}</select></label>
               <label><span>Filter column</span><select value={externalFilterField} onChange={(event) => { setExternalFilterField(event.target.value); setExternalPage(1); }}>{externalColumns.map(column => <option key={column.name} value={column.name}>{column.name}</option>)}</select></label>
               <label><span>Contains</span><input value={externalFilterValue} onChange={(event) => { setExternalFilterValue(event.target.value); setExternalPage(1); }} /></label>
               <label><span>Sort</span><select value={externalSortField} onChange={(event) => setExternalSortField(event.target.value)}>{externalColumns.map(column => <option key={column.name} value={column.name}>{column.name}</option>)}</select></label>
               <label><span>Direction</span><select value={externalSortDirection} onChange={(event) => setExternalSortDirection(event.target.value)}><option value="asc">Ascending</option><option value="desc">Descending</option></select></label>
-              <button type="button" className="dashboard-toolbar-btn is-primary" disabled={!externalTable} onClick={saveExternalDataset}>Save live dataset</button>
             </div>
-            <div className="datasets-field-grid">{externalColumns.map(column => <label className="datasets-field-card" key={column.name}><input type="checkbox" checked={selectedExternalFields.includes(column.name)} onChange={(event) => setSelectedExternalFields(current => event.target.checked ? [...new Set([...current, column.name])] : current.filter(field => field !== column.name))} /><strong>{column.name}</strong><small>{column.dataType}{column.primaryKey ? " · PK" : ""}</small></label>)}</div>
+            <div className="datasets-source-browser__fields">{externalColumns.map(column => <label className="datasets-field-card" key={column.name}><input type="checkbox" checked={selectedExternalFields.includes(column.name)} onChange={(event) => setSelectedExternalFields(current => event.target.checked ? [...new Set([...current, column.name])] : current.filter(field => field !== column.name))} /><strong>{column.name}</strong><small>{column.dataType}{column.primaryKey ? " · PK" : ""}</small></label>)}</div>
             {externalPreview.length ? <EnterpriseDataTable title={`Preview ${externalSchema}.${externalTable}`} rows={externalPreview} columns={Object.keys(externalPreview[0]).map(key => ({ key, label: key }))} density={appSettings.density} /> : <div className="datasets-empty-state">No rows to preview.</div>}
-            <div className="datasets-import-controls"><button type="button" className="dashboard-toolbar-btn" disabled={externalPage <= 1} onClick={() => setExternalPage(page => Math.max(1, page - 1))}>Previous</button><span>Page {externalPage}</span><button type="button" className="dashboard-toolbar-btn" disabled={externalPreview.length < 50} onClick={() => setExternalPage(page => page + 1)}>Next</button></div>
+            <footer className="datasets-source-browser__pagination"><button type="button" className="dashboard-toolbar-btn" disabled={externalPage <= 1} onClick={() => setExternalPage(page => Math.max(1, page - 1))}>Previous</button><span>Page {externalPage}</span><button type="button" className="dashboard-toolbar-btn" disabled={externalPreview.length < 50} onClick={() => setExternalPage(page => page + 1)}>Next</button></footer>
           </section>
 
           <section className="datasets-schema-panel">

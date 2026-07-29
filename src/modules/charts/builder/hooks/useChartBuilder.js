@@ -503,7 +503,14 @@ export default function useChartBuilder(builderContext, editingChartId = "") {
       try {
         setState((current) => ({ ...current, loading: true, error: "" }));
         const [dataset, templates] = await Promise.all([
-          getDataset(builderContext?.projectId),
+          builderContext?.datasetId
+            ? loadDataset(builderContext.datasetId).then((selectedDataset) => {
+                if (selectedDataset?.projectId && selectedDataset.projectId !== builderContext.projectId) {
+                  throw new Error("The selected dataset does not belong to this project.");
+                }
+                return selectedDataset;
+              })
+            : getDataset(builderContext?.projectId),
           getChartTemplates(),
         ]);
         const schema = dataset
@@ -595,7 +602,7 @@ export default function useChartBuilder(builderContext, editingChartId = "") {
     return () => {
       isActive = false;
     };
-  }, [builderContext?.dashboardId, builderContext?.projectId, builderContext?.prefillTemplateId, builderContext?.sheetId, editingChartId]);
+  }, [builderContext?.dashboardId, builderContext?.datasetId, builderContext?.projectId, builderContext?.prefillTemplateId, builderContext?.sheetId, editingChartId]);
 
   const selectedTemplate = useMemo(
     () => state.templates.find((template) => template.id === state.selectedTemplateId) ?? null,

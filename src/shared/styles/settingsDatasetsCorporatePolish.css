@@ -306,6 +306,123 @@ body:has(.datasets-page) .datasets-main {
   min-width: 0 !important;
 }
 
+/* The live PostgreSQL browser is a first-class data panel, not a CSV import
+ * panel.  Keeping its controls in one responsive grid prevents the source
+ * metadata from being stretched into a mostly empty two-column card. */
+body:has(.datasets-page) .datasets-source-browser {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #dbe1ea;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+body:has(.datasets-page) .datasets-source-browser__head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+body:has(.datasets-page) .datasets-source-browser__actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+}
+
+body:has(.datasets-page) .datasets-source-browser__head span {
+  color: #2563eb;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+body:has(.datasets-page) .datasets-source-browser__head h2 {
+  margin: 3px 0 0;
+  color: #111827;
+  font-size: 17px;
+  line-height: 1.3;
+}
+
+body:has(.datasets-page) .datasets-source-browser__head p {
+  max-width: 680px;
+  margin: 4px 0 0;
+  color: #6b7280;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+body:has(.datasets-page) .datasets-source-browser__controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+body:has(.datasets-page) .datasets-source-browser__controls label {
+  display: grid;
+  gap: 5px;
+  color: #4b5563;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+body:has(.datasets-page) .datasets-source-browser__controls input,
+body:has(.datasets-page) .datasets-source-browser__controls select {
+  min-width: 0;
+  min-height: 34px;
+  padding: 6px 8px;
+  border: 1px solid #cfd7e3;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #111827;
+  font: inherit;
+}
+
+body:has(.datasets-page) .datasets-source-browser__fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(152px, 1fr));
+  gap: 8px;
+  max-height: 238px;
+  overflow: auto;
+}
+
+body:has(.datasets-page) .datasets-source-browser__fields .datasets-field-card {
+  min-height: 58px !important;
+  grid-template-columns: 16px minmax(0, 1fr);
+  align-items: center;
+}
+
+body:has(.datasets-page) .datasets-source-browser__fields small {
+  grid-column: 2;
+}
+
+body:has(.datasets-page) .datasets-source-browser__pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+@media (max-width: 760px) {
+  body:has(.datasets-page) .datasets-source-browser__head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  body:has(.datasets-page) .datasets-source-browser__actions {
+    justify-content: flex-end;
+  }
+
+  body:has(.datasets-page) .datasets-source-browser__controls {
+    grid-template-columns: 1fr;
+  }
+}
+
 body:has(.datasets-page) .datasets-import-panel {
   display: grid !important;
   grid-template-columns: minmax(0, 1fr) minmax(260px, 360px) !important;
