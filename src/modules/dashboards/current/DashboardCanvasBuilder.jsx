@@ -13,6 +13,8 @@ import {
   createBeforeUnloadHandler,
   createDashboardAutosave,
   createSessionImageAsset,
+  dashboardSelectValue,
+  isDashboardPersistenceReady,
   prepareDashboardForPersistence,
   runExplicitDashboardSave,
   shouldWarnAboutUnsavedChanges,
@@ -1978,6 +1980,7 @@ export default function DashboardCanvasBuilder() {
 
   const persistLayout = useCallback(async (nextPayload) => {
     const payload = prepareDashboardForPersistence(nextPayload ?? buildLayoutPayload());
+    if (!mockMode && !isDashboardPersistenceReady(payload)) return null;
     if (mockMode) {
       const savedDashboard = upsertDashboard(payload.projectId, payload);
       if (!savedDashboard) throw new Error("Unable to save dashboard");
@@ -2189,8 +2192,13 @@ export default function DashboardCanvasBuilder() {
       autosaveSuppressedRef.current = false;
       return;
     }
-    autosave.schedule(buildLayoutPayload());
-  }, [autosave, buildLayoutPayload, canvasSettings, dashboardName, theme, widgets]);
+    const payload = buildLayoutPayload();
+    if (!mockMode && !isDashboardPersistenceReady(payload)) {
+      autosave.cancel();
+      return;
+    }
+    autosave.schedule(payload);
+  }, [autosave, buildLayoutPayload, canvasSettings, dashboardName, mockMode, theme, widgets]);
 
   useEffect(() => {
     const onBeforeUnload = createBeforeUnloadHandler(() => shouldWarnAboutUnsavedChanges(saveStatusRef.current));
@@ -3311,7 +3319,7 @@ export default function DashboardCanvasBuilder() {
             />
             <div className="dcb-dashboard-switcher" aria-label="เลือก Dashboard">
               <span>แดชบอร์ด</span>
-              <select value={activeDashboardId} onChange={(event) => switchDashboard(event.target.value)}>
+              <select value={dashboardSelectValue(activeDashboardId)} onChange={(event) => switchDashboard(event.target.value)}>
                 {dashboards.map((dashboard) => (
                   <option key={dashboard.id} value={dashboard.id}>
                     {dashboard.name || dashboard.dashboardName || "แดชบอร์ด"}
@@ -3436,7 +3444,7 @@ export default function DashboardCanvasBuilder() {
               <div className="dcb-dashboard-switcher dcb-dashboard-switcher-panel" aria-label="เลือก Dashboard">
                 <div className="dcb-dashboard-switcher-title">แดชบอร์ด</div>
                 <div className="dcb-dashboard-control-row">
-                  <select className="dcb-dashboard-select" value={activeDashboardId} onChange={(event) => switchDashboard(event.target.value)}>
+                  <select className="dcb-dashboard-select" value={dashboardSelectValue(activeDashboardId)} onChange={(event) => switchDashboard(event.target.value)}>
                     {dashboards.map((dashboard) => (
                       <option key={dashboard.id} value={dashboard.id}>
                         {dashboard.name || dashboard.dashboardName || "แดชบอร์ด"}

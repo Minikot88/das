@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 
 const configPath = path.resolve(process.cwd(), "nginx.conf");
 const composePath = path.resolve(process.cwd(), "docker-compose.yml");
+const localComposePath = path.resolve(process.cwd(), "docker-compose.local.yml");
 const indexPath = path.resolve(process.cwd(), "index.html");
 const packagePath = path.resolve(process.cwd(), "package.json");
 const workflowPath = path.resolve(process.cwd(), ".github/workflows/frontend-checks.yml");
@@ -57,6 +58,12 @@ describe("nginx static frontend configuration", () => {
     const compose = readFileSync(composePath, "utf8");
 
     expect(compose).toContain('"${FRONTEND_HOST:-127.0.0.1}:${FRONTEND_PORT:-8080}:8080"');
+  });
+
+  it("uses a configurable local backend port that does not collide with common host services", () => {
+    const localCompose = readFileSync(localComposePath, "utf8");
+
+    expect(localCompose).toContain('"127.0.0.1:${BACKEND_HOST_PORT:-3001}:3000"');
   });
 
   it("serves only self-hosted scripts and fonts under the production CSP", () => {

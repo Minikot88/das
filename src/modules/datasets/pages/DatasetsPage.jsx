@@ -3,6 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { PageContainer, PageHeader } from "@app/layouts/Layout";
 import EnterpriseDataTable from "@shared/components/ui/EnterpriseDataTable";
 import { useStore } from "@app/store/useStore";
+import {
+  API_ACTIVE_PROJECT_KEY,
+  getProjects,
+  resolveApiActiveProject,
+} from "@modules/projects";
 import { parseCsvTextAsync, validateCsvFile } from "@modules/datasets/lib/csvImport";
 import {
   archiveDataset,
@@ -69,8 +74,9 @@ function formatFieldType(type) {
 
 export default function DatasetsPage() {
   const navigate = useNavigate();
-  const activeProjectId = useStore((state) => state.activeProjectId);
+  const storeActiveProjectId = useStore((state) => state.activeProjectId);
   const appSettings = useStore((state) => state.appSettings);
+  const [activeProjectId, setActiveProjectId] = useState(null);
   const [datasets, setDatasets] = useState([]);
   const [selectedDatasetId, setSelectedDatasetId] = useState("");
   const [datasetRows, setDatasetRows] = useState([]);
@@ -95,6 +101,10 @@ export default function DatasetsPage() {
   const [externalPage, setExternalPage] = useState(1);
 
   const reloadDatasets = useCallback(async (preferredId = "") => {
+    if (!activeProjectId) {
+      return;
+    }
+
     setLoading(true);
     try {
       const response = await listDatasets({ projectId: activeProjectId });
@@ -115,8 +125,50 @@ export default function DatasetsPage() {
   }, [activeProjectId]);
 
   useEffect(() => {
-    void reloadDatasets();
-  }, [reloadDatasets]);
+    let active = true;
+
+    getProjects()
+      .then((items) => {
+        if (!active) return;
+
+        const projects = Array.isArray(items) ? items : [];
+        const selectedProject = resolveApiActiveProject(
+          projects,
+          window.localStorage.getItem(API_ACTIVE_PROJECT_KEY),
+          storeActiveProjectId,
+        );
+
+        if (!selectedProject) {
+          setActiveProjectId(null);
+          setDatasets([]);
+          setExternalSources([]);
+          setLoading(false);
+          return;
+        }
+
+        window.localStorage.setItem(API_ACTIVE_PROJECT_KEY, selectedProject.id);
+        useStore.setState?.({ activeProjectId: selectedProject.id });
+        setActiveProjectId(selectedProject.id);
+      })
+      .catch((error) => {
+        if (!active) return;
+        setActiveProjectId(null);
+        setDatasets([]);
+        setExternalSources([]);
+        setLoading(false);
+        setImportError(error?.message || "ไม่สามารถโหลดโปรเจกต์ได้");
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [storeActiveProjectId]);
+
+  useEffect(() => {
+    if (activeProjectId) {
+      void reloadDatasets();
+    }
+  }, [activeProjectId, reloadDatasets]);
 
   useEffect(() => { if (!activeProjectId) return; listExternalSources(activeProjectId).then(result => { const items = result?.items ?? []; setExternalSources(items); setExternalSchema(items[0]?.schemaName ?? ""); }).catch(() => setExternalSources([])); }, [activeProjectId]);
   useEffect(() => { if (!externalSchema) return; listExternalTables(externalSchema, activeProjectId).then(result => { const items = result?.items ?? []; setExternalTables(items); setExternalTable(items[0]?.name ?? ""); }).catch(error => setImportError(error.message)); }, [activeProjectId, externalSchema]);

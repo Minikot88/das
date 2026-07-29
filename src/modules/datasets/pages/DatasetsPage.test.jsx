@@ -20,6 +20,16 @@ vi.mock("@app/store/useStore", () => ({
   useStore: (selector) => selector(storeState),
 }));
 
+vi.mock("@modules/projects", () => ({
+  API_ACTIVE_PROJECT_KEY: "mini-bi-api-active-project-id",
+  getProjects: vi.fn(async () => [{ id: "project-a", name: "Project A" }]),
+  resolveApiActiveProject: (projects, preferredProjectId, activeProjectId) =>
+    projects.find((project) => project.id === preferredProjectId)
+      ?? projects.find((project) => project.id === activeProjectId)
+      ?? projects[0]
+      ?? null,
+}));
+
 vi.mock("@modules/datasets/api/datasetApi", () => ({
   listDatasets: vi.fn(async ({ projectId }) => ({
     items: datasets.filter((dataset) => dataset.projectId === projectId),

@@ -3,6 +3,8 @@ import {
   createBeforeUnloadHandler,
   createDashboardAutosave,
   createSessionImageAsset,
+  dashboardSelectValue,
+  isDashboardPersistenceReady,
   normalizeDashboardLayout,
   prepareDashboardForPersistence,
   revokeRemovedSessionAssets,
@@ -11,6 +13,32 @@ import {
 } from "@domain/dashboard/dashboardPersistence";
 
 describe("dashboard persistence", () => {
+  it.each([
+    [null, ""],
+    [undefined, ""],
+    ["null", ""],
+    ["undefined", ""],
+    ["dashboard-1", "dashboard-1"],
+  ])("normalizes unresolved dashboard select value %s", (dashboardId, expected) => {
+    expect(dashboardSelectValue(dashboardId)).toBe(expected);
+  });
+
+  it.each([
+    [{ projectId: null, dashboardId: null }],
+    [{ projectId: "project-1", dashboardId: null }],
+    [{ projectId: "project-1", dashboardId: "null" }],
+    [{ projectId: "project-1", dashboardId: "undefined" }],
+  ])("does not persist unresolved API dashboard identity %#", (dashboard) => {
+    expect(isDashboardPersistenceReady(dashboard)).toBe(false);
+  });
+
+  it("persists only after both API ownership identifiers resolve", () => {
+    expect(isDashboardPersistenceReady({
+      projectId: "project-1",
+      dashboardId: "dashboard-1",
+    })).toBe(true);
+  });
+
   it("normalizes layout deterministically and enforces dashboard ownership", () => {
     const input = {
       id: "dashboard-1",

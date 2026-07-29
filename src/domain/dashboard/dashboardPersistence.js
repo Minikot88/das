@@ -8,6 +8,20 @@ function errorMessage(error) {
   return error instanceof Error ? error.message : String(error || "Unable to save dashboard");
 }
 
+function isResolvedIdentifier(value) {
+  if (typeof value !== "string") return false;
+  const identifier = value.trim();
+  return Boolean(identifier) && identifier !== "null" && identifier !== "undefined";
+}
+
+export function isDashboardPersistenceReady(dashboard) {
+  return isResolvedIdentifier(dashboard?.projectId) && isResolvedIdentifier(dashboard?.dashboardId ?? dashboard?.id);
+}
+
+export function dashboardSelectValue(dashboardId) {
+  return isResolvedIdentifier(dashboardId) ? dashboardId.trim() : "";
+}
+
 export function normalizeDashboardLayout(dashboard, options = {}) {
   const columns = finiteInteger(options.columns, 180, 1);
   const id = String(dashboard?.id || dashboard?.dashboardId || "");
