@@ -51,4 +51,18 @@ describe("datasetApi production repository", () => {
       body: JSON.stringify({ revision: 3 }),
     });
   });
+
+  it("normalizes PostgreSQL field types for chart role validation", async () => {
+    apiRequest.mockResolvedValueOnce([
+      { fieldKey: "year", dataType: "integer" },
+      { fieldKey: "title", dataType: "text" },
+      { fieldKey: "published_at", dataType: "timestamp without time zone" },
+    ]);
+    const { getDatasetFields } = await import("./datasetApi");
+    await expect(getDatasetFields("dataset-1")).resolves.toEqual([
+      expect.objectContaining({ name: "year", type: "number", sourceType: "integer" }),
+      expect.objectContaining({ name: "title", type: "string", sourceType: "text" }),
+      expect.objectContaining({ name: "published_at", type: "date", sourceType: "timestamp without time zone" }),
+    ]);
+  });
 });

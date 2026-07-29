@@ -36,33 +36,33 @@ function createTemplate({
 
 const roleSets = {
   categoryValue: [
-    role("x", "Category", ["category", "date"]),
+    role("x", "Category", ["category", "date", "number"]),
     role("y", "Value", ["number"]),
     role("series", "Series", ["category"]),
   ],
   floatingBar: [
-    role("x", "Category", ["category", "date"]),
+    role("x", "Category", ["category", "date", "number"]),
     role("min", "Min", ["number"]),
     role("max", "Max", ["number"]),
     role("series", "Series", ["category"]),
   ],
   multiLine: [
-    role("x", "X Axis", ["category", "date"]),
+    role("x", "X Axis", ["category", "date", "number"]),
     role("y", "Value", ["number"]),
     role("series", "Series", ["category"]),
     role("measures", "Measures", ["number"], true),
   ],
   lineMeasures: [
-    role("x", "X Axis", ["category", "date"]),
+    role("x", "X Axis", ["category", "date", "number"]),
     role("measures", "Measures", ["number"], true),
   ],
   pie: [
-    role("label", "Label", ["category"]),
+    role("label", "Label", ["category", "number"]),
     role("value", "Value", ["number"]),
     role("measures", "Measures", ["number"], true),
   ],
   radar: [
-    role("label", "Label", ["category"]),
+    role("label", "Label", ["category", "number"]),
     role("value", "Value", ["number"]),
     role("series", "Series", ["category"]),
     role("measures", "Measures", ["number"], true),
@@ -79,7 +79,7 @@ const roleSets = {
     role("series", "Series", ["category"]),
   ],
   mixed: [
-    role("x", "Category", ["category", "date"]),
+    role("x", "Category", ["category", "date", "number"]),
     role("bar", "Bar Value", ["number"]),
     role("line", "Line Value", ["number"]),
     role("series", "Series", ["category"]),

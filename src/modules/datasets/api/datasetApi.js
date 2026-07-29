@@ -6,12 +6,22 @@ function activeProjectId() {
   return useStore.getState().activeProjectId;
 }
 
+function normalizeDataType(type) {
+  const value = String(type || "").toLowerCase();
+  if (value === "number") return "number";
+  if (/(^|\s)(smallint|integer|bigint|numeric|decimal|real|double precision|money)($|\s)/.test(value)) return "number";
+  if (/(date|time)/.test(value)) return "date";
+  if (/(bool)/.test(value)) return "boolean";
+  return "string";
+}
+
 function normalizeField(field) {
   return {
     ...field,
     name: field.fieldKey ?? field.name,
     label: field.label ?? field.name ?? field.fieldKey,
-    type: field.dataType ?? field.type ?? "string",
+    sourceType: field.dataType ?? field.type ?? "string",
+    type: normalizeDataType(field.dataType ?? field.type),
   };
 }
 
