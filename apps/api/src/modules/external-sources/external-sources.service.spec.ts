@@ -10,6 +10,15 @@ describe('ExternalSourcesService policy', () => {
     await expect(service.tables(schemaName)).rejects.toMatchObject({ code: 'EXTERNAL_SCHEMA_FORBIDDEN' });
   });
 
+  it('publishes an explicit read-only policy for every allowed source schema', async () => {
+    await expect(service.sources()).resolves.toEqual({
+      items: [expect.objectContaining({
+        schemaName: 'scopus', readOnly: true,
+        capabilities: { canRead: true, canInsert: false, canUpdate: false, canDelete: false, canExport: true },
+      })],
+    });
+  });
+
   it.each(['sc_articles;DROP TABLE public.datasets', '"sc_articles"', 'sc-articles'])('rejects unsafe table identifier %s', async tableName => {
     await expect(service.columns('scopus', tableName)).rejects.toMatchObject({ code: 'INVALID_TABLE' });
   });

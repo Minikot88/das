@@ -42,7 +42,7 @@ vi.mock("@modules/datasets/api/datasetApi", () => ({
   importDatasetCsv: vi.fn(),
   archiveDataset: vi.fn(),
   listExternalSources: vi.fn(async () => ({ items: [{ schemaName: "scopus", displayName: "Scopus" }] })),
-  listExternalTables: vi.fn(async () => ({ items: [{ name: "sc_articles", rowCountEstimate: 10 }, { name: "sc_authors", rowCountEstimate: 4 }] })),
+  listExternalTables: vi.fn(async () => ({ items: [{ name: "sc_articles", objectType: "table", rowCountEstimate: 10, readOnly: true, capabilities: { canRead: true, canInsert: false, canUpdate: false, canDelete: false, canExport: true } }, { name: "sc_authors", objectType: "table", rowCountEstimate: 4, readOnly: true, capabilities: { canRead: true, canInsert: false, canUpdate: false, canDelete: false, canExport: true } }] })),
   listExternalColumns: vi.fn(async () => ({ items: [{ name: "id", dataType: "uuid", primaryKey: true }] })),
   previewExternalSource: vi.fn(async () => ({ rows: [{ id: "article-1" }] })),
   createExternalDataset: vi.fn(async () => ({ id: "dataset-scopus" })),
@@ -63,6 +63,7 @@ describe("DatasetsPage project ownership", () => {
     render(<MemoryRouter><DatasetsPage /></MemoryRouter>);
 
     expect(await screen.findByRole("region", { name: "PostgreSQL external source browser" })).toBeInTheDocument();
+    expect(screen.getByText("Read only")).toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole("combobox", { name: "Schema" })).toHaveValue("scopus"));
     await waitFor(() => expect(screen.getByRole("combobox", { name: "Table" })).toHaveValue("sc_articles"));
     await waitFor(() => expect(screen.getByRole("button", { name: "Create live dataset" })).toBeEnabled());

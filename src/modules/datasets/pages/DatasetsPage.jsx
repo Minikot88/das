@@ -421,6 +421,7 @@ export default function DatasetsPage() {
                 <p>เลือก schema และตารางที่ได้รับอนุญาต ข้อมูลต้นทางเป็นแบบอ่านอย่างเดียว</p>
               </div>
               <div className="datasets-source-browser__actions">
+                <span className="datasets-source-browser__readonly" title="External source rows can be previewed and exported, but cannot be changed here.">Read only</span>
                 <button type="button" className="dashboard-toolbar-btn is-primary" disabled={!externalTable} onClick={saveExternalDataset}>Create live dataset</button>
                 {savedExternalDatasetId ? <button type="button" className="dashboard-toolbar-btn" onClick={() => navigate(`/dashboard-v2?projectId=${encodeURIComponent(activeProjectId)}&datasetId=${encodeURIComponent(savedExternalDatasetId)}`)}>Create chart</button> : null}
               </div>
@@ -435,7 +436,7 @@ export default function DatasetsPage() {
                   const tables = (externalTableCatalog[source.schemaName] ?? []).filter((table) => `${source.schemaName}.${table.name}`.toLowerCase().includes(externalTableSearch.trim().toLowerCase()));
                   return <section className="datasets-source-table-catalog__schema" key={source.schemaName} role="treeitem" aria-label={source.displayName || source.schemaName}>
                     <header><strong>{source.displayName || source.schemaName}</strong><span>{tables.length} tables</span></header>
-                    {tables.length ? <div>{tables.map((table) => <button type="button" key={table.name} className={source.schemaName === externalSchema && table.name === externalTable ? "is-active" : ""} onClick={() => { setExternalSchema(source.schemaName); setExternalTable(table.name); setExternalPage(1); }}>{table.name}<small>{table.rowCountEstimate ?? "?"} rows</small></button>)}</div> : <p>No matching tables.</p>}
+                    {tables.length ? <div>{tables.map((table) => <button type="button" key={table.name} className={source.schemaName === externalSchema && table.name === externalTable ? "is-active" : ""} onClick={() => { setExternalSchema(source.schemaName); setExternalTable(table.name); setExternalPage(1); }}><span>{table.name}</span><small>{table.objectType || "table"} · {table.rowCountEstimate ?? "?"} rows · read only</small></button>)}</div> : <p>No matching tables.</p>}
                   </section>;
                 })}
               </div>

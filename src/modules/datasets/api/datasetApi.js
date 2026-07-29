@@ -117,6 +117,9 @@ export async function listExternalTables(schemaName, projectId = activeProjectId
 export async function listExternalColumns(schemaName, tableName, projectId = activeProjectId()) {
   return apiRequest(`/api/v1/external-sources/${encodeApiPathSegment(schemaName)}/tables/${encodeApiPathSegment(tableName)}/columns?projectId=${encodeURIComponent(projectId)}`);
 }
+export async function listExternalRelationships(schemaName, tableName, projectId = activeProjectId()) {
+  return apiRequest(`/api/v1/external-sources/${encodeApiPathSegment(schemaName)}/tables/${encodeApiPathSegment(tableName)}/relationships?projectId=${encodeURIComponent(projectId)}`);
+}
 export async function previewExternalSource(input) {
   return apiRequest('/api/v1/external-sources/preview', { method: 'POST', body: JSON.stringify(input) });
 }
