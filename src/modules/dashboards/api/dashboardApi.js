@@ -68,8 +68,12 @@ export async function loadDashboardContext(dashboardId, context = {}) {
     return getDashboardContext(useStore.getState(), dashboardId, context);
   }
 
-  if (!dashboardId) return null;
-  return apiRequest(`/api/v1/dashboards/${encodeApiPathSegment(dashboardId)}`);
+  // Route/query state can briefly serialize an unresolved id as the literal
+  // string "null" or "undefined". Treat those exactly like an absent id so
+  // bootstrap never turns them into /dashboards/null requests.
+  const normalizedDashboardId = typeof dashboardId === "string" ? dashboardId.trim() : dashboardId;
+  if (!normalizedDashboardId || normalizedDashboardId === "null" || normalizedDashboardId === "undefined") return null;
+  return apiRequest(`/api/v1/dashboards/${encodeApiPathSegment(normalizedDashboardId)}`);
 }
 
 export async function listDashboards(projectId) {

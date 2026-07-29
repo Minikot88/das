@@ -35,6 +35,12 @@ describe("dashboard API v1 repository", () => {
     expect(apiRequest).not.toHaveBeenCalled();
   });
 
+  it.each(["null", "undefined", "  null  "])("does not serialize unresolved dashboard id %s into an API request", async (dashboardId) => {
+    const { loadDashboardContext } = await import("./dashboardApi");
+    await expect(loadDashboardContext(dashboardId)).resolves.toBeNull();
+    expect(apiRequest).not.toHaveBeenCalled();
+  });
+
   it("sends the current revision when updating a dashboard", async () => {
     apiRequest.mockResolvedValue({ id: "dash-1", revision: 3 });
     const { updateDashboard } = await import("./dashboardApi");
