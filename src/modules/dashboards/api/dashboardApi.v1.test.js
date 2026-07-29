@@ -23,6 +23,12 @@ describe("dashboard API v1 repository", () => {
     });
   });
 
+  it("does not send an unscoped dashboard request before project bootstrap", async () => {
+    const { listDashboards } = await import("./dashboardApi");
+    await expect(listDashboards(undefined)).resolves.toEqual([]);
+    expect(apiRequest).not.toHaveBeenCalled();
+  });
+
   it("sends the current revision when updating a dashboard", async () => {
     apiRequest.mockResolvedValue({ id: "dash-1", revision: 3 });
     const { updateDashboard } = await import("./dashboardApi");

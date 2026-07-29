@@ -45,6 +45,11 @@ import {
 } from "@infrastructure/persistence/project-storage/projectStorage";
 import { CANONICAL_WORKSPACE_KEY } from "@domain/workspace/workspaceSchema";
 import { isMockMode } from "@infrastructure/http/client";
+import {
+  API_ACTIVE_PROJECT_KEY,
+  getProjects as getApiProjects,
+  resolveApiActiveProject,
+} from "@modules/projects";
 import { getCharts } from "@modules/charts/public/api";
 import {
   archiveDashboard as archiveDashboardApi,
@@ -1357,13 +1362,23 @@ export default function DashboardCanvasBuilder() {
   const storeActiveProjectId = useStore((state) => state.activeProjectId);
   const initialState = useMemo(() => {
     const stored = loadDashboardLayout();
-    return mockMode ? stored : { ...stored, dashboards: [], widgets: [] };
+    // A persisted UI id is not authorization proof.  Production must resolve
+    // the project from the API before project-scoped requests are issued.
+    return mockMode ? stored : {
+      ...stored,
+      projectId: null,
+      projectName: "",
+      dashboardId: null,
+      dashboards: [],
+      widgets: [],
+    };
   }, [mockMode]);
   const initialPanelState = useMemo(() => loadPanelState(), []);
   const workspaceSnapshot = useWorkspaceSelector((snapshot) => snapshot);
   const rows = useMemo(() => (mockMode ? getDatasetRows("sales_performance") : []), [mockMode]);
   const [activeProjectId, setActiveProjectId] = useState(initialState.projectId);
   const [activeProjectName, setActiveProjectName] = useState(initialState.projectName);
+  const [projectBootstrapStatus, setProjectBootstrapStatus] = useState(mockMode ? "ready" : "loading");
   const [activeDashboardId, setActiveDashboardId] = useState(initialState.dashboardId);
   const [dashboards, setDashboards] = useState(initialState.dashboards);
   const [dashboardName, setDashboardName] = useState(initialState.dashboardName);
@@ -1401,6 +1416,7 @@ export default function DashboardCanvasBuilder() {
   const widgetsRef = useRef(widgets);
   const canvasSettingsRef = useRef(canvasSettings);
   const activeProjectIdRef = useRef(activeProjectId);
+  const availableProjectIdsRef = useRef(new Set());
   const activeDashboardIdRef = useRef(activeDashboardId);
   const dashboardRevisionRef = useRef(0);
   const canvasRef = useRef(null);
@@ -1429,13 +1445,59 @@ export default function DashboardCanvasBuilder() {
   }, [activeProjectId]);
 
   useEffect(() => {
-    if (mockMode || !storeActiveProjectId || storeActiveProjectId === activeProjectIdRef.current) return;
+    if (mockMode || projectBootstrapStatus !== "ready" || !storeActiveProjectId || storeActiveProjectId === activeProjectIdRef.current) return;
+    if (!availableProjectIdsRef.current.has(storeActiveProjectId)) return;
     activeProjectIdRef.current = storeActiveProjectId;
     activeDashboardIdRef.current = null;
     setActiveProjectId(storeActiveProjectId);
+    setActiveProjectName("");
     setActiveDashboardId(null);
     setSelectedWidgetId(null);
-  }, [mockMode, storeActiveProjectId]);
+  }, [mockMode, projectBootstrapStatus, storeActiveProjectId]);
+
+  useEffect(() => {
+    if (mockMode) return undefined;
+    let active = true;
+    setProjectBootstrapStatus("loading");
+    getApiProjects()
+      .then((items) => {
+        if (!active) return;
+        const projects = Array.isArray(items) ? items : [];
+        availableProjectIdsRef.current = new Set(projects.map((project) => project.id));
+        const selected = resolveApiActiveProject(
+          projects,
+          window.localStorage.getItem(API_ACTIVE_PROJECT_KEY),
+          useStore.getState().activeProjectId,
+        );
+        if (!selected) {
+          activeProjectIdRef.current = null;
+          activeDashboardIdRef.current = null;
+          setActiveProjectId(null);
+          setActiveProjectName("");
+          setActiveDashboardId(null);
+          setDashboards([]);
+          setSavedCharts([]);
+          setWidgets([]);
+          widgetsRef.current = [];
+          setProjectBootstrapStatus("empty");
+          return;
+        }
+        window.localStorage.setItem(API_ACTIVE_PROJECT_KEY, selected.id);
+        useStore.setState({ activeProjectId: selected.id });
+        activeProjectIdRef.current = selected.id;
+        setActiveProjectId(selected.id);
+        setActiveProjectName(selected.name ?? "");
+        setProjectBootstrapStatus("ready");
+      })
+      .catch((error) => {
+        if (!active) return;
+        availableProjectIdsRef.current = new Set();
+        setProjectBootstrapStatus("error");
+        setSaveStatus("error");
+        setToast(error?.message || "ไม่สามารถโหลด Project จากระบบได้");
+      });
+    return () => { active = false; };
+  }, [mockMode]);
 
   useEffect(() => {
     activeDashboardIdRef.current = activeDashboardId;
@@ -1446,7 +1508,7 @@ export default function DashboardCanvasBuilder() {
   }, [saveStatus]);
 
   useEffect(() => {
-    if (mockMode || !activeProjectId) return undefined;
+    if (mockMode || projectBootstrapStatus !== "ready" || !activeProjectId) return undefined;
     let active = true;
     setSaveStatus("loading");
     Promise.all([
@@ -1506,7 +1568,7 @@ export default function DashboardCanvasBuilder() {
     return () => {
       active = false;
     };
-  }, [activeProjectId, mockMode]);
+  }, [activeProjectId, mockMode, projectBootstrapStatus]);
 
   useEffect(() => {
     safeSetLocalStorage(PANEL_STATE_STORAGE_KEY, JSON.stringify({

@@ -37,4 +37,10 @@ describe("chart API v1 repository", () => {
 
     expect(apiRequest).toHaveBeenCalledWith("/api/v1/charts?projectId=project-1");
   });
+
+  it("does not send an unscoped chart request before project bootstrap", async () => {
+    const { getCharts } = await import("./chartApi");
+    await expect(getCharts(null)).resolves.toEqual([]);
+    expect(apiRequest).not.toHaveBeenCalled();
+  });
 });

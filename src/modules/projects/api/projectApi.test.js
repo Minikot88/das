@@ -18,6 +18,13 @@ describe("projectApi production contract", () => {
     expect(resolveApiActiveProject(projects, "api", "legacy")).toEqual(projects[1]);
   });
 
+  it("never reuses a stale local project that is absent from the API project list", async () => {
+    const { resolveApiActiveProject } = await import("./projectApi");
+    const projects = [{ id: "allowed-project" }];
+    expect(resolveApiActiveProject(projects, "deleted-project", "legacy-project")).toEqual(projects[0]);
+    expect(resolveApiActiveProject([], "deleted-project", "legacy-project")).toBeNull();
+  });
+
   it("uses canonical v1 endpoints for reads and creates", async () => {
     apiRequest.mockResolvedValueOnce([]).mockResolvedValueOnce({ id: "p-1" });
     const { createProject, getProjects } = await import("./projectApi");

@@ -197,8 +197,10 @@ export async function getCharts(projectId) {
     return projectId ? charts.filter((chart) => (chart.projectId ?? chart.sourceProjectId) === projectId) : charts;
   }
 
-  const query = projectId ? `?projectId=${encodeURIComponent(projectId)}` : "";
-  return apiRequest(`/api/v1/charts${query}`);
+  // Charts are project-scoped in production.  Do not issue an unscoped
+  // request while the active project is still being resolved.
+  if (!projectId) return [];
+  return apiRequest(`/api/v1/charts?projectId=${encodeURIComponent(projectId)}`);
 }
 
 export async function getChartById(id) {

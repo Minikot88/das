@@ -77,6 +77,9 @@ export async function listDashboards(projectId) {
     const project = state.projects.find((item) => item.id === projectId);
     return project?.sheets?.flatMap((sheet) => sheet.dashboards ?? []) ?? [];
   }
+  // Dashboards require a project scope; waiting is safer than converting a
+  // missing bootstrap value into a misleading backend 404.
+  if (!projectId) return [];
   return apiRequest(`/api/v1/dashboards?projectId=${encodeURIComponent(projectId)}`);
 }
 
