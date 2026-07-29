@@ -4,7 +4,7 @@ vi.mock("@infrastructure/persistence/project-storage/projectStorage", () => ({
   getActiveProject: (projects) => projects[0] ?? null,
 }));
 
-import { resolveHomeActiveProject } from "./homeProjectSelection";
+import { resolveHomeActiveProject, shouldPersistLegacyDashboard } from "./homeProjectSelection";
 
 describe("resolveHomeActiveProject", () => {
   const projects = [
@@ -38,5 +38,10 @@ describe("resolveHomeActiveProject", () => {
       resolveMockProject,
     })).toEqual(projects[1]);
     expect(resolveMockProject).toHaveBeenCalledWith(projects);
+  });
+
+  it("keeps API dashboard selection out of the legacy workspace store", () => {
+    expect(shouldPersistLegacyDashboard(false)).toBe(false);
+    expect(shouldPersistLegacyDashboard(true)).toBe(true);
   });
 });

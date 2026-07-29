@@ -22,7 +22,7 @@ import { listDatasets } from "@modules/datasets/public/api";
 import { getCharts } from "@modules/charts/public/api";
 import { createBuilderContextForDashboard } from "@modules/dashboards/public/workspace";
 import { TEMPLATE_GALLERY_CATALOG } from "@modules/charts/public/catalog";
-import { resolveHomeActiveProject } from "./homeProjectSelection";
+import { resolveHomeActiveProject, shouldPersistLegacyDashboard } from "./homeProjectSelection";
 import {
   ACTIVE_DASHBOARD_KEY,
   ACTIVE_PROJECT_KEY,
@@ -159,7 +159,7 @@ export default function HomePage() {
   const openDashboard = (projectId, dashboardId) => {
     if (!projectId || !dashboardId) return;
     activateProject(projectId, dashboardId);
-    setStoredActiveDashboard(dashboardId);
+    if (shouldPersistLegacyDashboard(isMockMode())) setStoredActiveDashboard(dashboardId);
     refreshProjects();
     navigate("/dashboard");
   };
@@ -170,7 +170,6 @@ export default function HomePage() {
       try {
         const dashboard = await createApiDashboard({ projectId, name: "Dashboard ใหม่" });
         activateProject(projectId, dashboard.id);
-        setStoredActiveDashboard(dashboard.id);
         await reloadRemoteProjects();
         setHomeNotice("สร้าง Dashboard ใหม่แล้ว");
         navigate("/dashboard");
@@ -449,7 +448,6 @@ export default function HomePage() {
         const dashboard = await createApiDashboard({ projectId: project.id, name: "Dashboard 1" });
         await reloadRemoteProjects();
         activateProject(project.id, dashboard.id);
-        setStoredActiveDashboard(dashboard.id);
         navigate("/dashboard");
       } catch (error) {
         setHomeNotice(error?.message || "Unable to create project.");

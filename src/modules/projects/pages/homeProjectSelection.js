@@ -10,3 +10,9 @@ export function resolveHomeActiveProject(projects, {
     ?? projects[0]
     ?? null;
 }
+
+// API-backed projects must not leak their selected dashboard into the legacy
+// workspace repository during project transitions.
+export function shouldPersistLegacyDashboard(mockMode) {
+  return Boolean(mockMode);
+}
