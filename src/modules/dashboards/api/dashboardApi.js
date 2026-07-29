@@ -57,7 +57,7 @@ export async function addSavedChartToDashboard({ chartId, projectId, sheetId, da
     return { layoutItem };
   }
 
-  return apiRequest(`/api/dashboards/${encodeApiPathSegment(dashboardId)}/charts`, {
+  return apiRequest(`/api/v1/dashboards/${encodeApiPathSegment(dashboardId)}/charts`, {
     method: "POST",
     body: JSON.stringify({ chartId }),
   });
@@ -68,5 +68,42 @@ export async function loadDashboardContext(dashboardId, context = {}) {
     return getDashboardContext(useStore.getState(), dashboardId, context);
   }
 
-  return apiRequest(`/api/dashboards/${encodeApiPathSegment(dashboardId)}`);
+  return apiRequest(`/api/v1/dashboards/${encodeApiPathSegment(dashboardId)}`);
+}
+
+export async function listDashboards(projectId) {
+  if (isMockMode()) {
+    const state = useStore.getState();
+    const project = state.projects.find((item) => item.id === projectId);
+    return project?.sheets?.flatMap((sheet) => sheet.dashboards ?? []) ?? [];
+  }
+  return apiRequest(`/api/v1/dashboards?projectId=${encodeURIComponent(projectId)}`);
+}
+
+export async function createDashboard(payload) {
+  return apiRequest("/api/v1/dashboards", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateDashboard(dashboardId, payload) {
+  return apiRequest(`/api/v1/dashboards/${encodeApiPathSegment(dashboardId)}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function saveDashboardWidgets(dashboardId, payload) {
+  return apiRequest(`/api/v1/dashboards/${encodeApiPathSegment(dashboardId)}/widgets`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function archiveDashboard(dashboardId, revision) {
+  return apiRequest(`/api/v1/dashboards/${encodeApiPathSegment(dashboardId)}`, {
+    method: "DELETE",
+    body: JSON.stringify({ revision }),
+  });
 }

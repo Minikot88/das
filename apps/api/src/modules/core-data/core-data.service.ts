@@ -142,6 +142,26 @@ export class CoreDataService {
     return { rows, total, page, pageSize, truncated: total > page * pageSize };
   }
 
+  async archiveDataset(principal: RequestPrincipal, id: string, revision: number) {
+    const dataset = await this.dataset(principal, id);
+    await this.project(principal, dataset.projectId, 'write');
+    if (!Number.isInteger(revision) || revision !== dataset.revision) {
+      throw new ApiError(409, 'REVISION_CONFLICT', 'Dataset has changed since it was loaded.', undefined, false, dataset.revision);
+    }
+    const referencedCharts = await this.prisma.chart.count({
+      where: { datasetId: id, organizationId: principal.organizationId, deletedAt: null },
+    });
+    if (referencedCharts > 0) {
+      throw new ApiError(409, 'DATASET_IN_USE', 'Dataset is referenced by one or more charts.');
+    }
+    const result = await this.prisma.dataset.updateMany({
+      where: { id, organizationId: principal.organizationId, deletedAt: null, revision },
+      data: { deletedAt: new Date(), revision: { increment: 1 } },
+    });
+    if (result.count !== 1) throw new ApiError(404, 'DATASET_NOT_FOUND', 'Dataset was not found.');
+    return { success: true };
+  }
+
   async listDashboards(principal: RequestPrincipal, projectId: string) {
     await this.project(principal, projectId);
     return this.prisma.biDashboard.findMany({ where: { organizationId: principal.organizationId, projectId, deletedAt: null }, orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }] });
@@ -172,6 +192,20 @@ export class CoreDataService {
       throw new ApiError(409, 'REVISION_CONFLICT', 'Dashboard has changed since it was loaded.', undefined, false, latest?.revision);
     }
     return this.dashboard(principal, id);
+  }
+
+  async archiveDashboard(principal: RequestPrincipal, id: string, revision: number) {
+    const current = await this.dashboard(principal, id);
+    await this.project(principal, current.projectId, 'write');
+    if (!Number.isInteger(revision) || revision !== current.revision) {
+      throw new ApiError(409, 'REVISION_CONFLICT', 'Dashboard has changed since it was loaded.', undefined, false, current.revision);
+    }
+    const result = await this.prisma.biDashboard.updateMany({
+      where: { id, organizationId: principal.organizationId, deletedAt: null, revision },
+      data: { deletedAt: new Date(), revision: { increment: 1 } },
+    });
+    if (result.count !== 1) throw new ApiError(404, 'DASHBOARD_NOT_FOUND', 'Dashboard was not found.');
+    return { success: true };
   }
 
   async saveWidgets(principal: RequestPrincipal, dashboardId: string, input: JsonObject) {

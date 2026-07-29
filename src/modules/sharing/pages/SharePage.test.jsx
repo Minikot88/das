@@ -16,6 +16,10 @@ vi.mock("@app/store/useStore", () => ({
   useStore: (selector) => selector(storeState),
 }));
 
+vi.mock("@infrastructure/http/client", () => ({
+  isMockMode: () => true,
+}));
+
 function RedirectTarget() {
   const location = useLocation();
   return <div data-testid="redirect-target">{location.pathname}{location.search}</div>;

@@ -4,6 +4,12 @@ import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createProjectStorageLegacyFixture, createZustandLegacyFixture } from "@domain/workspace/__fixtures__/workspaceFixtures";
 
+vi.mock("@infrastructure/http/client", () => ({
+  apiRequest: vi.fn(),
+  encodeApiPathSegment: encodeURIComponent,
+  isMockMode: () => true,
+}));
+
 function Wrapper({ children }: PropsWithChildren) {
   return <MemoryRouter initialEntries={["/dashboard-v2"]}>{children}</MemoryRouter>;
 }

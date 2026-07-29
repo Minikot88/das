@@ -1,22 +1,47 @@
-import React, { Suspense, lazy } from "react";
+import React, { Suspense, lazy, useEffect } from "react";
 import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { MainLayout } from "@app/layouts/Layout";
 import RouteErrorBoundary from "@app/error-boundaries/RouteErrorBoundary";
 import { useStore } from "@app/store/useStore";
 import { isInternalSingleUserMode } from "@infrastructure/http/client";
 
-const BuilderPage = lazy(() => import("@modules/charts/pages/Builder.jsx"));
-const DashboardCanvasBuilder = lazy(() => import("@modules/dashboards/current/DashboardCanvasBuilder.jsx"));
-const DashboardDesignerV2 = lazy(() => import("@modules/dashboards/designer-v2/pages"));
-const DashboardPage = lazy(() => import("@modules/dashboards/legacy/pages/DashboardPage.jsx"));
-const DashboardPublicPage = lazy(() => import("@modules/sharing/pages/DashboardPublicPage.jsx"));
-const DatabaseConnectionPage = lazy(() => import("@modules/connections/pages/DatabaseConnectionPage.jsx"));
-const DatasetsPage = lazy(() => import("@modules/datasets/pages/DatasetsPage.jsx"));
-const HomePage = lazy(() => import("@modules/projects/pages/HomePage.jsx"));
-const LoginPage = lazy(() => import("@modules/auth/pages/LoginPage"));
-const RegisterPage = lazy(() => import("@modules/auth/pages/RegisterPage"));
-const SettingsPage = lazy(() => import("@modules/settings/pages/SettingsPage.jsx"));
-const SharePage = lazy(() => import("@modules/sharing/pages/SharePage"));
+const ROUTE_LOADERS = {
+  "/builder": () => import("@modules/charts/pages/Builder.jsx"),
+  "/dashboard": () => import("@modules/dashboards/current/DashboardCanvasBuilder.jsx"),
+  "/dashboard-v2": () => import("@modules/dashboards/designer-v2/pages"),
+  "/dashboard-legacy": () => import("@modules/dashboards/legacy/pages/DashboardPage.jsx"),
+  "/dashboard-public": () => import("@modules/sharing/pages/DashboardPublicPage.jsx"),
+  "/connections": () => import("@modules/connections/pages/DatabaseConnectionPage.jsx"),
+  "/datasets": () => import("@modules/datasets/pages/DatasetsPage.jsx"),
+  "/home": () => import("@modules/projects/pages/HomePage.jsx"),
+  "/login": () => import("@modules/auth/pages/LoginPage"),
+  "/register": () => import("@modules/auth/pages/RegisterPage"),
+  "/settings": () => import("@modules/settings/pages/SettingsPage.jsx"),
+  "/share": () => import("@modules/sharing/pages/SharePage"),
+};
+
+const ROUTE_PRELOADERS = {
+  ...ROUTE_LOADERS,
+  "/dashboard-v2": () =>
+    Promise.all([
+      ROUTE_LOADERS["/dashboard-v2"](),
+      import("@modules/dashboards/designer-v2/components/PreviewCanvas"),
+      import("@modules/dashboards/designer-v2/components/PropertyPanel"),
+    ]),
+};
+
+const BuilderPage = lazy(ROUTE_LOADERS["/builder"]);
+const DashboardCanvasBuilder = lazy(ROUTE_LOADERS["/dashboard"]);
+const DashboardDesignerV2 = lazy(ROUTE_LOADERS["/dashboard-v2"]);
+const DashboardPage = lazy(ROUTE_LOADERS["/dashboard-legacy"]);
+const DashboardPublicPage = lazy(ROUTE_LOADERS["/dashboard-public"]);
+const DatabaseConnectionPage = lazy(ROUTE_LOADERS["/connections"]);
+const DatasetsPage = lazy(ROUTE_LOADERS["/datasets"]);
+const HomePage = lazy(ROUTE_LOADERS["/home"]);
+const LoginPage = lazy(ROUTE_LOADERS["/login"]);
+const RegisterPage = lazy(ROUTE_LOADERS["/register"]);
+const SettingsPage = lazy(ROUTE_LOADERS["/settings"]);
+const SharePage = lazy(ROUTE_LOADERS["/share"]);
 
 function RouteFallback() {
   return (
@@ -55,6 +80,16 @@ function withRouteBoundary(element) {
 }
 
 export default function AppRoutes() {
+  useEffect(() => {
+    const preloadRoute = (event) => {
+      const pathname = event.detail?.pathname;
+      const loader = ROUTE_PRELOADERS[pathname];
+      if (loader) void loader().catch(() => undefined);
+    };
+    window.addEventListener("mini-bi:preload-route", preloadRoute);
+    return () => window.removeEventListener("mini-bi:preload-route", preloadRoute);
+  }, []);
+
   return (
     <Suspense fallback={<RouteFallback />}>
       <Routes>

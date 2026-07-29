@@ -30,6 +30,9 @@ import {
   setActiveProject as setStoredActiveProject,
 } from "@infrastructure/persistence/project-storage/projectStorage";
 import { useLocation } from "react-router-dom";
+import { isMockMode } from "@infrastructure/http/client";
+import { getChartById, createChart, updateChart } from "@modules/charts/public/api";
+import { listDatasets, loadDataset } from "@modules/datasets/public/api";
 import type {
   Aggregation,
   ChartCategory,
@@ -89,6 +92,14 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+function errorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
+function errorStatus(error: unknown) {
+  return isObject(error) ? Number(error.status) : 0;
+}
+
 function safeGetLocalStorageValue(key: string) {
   if (typeof window === "undefined") return null;
   try {
@@ -100,6 +111,30 @@ function safeGetLocalStorageValue(key: string) {
 
 function cloneConfig(config: ChartConfig): ChartConfig {
   return structuredClone(config);
+}
+
+function toDesignerFields(fields: Array<Record<string, unknown>>, table = "dataset"): DataField[] {
+  return fields.map((field) => {
+    const rawType = String(field.type || field.dataType || "string");
+    const type: DataField["type"] = rawType === "number" || rawType === "date" || rawType === "boolean"
+      ? rawType
+      : "text";
+    const name = String(field.name || field.fieldKey || "");
+    const isMeasure = type === "number";
+    return {
+      id: String(field.id || name),
+      name,
+      label: String(field.label || field.name || field.fieldKey || name),
+      type,
+      semanticType: type === "date" ? "date" : isMeasure ? "quantity" : type === "boolean" ? "boolean" : "category",
+      table,
+      description: "",
+      sampleValues: [],
+      isMeasure,
+      isDimension: !isMeasure,
+      defaultAggregation: isMeasure ? "Sum" : "None",
+    };
+  });
 }
 
 function resolveSavedFields(savedSlot: Record<string, unknown>, fallbackFields: DataField[], availableFields = dataFields) {
@@ -771,8 +806,13 @@ async function downloadElementAsPng(element: HTMLElement, filename: string, requ
 
 export function useDashboardDesignerState() {
   const location = useLocation();
+  const mockMode = isMockMode();
   const workspaceSnapshot = useWorkspaceSelector((snapshot: Parameters<typeof getDatasources>[0]) => snapshot);
-  const availableDatasources = useMemo(() => getDatasources(workspaceSnapshot), [workspaceSnapshot]);
+  const [remoteDatasources, setRemoteDatasources] = useState<DemoDatasource[]>([]);
+  const availableDatasources = useMemo(
+    () => (mockMode ? getDatasources(workspaceSnapshot) : remoteDatasources),
+    [mockMode, remoteDatasources, workspaceSnapshot],
+  );
   const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const requestedChartId = queryParams.get("chartId");
   const returnToDashboard = queryParams.get("from") === "dashboard";
@@ -780,8 +820,18 @@ export function useDashboardDesignerState() {
   const returnDashboardId = queryParams.get("dashboardId");
   const createMode = queryParams.get("mode") === "create";
   const [initialSnapshot] = useState(() => {
-    restoreDashboardContext(returnProjectId, returnDashboardId);
-    return loadInitialDesignerSnapshot(createMode ? null : requestedChartId);
+    if (mockMode) return loadInitialDesignerSnapshot(createMode ? null : requestedChartId);
+    return {
+      config: { ...createDefaultConfig(), sourceType: "dataset" as const, datasetId: "" },
+      rows: [] as DemoDatasetRow[],
+      fields: [] as DataField[],
+      activeDatasourceId: "",
+      selectedTable: "",
+      sqlQuery: "",
+      sqlResult: null,
+      loadedSavedChartId: null,
+      requestedChartMissing: false,
+    };
   });
   const [config, setConfig] = useState<ChartConfig>(() => initialSnapshot.config);
   const [rows, setRows] = useState<DemoDatasetRow[]>(() => initialSnapshot.rows);
@@ -811,13 +861,15 @@ export function useDashboardDesignerState() {
         ? "ไม่พบกราฟที่ต้องการแก้ไข"
         : "โหลดแดชบอร์ดสำเร็จ"
   );
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!mockMode);
   const [historyPast, setHistoryPast] = useState<ChartConfig[]>([]);
   const [historyFuture, setHistoryFuture] = useState<ChartConfig[]>([]);
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "unsaved">("saved");
   const [lastSavedAt, setLastSavedAt] = useState(formatSavedTime());
   const [activeSavedChartId, setActiveSavedChartId] = useState<string | null>(() => initialSnapshot.loadedSavedChartId);
+  const [activeChartRevision, setActiveChartRevision] = useState<number | undefined>(undefined);
   const loadedQueryChartIdRef = useRef<string | null>(initialSnapshot.loadedSavedChartId);
+  const configRef = useRef(config);
   const pendingPersistenceRef = useRef({ config, sqlQuery, sqlResult, activeSavedChartId });
   const previewRef = useRef<HTMLDivElement | null>(null);
 
@@ -846,20 +898,98 @@ export function useDashboardDesignerState() {
   );
 
   useEffect(() => {
+    configRef.current = config;
     pendingPersistenceRef.current = { config, sqlQuery, sqlResult, activeSavedChartId };
   }, [activeSavedChartId, config, sqlQuery, sqlResult]);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => setIsLoading(false), 320);
-    return () => window.clearTimeout(timer);
-  }, []);
 
   useEffect(() => {
     restoreDashboardContext(returnProjectId, returnDashboardId);
   }, [returnProjectId, returnDashboardId]);
 
   useEffect(() => {
+    if (mockMode) return undefined;
+    let active = true;
+    setIsLoading(true);
+    listDatasets({ projectId: returnProjectId ?? undefined, page: 1, pageSize: 200 })
+      .then(async (response) => {
+        const items = Array.isArray(response?.items) ? response.items : [];
+        if (!active) return;
+        setRemoteDatasources(items.map((item: Record<string, unknown>) => ({
+          id: String(item.id),
+          name: String(item.name || "Dataset"),
+          database: "PostgreSQL",
+          schema: "public",
+          table: String(item.name || item.id),
+          rowCount: Number(item.rowCount || 0),
+          fieldCount: Number(item.fieldCount || 0),
+          lastUpdated: String(item.updatedAt || ""),
+          sourceType: "local",
+        })));
+        if (!items.length) {
+          setRows([]);
+          setFields([]);
+          setSnackbar("โปรเจกต์นี้ยังไม่มีชุดข้อมูล");
+          return;
+        }
+        const dataset = await loadDataset(String(items[0].id));
+        if (!active) return;
+        const nextFields = toDesignerFields(dataset.fields ?? [], dataset.name);
+        setRows((dataset.rows ?? []) as DemoDatasetRow[]);
+        setFields(nextFields);
+        setActiveDatasourceId(dataset.id);
+        setSelectedTable(dataset.name);
+        setConfig((current) => ({
+          ...current,
+          sourceType: "dataset",
+          datasetId: dataset.id,
+          mappings: current.chartType
+            ? applyChartTypeDefaults(current.mappings, current.chartType, nextFields)
+            : current.mappings,
+        }));
+      })
+      .catch((error) => {
+        if (active) setSnackbar(errorMessage(error, "ไม่สามารถโหลดชุดข้อมูลจาก API ได้"));
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [mockMode, returnProjectId]);
+
+  useEffect(() => {
     if (!requestedChartId || requestedChartId === loadedQueryChartIdRef.current) return;
+    if (!mockMode) {
+      loadedQueryChartIdRef.current = requestedChartId;
+      setIsLoading(true);
+      void getChartById(requestedChartId)
+        .then(async (chart) => {
+          if (!chart) throw new Error("ไม่พบกราฟที่ต้องการแก้ไข");
+          const dataset = chart.datasetId ? await loadDataset(chart.datasetId) : null;
+          const nextFields = toDesignerFields(dataset?.fields ?? [], dataset?.name ?? "dataset");
+          const nextConfig = normalizeConfig({
+            ...(chart.config ?? {}),
+            chartId: chart.id,
+            datasetId: chart.datasetId,
+            settings: chart.settings ?? chart.config?.settings,
+            mappings: chart.mapping ?? chart.config?.mappings,
+          }, nextFields);
+          setConfig(nextConfig);
+          setRows((dataset?.rows ?? []) as DemoDatasetRow[]);
+          setFields(nextFields);
+          setActiveDatasourceId(dataset?.id ?? "");
+          setSelectedTable(dataset?.name ?? "");
+          setActiveSavedChartId(chart.id);
+          setActiveChartRevision(Number(chart.revision || 0));
+          setSaveStatus("saved");
+          setLastSavedAt(formatSavedTime());
+          setSnackbar("โหลดกราฟสำหรับแก้ไขแล้ว");
+        })
+        .catch((error) => setSnackbar(errorMessage(error, "ไม่พบกราฟที่ต้องการแก้ไข")))
+        .finally(() => setIsLoading(false));
+      return;
+    }
     restoreDashboardContext(returnProjectId, returnDashboardId);
     const snapshot = loadInitialDesignerSnapshot(requestedChartId);
     if (!snapshot.loadedSavedChartId) {
@@ -885,9 +1015,13 @@ export function useDashboardDesignerState() {
     setSaveStatus("saved");
     setLastSavedAt(formatSavedTime());
     setSnackbar("โหลดกราฟสำหรับแก้ไขแล้ว");
-  }, [requestedChartId, returnDashboardId, returnProjectId]);
+  }, [mockMode, requestedChartId, returnDashboardId, returnProjectId]);
 
   useEffect(() => {
+    if (!mockMode) {
+      setSaveStatus("unsaved");
+      return undefined;
+    }
     setSaveStatus("saving");
     const timer = window.setTimeout(() => {
       const record = persistDesignerChartConfig(config, { query: sqlQuery, result: sqlResult }, activeSavedChartId);
@@ -898,16 +1032,17 @@ export function useDashboardDesignerState() {
       if (storageMessage) setSnackbar(storageMessage);
     }, 800);
     return () => window.clearTimeout(timer);
-  }, [activeSavedChartId, config, sqlQuery, sqlResult]);
+  }, [activeSavedChartId, config, mockMode, sqlQuery, sqlResult]);
 
   useEffect(() => () => {
+    if (!mockMode) return;
     const pending = pendingPersistenceRef.current;
     persistDesignerChartConfig(
       pending.config,
       { query: pending.sqlQuery, result: pending.sqlResult },
       pending.activeSavedChartId,
     );
-  }, []);
+  }, [mockMode]);
 
   useEffect(() => {
     const compactQueries = savedSqlQueries
@@ -938,18 +1073,22 @@ export function useDashboardDesignerState() {
   }, []);
 
   const commitConfig = useCallback((updater: (current: ChartConfig) => ChartConfig, message?: string) => {
-    setConfig((current) => {
-      const next = updater(cloneConfig(current));
-      next.updatedAt = new Date().toISOString();
-      setHistoryPast((past) => [...past.slice(-39), current]);
-      setHistoryFuture([]);
-      setSaveStatus("unsaved");
-      return next;
-    });
+    const current = configRef.current;
+    const next = updater(cloneConfig(current));
+    next.updatedAt = new Date().toISOString();
+    configRef.current = next;
+    setConfig(next);
+    setHistoryPast((past) => [...past.slice(-39), current]);
+    setHistoryFuture([]);
+    setSaveStatus("unsaved");
     if (message) setSnackbar(message);
   }, []);
 
   const activateDemoDataset = useCallback((message = "กลับไปใช้ Demo Dataset แล้ว") => {
+    if (!mockMode) {
+      setSnackbar("Demo Dataset ถูกปิดในโหมดใช้งานจริง");
+      return;
+    }
     setRows(getDatasetRows(DEFAULT_DATASET_ID));
     setFields(dataFields);
     setActiveDatasourceId(INITIAL_DATASOURCES[0]?.id ?? "researchdb");
@@ -969,9 +1108,9 @@ export function useDashboardDesignerState() {
         filters: {},
       };
     }, message);
-  }, [commitConfig]);
+  }, [commitConfig, mockMode]);
 
-  const updateDatasource = useCallback((datasourceId: string) => {
+  const updateDatasource = useCallback(async (datasourceId: string) => {
     if (datasourceId === SQL_DATASOURCE_ID && sqlResult) {
       setActiveDatasourceId(SQL_DATASOURCE_ID);
       setSelectedTable(SQL_TABLE_NAME);
@@ -986,6 +1125,36 @@ export function useDashboardDesignerState() {
     const datasource = availableDatasources.find((item) => item.id === datasourceId) ?? availableDatasources[0];
     if (!datasource) {
       setSnackbar("ไม่พบชุดข้อมูลที่เลือก");
+      return;
+    }
+    if (!mockMode) {
+      try {
+        setIsLoading(true);
+        const dataset = await loadDataset(datasource.id);
+        const nextFields = toDesignerFields(dataset.fields ?? [], dataset.name);
+        setRows((dataset.rows ?? []) as DemoDatasetRow[]);
+        setFields(nextFields);
+        setActiveDatasourceId(dataset.id);
+        setSelectedTable(dataset.name);
+        setSelectedFieldId(null);
+        setSearchValue("");
+        setActiveTemplateId(null);
+        const availableFieldIds = new Set(nextFields.map((field) => field.id));
+        commitConfig((current) => ({
+          ...current,
+          sourceType: "dataset",
+          datasetId: dataset.id,
+          mappings: current.mappings.map((slot) => ({
+            ...slot,
+            fields: slot.fields.filter((field) => availableFieldIds.has(field.id)),
+          })),
+          filters: {},
+        }));
+      } catch (error) {
+        setSnackbar(errorMessage(error, "ไม่สามารถโหลดชุดข้อมูลได้"));
+      } finally {
+        setIsLoading(false);
+      }
       return;
     }
     const schema = getDatasetSchema(datasource.id, workspaceSnapshot);
@@ -1005,7 +1174,7 @@ export function useDashboardDesignerState() {
     const availableFieldIds = new Set(schema.fields.map((field) => field.id));
     commitConfig((current) => ({
       ...current,
-      sourceType: datasource.sourceType === "local" ? "dataset" : "demo",
+      sourceType: "dataset",
       datasetId: schema.datasetId,
       mappings: current.mappings.map((slot) => ({
         ...slot,
@@ -1013,9 +1182,13 @@ export function useDashboardDesignerState() {
       })),
       filters: {},
     }));
-  }, [activateDemoDataset, availableDatasources, commitConfig, config.sourceType, sqlResult, workspaceSnapshot]);
+  }, [activateDemoDataset, availableDatasources, commitConfig, config.sourceType, mockMode, sqlResult, workspaceSnapshot]);
 
   const executeSqlQuery = useCallback((query: string, message = "รัน SQL Query แล้ว") => {
+    if (!mockMode) {
+      setSnackbar("Demo SQL ถูกปิดในโหมดใช้งานจริง");
+      return false;
+    }
     const execution = runDemoSqlQuery(query, getDatasetRows(DEFAULT_DATASET_ID), dataFields);
 
     if (execution.ok) {
@@ -1028,7 +1201,7 @@ export function useDashboardDesignerState() {
     setSqlError(execution.error);
     setSnackbar(execution.error.message);
     return false;
-  }, []);
+  }, [mockMode]);
 
   const runSqlQuery = useCallback(() => {
     executeSqlQuery(sqlQuery);
@@ -1371,7 +1544,43 @@ export function useDashboardDesignerState() {
     setSnackbar("ทำซ้ำแล้ว");
   }, [config, historyFuture]);
 
-  const saveChart = useCallback(() => {
+  const saveChart = useCallback(async () => {
+    if (!mockMode) {
+      if (!returnProjectId || !config.datasetId) {
+        setSnackbar("ต้องเลือกโปรเจกต์และชุดข้อมูลก่อนบันทึก");
+        return;
+      }
+      setSaveStatus("saving");
+      try {
+        const serialized = serializeChartConfig(config, { query: sqlQuery, result: sqlResult });
+        const payload = {
+          projectId: returnProjectId,
+          datasetId: config.datasetId,
+          name: config.settings.general.title || "กราฟที่บันทึก",
+          title: config.settings.general.title || "กราฟที่บันทึก",
+          engine: "echarts",
+          mapping: serialized.mappings,
+          settings: serialized.settings,
+          filters: serialized.filters,
+          config: serialized,
+          revision: activeChartRevision,
+        };
+        const saved = activeSavedChartId
+          ? await updateChart(activeSavedChartId, payload)
+          : await createChart(payload);
+        setActiveSavedChartId(saved.id);
+        setActiveChartRevision(Number(saved.revision || 0));
+        setSaveStatus("saved");
+        setLastSavedAt(formatSavedTime());
+        setSnackbar("บันทึกกราฟลง PostgreSQL แล้ว");
+      } catch (error) {
+        setSaveStatus("unsaved");
+        setSnackbar(errorStatus(error) === 409
+          ? "กราฟถูกแก้ไขจากอีกหน้าต่าง กรุณาโหลดข้อมูลล่าสุด"
+          : errorMessage(error, "ไม่สามารถบันทึกกราฟได้"));
+      }
+      return;
+    }
     const record = persistDesignerChartConfig(config, { query: sqlQuery, result: sqlResult }, activeSavedChartId, {
       createIfMissing: true,
     });
@@ -1379,9 +1588,9 @@ export function useDashboardDesignerState() {
     setSaveStatus("saved");
     setLastSavedAt(formatSavedTime());
     setSnackbar(consumeStorageRecoveryMessage() || "บันทึกกราฟแล้ว");
-  }, [activeSavedChartId, config, sqlQuery, sqlResult]);
+  }, [activeChartRevision, activeSavedChartId, config, mockMode, returnProjectId, sqlQuery, sqlResult]);
 
-  const refreshDataset = useCallback(() => {
+  const refreshDataset = useCallback(async () => {
     if (config.sourceType === "demo-sql" && sqlQuery.trim()) {
       const execution = runDemoSqlQuery(sqlQuery, getDatasetRows(DEFAULT_DATASET_ID), dataFields);
       if (execution.ok) {
@@ -1396,11 +1605,23 @@ export function useDashboardDesignerState() {
       setSnackbar(execution.error.message);
       return;
     }
+    if (!mockMode) {
+      try {
+        const dataset = await loadDataset(config.datasetId);
+        const nextFields = toDesignerFields(dataset.fields ?? [], dataset.name);
+        setRows((dataset.rows ?? []) as DemoDatasetRow[]);
+        setFields(nextFields);
+        setSnackbar("รีเฟรชข้อมูลจาก PostgreSQL แล้ว");
+      } catch (error) {
+        setSnackbar(errorMessage(error, "ไม่สามารถรีเฟรชชุดข้อมูลได้"));
+      }
+      return;
+    }
     const schema = getDatasetSchema(config.datasetId, workspaceSnapshot);
     setRows(refreshDatasetRows(config.datasetId, workspaceSnapshot));
     if (schema.available) setFields(schema.fields);
     setSnackbar("รีเฟรชข้อมูลแล้ว");
-  }, [config.datasetId, config.sourceType, sqlQuery, workspaceSnapshot]);
+  }, [config.datasetId, config.sourceType, mockMode, sqlQuery, workspaceSnapshot]);
 
   const addTextElement = useCallback(() => {
     commitConfig((current) => ({

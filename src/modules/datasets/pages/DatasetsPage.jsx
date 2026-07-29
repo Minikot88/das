@@ -1,12 +1,16 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageContainer, PageHeader } from "@app/layouts/Layout";
 import EnterpriseDataTable from "@shared/components/ui/EnterpriseDataTable";
-import { mockDataset } from "@infrastructure/mock/mockData";
-import { selectProjectDatasets } from "@domain/workspace/workspaceSelectors";
-import { useWorkspaceSelector } from "@app/store/useWorkspaceSelector";
 import { useStore } from "@app/store/useStore";
-import { createDatasetFromCsv, parseCsvTextAsync, validateCsvFile } from "@modules/datasets/lib/csvImport";
+import { parseCsvTextAsync, validateCsvFile } from "@modules/datasets/lib/csvImport";
+import {
+  archiveDataset,
+  getDatasetFields,
+  importDatasetCsv,
+  listDatasets,
+  queryDataset,
+} from "@modules/datasets/api/datasetApi";
 
 function datasetColumns(dataset) {
   return (dataset?.fields ?? []).map((field) => ({
@@ -60,16 +64,65 @@ function formatFieldType(type) {
 
 export default function DatasetsPage() {
   const navigate = useNavigate();
-  const importDataset = useStore((state) => state.importDataset);
-  const deleteImportedDataset = useStore((state) => state.deleteImportedDataset);
   const activeProjectId = useStore((state) => state.activeProjectId);
-  const importedDatasets = useWorkspaceSelector((snapshot) => selectProjectDatasets(snapshot, activeProjectId));
   const appSettings = useStore((state) => state.appSettings);
-  const [selectedDatasetId, setSelectedDatasetId] = useState(mockDataset.id);
+  const [datasets, setDatasets] = useState([]);
+  const [selectedDatasetId, setSelectedDatasetId] = useState("");
+  const [datasetRows, setDatasetRows] = useState([]);
+  const [datasetFields, setDatasetFields] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [parsedCsv, setParsedCsv] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
   const [fileName, setFileName] = useState("");
   const [datasetName, setDatasetName] = useState("");
   const [importError, setImportError] = useState("");
+
+  const reloadDatasets = useCallback(async (preferredId = "") => {
+    setLoading(true);
+    try {
+      const response = await listDatasets({ projectId: activeProjectId });
+      const items = Array.isArray(response?.items) ? response.items : [];
+      setDatasets(items);
+      setSelectedDatasetId((current) => {
+        const candidate = preferredId || current;
+        return items.some((item) => item.id === candidate) ? candidate : (items[0]?.id ?? "");
+      });
+      setImportError("");
+    } catch (error) {
+      setDatasets([]);
+      setSelectedDatasetId("");
+      setImportError(error?.message || "ไม่สามารถโหลดชุดข้อมูลได้");
+    } finally {
+      setLoading(false);
+    }
+  }, [activeProjectId]);
+
+  useEffect(() => {
+    void reloadDatasets();
+  }, [reloadDatasets]);
+
+  useEffect(() => {
+    if (!selectedDatasetId) {
+      setDatasetRows([]);
+      setDatasetFields([]);
+      return;
+    }
+    let active = true;
+    Promise.all([
+      getDatasetFields(selectedDatasetId),
+      queryDataset(selectedDatasetId, { page: 1, pageSize: 200 }),
+    ]).then(([fields, result]) => {
+      if (!active) return;
+      setDatasetFields(fields);
+      setDatasetRows(Array.isArray(result?.rows) ? result.rows : []);
+      setImportError("");
+    }).catch((error) => {
+      if (active) setImportError(error?.message || "ไม่สามารถโหลดตัวอย่างข้อมูลได้");
+    });
+    return () => {
+      active = false;
+    };
+  }, [selectedDatasetId]);
 
   useEffect(() => {
     function handleRibbonCommand(event) {
@@ -90,32 +143,20 @@ export default function DatasetsPage() {
     };
   }, []);
 
-  const datasets = useMemo(
-    () => [
-      {
-        ...mockDataset,
-        source: "ชุดข้อมูลตัวอย่างในระบบ",
-        rowCount: mockDataset.rows?.length ?? 0,
-        columnCount: mockDataset.fields?.length ?? 0,
-      },
-      ...importedDatasets,
-    ],
-    [importedDatasets]
-  );
-  const selectedDataset = datasets.find((dataset) => dataset.id === selectedDatasetId) ?? datasets[0];
+  const selectedDataset = datasets.find((dataset) => dataset.id === selectedDatasetId) ?? null;
   const previewRows = useMemo(
-    () => parsedCsv?.rows ?? selectedDataset?.rows ?? [],
-    [parsedCsv?.rows, selectedDataset?.rows]
+    () => parsedCsv?.rows ?? datasetRows,
+    [datasetRows, parsedCsv?.rows]
   );
   const activeFields = useMemo(
-    () => parsedCsv?.fields ?? selectedDataset?.fields ?? [],
-    [parsedCsv?.fields, selectedDataset?.fields]
+    () => parsedCsv?.fields ?? datasetFields,
+    [datasetFields, parsedCsv?.fields]
   );
   const previewColumns = useMemo(
     () => parsedCsv
       ? parsedCsv.fields.map((field) => ({ key: field.name, label: field.label }))
-      : datasetColumns(selectedDataset),
-    [parsedCsv, selectedDataset]
+      : datasetColumns({ fields: datasetFields }),
+    [datasetFields, parsedCsv]
   );
   const activeStats = useMemo(
     () => createColumnStats(previewRows, activeFields),
@@ -130,6 +171,7 @@ export default function DatasetsPage() {
     const file = event.target.files?.[0];
     setImportError("");
     setParsedCsv(null);
+    setSelectedFile(file ?? null);
     if (!file) return;
 
     try {
@@ -144,23 +186,29 @@ export default function DatasetsPage() {
     }
   }
 
-  function handleImport() {
+  async function handleImport() {
     if (!parsedCsv?.validation?.valid) {
       setImportError("แก้ข้อผิดพลาดของ CSV ก่อนนำเข้า");
       return;
     }
-    const dataset = createDatasetFromCsv({
-      name: datasetName,
-      fileName,
-      parsed: parsedCsv,
-      projectId: activeProjectId,
-    });
-    importDataset(dataset);
-    setSelectedDatasetId(dataset.id);
-    setParsedCsv(null);
-    setFileName("");
-    setDatasetName("");
-    setImportError("");
+    try {
+      if (!selectedFile) throw new Error("กรุณาเลือกไฟล์ CSV อีกครั้ง");
+      const response = await importDatasetCsv({
+        file: selectedFile,
+        projectId: activeProjectId,
+        name: datasetName,
+        idempotencyKey: `dataset-import-${activeProjectId}-${selectedFile.name}-${selectedFile.size}`,
+      });
+      const datasetId = response?.dataset?.id ?? "";
+      setParsedCsv(null);
+      setSelectedFile(null);
+      setFileName("");
+      setDatasetName("");
+      setImportError("");
+      await reloadDatasets(datasetId);
+    } catch (error) {
+      setImportError(error?.message || "ไม่สามารถนำเข้าชุดข้อมูลได้");
+    }
   }
 
   return (
@@ -180,7 +228,7 @@ export default function DatasetsPage() {
         <aside className="datasets-sidebar">
           <div className="datasets-sidebar-head">
             <span>แคตตาล็อก</span>
-            <strong>{datasets.length} ชุดข้อมูล</strong>
+            <strong>{loading ? "กำลังโหลด…" : `${datasets.length} ชุดข้อมูล`}</strong>
           </div>
           {datasets.map((dataset) => {
             const summary = datasetSummary(dataset);
@@ -192,7 +240,7 @@ export default function DatasetsPage() {
                 onClick={() => setSelectedDatasetId(dataset.id)}
               >
                 <strong>{dataset.name}</strong>
-                <span>{dataset.source || "ชุดข้อมูลในเครื่อง"}</span>
+                <span>{dataset.source || "ชุดข้อมูลจากระบบ"}</span>
                 <small>{summary.rows} แถว / {summary.columns} คอลัมน์</small>
               </button>
             );
@@ -204,7 +252,7 @@ export default function DatasetsPage() {
             <div className="datasets-import-copy">
               <span>นำเข้า CSV</span>
               <h2>อัปโหลด ดูตัวอย่าง ตรวจสอบ และนำเข้า</h2>
-              <p>ชุดข้อมูล CSV ที่นำเข้าจะถูกเก็บไว้ในเครื่องจนกว่าจะเชื่อมต่อระบบหลังบ้าน</p>
+              <p>ชุดข้อมูล CSV ที่นำเข้าจะถูกตรวจสอบและบันทึกผ่านระบบหลังบ้าน</p>
             </div>
             <div className="datasets-import-controls">
               <label className="dashboard-toolbar-btn datasets-file-picker" htmlFor="dataset-csv-input">
@@ -247,13 +295,17 @@ export default function DatasetsPage() {
                 <span>{parsedCsv ? "แมปคอลัมน์" : "โครงสร้างข้อมูล"}</span>
                 <h2>{parsedCsv ? fileName : selectedDataset?.name}</h2>
               </div>
-              {!parsedCsv && selectedDataset?.id !== mockDataset.id ? (
+              {!parsedCsv && selectedDataset ? (
                 <button
                   type="button"
                   className="dashboard-toolbar-btn"
-                  onClick={() => {
-                    deleteImportedDataset(selectedDataset.id);
-                    setSelectedDatasetId(mockDataset.id);
+                  onClick={async () => {
+                    try {
+                      await archiveDataset(selectedDataset.id, selectedDataset.revision);
+                      await reloadDatasets();
+                    } catch (error) {
+                      setImportError(error?.message || "ไม่สามารถลบชุดข้อมูลได้");
+                    }
                   }}
                 >
                   ลบ
@@ -298,7 +350,7 @@ export default function DatasetsPage() {
           </section>
 
           <EnterpriseDataTable
-            title={parsedCsv ? "ตัวอย่าง CSV" : `ตัวอย่าง ${selectedDataset?.name}`}
+            title={parsedCsv ? "ตัวอย่าง CSV" : selectedDataset?.name ? `ตัวอย่าง ${selectedDataset.name}` : "ตัวอย่างข้อมูล"}
             rows={previewRows}
             columns={previewColumns}
             density={appSettings.density}

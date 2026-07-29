@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
 import { CurrentPrincipal } from '../auth/application/current-principal.js';
 import { SessionGuard } from '../auth/application/session.guard.js';
@@ -14,6 +14,7 @@ export class CoreDataController {
   @Get('datasets/:id') dataset(@CurrentPrincipal() p: RequestPrincipal, @Param('id') id: string) { return this.data.dataset(p, id); }
   @Get('datasets/:id/fields') fields(@CurrentPrincipal() p: RequestPrincipal, @Param('id') id: string) { return this.data.fields(p, id); }
   @Post('datasets/:id/query') @HttpCode(HttpStatus.OK) queryDataset(@CurrentPrincipal() p: RequestPrincipal, @Param('id') id: string, @Body() body: Record<string, unknown>) { return this.data.queryDataset(p, id, body || {}); }
+  @Delete('datasets/:id') archiveDataset(@CurrentPrincipal() p: RequestPrincipal, @Param('id') id: string, @Body() body: { revision?: number }) { return this.data.archiveDataset(p, id, Number(body?.revision)); }
   @Post('datasets/import') async importCsv(@CurrentPrincipal() p: RequestPrincipal, @Req() request: FastifyRequest) {
     const file = await request.file();
     if (!file) throw new ApiError(400, 'FILE_REQUIRED', 'CSV file is required.');
@@ -24,6 +25,7 @@ export class CoreDataController {
   @Get('dashboards/:id') dashboard(@CurrentPrincipal() p: RequestPrincipal, @Param('id') id: string) { return this.data.dashboard(p, id); }
   @Post('dashboards') createDashboard(@CurrentPrincipal() p: RequestPrincipal, @Body() body: Record<string, unknown>) { return this.data.createDashboard(p, body || {}); }
   @Patch('dashboards/:id') updateDashboard(@CurrentPrincipal() p: RequestPrincipal, @Param('id') id: string, @Body() body: Record<string, unknown>) { return this.data.updateDashboard(p, id, body || {}); }
+  @Delete('dashboards/:id') archiveDashboard(@CurrentPrincipal() p: RequestPrincipal, @Param('id') id: string, @Body() body: { revision?: number }) { return this.data.archiveDashboard(p, id, Number(body?.revision)); }
   @Patch('dashboards/:id/widgets') widgets(@CurrentPrincipal() p: RequestPrincipal, @Param('id') id: string, @Body() body: Record<string, unknown>) { return this.data.saveWidgets(p, id, body || {}); }
   @Post('workspace/import') importWorkspace(@CurrentPrincipal() p: RequestPrincipal, @Body() body: Record<string, unknown>) { return this.data.importWorkspace(p, body || {}); }
   @Get('settings/preferences') preferences(@CurrentPrincipal() p: RequestPrincipal) { return this.data.preferences(p); }

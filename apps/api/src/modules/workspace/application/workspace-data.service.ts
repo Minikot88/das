@@ -41,6 +41,21 @@ export class WorkspaceDataService {
     return accessibleIds;
   }
 
+  private async resolveChartTypeId(value: unknown) {
+    const requested = optionalString(value);
+    if (!requested) return null;
+    const chartType = await this.prisma.chartType.findFirst({
+      where: { OR: [{ id: requested }, { code: requested }] },
+      select: { id: true },
+    });
+    if (chartType) return chartType.id;
+    const template = await this.prisma.chartTemplate.findFirst({
+      where: { OR: [{ id: requested }, { code: requested }] },
+      select: { chartTypeId: true },
+    });
+    return template?.chartTypeId ?? null;
+  }
+
   async getChartTypes() {
     if (this.memory) return [];
     return this.prisma.chartType.findMany({ orderBy: { code: 'asc' } });
@@ -57,10 +72,14 @@ export class WorkspaceDataService {
     return { ...item, mapping: item.defaultMappingJson, settings: item.defaultSettingsJson };
   }
 
-  async listCharts(principal: RequestPrincipal) {
-    if (this.memory) return this.charts.filter(item => item.organizationId === principal.organizationId);
+  async listCharts(principal: RequestPrincipal, projectId?: string) {
+    if (projectId) await this.authorization.assertProjectPermission(principal as never, projectId, 'read');
+    if (this.memory) return this.charts.filter(item =>
+      item.organizationId === principal.organizationId && (!projectId || item.projectId === projectId)
+    );
     const projectIds = await this.accessibleProjectIds(principal);
-    const rows = await this.prisma.chart.findMany({ where: { organizationId: principal.organizationId, projectId: { in: projectIds }, deletedAt: null }, orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }] });
+    const scopedProjectIds = projectId && projectIds.includes(projectId) ? [projectId] : projectId ? [] : projectIds;
+    const rows = await this.prisma.chart.findMany({ where: { organizationId: principal.organizationId, projectId: { in: scopedProjectIds }, deletedAt: null }, orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }] });
     return rows.map(mapChart);
   }
   async getChart(principal: RequestPrincipal, id: string) {
@@ -82,7 +101,19 @@ export class WorkspaceDataService {
       const dataset = await this.prisma.dataset.findFirst({ where: { id: datasetId, organizationId: principal.organizationId, projectId, deletedAt: null }, select: { id: true } });
       if (!dataset) throw new ApiError(404, 'DATASET_NOT_FOUND', 'Dataset was not found.');
     }
-    const item = await this.prisma.chart.create({ data: { ...common, datasetId, chartTypeId: optionalString(payload.chartTypeId), engine: String(payload.engine || 'chartjs'), mappingJson: asJson(payload.mapping), settingsJson: asJson(payload.settings), filtersJson: asJson(payload.filters), configJson: asJson(payload.config), queryDefinitionJson: asJson({ queryMode: payload.queryMode, generatedSql: payload.generatedSql, customSql: payload.customSql }), dataContractJson: asJson({ schema: payload.schema }) } });
+    const chartTypeId = await this.resolveChartTypeId(payload.chartTypeId || payload.templateId || asJsonMap(payload.config).chartType || asJsonMap(payload.config).type);
+    const item = await this.prisma.chart.create({ data: {
+      ...common,
+      datasetId,
+      chartTypeId,
+      engine: String(payload.engine || 'chartjs'),
+      mappingJson: asJson(payload.mapping),
+      settingsJson: asJson(payload.settings),
+      filtersJson: asJson(payload.filters),
+      configJson: asJson(payload.config),
+      queryDefinitionJson: asJson({ queryMode: payload.queryMode, generatedSql: payload.generatedSql, customSql: payload.customSql }),
+      dataContractJson: asJson(buildChartDataContract(payload, datasetId)),
+    } });
     return mapChart(item);
   }
   async updateChart(principal: RequestPrincipal, id: string, payload: JsonMap) {
@@ -98,7 +129,24 @@ export class WorkspaceDataService {
     if (!current) throw new ApiError(404, 'CHART_NOT_FOUND', 'Chart was not found.');
     await this.authorization.assertProjectPermission(principal as never, current.projectId, 'write');
     if (!Number.isFinite(expectedRevision) || current.revision !== expectedRevision) throw new ApiError(409, 'REVISION_CONFLICT', 'Chart has changed since it was loaded.', undefined, false, current.revision);
-    const updated = await this.prisma.chart.update({ where: { id }, data: { name: String(payload.name || payload.title || current.name), mappingJson: asJson(payload.mapping), settingsJson: asJson(payload.settings), configJson: asJson(payload.config), revision: { increment: 1 } } });
+    const nextDatasetId = optionalString(payload.datasetId || payload.dataset) ?? current.datasetId;
+    if (nextDatasetId) {
+      const dataset = await this.prisma.dataset.findFirst({ where: { id: nextDatasetId, organizationId: principal.organizationId, projectId: current.projectId, deletedAt: null }, select: { id: true } });
+      if (!dataset) throw new ApiError(404, 'DATASET_NOT_FOUND', 'Dataset was not found.');
+    }
+    const chartTypeId = await this.resolveChartTypeId(payload.chartTypeId || payload.templateId || asJsonMap(payload.config).chartType || asJsonMap(payload.config).type);
+    const updated = await this.prisma.chart.update({ where: { id }, data: {
+      name: String(payload.name || payload.title || current.name),
+      datasetId: nextDatasetId,
+      chartTypeId: chartTypeId ?? current.chartTypeId,
+      mappingJson: asJson(payload.mapping),
+      settingsJson: asJson(payload.settings),
+      filtersJson: asJson(payload.filters),
+      configJson: asJson(payload.config),
+      queryDefinitionJson: asJson({ queryMode: payload.queryMode, generatedSql: payload.generatedSql, customSql: payload.customSql }),
+      dataContractJson: asJson(buildChartDataContract(payload, nextDatasetId)),
+      revision: { increment: 1 },
+    } });
     return mapChart(updated);
   }
   async deleteChart(principal: RequestPrincipal, id: string) {
@@ -162,6 +210,43 @@ export class WorkspaceDataService {
 
 function optionalString(value: unknown) { const text = value == null ? '' : String(value); return text || null; }
 function asJson(value: unknown) { return value === undefined ? undefined : value as never; }
+function asJsonMap(value: unknown): JsonMap {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as JsonMap : {};
+}
+function asJsonArray(value: unknown): unknown[] { return Array.isArray(value) ? value : []; }
+function buildChartDataContract(payload: JsonMap, datasetId: string | null) {
+  const supplied = asJsonMap(payload.dataContract);
+  if (typeof supplied.sourceType === 'string') return supplied;
+  const queryResult = asJsonMap(payload.queryResult);
+  const schema = asJsonMap(payload.querySchema ?? payload.schema);
+  const rows = asJsonArray(payload.rows).length ? asJsonArray(payload.rows) : asJsonArray(queryResult.rows);
+  const fields = asJsonArray(schema.fields).length
+    ? asJsonArray(schema.fields)
+    : asJsonArray(queryResult.fields).length
+      ? asJsonArray(queryResult.fields)
+      : asJsonArray(payload.schema);
+  if (String(payload.queryMode || '') === 'sql') {
+    return { sourceType: 'sql-result', datasetId: null, rows, fields, queryText: String(payload.customSql || payload.lastExecutedSql || '') };
+  }
+  if (rows.length) return { sourceType: 'snapshot', datasetId: null, rows, fields };
+  if (datasetId) return { sourceType: 'dataset', datasetId, rows: [], fields };
+  return { sourceType: 'unavailable', datasetId: null, rows: [], fields };
+}
 function mapChart(item: JsonMap) {
-  return { ...item, mapping: item.mappingJson, settings: item.settingsJson, filters: item.filtersJson, config: item.configJson, datasetId: item.datasetId, dataset: item.datasetId };
+  const config = asJsonMap(item.configJson);
+  const storedChartType = optionalString(config.chartType || config.type || item.chartTypeId);
+  const chartType = storedChartType?.replace(/^chart-type-/, '') || 'bar';
+  return {
+    ...item,
+    title: item.name,
+    mapping: item.mappingJson,
+    settings: item.settingsJson,
+    filters: item.filtersJson,
+    config,
+    dataContract: item.dataContractJson,
+    datasetId: item.datasetId,
+    dataset: item.datasetId,
+    templateId: optionalString(config.templateId) || chartType,
+    chartType,
+  };
 }

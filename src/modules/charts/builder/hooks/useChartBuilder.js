@@ -6,7 +6,6 @@ import {
   getChartById,
   getChartTemplates,
   getDataset,
-  getDatasetSchema,
   runDatasetSql,
   updateChart,
   validateChartMapping,
@@ -451,6 +450,7 @@ function createEditingState(chart, templates, dataset, schema) {
     error: "",
     isEditing: true,
     editingChartId: chart.id,
+    editingRevision: chart.revision,
   };
 }
 
@@ -480,6 +480,8 @@ function createChartPayload({
     customSql: state.customSql,
     lastExecutedSql: state.lastExecutedSql,
     queryResult: state.queryResult,
+    datasetId: state.dataset?.id ?? null,
+    revision: state.editingRevision,
   };
 }
 
@@ -492,11 +494,13 @@ export default function useChartBuilder(builderContext, editingChartId = "") {
     async function loadBuilder() {
       try {
         setState((current) => ({ ...current, loading: true, error: "" }));
-        const [dataset, schema, templates] = await Promise.all([
+        const [dataset, templates] = await Promise.all([
           getDataset(),
-          getDatasetSchema(),
           getChartTemplates(),
         ]);
+        const schema = dataset
+          ? { datasetId: dataset.id, name: dataset.name, fields: dataset.fields ?? [] }
+          : { datasetId: null, name: "", fields: [] };
 
         if (!isActive) return;
 
@@ -894,6 +898,7 @@ export default function useChartBuilder(builderContext, editingChartId = "") {
         setState((current) => ({
           ...current,
           saving: false,
+          editingRevision: updatedChart.revision,
         }));
 
         return {

@@ -389,6 +389,7 @@ function DashboardDesignerContent() {
               config={state.config}
               datasetRows={state.rows}
               fields={state.fields}
+              transformedData={state.transformedData}
               previewMode={state.previewMode}
               deviceMode={state.deviceMode}
               zoom={state.zoom}
@@ -437,8 +438,8 @@ function DashboardDesignerContent() {
       <BottomStatus
         chart={state.selectedChart}
         mappings={state.config.mappings}
-        datasourceName={activeDatasource.name}
-        sourceLabel={state.sqlSourceActive ? "Demo SQL" : "Demo Dataset"}
+        datasourceName={activeDatasource?.name ?? "ยังไม่ได้เลือกชุดข้อมูล"}
+        sourceLabel={state.sqlSourceActive ? "SQL query" : activeDatasource ? "Dataset" : "ยังไม่มีข้อมูล"}
         rowCount={state.rows.length}
         fieldCount={state.fields.length}
         filteredRowCount={state.transformedData.filteredRows.length}

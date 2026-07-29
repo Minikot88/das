@@ -9,8 +9,20 @@ import SectionHeader from "@shared/components/ui/SectionHeader";
 import CreateProjectModal from "@modules/projects/components/CreateProjectModal";
 import { useStore } from "@app/store/useStore";
 import { useI18n } from "@shared/lib/i18n";
+import { isMockMode } from "@infrastructure/http/client";
+import {
+  archiveProject as archiveApiProject,
+  createProject as createApiProject,
+  getProjects as getApiProjects,
+  updateProject as updateApiProject,
+  API_ACTIVE_PROJECT_KEY,
+} from "@modules/projects/api/projectApi";
+import { createDashboard as createApiDashboard, listDashboards } from "@modules/dashboards/public/api";
+import { listDatasets } from "@modules/datasets/public/api";
+import { getCharts } from "@modules/charts/public/api";
 import { createBuilderContextForDashboard } from "@modules/dashboards/public/workspace";
 import { TEMPLATE_GALLERY_CATALOG } from "@modules/charts/public/catalog";
+import { resolveHomeActiveProject } from "./homeProjectSelection";
 import {
   ACTIVE_DASHBOARD_KEY,
   ACTIVE_PROJECT_KEY,
@@ -57,15 +69,24 @@ export default function HomePage() {
   const legacyActiveSheetId = useStore((state) => state.activeSheetId);
   const legacyActiveDashboardId = useStore((state) => state.activeDashboardId);
   const [workspaceRevision, setWorkspaceRevision] = useState(0);
+  const [remoteProjects, setRemoteProjects] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [projectSort, setProjectSort] = useState("recent");
   const [homeNotice, setHomeNotice] = useState("");
   const projects = useMemo(() => {
     void workspaceRevision;
     void legacyProjects;
-    return getStoredProjects();
-  }, [legacyProjects, workspaceRevision]);
-  const activeProject = useMemo(() => getStoredActiveProject(projects), [projects]);
+    return isMockMode() ? getStoredProjects() : remoteProjects;
+  }, [legacyProjects, remoteProjects, workspaceRevision]);
+  const preferredApiProjectId = !isMockMode()
+    ? window.localStorage.getItem(API_ACTIVE_PROJECT_KEY)
+    : null;
+  const activeProject = useMemo(() => resolveHomeActiveProject(projects, {
+    mockMode: isMockMode(),
+    activeProjectId: legacyActiveProjectId,
+    preferredProjectId: preferredApiProjectId,
+    resolveMockProject: getStoredActiveProject,
+  }), [legacyActiveProjectId, preferredApiProjectId, projects]);
   const activeProjectId = activeProject?.id ?? projects[0]?.id ?? null;
 
   const totalDashboards = projects.reduce((count, project) => count + (project.dashboards?.length ?? 0), 0);
@@ -74,7 +95,34 @@ export default function HomePage() {
   const workspaceTitle = activeProject?.name ? `โปรเจกต์: ${activeProject.name}` : "พื้นที่ทำงาน 01";
   const refreshProjects = () => setWorkspaceRevision((revision) => revision + 1);
 
+  const reloadRemoteProjects = React.useCallback(async () => {
+    if (isMockMode()) return;
+    try {
+      const [apiProjects, charts] = await Promise.all([getApiProjects(), getCharts()]);
+      const enriched = await Promise.all((apiProjects ?? []).map(async (project) => {
+        const [dashboards, datasetResponse] = await Promise.all([
+          listDashboards(project.id),
+          listDatasets({ projectId: project.id, page: 1, pageSize: 100 }),
+        ]);
+        return {
+          ...project,
+          dashboards: dashboards ?? [],
+          datasets: datasetResponse?.items ?? [],
+          charts: (charts ?? []).filter((chart) => chart.projectId === project.id),
+        };
+      }));
+      setRemoteProjects(enriched);
+    } catch (error) {
+      setHomeNotice(error?.message || "Unable to load projects from the API.");
+    }
+  }, []);
+
   React.useEffect(() => {
+    void reloadRemoteProjects();
+  }, [reloadRemoteProjects]);
+
+  React.useEffect(() => {
+    if (!isMockMode()) return undefined;
     const onStorage = (event) => {
       if ([PROJECTS_KEY, ACTIVE_PROJECT_KEY, ACTIVE_DASHBOARD_KEY].includes(event.key)) refreshProjects();
     };
@@ -88,38 +136,88 @@ export default function HomePage() {
     return () => window.clearTimeout(timer);
   }, [homeNotice]);
 
+  const activateProject = (projectId, dashboardId) => {
+    if (isMockMode()) {
+      setStoredActiveProject(projectId, dashboardId);
+      return;
+    }
+    window.localStorage.setItem(API_ACTIVE_PROJECT_KEY, projectId);
+    if (dashboardId) window.localStorage.setItem(ACTIVE_DASHBOARD_KEY, dashboardId);
+    useStore.setState({
+      activeProjectId: projectId,
+      ...(dashboardId ? { activeDashboardId: dashboardId } : {}),
+    });
+  };
+
   const openProject = (projectId) => {
     if (!projectId) return;
-    setStoredActiveProject(projectId);
+    activateProject(projectId);
     refreshProjects();
     navigate("/dashboard");
   };
 
   const openDashboard = (projectId, dashboardId) => {
     if (!projectId || !dashboardId) return;
-    setStoredActiveProject(projectId, dashboardId);
+    activateProject(projectId, dashboardId);
     setStoredActiveDashboard(dashboardId);
     refreshProjects();
     navigate("/dashboard");
   };
 
-  const createDashboardInProject = (projectId) => {
+  const createDashboardInProject = async (projectId) => {
     if (!projectId) return;
+    if (!isMockMode()) {
+      try {
+        const dashboard = await createApiDashboard({ projectId, name: "Dashboard ใหม่" });
+        activateProject(projectId, dashboard.id);
+        setStoredActiveDashboard(dashboard.id);
+        await reloadRemoteProjects();
+        setHomeNotice("สร้าง Dashboard ใหม่แล้ว");
+        navigate("/dashboard");
+      } catch (error) {
+        setHomeNotice(error?.message || "Unable to create dashboard.");
+      }
+      return;
+    }
     const dashboard = createStoredDashboard(projectId, "แดชบอร์ดใหม่");
-    setStoredActiveProject(projectId, dashboard.id);
+    activateProject(projectId, dashboard.id);
     setStoredActiveDashboard(dashboard.id);
     refreshProjects();
     setHomeNotice("สร้าง Dashboard ใหม่แล้ว");
     navigate("/dashboard");
   };
 
-  const renameProject = (projectId, name) => {
+  const renameProject = async (projectId, name) => {
+    if (!isMockMode()) {
+      const project = projects.find((item) => item.id === projectId);
+      if (!project) return;
+      try {
+        await updateApiProject(projectId, { name, revision: project.revision });
+        await reloadRemoteProjects();
+        setHomeNotice("เปลี่ยนชื่อโปรเจกต์แล้ว");
+      } catch (error) {
+        setHomeNotice(error?.message || "Unable to rename project.");
+      }
+      return;
+    }
     renameStoredProject(projectId, name);
     refreshProjects();
     setHomeNotice("เปลี่ยนชื่อโปรเจกต์แล้ว");
   };
 
-  const deleteProject = () => {
+  const deleteProject = async (projectId) => {
+    if (!isMockMode()) {
+      const project = projects.find((item) => item.id === projectId);
+      if (!project) return;
+      try {
+        await archiveApiProject(projectId, project.revision);
+        await reloadRemoteProjects();
+        setHomeNotice("ลบโปรเจกต์แล้ว");
+      } catch (error) {
+        setHomeNotice(error?.message || "Unable to delete project.");
+      }
+      return;
+    }
     setHomeNotice("การลบโปรเจกต์จะเปิดใช้เมื่อเชื่อมต่อ backend แล้ว");
   };
 
@@ -163,7 +261,7 @@ export default function HomePage() {
     {
       icon: "DS",
       label: "จัดการชุดข้อมูล",
-      description: "ดูและนำเข้าข้อมูลตัวอย่าง",
+      description: "ดูและนำเข้าชุดข้อมูลจากระบบ",
       action: () => navigate("/datasets"),
     },
     {
@@ -186,11 +284,19 @@ export default function HomePage() {
     { label: "กราฟ", value: totalCharts },
   ];
   const systemStatusItems = [
-    { label: "Demo Mode", value: "เปิดใช้งาน", tone: "success" },
-    { label: "Local Save", value: "พร้อมบันทึก", tone: "success" },
+    {
+      label: isMockMode() ? "Mock Mode" : "Data Source",
+      value: isMockMode() ? "เปิดสำหรับการพัฒนา" : "PostgreSQL API",
+      tone: isMockMode() ? "muted" : "success",
+    },
+    {
+      label: "Persistence",
+      value: isMockMode() ? "Local workspace" : "Backend API",
+      tone: "success",
+    },
     { label: "Chart Engine", value: "Apache ECharts", tone: "neutral" },
     { label: "Export", value: "PNG / CSV / JSON", tone: "neutral" },
-    { label: "Backend", value: "ยังไม่เชื่อมต่อ", tone: "muted" },
+    { label: "Backend", value: isMockMode() ? "Mock adapter" : "เชื่อมต่อแล้ว", tone: isMockMode() ? "muted" : "success" },
   ];
   const gettingStartedItems = [
     "\u0e40\u0e25\u0e37\u0e2d\u0e01\u0e0a\u0e38\u0e14\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25",
@@ -337,9 +443,22 @@ export default function HomePage() {
   };
 
   const handleCreate = async (name) => {
+    if (!isMockMode()) {
+      try {
+        const project = await createApiProject(name);
+        const dashboard = await createApiDashboard({ projectId: project.id, name: "Dashboard 1" });
+        await reloadRemoteProjects();
+        activateProject(project.id, dashboard.id);
+        setStoredActiveDashboard(dashboard.id);
+        navigate("/dashboard");
+      } catch (error) {
+        setHomeNotice(error?.message || "Unable to create project.");
+      }
+      return;
+    }
     const project = createStoredProject(name);
     refreshProjects();
-    setStoredActiveProject(project.id, project.dashboards[0]?.id);
+    activateProject(project.id, project.dashboards[0]?.id);
     navigate("/dashboard");
   };
 

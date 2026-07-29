@@ -100,9 +100,9 @@ describe("local dashboard view and embed routes", () => {
   });
 
   it.each([
-    ["missing", { projects: [] }, "ไม่พบลิงก์นี้ในเบราว์เซอร์ปัจจุบัน"],
-    ["invalid", createFixture({ editable: true }), "ข้อมูลแชร์ภายในเครื่องไม่สมบูรณ์"],
-    ["expired", createFixture({ expiresAt: "2026-07-10T00:00:00.000Z" }), "ลิงก์ภายในเบราว์เซอร์นี้หมดอายุแล้ว"],
+    ["missing", { projects: [] }, "ไม่พบลิงก์แชร์นี้"],
+    ["invalid", createFixture({ editable: true }), "ลิงก์แชร์ไม่ผ่านการตรวจสอบ"],
+    ["expired", createFixture({ expiresAt: "2026-07-10T00:00:00.000Z" }), "ลิงก์แชร์นี้หมดอายุแล้ว"],
   ])("fails closed for a %s local share", (_state, nextWorkspace, description) => {
     workspace = nextWorkspace;
     renderRoute("/dashboard/dashboard-1/view?share=share-1");

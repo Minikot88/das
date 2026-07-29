@@ -1,1 +1,8 @@
-export { getChartsByDashboardId } from "@modules/charts/api/chartApi.js";
+export {
+  createChart,
+  deleteChart,
+  getChartById,
+  getCharts,
+  getChartsByDashboardId,
+  updateChart,
+} from "@modules/charts/api/chartApi.js";

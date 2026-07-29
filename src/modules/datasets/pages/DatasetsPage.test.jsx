@@ -8,13 +8,6 @@ const datasets = [
   { id: "dataset-a", projectId: "project-a", name: "Project A dataset", fields: [], rows: [] },
   { id: "dataset-b", projectId: "project-b", name: "Project B dataset", fields: [], rows: [] },
 ];
-const workspace = {
-  active: { projectId: "project-a", dashboardId: null },
-  projects: [
-    { id: "project-a", datasets: [datasets[0]] },
-    { id: "project-b", datasets: [datasets[1]] },
-  ],
-};
 const storeState = {
   importedDatasets: datasets,
   activeProjectId: "project-a",
@@ -27,21 +20,26 @@ vi.mock("@app/store/useStore", () => ({
   useStore: (selector) => selector(storeState),
 }));
 
-vi.mock("@domain/workspace/workspaceSelectors", () => ({
-  selectProjectDatasets: (snapshot, projectId) => snapshot.projects.find((project) => project.id === projectId)?.datasets ?? [],
-}));
-
-vi.mock("@app/store/useWorkspaceSelector", () => ({
-  useWorkspaceSelector: (selector) => selector(workspace),
+vi.mock("@modules/datasets/api/datasetApi", () => ({
+  listDatasets: vi.fn(async ({ projectId }) => ({
+    items: datasets.filter((dataset) => dataset.projectId === projectId),
+    total: 1,
+    page: 1,
+    pageSize: 100,
+  })),
+  getDatasetFields: vi.fn(async () => []),
+  queryDataset: vi.fn(async () => ({ rows: [], total: 0 })),
+  importDatasetCsv: vi.fn(),
+  archiveDataset: vi.fn(),
 }));
 
 vi.mock("@shared/components/ui/EnterpriseDataTable", () => ({ default: () => null }));
 
 describe("DatasetsPage project ownership", () => {
-  it("shows imported datasets from the active project only", () => {
+  it("shows datasets returned by the active project API only", async () => {
     render(<MemoryRouter><DatasetsPage /></MemoryRouter>);
 
-    expect(screen.getByText("Project A dataset")).toBeInTheDocument();
+    expect((await screen.findAllByText("Project A dataset")).length).toBeGreaterThan(0);
     expect(screen.queryByText("Project B dataset")).not.toBeInTheDocument();
   });
 });

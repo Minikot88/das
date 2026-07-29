@@ -50,7 +50,16 @@ function DataPanel({
   const [openSchema, setOpenSchema] = useState(true);
   const [openTable, setOpenTable] = useState(true);
   const [showAllFields, setShowAllFields] = useState(false);
-  const datasource = datasources.find((item) => item.id === activeDatasourceId) ?? datasources[0];
+  const datasource = datasources.find((item) => item.id === activeDatasourceId) ?? datasources[0] ?? {
+    id: "",
+    name: "ยังไม่มีชุดข้อมูล",
+    database: "",
+    schema: "",
+    table: "",
+    rowCount: 0,
+    fieldCount: 0,
+    lastUpdated: "",
+  };
 
   const filteredFields = useMemo(() => {
     const query = searchValue.trim().toLowerCase();
@@ -120,7 +129,8 @@ function DataPanel({
         <Select
           size="small"
           fullWidth
-          value={activeDatasourceId}
+          value={datasources.some((item) => item.id === activeDatasourceId) ? activeDatasourceId : ""}
+          disabled={!datasources.length}
           onChange={(event) => onDatasourceChange(event.target.value)}
           aria-label="เลือก datasource"
           sx={{

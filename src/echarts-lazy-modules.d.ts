@@ -1,0 +1,13 @@
+declare module "echarts/lib/chart/boxplot.js";
+declare module "echarts/lib/chart/candlestick.js";
+declare module "echarts/lib/chart/funnel.js";
+declare module "echarts/lib/chart/gauge.js";
+declare module "echarts/lib/chart/graph.js";
+declare module "echarts/lib/chart/heatmap.js";
+declare module "echarts/lib/chart/parallel.js";
+declare module "echarts/lib/chart/radar.js";
+declare module "echarts/lib/chart/sankey.js";
+declare module "echarts/lib/chart/sunburst.js";
+declare module "echarts/lib/chart/treemap.js";
+declare module "echarts/lib/component/calendar.js";
+declare module "echarts/lib/component/visualMap.js";

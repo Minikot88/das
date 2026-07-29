@@ -1,6 +1,6 @@
 import React, { memo } from "react";
 import type { DemoDatasetRow } from "@modules/dashboards/designer-v2/components/services/datasetService";
-import type { ChartConfig, DataField, DeviceMode } from "@modules/dashboards/designer-v2/components/types";
+import type { ChartConfig, DataField, DeviceMode, TransformedChartData } from "@modules/dashboards/designer-v2/components/types";
 import EChartsRenderer from "@modules/dashboards/designer-v2/components/components/charts/EChartsRenderer";
 
 type ChartPreviewProps = {
@@ -11,9 +11,10 @@ type ChartPreviewProps = {
   deviceMode: DeviceMode;
   zoom: number;
   density?: "standard" | "compact" | "mini";
+  transformedData?: TransformedChartData;
 };
 
-function ChartPreview({ config, datasetRows, fields, previewMode, deviceMode, zoom, density = "standard" }: ChartPreviewProps) {
+function ChartPreview({ config, datasetRows, fields, previewMode, deviceMode, zoom, density = "standard", transformedData }: ChartPreviewProps) {
   return (
     <EChartsRenderer
       chartType={config.chartType}
@@ -29,6 +30,7 @@ function ChartPreview({ config, datasetRows, fields, previewMode, deviceMode, zo
       deviceMode={deviceMode}
       zoom={zoom}
       density={density}
+      transformedData={transformedData}
     />
   );
 }

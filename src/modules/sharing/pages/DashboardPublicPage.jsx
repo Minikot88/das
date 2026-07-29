@@ -11,8 +11,7 @@ import { useWorkspaceSelector } from "@app/store/useWorkspaceSelector";
 import { isMockMode } from "@infrastructure/http/client";
 import { resolvePersistentDashboardShare } from "@modules/sharing/api/sharingApi";
 import { normalizeServerShareWidgets } from "@modules/sharing/lib/serverShareSnapshot";
-import ChartPreview from "@modules/dashboards/designer-v2/components/components/charts/ChartPreview";
-import { createDefaultConfig } from "@modules/dashboards/designer-v2/components/mockData";
+import { ChartPreview, createDefaultConfig } from "@modules/dashboards/public/chartRendering";
 
 function countChartTypes(widgets = []) {
   return new Set(widgets.map((widget) => widget.type).filter(Boolean)).size;
@@ -197,11 +196,11 @@ export default function DashboardPublicPage() {
     return () => { active = false; };
   }, [shareId]);
   const shareRecord = useMemo(() => (
-    !isMockMode() && serverShare.share
+    !isMockMode()
       ? normalizeLocalShareRecord(serverShare.share)
       : canonicalShare.status === "missing"
-      ? normalizeLocalShareRecord(resolveShareLink(shareId))
-      : normalizeLocalShareRecord(canonicalShare.share)
+        ? normalizeLocalShareRecord(resolveShareLink(shareId))
+        : normalizeLocalShareRecord(canonicalShare.share)
   ), [canonicalShare, resolveShareLink, serverShare.share, shareId]);
   const legacyDashboardContext = useMemo(() => (
     canonicalShare.status === "missing" && shareRecord
@@ -250,6 +249,7 @@ export default function DashboardPublicPage() {
           snapshot: shareRecord.snapshot,
         };
       }
+      if (!isMockMode()) return null;
       const context = findDashboardContextById(projects, charts, dashboardId);
       if (shareRecord.projectId && context?.project?.id !== shareRecord.projectId) return null;
       if (shareRecord.sheetId && context?.sheet?.id !== shareRecord.sheetId) return null;
@@ -262,7 +262,7 @@ export default function DashboardPublicPage() {
   useEffect(() => {
     document.title = dashboardContext
       ? `${dashboardContext.dashboard.name} | Mini BI`
-      : "Local share unavailable | Mini BI";
+      : "Shared dashboard unavailable | Mini BI";
   }, [dashboardContext]);
 
   useEffect(() => {
@@ -290,10 +290,10 @@ export default function DashboardPublicPage() {
           kicker="ไม่พร้อมใช้งาน"
           title="ไม่พบแดชบอร์ด"
           description={shareState === "expired"
-            ? "ลิงก์ภายในเบราว์เซอร์นี้หมดอายุแล้ว กรุณาสร้างลิงก์ใหม่จากหน้าแดชบอร์ด"
+            ? "ลิงก์แชร์นี้หมดอายุแล้ว กรุณาสร้างลิงก์ใหม่จากหน้าแดชบอร์ด"
             : shareState === "invalid"
-              ? "ข้อมูลแชร์ภายในเครื่องไม่สมบูรณ์หรือไม่ผ่านการตรวจสอบ"
-              : "ไม่พบลิงก์นี้ในเบราว์เซอร์ปัจจุบัน ลิงก์แบบ Local ใช้งานได้เฉพาะโปรไฟล์เบราว์เซอร์ที่สร้างลิงก์"}
+              ? "ลิงก์แชร์ไม่ผ่านการตรวจสอบหรือไม่ได้รับอนุญาต"
+              : "ไม่พบลิงก์แชร์นี้ ลิงก์อาจถูกยกเลิกหรือไม่ถูกต้อง"}
         />
       </main>
     );
@@ -336,14 +336,14 @@ export default function DashboardPublicPage() {
           }}
         >
           <div className="dashboard-public-header-copy">
-            <span className="dashboard-public-kicker">{isEmbedMode ? "แดชบอร์ด Local แบบฝัง" : "แดชบอร์ด Local แบบอ่านอย่างเดียว"}</span>
+            <span className="dashboard-public-kicker">{isEmbedMode ? "แดชบอร์ดแบบฝัง" : "แดชบอร์ดแชร์แบบอ่านอย่างเดียว"}</span>
             <h1 className="dashboard-public-title">{dashboard.name}</h1>
             <div className="dashboard-public-breadcrumb">
               <span>{project.name}</span>
               <span>/</span>
               <span>{sheet.name}</span>
               <span>/</span>
-              <span>{isEmbedMode ? "ดูอย่างเดียว" : "Local snapshot"}</span>
+              <span>{isEmbedMode ? "ดูอย่างเดียว" : "Server snapshot"}</span>
             </div>
             {snapshot?.contextItems?.length ? (
               <div className="dashboard-public-breadcrumb">

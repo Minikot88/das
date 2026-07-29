@@ -14,7 +14,7 @@ import ChartPreview from "@modules/dashboards/designer-v2/components/components/
 import InsightStrip from "@modules/dashboards/designer-v2/components/InsightStrip";
 import type { DemoDatasetRow } from "@modules/dashboards/designer-v2/components/services/datasetService";
 import { dashboardV2Tokens as tokens } from "@modules/dashboards/designer-v2/components/theme";
-import type { ChartConfig, ChartDefinition, DataField, DeviceMode, DragFieldItem } from "@modules/dashboards/designer-v2/components/types";
+import type { ChartConfig, ChartDefinition, DataField, DeviceMode, DragFieldItem, TransformedChartData } from "@modules/dashboards/designer-v2/components/types";
 import type { DemoInsight } from "@modules/dashboards/designer-v2/components/demo/demoTypes";
 
 type PreviewCanvasProps = {
@@ -22,6 +22,7 @@ type PreviewCanvasProps = {
   config: ChartConfig;
   datasetRows: DemoDatasetRow[];
   fields: DataField[];
+  transformedData?: TransformedChartData;
   previewMode: boolean;
   deviceMode: DeviceMode;
   zoom: number;
@@ -59,6 +60,7 @@ function PreviewCanvas({
   config,
   datasetRows,
   fields,
+  transformedData,
   previewMode,
   deviceMode,
   zoom,
@@ -253,6 +255,7 @@ function PreviewCanvas({
                   previewMode={previewMode}
                   deviceMode={deviceMode}
                   zoom={zoom}
+                  transformedData={transformedData}
                 />
               </ChartErrorBoundary>
             </Box>

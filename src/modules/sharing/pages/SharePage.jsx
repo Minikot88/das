@@ -30,6 +30,7 @@ export default function SharePage() {
   }, [sheetId]);
 
   const shareResolution = useMemo(() => {
+    if (!isMockMode()) return { status: "missing", share: null, project: null, dashboard: null };
     const canonical = resolveLocalShare(workspaceSnapshot, sheetId);
     if (canonical.status !== "missing") return canonical;
 

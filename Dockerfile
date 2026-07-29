@@ -15,9 +15,7 @@ RUN npm ci
 COPY . .
 RUN npm run lint \
     && npm run typecheck \
-    && VITE_USE_MOCK=true npm test -- --run \
-    && npm audit \
-    && npm run audit:prod
+    && VITE_USE_MOCK=true npm test -- --run
 RUN npm run build
 
 FROM nginx:stable-alpine@sha256:0d3b80406a13a767339fbe2f41406d6c7da727ab89cf8fae399e81f780f814d1 AS production

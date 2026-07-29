@@ -40,4 +40,25 @@ describe('CoreDataService dataset query validation', () => {
     await expect(service.createDashboard(principal, { projectId: 'project-1', name: 'Blocked' })).rejects.toMatchObject({ code: 'FORBIDDEN' });
     expect(authorization.assertProjectPermission).toHaveBeenCalledWith(expect.anything(), 'project-1', 'write');
   });
+
+  it('rejects a stale dataset archive before changing data', async () => {
+    const prisma = {
+      biProjectMember: { findMany: vi.fn().mockResolvedValue([]) },
+      biProject: { findFirst: vi.fn().mockResolvedValue({ id: 'project-1', organizationId: 'org-default', ownerUserId: 'user-development' }) },
+      dataset: { findFirst: vi.fn().mockResolvedValue({ id: 'dataset-1', projectId: 'project-1', organizationId: 'org-default', revision: 3 }) },
+    };
+    const instance = new CoreDataService(prisma as never, { assertProjectPermission: vi.fn().mockResolvedValue(undefined) } as never);
+    await expect(instance.archiveDataset(principal, 'dataset-1', 2)).rejects.toMatchObject({ code: 'REVISION_CONFLICT', currentRevision: 3 });
+  });
+
+  it('rejects a stale dashboard archive before changing data', async () => {
+    const prisma = {
+      biProjectMember: { findMany: vi.fn().mockResolvedValue([]) },
+      biProject: { findFirst: vi.fn().mockResolvedValue({ id: 'project-1', organizationId: 'org-default', ownerUserId: 'user-development' }) },
+      biDashboard: { findFirst: vi.fn().mockResolvedValue({ id: 'dashboard-1', projectId: 'project-1', organizationId: 'org-default', revision: 5 }) },
+      dashboardWidget: { findMany: vi.fn().mockResolvedValue([]) },
+    };
+    const instance = new CoreDataService(prisma as never, { assertProjectPermission: vi.fn().mockResolvedValue(undefined) } as never);
+    await expect(instance.archiveDashboard(principal, 'dashboard-1', 4)).rejects.toMatchObject({ code: 'REVISION_CONFLICT', currentRevision: 5 });
+  });
 });

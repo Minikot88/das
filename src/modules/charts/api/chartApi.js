@@ -17,6 +17,7 @@ import {
 } from "@modules/charts/lib/mockSqlEngine";
 import { createEntityId } from "@shared/lib/id";
 import { useStore } from "@app/store/useStore";
+import { loadDefaultProjectDataset } from "@modules/datasets/public/api";
 
 function getActiveStoreContext() {
   const state = useStore.getState();
@@ -91,27 +92,30 @@ function createSavedChartRecord(payload = {}) {
 
 export async function getDataset() {
   if (isMockMode()) return mockData;
-  return apiRequest("/api/dataset");
+  return loadDefaultProjectDataset();
 }
 
 export async function getDatasetSchema() {
   if (isMockMode()) return mockSchema;
-  return apiRequest("/api/dataset/schema");
+  const dataset = await loadDefaultProjectDataset();
+  return dataset
+    ? { datasetId: dataset.id, name: dataset.name, fields: dataset.fields ?? [] }
+    : { datasetId: null, name: "", fields: [] };
 }
 
 export async function getChartTypes() {
   if (isMockMode()) return getTemplateChartTypes();
-  return apiRequest("/api/chart-types");
+  return apiRequest("/api/v1/chart-types");
 }
 
 export async function getChartTemplates() {
   if (isMockMode()) return chartJsTemplates;
-  return apiRequest("/api/chart-templates");
+  return apiRequest("/api/v1/chart-templates");
 }
 
 export async function getChartTemplateById(id) {
   if (isMockMode()) return getChartJsTemplateById(id);
-  return apiRequest(`/api/chart-templates/${encodeApiPathSegment(id)}`);
+  return apiRequest(`/api/v1/chart-templates/${encodeApiPathSegment(id)}`);
 }
 
 export async function validateChartMapping(payload) {
@@ -127,10 +131,12 @@ export async function validateChartMapping(payload) {
     };
   }
 
-  return apiRequest("/api/charts/validate", {
-    method: "POST",
-    body: JSON.stringify(payload),
+  const result = validateChartMappingInternal({
+    ...payload,
+    schema: payload.schema ?? { fields: [] },
+    rows: payload.rows ?? [],
   });
+  return { ...result, message: getChartValidationMessage(result) };
 }
 
 export async function createChartConfig(payload) {
@@ -142,9 +148,10 @@ export async function createChartConfig(payload) {
     });
   }
 
-  return apiRequest("/api/charts/config", {
-    method: "POST",
-    body: JSON.stringify(payload),
+  return createChartConfigInternal({
+    ...payload,
+    rows: payload.rows ?? [],
+    schema: payload.schema ?? { fields: [] },
   });
 }
 
@@ -159,9 +166,12 @@ export async function generateVisualSql(payload) {
     });
   }
 
-  return apiRequest("/api/charts/sql-preview", {
-    method: "POST",
-    body: JSON.stringify(payload),
+  const template = getChartJsTemplateById(payload?.templateId);
+  return generateVisualSqlInternal({
+    template,
+    mapping: payload?.mapping,
+    settings: payload?.settings,
+    dataset: payload?.dataset,
   });
 }
 
@@ -175,18 +185,20 @@ export async function runDatasetSql(payload) {
     });
   }
 
-  return apiRequest("/api/dataset/query", {
+  return apiRequest("/api/v1/dataset/query", {
     method: "POST",
     body: JSON.stringify(payload),
   });
 }
 
-export async function getCharts() {
+export async function getCharts(projectId) {
   if (isMockMode()) {
-    return useStore.getState().charts;
+    const charts = useStore.getState().charts;
+    return projectId ? charts.filter((chart) => (chart.projectId ?? chart.sourceProjectId) === projectId) : charts;
   }
 
-  return apiRequest("/api/charts");
+  const query = projectId ? `?projectId=${encodeURIComponent(projectId)}` : "";
+  return apiRequest(`/api/v1/charts${query}`);
 }
 
 export async function getChartById(id) {
@@ -194,7 +206,7 @@ export async function getChartById(id) {
     return useStore.getState().charts.find((chart) => chart.id === id) ?? null;
   }
 
-  return apiRequest(`/api/charts/${encodeApiPathSegment(id)}`);
+  return apiRequest(`/api/v1/charts/${encodeApiPathSegment(id)}`);
 }
 
 export async function getChartsByDashboardId(dashboardId, context = {}) {
@@ -233,7 +245,7 @@ export async function getChartsByDashboardId(dashboardId, context = {}) {
     return [];
   }
 
-  return apiRequest(`/api/dashboards/${encodeApiPathSegment(dashboardId)}/charts`);
+  return apiRequest(`/api/v1/dashboards/${encodeApiPathSegment(dashboardId)}/charts`);
 }
 
 export async function createChart(payload) {
@@ -244,7 +256,7 @@ export async function createChart(payload) {
     return useStore.getState().charts[beforeCount] ?? chart;
   }
 
-  return apiRequest("/api/charts", {
+  return apiRequest("/api/v1/charts", {
     method: "POST",
     body: JSON.stringify(payload),
   });
@@ -266,8 +278,8 @@ export async function updateChart(id, payload) {
     return nextChart;
   }
 
-  return apiRequest(`/api/charts/${encodeApiPathSegment(id)}`, {
-    method: "PUT",
+  return apiRequest(`/api/v1/charts/${encodeApiPathSegment(id)}`, {
+    method: "PATCH",
     body: JSON.stringify(payload),
   });
 }
@@ -279,7 +291,7 @@ export async function deleteChart(id) {
     return { success: true };
   }
 
-  return apiRequest(`/api/charts/${encodeApiPathSegment(id)}`, {
+  return apiRequest(`/api/v1/charts/${encodeApiPathSegment(id)}`, {
     method: "DELETE",
   });
 }

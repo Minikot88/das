@@ -24,7 +24,11 @@ import { toText } from "@modules/dashboards/designer-v2/components/utils/chartAg
 import { formatValue, transformChartData } from "@modules/dashboards/designer-v2/components/utils/chartDataEngine";
 import { clearLatestEChartsInstance, setLatestEChartsInstance } from "@modules/dashboards/designer-v2/components/utils/echartsInstanceRegistry";
 import { buildEChartsOption } from "@modules/dashboards/designer-v2/components/utils/echartsOptionBuilder";
-import { echarts } from "@modules/dashboards/designer-v2/components/utils/echartsModules";
+import {
+  echarts,
+  ensureEChartsChartModule,
+  isEChartsChartModuleReady,
+} from "@modules/dashboards/designer-v2/components/utils/echartsModules";
 import { validateChartConfig } from "@modules/dashboards/designer-v2/components/utils/chartValidation";
 
 type BuiltEChartsOption = ReturnType<typeof buildEChartsOption>;
@@ -47,6 +51,7 @@ type EChartsRendererProps = {
   deviceMode: DeviceMode;
   zoom: number;
   density?: ChartDensity;
+  transformedData?: TransformedChartData;
 };
 
 function mapOptionEntries<T>(value: T, transform: (entry: Record<string, unknown>) => Record<string, unknown>): T {
@@ -280,6 +285,7 @@ function EChartsCanvas({ option, zoom }: { option: BuiltEChartsOption; zoom: num
   const mountedRef = useRef(false);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const rafRef = useRef<number | null>(null);
+  const lastObservedSizeRef = useRef({ width: 0, height: 0 });
 
   const cancelResizeFrame = useCallback(() => {
     if (rafRef.current !== null) {
@@ -336,12 +342,21 @@ function EChartsCanvas({ option, zoom }: { option: BuiltEChartsOption; zoom: num
     };
 
     chart.on("finished", markReady);
-    window.addEventListener("resize", scheduleResize);
-
     if (typeof ResizeObserver !== "undefined") {
-      const observer = new ResizeObserver(() => scheduleResize());
+      const observer = new ResizeObserver((entries) => {
+        const rect = entries[0]?.contentRect;
+        if (!rect) return;
+        const width = Math.round(rect.width);
+        const height = Math.round(rect.height);
+        const previous = lastObservedSizeRef.current;
+        if (previous.width === width && previous.height === height) return;
+        lastObservedSizeRef.current = { width, height };
+        scheduleResize();
+      });
       observer.observe(element);
       resizeObserverRef.current = observer;
+    } else {
+      window.addEventListener("resize", scheduleResize);
     }
 
     scheduleResize();
@@ -352,7 +367,9 @@ function EChartsCanvas({ option, zoom }: { option: BuiltEChartsOption; zoom: num
       resizeObserverRef.current?.disconnect();
       resizeObserverRef.current = null;
       chart.off("finished", markReady);
-      window.removeEventListener("resize", scheduleResize);
+      if (typeof ResizeObserver === "undefined") {
+        window.removeEventListener("resize", scheduleResize);
+      }
       if (!chart.isDisposed()) {
         chart.dispose();
       }
@@ -366,7 +383,9 @@ function EChartsCanvas({ option, zoom }: { option: BuiltEChartsOption; zoom: num
   useEffect(() => {
     const chart = getLiveChart();
     if (!chart) return undefined;
-    chart.setOption(option, { notMerge: true, lazyUpdate: true });
+    // Apply the option synchronously. A deferred ECharts update can leave the
+    // event dispatcher pointing at stale series data while the user interacts.
+    chart.setOption(option, { notMerge: true, lazyUpdate: false });
     setLatestEChartsInstance(chart);
     scheduleResize();
     return undefined;
@@ -417,7 +436,34 @@ function EChartsRenderer({
   deviceMode,
   zoom,
   density = "standard",
+  transformedData: providedTransformedData,
 }: EChartsRendererProps) {
+  const [, forceChartModuleRender] = useState(0);
+  const [chartModuleFailure, setChartModuleFailure] = useState<{ chartType: ChartType | null; message: string } | null>(null);
+  const chartModuleReady = isEChartsChartModuleReady(chartType);
+  const chartModuleError = chartModuleFailure?.chartType === chartType ? chartModuleFailure.message : "";
+
+  useEffect(() => {
+    if (chartModuleReady) return undefined;
+    let active = true;
+    void ensureEChartsChartModule(chartType).then(() => {
+      if (active) {
+        setChartModuleFailure(null);
+        forceChartModuleRender((value) => value + 1);
+      }
+    }).catch((error) => {
+      if (active) {
+        setChartModuleFailure({
+          chartType,
+          message: error instanceof Error ? error.message : "ไม่สามารถโหลดโมดูลกราฟได้",
+        });
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [chartModuleReady, chartType]);
+
   const config = useMemo(
     () => ({
       schemaVersion: 3,
@@ -440,7 +486,10 @@ function EChartsRenderer({
   );
 
   const validation = useMemo(() => validateChartConfig(config), [config]);
-  const transformedData = useMemo(() => transformChartData(datasetRows, config, allFields), [allFields, config, datasetRows]);
+  const transformedData = useMemo(
+    () => providedTransformedData ?? transformChartData(datasetRows, config, allFields),
+    [allFields, config, datasetRows, providedTransformedData]
+  );
   const optionResult = useMemo(() => {
     try {
       return {
@@ -476,6 +525,14 @@ function EChartsRenderer({
 
   if (!validation.valid) {
     return <EmptyState title={validation.title} message={validation.message} requirements={validation.requirements} />;
+  }
+
+  if (chartModuleError) {
+    return <ErrorState message={chartModuleError} />;
+  }
+
+  if (!chartModuleReady) {
+    return <EmptyState title="กำลังเตรียมกราฟ" message="กำลังโหลด renderer สำหรับกราฟชนิดนี้" requirements={[]} />;
   }
 
   if (optionResult.error || !optionResult.option) {

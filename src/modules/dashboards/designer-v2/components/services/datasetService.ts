@@ -1,4 +1,5 @@
 import { workspaceRepository } from "@infrastructure/persistence/workspace-repository/workspaceRepository";
+import { isMockMode } from "@infrastructure/http/client";
 import { demoDataFields, demoDatasources, demoRows, type DemoDatasource, type DemoDatasetRow } from "@modules/dashboards/designer-v2/components/data/demoDataset";
 import type { Aggregation, DataField, FieldType, SemanticType } from "@modules/dashboards/designer-v2/components/types";
 
@@ -67,6 +68,7 @@ function canonicalDataset(datasetId: string, snapshot?: WorkspaceLike): Workspac
 }
 
 function demoDatasource(datasetId: string): DemoDatasource | null {
+  if (!isMockMode()) return null;
   return demoDatasources.find((datasource) => datasource.id === datasetId || datasource.table === datasetId) ?? null;
 }
 
@@ -123,10 +125,12 @@ function designerField(field: WorkspaceField, dataset: WorkspaceDataset, index: 
 }
 
 export function getDatasources(snapshot?: WorkspaceLike): DesignerDatasource[] {
-  const demoSources: DesignerDatasource[] = demoDatasources.map((datasource) => ({
-    ...datasource,
-    sourceType: "demo",
-  }));
+  const demoSources: DesignerDatasource[] = isMockMode()
+    ? demoDatasources.map((datasource) => ({
+        ...datasource,
+        sourceType: "demo",
+      }))
+    : [];
   const project = activeProject(snapshot);
   const localSources: DesignerDatasource[] = (project?.datasets ?? []).map((dataset) => ({
     id: dataset.id,

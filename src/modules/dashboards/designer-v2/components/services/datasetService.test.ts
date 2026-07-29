@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createValidWorkspaceFixture } from "@domain/workspace/__fixtures__/workspaceFixtures";
 import {
   getDatasetRows,
@@ -7,6 +7,10 @@ import {
 } from "@modules/dashboards/designer-v2/components/services/datasetService";
 
 describe("dashboard designer dataset service", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
   it("adds active-project canonical datasets to the explicit demo catalog", () => {
     const workspace = createValidWorkspaceFixture();
 
@@ -65,9 +69,23 @@ describe("dashboard designer dataset service", () => {
     });
   });
 
-  it("uses demo rows only for an explicit built-in demo dataset", () => {
+  it("uses demo rows only when mock mode is explicitly enabled", async () => {
+    vi.stubEnv("VITE_USE_MOCK", "true");
+    vi.resetModules();
+    const service = await import("@modules/dashboards/designer-v2/components/services/datasetService");
     const workspace = createValidWorkspaceFixture();
 
-    expect(getDatasetRows("sales_performance", workspace).length).toBeGreaterThan(1);
+    expect(service.getDatasetRows("sales_performance", workspace).length).toBeGreaterThan(1);
+  });
+
+  it("does not expose demo datasets when mock mode is explicitly disabled", async () => {
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    vi.resetModules();
+    const service = await import("@modules/dashboards/designer-v2/components/services/datasetService");
+    const workspace = createValidWorkspaceFixture();
+
+    expect(service.getDatasources(workspace).some((datasource) => datasource.sourceType === "demo")).toBe(false);
+    expect(service.getDatasetRows("sales_performance", workspace)).toEqual([]);
+    expect(service.getDatasetSchema("sales_performance", workspace)).toMatchObject({ available: false, fields: [] });
   });
 });

@@ -3,6 +3,7 @@ import ReactGridLayout, { WidthProvider } from "react-grid-layout";
 import { useLocation, useNavigate } from "react-router-dom";
 import ChartPreview from "@modules/dashboards/designer-v2/components/components/charts/ChartPreview";
 import { chartWidgetDensity } from "./chartWidgetDensity";
+import { normalizeDashboardChartFields, toDashboardMappingSlots } from "./chartMappingAdapter";
 import { createDefaultConfig, dataFields, defaultChartSettings } from "@modules/dashboards/designer-v2/components/mockData";
 import { getDatasetRows } from "@modules/dashboards/designer-v2/components/services/datasetService";
 import { resolveChartData } from "@domain/charts/chartDataContract";
@@ -14,8 +15,9 @@ import {
   runExplicitDashboardSave,
   shouldWarnAboutUnsavedChanges,
 } from "@domain/dashboard/dashboardPersistence";
-import { buildServerShareWorkspace, createPersistentDashboardShare, importWorkspaceForServerShare } from "@modules/sharing";
+import { createPersistentDashboardShare } from "@modules/sharing";
 import { useWorkspaceSelector } from "@app/store/useWorkspaceSelector";
+import { useStore } from "@app/store/useStore";
 import useNavigationControls from "@shared/hooks/useNavigationControls";
 import {
   createSavedChartFromConfig,
@@ -42,6 +44,16 @@ import {
   upsertDashboard,
 } from "@infrastructure/persistence/project-storage/projectStorage";
 import { CANONICAL_WORKSPACE_KEY } from "@domain/workspace/workspaceSchema";
+import { isMockMode } from "@infrastructure/http/client";
+import { getCharts } from "@modules/charts/public/api";
+import {
+  archiveDashboard as archiveDashboardApi,
+  createDashboard as createDashboardApi,
+  listDashboards as listDashboardsApi,
+  loadDashboardContext,
+  saveDashboardWidgets,
+  updateDashboard as updateDashboardApi,
+} from "@modules/dashboards/public/api";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import "@modules/dashboards/current/DashboardCanvasBuilder.css";
@@ -1171,8 +1183,10 @@ function WidgetContent({
     const density = chartWidgetDensity(chartWidth, chartHeight);
     const compactChart = density === "compact" || density === "mini" || density === "micro";
     const miniChart = density === "mini" || density === "micro";
+    const dashboardChartFields = normalizeDashboardChartFields(chartData.fields);
     const dashboardChartConfig = {
       ...chartConfig,
+      mappings: toDashboardMappingSlots(chartConfig, dashboardChartFields),
       settings: {
         ...chartConfig.settings,
         general: {
@@ -1214,7 +1228,7 @@ function WidgetContent({
         <ChartPreview
           config={dashboardChartConfig}
           datasetRows={chartData.rows}
-          fields={chartData.fields}
+          fields={dashboardChartFields}
           previewMode
           deviceMode="desktop"
           zoom={canvasZoom}
@@ -1339,10 +1353,15 @@ export default function DashboardCanvasBuilder() {
   const navigate = useNavigate();
   const location = useLocation();
   const navigation = useNavigationControls();
-  const initialState = useMemo(() => loadDashboardLayout(), []);
+  const mockMode = isMockMode();
+  const storeActiveProjectId = useStore((state) => state.activeProjectId);
+  const initialState = useMemo(() => {
+    const stored = loadDashboardLayout();
+    return mockMode ? stored : { ...stored, dashboards: [], widgets: [] };
+  }, [mockMode]);
   const initialPanelState = useMemo(() => loadPanelState(), []);
   const workspaceSnapshot = useWorkspaceSelector((snapshot) => snapshot);
-  const rows = useMemo(() => getDatasetRows("sales_performance"), []);
+  const rows = useMemo(() => (mockMode ? getDatasetRows("sales_performance") : []), [mockMode]);
   const [activeProjectId, setActiveProjectId] = useState(initialState.projectId);
   const [activeProjectName, setActiveProjectName] = useState(initialState.projectName);
   const [activeDashboardId, setActiveDashboardId] = useState(initialState.dashboardId);
@@ -1355,7 +1374,7 @@ export default function DashboardCanvasBuilder() {
   const [rightPanelOpen, setRightPanelOpen] = useState(initialPanelState.rightOpen);
   const [selectedWidgetId, setSelectedWidgetId] = useState(null);
   const [previewMode, setPreviewMode] = useState(false);
-  const [savedCharts, setSavedCharts] = useState(() => readSavedCharts());
+  const [savedCharts, setSavedCharts] = useState(() => (mockMode ? readSavedCharts() : []));
   const [elementsModalOpen, setElementsModalOpen] = useState(false);
   const [suggestedElementType, setSuggestedElementType] = useState(null);
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
@@ -1383,6 +1402,7 @@ export default function DashboardCanvasBuilder() {
   const canvasSettingsRef = useRef(canvasSettings);
   const activeProjectIdRef = useRef(activeProjectId);
   const activeDashboardIdRef = useRef(activeDashboardId);
+  const dashboardRevisionRef = useRef(0);
   const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
   const focusPulseTimerRef = useRef(null);
@@ -1409,12 +1429,84 @@ export default function DashboardCanvasBuilder() {
   }, [activeProjectId]);
 
   useEffect(() => {
+    if (mockMode || !storeActiveProjectId || storeActiveProjectId === activeProjectIdRef.current) return;
+    activeProjectIdRef.current = storeActiveProjectId;
+    activeDashboardIdRef.current = null;
+    setActiveProjectId(storeActiveProjectId);
+    setActiveDashboardId(null);
+    setSelectedWidgetId(null);
+  }, [mockMode, storeActiveProjectId]);
+
+  useEffect(() => {
     activeDashboardIdRef.current = activeDashboardId;
   }, [activeDashboardId]);
 
   useEffect(() => {
     saveStatusRef.current = saveStatus;
   }, [saveStatus]);
+
+  useEffect(() => {
+    if (mockMode || !activeProjectId) return undefined;
+    let active = true;
+    setSaveStatus("loading");
+    Promise.all([
+      listDashboardsApi(activeProjectId),
+      getCharts(activeProjectId),
+    ]).then(async ([dashboardItems, chartItems]) => {
+      if (!active) return;
+      const availableDashboards = Array.isArray(dashboardItems) ? dashboardItems : [];
+      const selectedDashboard = availableDashboards.find((item) => item.id === activeDashboardIdRef.current)
+        ?? availableDashboards[0]
+        ?? null;
+      setDashboards(availableDashboards);
+      setSavedCharts(Array.isArray(chartItems) ? chartItems : []);
+      if (!selectedDashboard) {
+        setWidgets([]);
+        widgetsRef.current = [];
+        setSaveStatus("saved");
+        return;
+      }
+      const context = await loadDashboardContext(selectedDashboard.id, { projectId: activeProjectId });
+      if (!active) return;
+      const dashboard = context?.dashboard ?? context;
+      const chartsById = new Map((Array.isArray(chartItems) ? chartItems : []).map((chart) => [chart.id, chart]));
+      const nextCanvasSettings = normalizeCanvasSettings(dashboard.canvasSettingsJson ?? dashboard.canvasSettings ?? canvasSettingsRef.current);
+      const nextWidgets = sanitizeWidgets(
+        (dashboard.widgets ?? dashboard.layout ?? []).map((widget) => {
+          const chart = widget.chartId ? chartsById.get(widget.chartId) : null;
+          return {
+            ...widget,
+            w: widget.width ?? widget.w,
+            h: widget.height ?? widget.h,
+            sourceChartId: widget.chartId ?? widget.sourceChartId,
+            sourceChartConfigId: widget.chartId ?? widget.sourceChartConfigId,
+            title: chart?.title ?? chart?.name ?? widget.title,
+            config: widget.configJson ?? widget.config ?? {},
+            chartConfigSnapshot: chart?.config ?? widget.chartConfigSnapshot,
+          };
+        }),
+        nextCanvasSettings,
+      );
+      dashboardRevisionRef.current = Number(dashboard.revision || 0);
+      activeDashboardIdRef.current = dashboard.id;
+      setActiveDashboardId(dashboard.id);
+      setDashboardName(dashboard.name || "Dashboard");
+      setCanvasSettings(nextCanvasSettings);
+      canvasSettingsRef.current = nextCanvasSettings;
+      setWidgets(nextWidgets);
+      widgetsRef.current = nextWidgets;
+      setTheme(dashboard.canvasSettingsJson?.theme ?? dashboard.canvasSettings?.theme ?? "light");
+      setSaveStatus("saved");
+      setLastSavedAt(formatSavedTime(new Date(dashboard.updatedAt || Date.now())));
+    }).catch((error) => {
+      if (!active) return;
+      setSaveStatus("error");
+      setToast(error?.message || "ไม่สามารถโหลด Dashboard จากระบบได้");
+    });
+    return () => {
+      active = false;
+    };
+  }, [activeProjectId, mockMode]);
 
   useEffect(() => {
     safeSetLocalStorage(PANEL_STATE_STORAGE_KEY, JSON.stringify({
@@ -1437,6 +1529,7 @@ export default function DashboardCanvasBuilder() {
   }, [leftPanelOpen, previewMode, rightPanelOpen]);
 
   useEffect(() => {
+    if (!mockMode) return undefined;
     const refreshSavedCharts = () => setSavedCharts(readSavedCharts());
     const onStorage = (event) => {
       if (
@@ -1459,7 +1552,7 @@ export default function DashboardCanvasBuilder() {
       window.removeEventListener("focus", refreshSavedCharts);
       document.removeEventListener("visibilitychange", refreshSavedCharts);
     };
-  }, []);
+  }, [mockMode]);
 
   useEffect(() => {
     if (!chartActionMenuId) return undefined;
@@ -1788,17 +1881,52 @@ export default function DashboardCanvasBuilder() {
     [dashboardName, theme]
   );
 
-  const persistLayout = useCallback((nextPayload) => {
+  const persistLayout = useCallback(async (nextPayload) => {
     const payload = prepareDashboardForPersistence(nextPayload ?? buildLayoutPayload());
-    const savedDashboard = upsertDashboard(payload.projectId, payload);
-    if (!savedDashboard) throw new Error("Unable to save dashboard");
-    safeSetLocalStorage(LAYOUT_STORAGE_KEY, JSON.stringify(compactDashboardLayoutForStorage(payload)), { removeOnFail: false });
-    const storageMessage = consumeStorageRecoveryMessage();
-    if (storageMessage) setToast(storageMessage);
-    setDashboards(getDashboards(payload.projectId));
-    setSaveStatus("saved");
-    setLastSavedAt(formatSavedTime());
-  }, [buildLayoutPayload]);
+    if (mockMode) {
+      const savedDashboard = upsertDashboard(payload.projectId, payload);
+      if (!savedDashboard) throw new Error("Unable to save dashboard");
+      safeSetLocalStorage(LAYOUT_STORAGE_KEY, JSON.stringify(compactDashboardLayoutForStorage(payload)), { removeOnFail: false });
+      const storageMessage = consumeStorageRecoveryMessage();
+      if (storageMessage) setToast(storageMessage);
+      setDashboards(getDashboards(payload.projectId));
+      setSaveStatus("saved");
+      setLastSavedAt(formatSavedTime());
+      return savedDashboard;
+    }
+    try {
+      setSaveStatus("saving");
+      const updatedDashboard = await updateDashboardApi(payload.dashboardId, {
+        revision: dashboardRevisionRef.current,
+        name: payload.dashboardName,
+        canvasSettings: { ...payload.canvasSettings, theme: payload.theme },
+      });
+      const savedDashboard = await saveDashboardWidgets(payload.dashboardId, {
+        revision: updatedDashboard.revision,
+        widgets: payload.widgets.map((widget) => ({
+          id: widget.id,
+          chartId: savedChartIdFromWidget(widget),
+          type: widget.type,
+          x: widget.x,
+          y: widget.y,
+          width: widget.w ?? widget.width,
+          height: widget.h ?? widget.height,
+          zIndex: widget.zIndex,
+          config: widget.config,
+        })),
+      });
+      dashboardRevisionRef.current = Number(savedDashboard.revision || updatedDashboard.revision + 1);
+      setSaveStatus("saved");
+      setLastSavedAt(formatSavedTime());
+      return savedDashboard;
+    } catch (error) {
+      setSaveStatus("error");
+      setToast(error?.status === 409
+        ? "Dashboard ถูกแก้ไขจากอีกหน้าต่าง กรุณาโหลดข้อมูลล่าสุดก่อนบันทึกอีกครั้ง"
+        : (error?.message || "ไม่สามารถบันทึก Dashboard ได้"));
+      throw error;
+    }
+  }, [buildLayoutPayload, mockMode]);
 
   const chartDesignerUrl = useCallback((params = {}) => {
     const search = new URLSearchParams({
@@ -1847,43 +1975,103 @@ export default function DashboardCanvasBuilder() {
     if (message) setToast(message);
   }, [autosave]);
 
-  const loadActiveDashboardState = useCallback((message) => {
-    const nextState = loadDashboardLayout();
-    applyDashboardState(nextState, message);
-  }, [applyDashboardState]);
+  const loadActiveDashboardState = useCallback(async (message, dashboardId = activeDashboardIdRef.current) => {
+    if (mockMode) {
+      const nextState = loadDashboardLayout();
+      applyDashboardState(nextState, message);
+      return;
+    }
+    const [context, dashboardItems, chartItems] = await Promise.all([
+      loadDashboardContext(dashboardId, { projectId: activeProjectIdRef.current }),
+      listDashboardsApi(activeProjectIdRef.current),
+      getCharts(activeProjectIdRef.current),
+    ]);
+    const dashboard = context?.dashboard ?? context;
+    const nextCanvasSettings = normalizeCanvasSettings(dashboard.canvasSettingsJson ?? dashboard.canvasSettings ?? canvasSettingsRef.current);
+    const chartsById = new Map((chartItems ?? []).map((chart) => [chart.id, chart]));
+    const nextWidgets = sanitizeWidgets((dashboard.widgets ?? dashboard.layout ?? []).map((widget) => {
+      const chart = widget.chartId ? chartsById.get(widget.chartId) : null;
+      return {
+        ...widget,
+        w: widget.width ?? widget.w,
+        h: widget.height ?? widget.h,
+        sourceChartId: widget.chartId ?? widget.sourceChartId,
+        title: chart?.title ?? chart?.name ?? widget.title,
+        config: widget.configJson ?? widget.config ?? {},
+        chartConfigSnapshot: chart?.config ?? widget.chartConfigSnapshot,
+      };
+    }), nextCanvasSettings);
+    dashboardRevisionRef.current = Number(dashboard.revision || 0);
+    activeDashboardIdRef.current = dashboard.id;
+    setActiveDashboardId(dashboard.id);
+    setDashboards(dashboardItems ?? []);
+    setDashboardName(dashboard.name || "Dashboard");
+    setCanvasSettings(nextCanvasSettings);
+    canvasSettingsRef.current = nextCanvasSettings;
+    setWidgets(nextWidgets);
+    widgetsRef.current = nextWidgets;
+    setSavedCharts(chartItems ?? []);
+    setSaveStatus("saved");
+    setLastSavedAt(formatSavedTime(new Date(dashboard.updatedAt || Date.now())));
+    if (message) setToast(message);
+  }, [applyDashboardState, mockMode]);
 
-  const switchDashboard = useCallback((dashboardId) => {
+  const switchDashboard = useCallback(async (dashboardId) => {
     if (!dashboardId || dashboardId === activeDashboardIdRef.current) return;
-    persistLayout();
-    setStoredActiveDashboard(dashboardId);
-    loadActiveDashboardState("\u0e40\u0e1b\u0e25\u0e35\u0e48\u0e22\u0e19 Dashboard \u0e41\u0e25\u0e49\u0e27");
-  }, [loadActiveDashboardState, persistLayout]);
+    await persistLayout();
+    activeDashboardIdRef.current = dashboardId;
+    if (mockMode) setStoredActiveDashboard(dashboardId);
+    await loadActiveDashboardState("\u0e40\u0e1b\u0e25\u0e35\u0e48\u0e22\u0e19 Dashboard \u0e41\u0e25\u0e49\u0e27", dashboardId);
+  }, [loadActiveDashboardState, mockMode, persistLayout]);
 
-  const createNewDashboard = useCallback(() => {
-    persistLayout();
-    const dashboard = createStoredDashboard(activeProjectIdRef.current, "แดชบอร์ดใหม่");
-    setStoredActiveDashboard(dashboard.id);
-    loadActiveDashboardState("\u0e2a\u0e23\u0e49\u0e32\u0e07 Dashboard \u0e43\u0e2b\u0e21\u0e48\u0e41\u0e25\u0e49\u0e27");
-  }, [loadActiveDashboardState, persistLayout]);
+  const createNewDashboard = useCallback(async () => {
+    await persistLayout();
+    const dashboard = mockMode
+      ? createStoredDashboard(activeProjectIdRef.current, "แดชบอร์ดใหม่")
+      : await createDashboardApi({ projectId: activeProjectIdRef.current, name: "แดชบอร์ดใหม่" });
+    activeDashboardIdRef.current = dashboard.id;
+    if (mockMode) setStoredActiveDashboard(dashboard.id);
+    await loadActiveDashboardState("\u0e2a\u0e23\u0e49\u0e32\u0e07 Dashboard \u0e43\u0e2b\u0e21\u0e48\u0e41\u0e25\u0e49\u0e27", dashboard.id);
+  }, [loadActiveDashboardState, mockMode, persistLayout]);
 
-  const renameCurrentDashboard = useCallback(() => {
+  const renameCurrentDashboard = useCallback(async () => {
     setToast("เปิดหน้าต่างเปลี่ยนชื่อ Dashboard");
     const nextName = window.prompt("\u0e0a\u0e37\u0e48\u0e2d Dashboard", dashboardName);
     if (!nextName || !nextName.trim()) return;
-    renameStoredDashboard(activeProjectIdRef.current, activeDashboardIdRef.current, nextName.trim());
-    loadActiveDashboardState("\u0e40\u0e1b\u0e25\u0e35\u0e48\u0e22\u0e19\u0e0a\u0e37\u0e48\u0e2d Dashboard \u0e41\u0e25\u0e49\u0e27");
-  }, [dashboardName, loadActiveDashboardState]);
+    if (mockMode) {
+      renameStoredDashboard(activeProjectIdRef.current, activeDashboardIdRef.current, nextName.trim());
+      await loadActiveDashboardState("\u0e40\u0e1b\u0e25\u0e35\u0e48\u0e22\u0e19\u0e0a\u0e37\u0e48\u0e2d Dashboard \u0e41\u0e25\u0e49\u0e27");
+      return;
+    }
+    const updated = await updateDashboardApi(activeDashboardIdRef.current, {
+      revision: dashboardRevisionRef.current,
+      name: nextName.trim(),
+    });
+    dashboardRevisionRef.current = Number(updated.revision);
+    setDashboardName(updated.name);
+    setDashboards((current) => current.map((item) => item.id === updated.id ? updated : item));
+    setToast("\u0e40\u0e1b\u0e25\u0e35\u0e48\u0e22\u0e19\u0e0a\u0e37\u0e48\u0e2d Dashboard \u0e41\u0e25\u0e49\u0e27");
+  }, [dashboardName, loadActiveDashboardState, mockMode]);
 
-  const deleteCurrentDashboard = useCallback(() => {
+  const deleteCurrentDashboard = useCallback(async () => {
     if (dashboards.length <= 1) {
       setToast("\u0e15\u0e49\u0e2d\u0e07\u0e21\u0e35 Dashboard \u0e2d\u0e22\u0e48\u0e32\u0e07\u0e19\u0e49\u0e2d\u0e22 1 \u0e23\u0e32\u0e22\u0e01\u0e32\u0e23");
       return;
     }
     const confirmed = window.confirm(`\u0e25\u0e1a Dashboard "${dashboardName}" \u0e2b\u0e23\u0e37\u0e2d\u0e44\u0e21\u0e48`);
     if (!confirmed) return;
-    deleteStoredDashboard(activeProjectIdRef.current, activeDashboardIdRef.current);
-    loadActiveDashboardState("\u0e25\u0e1a Dashboard \u0e41\u0e25\u0e49\u0e27");
-  }, [dashboardName, dashboards.length, loadActiveDashboardState]);
+    if (mockMode) {
+      deleteStoredDashboard(activeProjectIdRef.current, activeDashboardIdRef.current);
+      await loadActiveDashboardState("\u0e25\u0e1a Dashboard \u0e41\u0e25\u0e49\u0e27");
+      return;
+    }
+    await archiveDashboardApi(activeDashboardIdRef.current, dashboardRevisionRef.current);
+    const remaining = dashboards.filter((item) => item.id !== activeDashboardIdRef.current);
+    if (remaining[0]) {
+      activeDashboardIdRef.current = remaining[0].id;
+      await loadActiveDashboardState("\u0e25\u0e1a Dashboard \u0e41\u0e25\u0e49\u0e27", remaining[0].id);
+    }
+  }, [dashboardName, dashboards, loadActiveDashboardState, mockMode]);
 
   useEffect(() => {
     autosave.setSave(persistLayout);
@@ -2509,24 +2697,9 @@ export default function DashboardCanvasBuilder() {
     setServerShare({ status: "creating", token: "", dashboardId: "", error: "" });
     try {
       await autosave.flush(buildLayoutPayload());
-      const chartDataById = Object.fromEntries(savedCharts.map((chart) => {
-        const data = resolveChartData(workspaceSnapshot, chart, {
-          demoResolver: (datasetId) => ({ rows: getDatasetRows(datasetId, workspaceSnapshot), fields: dataFields }),
-        });
-        return [chart.id, data.status === "ready" ? {
-          sourceType: "snapshot",
-          datasetId: null,
-          fields: data.fields,
-          rows: data.rows,
-        } : null];
-      }).filter(([, data]) => data));
-      const imported = await importWorkspaceForServerShare(
-        buildServerShareWorkspace(workspaceSnapshot, activeProjectIdRef.current, buildLayoutPayload(), chartDataById)
-      );
-      const serverDashboardId = imported?.mapping?.dashboards?.[activeDashboardId] || activeDashboardId;
-      const share = await createPersistentDashboardShare(serverDashboardId);
+      const share = await createPersistentDashboardShare(activeDashboardId);
       if (!share?.token) throw new Error("Share API returned no token");
-      setServerShare({ status: "ready", token: share.token, dashboardId: serverDashboardId, error: "" });
+      setServerShare({ status: "ready", token: share.token, dashboardId: activeDashboardId, error: "" });
       setShareOpen(true);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to create server share";
@@ -2534,7 +2707,7 @@ export default function DashboardCanvasBuilder() {
       setShareOpen(true);
       setToast("ไม่สามารถสร้างลิงก์แชร์จากเซิร์ฟเวอร์ได้");
     }
-  }, [activeDashboardId, autosave, buildLayoutPayload, savedCharts, workspaceSnapshot]);
+  }, [activeDashboardId, autosave, buildLayoutPayload]);
 
   const copyShareLink = useCallback(async () => {
     const copied = await copyText(shareLink);
@@ -2896,7 +3069,10 @@ export default function DashboardCanvasBuilder() {
         return;
       }
       if (detail.command === "save") {
-        saveDashboard();
+        // Let navigation paint first. The callback remains valid after this
+        // component unmounts, while avoiding a synchronous layout snapshot in
+        // the route-click event.
+        queueMicrotask(saveDashboard);
         return;
       }
       if (detail.command === "preview") {
@@ -3853,7 +4029,6 @@ export default function DashboardCanvasBuilder() {
         <span>Grid: {canvasSettings.showGrid ? "On" : "Off"}</span>
         <span>Snap: {canvasSettings.snapToGrid ? "On" : "Off"}</span>
         <span>{statusText}</span>
-        <span>โหมดเดโม</span>
       </footer>
 
       {elementsModalOpen ? (

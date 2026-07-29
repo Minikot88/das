@@ -1,0 +1,54 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const apiRequest = vi.fn();
+const mockMode = vi.fn(() => false);
+const getState = vi.fn(() => ({ activeProjectId: "project-1" }));
+
+vi.mock("@infrastructure/http/client", () => ({
+  apiRequest,
+  encodeApiPathSegment: encodeURIComponent,
+  isMockMode: mockMode,
+}));
+vi.mock("@app/store/useStore", () => ({ useStore: { getState } }));
+vi.mock("@infrastructure/mock/mockData", () => ({ mockDataset: { id: "mock", fields: [], rows: [] } }));
+
+describe("datasetApi production repository", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockMode.mockReturnValue(false);
+  });
+
+  it("loads list, detail, fields and preview through /api/v1 without fallback", async () => {
+    apiRequest
+      .mockResolvedValueOnce({ items: [{ id: "dataset-1" }], total: 1 })
+      .mockResolvedValueOnce({ id: "dataset-1", name: "Sales" })
+      .mockResolvedValueOnce([{ fieldKey: "amount", name: "Amount", dataType: "number" }])
+      .mockResolvedValueOnce({ rows: [{ amount: 10 }], total: 1 });
+    const { loadDefaultProjectDataset } = await import("./datasetApi");
+    const dataset = await loadDefaultProjectDataset();
+    expect(dataset.rows).toEqual([{ amount: 10 }]);
+    expect(dataset.fields[0]).toMatchObject({ name: "amount", type: "number" });
+    expect(apiRequest.mock.calls.map(([url]) => url)).toEqual([
+      "/api/v1/datasets?projectId=project-1&page=1&pageSize=1",
+      "/api/v1/datasets/dataset-1",
+      "/api/v1/datasets/dataset-1/fields",
+      "/api/v1/datasets/dataset-1/query",
+    ]);
+  });
+
+  it("propagates API failures and never replaces them with demo data", async () => {
+    apiRequest.mockRejectedValueOnce(new Error("backend unavailable"));
+    const { listDatasets } = await import("./datasetApi");
+    await expect(listDatasets()).rejects.toThrow("backend unavailable");
+  });
+
+  it("sends the loaded revision when archiving a dataset", async () => {
+    apiRequest.mockResolvedValue({ success: true });
+    const { archiveDataset } = await import("./datasetApi");
+    await archiveDataset("dataset-1", 3);
+    expect(apiRequest).toHaveBeenCalledWith("/api/v1/datasets/dataset-1", {
+      method: "DELETE",
+      body: JSON.stringify({ revision: 3 }),
+    });
+  });
+});

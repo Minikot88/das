@@ -55,7 +55,7 @@ function BottomStatus({
       }}
     >
       <Typography variant="caption" color="text.secondary" noWrap sx={{ display: { xs: "block", sm: "none" } }}>
-        Demo Mode · {filteredRowCount.toLocaleString("th-TH")} rows · Local
+        {sourceLabel} · {filteredRowCount.toLocaleString("th-TH")} rows
       </Typography>
 
       <Stack direction="row" spacing={1} alignItems="center" minWidth={0} sx={{ display: { xs: "none", sm: "flex" } }}>
@@ -118,7 +118,7 @@ function BottomStatus({
               fontWeight: 400,
             }}
           >
-            Demo Mode
+            {sourceLabel}
           </Box>
         </Tooltip>
       </Stack>

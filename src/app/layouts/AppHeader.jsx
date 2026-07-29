@@ -13,6 +13,22 @@ import {
 import { createBuilderContextForDashboard } from "@modules/dashboards/lib/dashboardWorkspace";
 import { getStorageHealth, subscribeStorageHealth } from "@infrastructure/persistence/workspace-ui/storage";
 import { logout as logoutApi } from "@modules/auth/api/authApi";
+import {
+  API_ACTIVE_PROJECT_KEY,
+  getProjects as getApiProjects,
+  resolveApiActiveProject,
+} from "@modules/projects/api/projectApi";
+import { isMockMode } from "@infrastructure/http/client";
+
+const preloadedRoutes = new Set();
+
+function preloadNavigationRoute(route) {
+  if (!route) return;
+  const pathname = new URL(route, window.location.origin).pathname;
+  if (preloadedRoutes.has(pathname)) return;
+  preloadedRoutes.add(pathname);
+  window.dispatchEvent(new CustomEvent("mini-bi:preload-route", { detail: { pathname } }));
+}
 
 const RIBBON_TABS = [
   { id: "home", label: "หน้าหลัก", routes: ["/", "/home"] },
@@ -508,8 +524,15 @@ export default function AppHeader() {
   const activeProjectId = useStore((s) => s.activeProjectId);
   const activeSheetId = useStore((s) => s.activeSheetId);
   const activeDashboardId = useStore((s) => s.activeDashboardId);
+  const [apiProjects, setApiProjects] = useState([]);
+  const availableProjects = isMockMode() ? projects : apiProjects;
   const setActiveProject = useCallback((projectId) => {
-    setStoredActiveProject(projectId);
+    if (isMockMode()) {
+      setStoredActiveProject(projectId);
+    } else {
+      window.localStorage.setItem(API_ACTIVE_PROJECT_KEY, projectId);
+    }
+    useStore.setState({ activeProjectId: projectId });
   }, []);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [datasetExplorerOpen, setDatasetExplorerOpen] = useState(false);
@@ -529,9 +552,46 @@ export default function AppHeader() {
   const currentPage = getCurrentPageMeta(location.pathname);
   const showRibbon = true;
 
+  useEffect(() => {
+    if (isMockMode()) return undefined;
+    let active = true;
+    getApiProjects()
+      .then((items) => {
+        if (!active) return;
+        const nextProjects = Array.isArray(items) ? items : [];
+        setApiProjects(nextProjects);
+        const preferredProjectId = window.localStorage.getItem(API_ACTIVE_PROJECT_KEY);
+        const selectedProject = resolveApiActiveProject(
+          nextProjects,
+          preferredProjectId,
+          useStore.getState().activeProjectId,
+        );
+        if (selectedProject && selectedProject.id !== useStore.getState().activeProjectId) {
+          setActiveProject(selectedProject.id);
+        }
+      })
+      .catch(() => {
+        if (active) setApiProjects([]);
+      });
+    return () => { active = false; };
+  }, [setActiveProject]);
+
+  useEffect(() => {
+    if (isMockMode() || apiProjects.length === 0) return;
+    const preferredProjectId = window.localStorage.getItem(API_ACTIVE_PROJECT_KEY);
+    const preferredProject = apiProjects.find((project) => project.id === preferredProjectId);
+    if (preferredProject && preferredProject.id !== activeProjectId) {
+      setActiveProject(preferredProject.id);
+    }
+  }, [activeProjectId, apiProjects, setActiveProject]);
+
   const activeProject = useMemo(
-    () => projects.find((project) => project.id === activeProjectId) ?? projects[0] ?? null,
-    [projects, activeProjectId]
+    () => {
+      const project = availableProjects.find((item) => item.id === activeProjectId) ?? availableProjects[0] ?? null;
+      const cached = projects.find((item) => item.id === project?.id);
+      return cached ?? (project ? { ...project, sheets: [] } : null);
+    },
+    [activeProjectId, availableProjects, projects]
   );
 
   const activeSheet = useMemo(
@@ -803,6 +863,23 @@ export default function AppHeader() {
   useEffect(() => subscribeStorageHealth(setStorageHealth), []);
 
   useEffect(() => {
+    const likelyNextRoute = location.pathname === "/dashboard"
+      ? "/dashboard-v2"
+      : location.pathname === "/dashboard-v2"
+        ? "/dashboard"
+        : null;
+    if (!likelyNextRoute) return undefined;
+
+    const preload = () => preloadNavigationRoute(likelyNextRoute);
+    if (typeof window.requestIdleCallback === "function") {
+      const idleId = window.requestIdleCallback(preload, { timeout: 1200 });
+      return () => window.cancelIdleCallback(idleId);
+    }
+    const timer = window.setTimeout(preload, 600);
+    return () => window.clearTimeout(timer);
+  }, [location.pathname]);
+
+  useEffect(() => {
     setManualRibbonTab(null);
     closeNavigationOverlays();
   }, [location.pathname, closeNavigationOverlays]);
@@ -952,7 +1029,7 @@ export default function AppHeader() {
               onChange={(event) => setActiveProject(event.target.value)}
               aria-label="ตัวเลือกพื้นที่ทำงาน"
             >
-              {projects.map((project) => (
+              {availableProjects.map((project) => (
                 <option key={project.id} value={project.id}>
                   {project.name}
                 </option>
@@ -1077,6 +1154,8 @@ export default function AppHeader() {
               key={tab.id}
               type="button"
               className={`mini-bi-ribbon-tab${tab.id === activeRibbonTab ? " is-active" : ""}`}
+              onPointerEnter={() => preloadNavigationRoute(tab.route)}
+              onFocus={() => preloadNavigationRoute(tab.route)}
               onClick={() => {
                 if (tab.id === "tools") {
                   setCommandPaletteOpen(false);
@@ -1148,6 +1227,8 @@ export default function AppHeader() {
                       key={`${group.title}-${commandTitle}`}
                       type="button"
                       className={`mini-bi-ribbon-command${item.tone === "primary" ? " is-primary" : ""}`}
+                      onPointerEnter={() => preloadNavigationRoute(item.route)}
+                      onFocus={() => preloadNavigationRoute(item.route)}
                       onClick={() => handleRibbonCommand(item)}
                       disabled={!isCommandAvailable}
                       aria-disabled={!isCommandAvailable}
@@ -1193,6 +1274,8 @@ export default function AppHeader() {
                     <button
                       type="button"
                       className={isActive ? "is-active" : ""}
+                      onPointerEnter={() => preloadNavigationRoute(item.route)}
+                      onFocus={() => preloadNavigationRoute(item.route)}
                       onClick={() => {
                         if (item.route) {
                           navigateToPage(item.route);
