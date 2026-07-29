@@ -33,10 +33,24 @@ function datasetColumns(dataset) {
 }
 
 function datasetSummary(dataset) {
+  const estimatedRows = dataset?.sourceConfigJson?.estimatedRowCount;
   return {
-    rows: dataset?.rows?.length ?? dataset?.rowCount ?? 0,
-    columns: dataset?.fields?.length ?? dataset?.columnCount ?? 0,
+    rows: dataset?.rows?.length ?? dataset?.rowCount ?? estimatedRows ?? null,
+    columns: dataset?.fields?.length ?? dataset?.fieldCount ?? dataset?.columnCount ?? 0,
   };
+}
+
+function uniqueCatalogDatasets(items = []) {
+  const seen = new Set();
+  return items.filter((dataset) => {
+    const config = dataset?.sourceConfigJson;
+    const key = dataset?.sourceType === "postgres_schema" && config?.schemaName && config?.tableName
+      ? `live:${config.schemaName}.${config.tableName}`
+      : `dataset:${dataset?.id}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function createColumnStats(rows = [], fields = []) {
@@ -104,6 +118,7 @@ export default function DatasetsPage() {
   const [externalSortDirection, setExternalSortDirection] = useState("asc");
   const [externalPage, setExternalPage] = useState(1);
   const [savedExternalDatasetId, setSavedExternalDatasetId] = useState("");
+  const [savingExternalDataset, setSavingExternalDataset] = useState(false);
   const [catalogName, setCatalogName] = useState("");
 
   const reloadDatasets = useCallback(async (preferredId = "") => {
@@ -115,7 +130,7 @@ export default function DatasetsPage() {
     try {
       const response = await listDatasets({ projectId: activeProjectId });
       const items = Array.isArray(response?.items) ? response.items : [];
-      setDatasets(items);
+      setDatasets(uniqueCatalogDatasets(items));
       setSelectedDatasetId((current) => {
         const candidate = preferredId || current;
         return items.some((item) => item.id === candidate) ? candidate : (items[0]?.id ?? "");
@@ -191,6 +206,8 @@ export default function DatasetsPage() {
   useEffect(() => { if (!externalSchema || !externalTable || !selectedExternalFields.length) return; previewExternalSource({ projectId: activeProjectId, schemaName: externalSchema, tableName: externalTable, select: selectedExternalFields, filters: externalFilterValue ? [{ field: externalFilterField, operator: "contains", value: externalFilterValue }] : [], sort: externalSortField ? { field: externalSortField, direction: externalSortDirection } : undefined, page: externalPage, pageSize: 50 }).then(result => setExternalPreview(result?.rows ?? [])).catch(error => setImportError(error.message)); }, [activeProjectId, externalFilterField, externalFilterValue, externalPage, externalSchema, externalSortDirection, externalSortField, externalTable, selectedExternalFields]);
 
   async function saveExternalDataset() {
+    if (savingExternalDataset || !externalTable) return;
+    setSavingExternalDataset(true);
     try {
       const dataset = await createExternalDataset({
         projectId: activeProjectId,
@@ -205,6 +222,8 @@ export default function DatasetsPage() {
       await reloadDatasets(dataset?.id ?? "");
     } catch (error) {
       setImportError(error.message);
+    } finally {
+      setSavingExternalDataset(false);
     }
   }
 
@@ -366,7 +385,7 @@ export default function DatasetsPage() {
               >
                 <strong>{dataset.name}</strong>
                 <span>{dataset.source || "ชุดข้อมูลจากระบบ"}</span>
-                <small>{summary.rows} แถว / {summary.columns} คอลัมน์</small>
+                <small>{summary.rows == null || summary.rows < 0 ? "ไม่ทราบจำนวนแถว" : `${summary.rows} แถว`} / {summary.columns} คอลัมน์</small>
               </button>
             );
           })}
@@ -422,7 +441,7 @@ export default function DatasetsPage() {
               </div>
               <div className="datasets-source-browser__actions">
                 <span className="datasets-source-browser__readonly" title="External source rows can be previewed and exported, but cannot be changed here.">Read only</span>
-                <button type="button" className="dashboard-toolbar-btn is-primary" disabled={!externalTable} onClick={saveExternalDataset}>Create live dataset</button>
+                <button type="button" className="dashboard-toolbar-btn is-primary" disabled={!externalTable || savingExternalDataset} onClick={saveExternalDataset}>{savingExternalDataset ? "กำลังบันทึก…" : "Create live dataset"}</button>
                 {savedExternalDatasetId ? <button type="button" className="dashboard-toolbar-btn" onClick={() => navigate(`/dashboard-v2?projectId=${encodeURIComponent(activeProjectId)}&datasetId=${encodeURIComponent(savedExternalDatasetId)}`)}>Create chart</button> : null}
               </div>
             </header>

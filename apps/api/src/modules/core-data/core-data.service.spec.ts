@@ -46,6 +46,19 @@ describe('CoreDataService dataset query validation', () => {
     expect(external.run).toHaveBeenCalledWith(expect.objectContaining({ schemaName: 'scopus', tableName: 'sc_articles' }));
   });
 
+  it('returns an existing live dataset instead of duplicating its schema table definition', async () => {
+    const existing = { id: 'dataset-existing', sourceConfigJson: { schemaName: 'scopus', tableName: 'sc_articles' } };
+    const prisma = {
+      biProjectMember: { findMany: vi.fn().mockResolvedValue([]) },
+      biProject: { findFirst: vi.fn().mockResolvedValue({ id: 'project-1', organizationId: 'org-default', ownerUserId: 'user-development' }) },
+      dataset: { findMany: vi.fn().mockResolvedValue([existing]) },
+    };
+    const external = { columns: vi.fn(), tables: vi.fn() };
+    const instance = new CoreDataService(prisma as never, { assertProjectPermission: vi.fn().mockResolvedValue(undefined) } as never, external as never);
+    await expect(instance.createExternalDataset(principal, { projectId: 'project-1', schemaName: 'scopus', tableName: 'sc_articles' })).resolves.toBe(existing);
+    expect(external.columns).not.toHaveBeenCalled();
+  });
+
   it('rejects a viewer attempting to create a dashboard', async () => {
     const prisma = {} as never;
     const authorization = { assertProjectPermission: vi.fn().mockRejectedValue({ status: 403, code: 'FORBIDDEN' }) };

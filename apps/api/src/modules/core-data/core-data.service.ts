@@ -157,12 +157,18 @@ export class CoreDataService {
   async previewExternal(principal: RequestPrincipal, input: JsonObject) { await this.project(principal, String(input.projectId || '')); return this.external.preview(input); }
   async createExternalDataset(principal: RequestPrincipal, input: JsonObject) {
     const projectId = String(input.projectId || ''); await this.project(principal, projectId, 'write');
-    const schemaName = String(input.schemaName || ''); const tableName = String(input.tableName || ''); const columns = await this.external.columns(schemaName, tableName);
+    const schemaName = String(input.schemaName || ''); const tableName = String(input.tableName || '');
+    const existing = await this.prisma.dataset.findMany({ where: { organizationId: principal.organizationId, projectId, sourceType: 'postgres_schema', deletedAt: null, sourceConfigJson: { path: ['schemaName'], equals: schemaName } }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] });
+    const matching = existing.find((dataset: { sourceConfigJson?: unknown }) => (dataset.sourceConfigJson as JsonObject | null)?.tableName === tableName);
+    if (matching) return matching;
+    const columns = await this.external.columns(schemaName, tableName);
     const selected = Array.isArray(input.selectedFields) && input.selectedFields.length ? input.selectedFields.map(String) : columns.items.map((column: { name: string }) => column.name);
     const allowed = new Set(columns.items.map((column: { name: string }) => column.name)); if (selected.some(field => !allowed.has(field))) throw new ApiError(400, 'INVALID_COLUMN', 'Selected field is not allowed.');
-    const id = `dataset-${randomUUID()}`; const config = { sourceMode: 'live', connectionId: 'application-postgres', schemaName, tableName, select: selected, filters: Array.isArray(input.filters) ? input.filters : [], groupBy: Array.isArray(input.groupBy) ? input.groupBy : [], aggregates: Array.isArray(input.aggregates) ? input.aggregates : [], sort: input.sort || null };
+    const tables = await this.external.tables(schemaName); const tableMetadata = tables.items.find((item: { name: string }) => item.name === tableName);
+    const rowCountEstimate = Number(tableMetadata?.rowCountEstimate);
+    const id = `dataset-${randomUUID()}`; const config = { sourceMode: 'live', connectionId: 'application-postgres', schemaName, tableName, estimatedRowCount: Number.isFinite(rowCountEstimate) && rowCountEstimate >= 0 ? rowCountEstimate : null, select: selected, filters: Array.isArray(input.filters) ? input.filters : [], groupBy: Array.isArray(input.groupBy) ? input.groupBy : [], aggregates: Array.isArray(input.aggregates) ? input.aggregates : [], sort: input.sort || null };
     return this.prisma.$transaction(async tx => {
-      const dataset = await tx.dataset.create({ data: { id, organizationId: principal.organizationId, projectId, name: String(input.name || tableName).slice(0, 180), sourceType: 'postgres_schema', sourceConfigJson: config, status: 'ready', fieldCount: selected.length, revision: 1 } });
+      const dataset = await tx.dataset.create({ data: { id, organizationId: principal.organizationId, projectId, name: String(input.name || tableName).slice(0, 180), sourceType: 'postgres_schema', sourceConfigJson: config, status: 'ready', rowCount: Number.isFinite(rowCountEstimate) && rowCountEstimate >= 0 ? Math.min(Math.trunc(rowCountEstimate), 2_147_483_647) : 0, fieldCount: selected.length, revision: 1 } });
       await tx.datasetField.createMany({ data: columns.items.filter((column: { name: string }) => selected.includes(column.name)).map((column: { name: string; dataType: string; nullable: boolean; ordinal: number }) => ({ id: `field-${randomUUID()}`, datasetId: id, fieldKey: column.name, name: column.name, label: column.name, dataType: column.dataType, nullable: column.nullable, ordinal: column.ordinal })) });
       await tx.datasetVersion.create({ data: { id: `dataset-version-${randomUUID()}`, datasetId: id, version: 1, schemaJson: config, rowCount: 0 } }); return dataset;
     });

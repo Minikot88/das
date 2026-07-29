@@ -71,6 +71,21 @@ describe("DatasetsPage project ownership", () => {
     expect(await screen.findByRole("button", { name: "Create chart" })).toBeInTheDocument();
   });
 
+  it("submits a live dataset only once when the create button is double-clicked", async () => {
+    const api = await import("@modules/datasets/api/datasetApi");
+    api.createExternalDataset.mockClear();
+    let finishCreate;
+    api.createExternalDataset.mockImplementationOnce(() => new Promise((resolve) => { finishCreate = resolve; }));
+    render(<MemoryRouter><DatasetsPage /></MemoryRouter>);
+    const button = await screen.findByRole("button", { name: "Create live dataset" });
+    await waitFor(() => expect(button).toBeEnabled());
+    fireEvent.click(button);
+    fireEvent.click(button);
+    expect(api.createExternalDataset).toHaveBeenCalledTimes(1);
+    finishCreate({ id: "dataset-scopus" });
+    await screen.findByRole("button", { name: "Create chart" });
+  });
+
   it("lists every table in each allowed schema and selects one for live preview", async () => {
     render(<MemoryRouter><DatasetsPage /></MemoryRouter>);
     expect(await screen.findByRole("tree", { name: "External schema tables" })).toBeInTheDocument();
