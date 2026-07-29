@@ -33,7 +33,7 @@ jobs:
       - run: npm --prefix apps/api run prisma:generate
       - run: npm --prefix apps/api run prisma:migrate
       - run: npm --prefix apps/api run prisma:seed
-      - run: npm run lint && npm run typecheck && npm run test:coverage && npm run build && npm audit --audit-level=high
+      - run: npm run lint && npm run typecheck && npm run test:coverage && npm run build && npm run audit:prod
       - run: npm --prefix apps/api run lint && npm --prefix apps/api run typecheck && npm --prefix apps/api run test:coverage && npm --prefix apps/api run build && npm --prefix apps/api audit --audit-level=high
       - run: npm --prefix apps/api run test:integration
       - run: node scripts/database/validate-data-dictionary.mjs && node scripts/database/check-schema-drift.mjs

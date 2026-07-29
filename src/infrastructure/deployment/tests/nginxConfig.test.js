@@ -76,7 +76,8 @@ describe("nginx static frontend configuration", () => {
     const workflow = readFileSync(workflowPath, "utf8");
 
     expect(packageJson.scripts.check).toContain("npm audit");
-    expect(packageJson.scripts["audit:prod"]).toBe("npm audit --omit=dev");
+    expect(packageJson.scripts["audit:prod"]).toBe("node scripts/security/audit-production.mjs");
+    expect(packageJson.scripts["security:router-rsc"]).toBe("node scripts/security/check-react-router-rsc-exemption.mjs");
     expect(packageJson.scripts.check).toContain("npm run audit:prod");
     expect(workflow).toContain("npm ci");
     expect(workflow).toContain("npm run check");
