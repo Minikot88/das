@@ -83,7 +83,6 @@ function ObjectExplorer({
   sources,
   catalog,
   columns,
-  metadata,
   selectedSchema,
   selectedTable,
   search,
@@ -167,33 +166,29 @@ function ObjectExplorer({
                             </button>
                             {active && expanded.has(currentTableId) ? (
                               <div role="group">
-                                {[
-                                  ["columns", "Columns", columns.length],
-                                  ["constraints", "Constraints", metadata.constraints.length],
-                                  ["foreignKeys", "Foreign Keys", metadata.foreignKeys.length],
-                                  ["indexes", "Indexes", metadata.indexes.length],
-                                ].map(([id, label, count]) => {
-                                  const folderId = `${id}:${currentTableId}`;
-                                  return (
-                                    <React.Fragment key={id}>
-                                      <button type="button" className="db-tree-row level-5" onClick={() => onToggle(folderId)} aria-expanded={expanded.has(folderId)}>
-                                        <Toggle open={expanded.has(folderId)} /><span className="db-tree-icon">⌘</span><span>{label}</span><small>{count}</small>
-                                      </button>
-                                      {id === "columns" && expanded.has(folderId) ? columns.map((column) => (
-                                        <label className="db-tree-column level-6" key={column.name}>
-                                          <input
-                                            type="checkbox"
-                                            checked={selectedFields.includes(column.name)}
-                                            onChange={() => onToggleField(column.name)}
-                                          />
-                                          <TypeMark type={column.dataType} />
-                                          <span>{column.name}</span>
-                                          <small>{column.dataType}</small>
-                                        </label>
-                                      )) : null}
-                                    </React.Fragment>
-                                  );
-                                })}
+                                <button
+                                  type="button"
+                                  className="db-tree-row level-5"
+                                  onClick={() => onToggle(`columns:${currentTableId}`)}
+                                  aria-expanded={expanded.has(`columns:${currentTableId}`)}
+                                >
+                                  <Toggle open={expanded.has(`columns:${currentTableId}`)} />
+                                  <span className="db-tree-icon">⌘</span>
+                                  <span>Columns</span>
+                                  <small>{columns.length}</small>
+                                </button>
+                                {expanded.has(`columns:${currentTableId}`) ? columns.map((column) => (
+                                  <label className="db-tree-column level-6" key={column.name}>
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedFields.includes(column.name)}
+                                      onChange={() => onToggleField(column.name)}
+                                    />
+                                    <TypeMark type={column.dataType} />
+                                    <span>{column.name}</span>
+                                    <small>{column.dataType}</small>
+                                  </label>
+                                )) : null}
                               </div>
                             ) : null}
                           </div>
@@ -547,7 +542,6 @@ export default function DatasetsPage() {
           sources={sources}
           catalog={catalog}
           columns={columns}
-          metadata={metadata}
           selectedSchema={schemaName}
           selectedTable={tableName}
           search={explorerSearch}

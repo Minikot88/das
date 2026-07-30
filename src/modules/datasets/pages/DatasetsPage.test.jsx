@@ -1,5 +1,5 @@
 import React from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import DatasetsPage from "@modules/datasets/pages/DatasetsPage";
@@ -120,5 +120,16 @@ describe("DatasetsPage project ownership", () => {
     fireEvent.click(await screen.findByRole("tab", { name: "Indexes" }));
     expect(await screen.findByText("sc_articles_pkey")).toBeInTheDocument();
     expect(screen.getAllByRole("table")).toHaveLength(1);
+  });
+
+  it("keeps table metadata out of the object tree while retaining the columns folder", async () => {
+    render(<MemoryRouter><DatasetsPage /></MemoryRouter>);
+    await screen.findByRole("button", { name: "sc_articles" });
+    const tree = await screen.findByRole("tree", { name: "Object Explorer" });
+
+    expect(await within(tree).findByText("Columns")).toBeInTheDocument();
+    expect(within(tree).queryByText("Constraints")).not.toBeInTheDocument();
+    expect(within(tree).queryByText("Foreign Keys")).not.toBeInTheDocument();
+    expect(within(tree).queryByText("Indexes")).not.toBeInTheDocument();
   });
 });
