@@ -38,8 +38,6 @@ import { getChartDefinition } from "@modules/dashboards/designer-v2/components/u
 
 type PropertyPanelProps = {
   config: ChartConfig;
-  saveStatus: "saved" | "saving" | "unsaved";
-  lastSavedAt: string;
   onSettingsChange: <K extends keyof ChartSettings>(section: K, patch: Partial<ChartSettings[K]>) => void;
   onSave: () => void;
   onPreview: () => void;
@@ -137,8 +135,6 @@ function CompactSwitch({
 
 function PropertyPanel({
   config,
-  saveStatus,
-  lastSavedAt,
   onSettingsChange,
   onSave,
   onPreview,
@@ -242,7 +238,7 @@ function PropertyPanel({
         borderColor: "divider",
         borderRadius: 0,
         display: "grid",
-        gridTemplateRows: "auto minmax(0, 1fr) auto",
+        gridTemplateRows: "auto minmax(0, 1fr)",
         overflow: "hidden",
         minWidth: 0,
         boxShadow: "none",
@@ -785,21 +781,6 @@ function PropertyPanel({
         </Accordion>
       </Box>
 
-      <Box sx={{ height: 44, px: 1, py: 0.6, borderTop: "1px solid", borderColor: "divider", bgcolor: tokens.color.surface }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1}>
-          <Box>
-            <Typography variant="caption" color={saveStatus === "unsaved" ? "warning.main" : "success.main"} sx={{ display: "block", fontSize: 11, fontWeight: 500 }}>
-              {saveStatus === "saving" ? "Saving" : saveStatus === "unsaved" ? "Unsaved" : "Saved"}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              Auto save
-            </Typography>
-          </Box>
-          <Typography variant="caption" color="text.secondary" textAlign="right">
-            Last saved {lastSavedAt}
-          </Typography>
-        </Stack>
-      </Box>
     </Paper>
   );
 }

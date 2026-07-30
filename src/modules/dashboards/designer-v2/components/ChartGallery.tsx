@@ -153,9 +153,11 @@ function ChartGallery({ charts, selectedChartId, selectedCategory, mappings, pre
             gap: 0.5,
             alignItems: "stretch",
             minHeight: 0,
-            overflowX: "clip",
+            overflowX: "auto",
             overflowY: "visible",
             scrollbarWidth: "none",
+            overscrollBehaviorX: "contain",
+            WebkitOverflowScrolling: "touch",
             "&::-webkit-scrollbar": { display: "none" },
           }}
         >

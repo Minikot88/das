@@ -538,10 +538,16 @@ function FieldMapping({
             sx={{
               minHeight: 0,
               display: "grid",
-              gridTemplateColumns: { xs: "repeat(2, minmax(0, 1fr))", lg: "repeat(4, minmax(0, 1fr))" },
+              gridTemplateColumns: "minmax(0, 1fr)",
               gap: 0.75,
               alignItems: "stretch",
               overflow: "visible",
+              "@media (min-width: 600px)": {
+                gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+              },
+              "@media (min-width: 1400px)": {
+                gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+              },
             }}
           >
             {primarySlots.map((slot) => (

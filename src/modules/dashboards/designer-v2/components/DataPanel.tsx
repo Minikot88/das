@@ -51,6 +51,10 @@ const rowSx = {
   gap: 0.625,
   textAlign: "left",
   color: "text.primary",
+  "@media (max-width: 899px)": {
+    minHeight: 36,
+    py: 0.25,
+  },
   borderRadius: `${tokens.radius.control}px`,
   cursor: "pointer",
   "&:hover": { bgcolor: tokens.color.primarySubtle },

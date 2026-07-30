@@ -1,9 +1,8 @@
 import React, { memo } from "react";
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
-import CloudQueueRoundedIcon from "@mui/icons-material/CloudQueueRounded";
 import DatabaseRoundedIcon from "@mui/icons-material/StorageRounded";
 import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
-import { Box, Divider, Stack, Tooltip, Typography } from "@mui/material";
+import { Box, Divider, Stack, Typography } from "@mui/material";
 import { dashboardV2Tokens as tokens } from "@modules/dashboards/designer-v2/components/theme";
 import type { ChartDefinition, MappingSlot } from "@modules/dashboards/designer-v2/components/types";
 
@@ -94,33 +93,11 @@ function BottomStatus({
       <Stack direction="row" spacing={1} alignItems="center" justifyContent="flex-end" minWidth={0} sx={{ display: { xs: "none", md: "flex" } }}>
         <CheckCircleRoundedIcon color={saveStatus === "unsaved" ? "warning" : "success"} fontSize="small" />
         <Typography variant="caption" color="text.secondary" noWrap>
-          {saveStatus === "saving" ? "Saving" : saveStatus === "unsaved" ? "Unsaved" : "Auto Save"}
+          {saveStatus === "saving" ? "กำลังบันทึก" : saveStatus === "unsaved" ? "ยังไม่ได้บันทึก" : "บันทึกแล้ว"}
         </Typography>
         <Typography variant="caption" color="text.secondary" noWrap>
-          Last Saved {lastSavedAt}
+          บันทึกล่าสุด {lastSavedAt}
         </Typography>
-        <CloudQueueRoundedIcon sx={{ color: tokens.color.success }} />
-        <Typography variant="caption" color="text.secondary" noWrap>
-          Server: Local
-        </Typography>
-        <Tooltip title="โหมดเดโมใช้ข้อมูลตัวอย่างและ localStorage ยังไม่เชื่อม backend จริง">
-          <Box
-            component="span"
-            sx={{
-              px: 0.75,
-              py: 0.15,
-              border: "1px solid",
-              borderColor: tokens.color.border,
-              bgcolor: tokens.color.surface,
-              color: tokens.color.textMuted,
-              fontSize: 10,
-              lineHeight: 1.35,
-              fontWeight: 400,
-            }}
-          >
-            {sourceLabel}
-          </Box>
-        </Tooltip>
       </Stack>
     </Box>
   );

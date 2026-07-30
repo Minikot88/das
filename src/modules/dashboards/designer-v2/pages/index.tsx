@@ -292,6 +292,11 @@ function DashboardDesignerContent() {
           gridTemplateColumns: state.previewMode ? "minmax(0, 1fr)" : "280px minmax(0, 1fr) 336px",
           gap: "10px",
           p: "10px",
+          "@media (max-width: 1360px)": {
+            gridTemplateColumns: state.previewMode ? "minmax(0, 1fr)" : "240px minmax(0, 1fr) 304px",
+            gap: "8px",
+            p: "8px",
+          },
           "@media (max-width: 1120px)": {
             gridTemplateColumns: state.previewMode ? "minmax(0, 1fr)" : "220px minmax(0, 1fr) 280px",
             gap: "8px",
@@ -404,8 +409,6 @@ function DashboardDesignerContent() {
           <Suspense fallback={<Skeleton variant="rounded" height="100%" />}>
             <PropertyPanel
               config={state.config}
-              saveStatus={state.saveStatus}
-              lastSavedAt={state.lastSavedAt}
               themePresets={state.demoThemes}
               onSettingsChange={actions.updateSettings}
               onThemePresetChange={actions.applyThemePreset}
