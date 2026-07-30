@@ -29,6 +29,19 @@
 
 ไม่ควรใช้ชื่อแกนเป็นตัวแทน field และไม่ควรให้ผู้ใช้เข้าใจว่าเปลี่ยนชื่อแกนแล้วแหล่งข้อมูลเปลี่ยนตาม
 
+## ข้อกำหนดคง UX/UI เดิม
+
+งานนี้เป็นการจัดระเบียบและทำ responsive ภายในหน้าปัจจุบัน ไม่ใช่การ redesign ระบบ:
+
+- คง top navigation, chart builder layout, ลำดับงานหลัก และตำแหน่ง Preview ตามแนวทางเดิม
+- ใช้สี, typography, spacing scale, border, radius, shadow, icon และ component style ที่มีอยู่ใน DashboardMiniBi
+- ไม่สร้าง design system, theme, navigation pattern หรือ visual language ชุดใหม่
+- ไม่เปลี่ยน chart renderer, query, calculation, API, routing, state management หรือ save flow เพื่อให้หน้าตาดูดีขึ้น
+- ไม่เปลี่ยนชื่อ control ที่ผู้ใช้คุ้นเคย ยกเว้นแก้คำที่ผิดหรือทำให้เข้าใจผิด เช่น `Auto save`
+- การยุบ panel, drawer หรือการเรียง component ใหม่ตาม breakpoint ต้องใช้ component เดิมและคงผลลัพธ์เดิม
+- ไม่เพิ่ม card, summary, status, footer, preview หรือ CTA ซ้ำ
+- ถ้า responsive behavior ใดต้องแก้ business logic หรือ data flow ให้แยกขออนุมัติก่อน
+
 ## โครงสร้าง Settings ที่แนะนำ
 
 ### 1. พื้นฐาน
@@ -195,7 +208,7 @@ Y Axis · Count(id)
 ### หลักการจัดวาง
 
 - ให้ Preview เป็นพื้นที่หลัก และเปิด DATA/Settings เท่าที่จำเป็นตามขั้นตอนงาน
-- แต่ละ breakpoint ต้องเปลี่ยน composition ไม่ใช่เพียงย่อสาม panel เดิม
+- แต่ละ breakpoint ปรับการจัดวาง component เดิม ไม่ใช่ย่อสาม panel จนใช้งานไม่ได้ และไม่สร้างหน้าตาระบบใหม่
 - หน้าไม่ควรมี horizontal page scroll; panel ที่มีเนื้อหายาวต้อง scroll ภายในตัวเอง
 - หลีกเลี่ยง nested vertical scroll มากกว่าสองระดับ
 - แสดงสถานะบันทึกเพียงจุดเดียวใน global status/action bar
@@ -243,7 +256,7 @@ Y Axis · Count(id)
 ### Tablet
 
 - ใช้พื้นที่กลางเป็น Preview/Mapping และให้ DATA กับ Settings เป็น drawer ที่เปิดทีละอัน
-- มี navigation ระดับงานที่เข้าใจทันที เช่น `ข้อมูล | Mapping | Preview | ตั้งค่า`
+- ใช้ trigger/tab style เดิมเพื่อสลับ `ข้อมูล | Mapping | Preview | ตั้งค่า`; ไม่สร้าง navigation ชุดใหม่
 - Mapping ใช้ 2 คอลัมน์เมื่อกว้างพอ และเรียงแนวตั้งเมื่อข้อความเริ่มตัด
 - Save/Preview อยู่ใน sticky action bar ที่ไม่บังเนื้อหา
 - เมื่อ drawer เปิด ต้อง trap focus, ปิดด้วย Escape ได้ และคืน focus ไปยังปุ่มเดิม
@@ -251,7 +264,7 @@ Y Axis · Count(id)
 
 ### Mobile
 
-ใช้ flow แบบทีละขั้น:
+แสดงส่วนของ flow เดิมทีละส่วนใน route เดิม โดยไม่สร้าง wizard หรือ state flow ชุดใหม่:
 
 ```text
 ข้อมูล → Mapping → Preview → รูปแบบ → บันทึก
@@ -264,6 +277,7 @@ Y Axis · Count(id)
 - Preview แสดงเต็มความกว้างใน tab/step ของตัวเอง พร้อมปุ่มกลับไปแก้ Mapping
 - sticky bottom action แสดงเฉพาะ action หลัก เช่น ย้อนกลับ, Preview และบันทึก
 - ไม่มี page overflow แนวนอนที่ความกว้าง 360px; tree และตารางเลื่อนภายในพื้นที่ของตนเอง
+- เมื่อหมุนหน้าจอหรือเปิด keyboard บนมือถือ ค่า mapping และค่าที่ยังไม่ได้บันทึกต้องไม่หาย
 
 ### พฤติกรรมของ Panel และ Scroll
 
@@ -285,6 +299,16 @@ Y Axis · Count(id)
 - ไม่แสดง `Auto save` จนกว่าจะมีการบันทึกอัตโนมัติจริง
 - Validation ต้องอยู่ใกล้ slot ที่ผิด และบอกวิธีแก้ เช่น “Y Axis ต้องเป็นตัวเลข หรือเลือก Count”
 - control ที่ chart type ไม่รองรับต้องซ่อน หรือ disabled พร้อมคำอธิบายที่ตรงกับความจริง
+
+### การเลือกและสลับตาราง
+
+- DATA explorer แสดงหลาย schema และหลาย table ได้ แต่กราฟหนึ่งชิ้นใช้ active source/table เดียวจนกว่าระบบจะรองรับ join จริง
+- เมื่อ Mapping ยังว่าง การเลือก field จาก table ใหม่ให้เปลี่ยน active table และโหลด preview จาก table นั้น
+- เมื่อ Mapping มี field จาก table ปัจจุบันแล้ว การเลือก field จากอีก table ต้องไม่ผสมข้อมูลเงียบ ๆ
+- ให้ใช้ confirmation ที่ชัดเจน: “เปลี่ยนตารางและล้าง Mapping เดิม” หรือ “ยกเลิก”
+- แสดง `schema.table` ของ active source ใกล้ Mapping เพียงจุดเดียว และแสดง fully-qualified field เฉพาะเมื่อชื่อซ้ำหรือจำเป็น
+- ไม่แสดง join button, relationship editor หรือ multi-table badge จนกว่า backend/query layer รองรับจริง
+- การยุบ/เปิด panel และการเปลี่ยน viewport ต้องไม่ล้าง active table, Mapping หรือค่าที่ยังไม่ได้บันทึก
 
 ### Accessibility และความชัดเจน
 
@@ -313,6 +337,39 @@ Y Axis · Count(id)
 - DATA/Settings drawer เปิด ปิด เลื่อน และคืน focus ได้ถูกต้อง
 - สถานะ save มีจุดเดียวและตรงกับ backend behavior
 - 200% zoom ยังเข้าถึง navigation, mapping, preview และ save ได้
+- การหมุนหน้าจอ, เปิด mobile keyboard และสลับ drawer ไม่ทำให้ค่าที่ยังไม่ได้บันทึกหาย
+- active table และ Mapping ไม่เปลี่ยนจากการยุบ panel หรือเปลี่ยน breakpoint
+- visual comparison กับหน้าปัจจุบันต้องยังเห็นว่าเป็น DashboardMiniBi เดิม: สี ตัวอักษร control และลำดับงานหลักไม่เปลี่ยน
+
+## ผลตรวจ Notes รอบสอง
+
+### ครบแล้ว
+
+- การกำหนด field, aggregation, ชื่อกราฟ, คำอธิบาย และชื่อแกน X/Y
+- Auto/Custom axis title และกติกาไม่เขียนทับ custom title
+- Validation ตาม chart type และ field type
+- Responsive desktop, laptop, tablet และ mobile
+- drag, tap และ keyboard fallback
+- save status จุดเดียวและคำที่ตรงกับพฤติกรรมจริง
+- การสลับ table โดยไม่สร้าง cross-table join หลอก
+- ข้อกำหนดคง visual language และ interaction flow เดิม
+
+### ไม่ควรเพิ่มในงานนี้
+
+- design system, theme หรือ component library ใหม่
+- navigation หรือ wizard flow ใหม่
+- dynamic cross-table join
+- secondary Y axis, calculated field และ semantic layer
+- backend, API, routing, state architecture หรือ dependency ใหม่เพื่อแก้ presentation
+- summary card, metadata footer, preview หรือ status ที่ซ้ำกับของเดิม
+
+### สิ่งที่ยังต้องพิสูจน์ตอนลงมือทำ
+
+- interaction จริงของ drag/drop, tap-to-map และ keyboard
+- state preservation เมื่อ resize, rotate, เปิด drawer และเปิด mobile keyboard
+- responsive screenshot comparison ที่ viewport เดียวกันกับหน้าปัจจุบัน
+- console errors, focus order, screen reader labels และ browser zoom 200%
+- preview/save/reload ให้ผลตรงกันกับ PostgreSQL/API จริง
 
 ## Acceptance Criteria
 
