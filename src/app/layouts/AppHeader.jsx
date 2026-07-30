@@ -18,6 +18,7 @@ import {
   getProjects as getApiProjects,
   resolveApiActiveProject,
 } from "@modules/projects/api/projectApi";
+import { chartDesignerRibbonItems } from "./appHeaderNavigation";
 import { isMockMode } from "@infrastructure/http/client";
 import { resolveChartDesignerNavigation } from "./appHeaderNavigation";
 
@@ -366,9 +367,7 @@ const MINI_RIBBON_GROUPS = {
     {
       title: "ข้อมูลและเทมเพลต",
       items: [
-        { label: "Templates", icon: "template", tone: "primary", action: "chart:templates" },
-        { label: "SQL", icon: "api", action: "chart:sql" },
-        { label: "Presets", icon: "settings", action: "chart:presets" },
+        ...chartDesignerRibbonItems,
       ],
     },
     {
@@ -1206,7 +1205,7 @@ export default function AppHeader() {
                   onClick={() => handleToolMenuItem(item)}
                   disabled={item.disabled}
                   aria-disabled={item.disabled || undefined}
-                  title={item.disabled ? `${item.label} ยังไม่พร้อมใช้งาน` : item.label}
+                  title={item.title ?? (item.disabled ? `${item.label} ยังไม่พร้อมใช้งาน` : item.label)}
                 >
                   <span>{item.label}</span>
                   <small>{item.description}</small>
