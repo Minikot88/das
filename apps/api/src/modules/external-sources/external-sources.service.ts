@@ -61,6 +61,47 @@ export class ExternalSourcesService {
       return { schemaName: schema, tableName: table, items: result.rows };
     } finally { await db.end(); }
   }
+  async metadata(schemaName: string, tableName: string) {
+    const schema = this.schema(schemaName); const table = await this.table(schema, tableName); const db = this.pool();
+    try {
+      const [constraints, foreignKeys, indexes] = await Promise.all([
+        db.query(`SELECT con.conname AS name,
+          CASE con.contype WHEN 'p' THEN 'PRIMARY KEY' WHEN 'u' THEN 'UNIQUE' WHEN 'c' THEN 'CHECK' WHEN 'f' THEN 'FOREIGN KEY' ELSE con.contype::text END AS type,
+          COALESCE(array_agg(att.attname ORDER BY keys.ordinality) FILTER (WHERE att.attname IS NOT NULL), ARRAY[]::text[]) AS columns,
+          pg_get_constraintdef(con.oid, true) AS definition
+          FROM pg_constraint con
+          JOIN pg_class rel ON rel.oid=con.conrelid
+          JOIN pg_namespace nsp ON nsp.oid=rel.relnamespace
+          LEFT JOIN LATERAL unnest(con.conkey) WITH ORDINALITY AS keys(attnum, ordinality) ON true
+          LEFT JOIN pg_attribute att ON att.attrelid=rel.oid AND att.attnum=keys.attnum
+          WHERE nsp.nspname=$1 AND rel.relname=$2
+          GROUP BY con.oid,con.conname,con.contype
+          ORDER BY con.conname`, [schema, table]),
+        db.query(`SELECT tc.constraint_name AS name,kcu.column_name AS "columnName",ccu.table_schema AS "referencedSchema",ccu.table_name AS "referencedTable",ccu.column_name AS "referencedColumn"
+          FROM information_schema.table_constraints tc
+          JOIN information_schema.key_column_usage kcu ON kcu.constraint_name=tc.constraint_name AND kcu.constraint_schema=tc.constraint_schema
+          JOIN information_schema.constraint_column_usage ccu ON ccu.constraint_name=tc.constraint_name AND ccu.constraint_schema=tc.constraint_schema
+          WHERE tc.constraint_type='FOREIGN KEY' AND tc.table_schema=$1 AND tc.table_name=$2
+          ORDER BY tc.constraint_name,kcu.ordinal_position`, [schema, table]),
+        db.query(`SELECT idx.relname AS name, ix.indisunique AS unique, ix.indisprimary AS primary,
+          am.amname AS method, pg_get_indexdef(ix.indexrelid) AS definition
+          FROM pg_index ix
+          JOIN pg_class rel ON rel.oid=ix.indrelid
+          JOIN pg_namespace nsp ON nsp.oid=rel.relnamespace
+          JOIN pg_class idx ON idx.oid=ix.indexrelid
+          JOIN pg_am am ON am.oid=idx.relam
+          WHERE nsp.nspname=$1 AND rel.relname=$2
+          ORDER BY idx.relname`, [schema, table]),
+      ]);
+      return {
+        schemaName: schema,
+        tableName: table,
+        constraints: constraints.rows,
+        foreignKeys: foreignKeys.rows,
+        indexes: indexes.rows,
+      };
+    } finally { await db.end(); }
+  }
   async preview(input: Input) { return this.run(input); }
   async run(input: Input) {
     const schema = this.schema(String(input.schemaName || '')); const table = await this.table(schema, String(input.tableName || ''));

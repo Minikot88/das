@@ -54,6 +54,11 @@ vi.mock("@modules/datasets/api/datasetApi", () => ({
   listExternalSources: vi.fn(async () => ({ items: [{ schemaName: "scopus", displayName: "Scopus" }] })),
   listExternalTables: vi.fn(async () => ({ items: [{ name: "sc_articles", objectType: "table", rowCountEstimate: 10, readOnly: true, capabilities: { canRead: true, canInsert: false, canUpdate: false, canDelete: false, canExport: true } }, { name: "sc_authors", objectType: "table", rowCountEstimate: -1, readOnly: true, capabilities: { canRead: true, canInsert: false, canUpdate: false, canDelete: false, canExport: true } }] })),
   listExternalColumns: vi.fn(async () => ({ items: [{ name: "id", dataType: "uuid", primaryKey: true }] })),
+  listExternalMetadata: vi.fn(async () => ({
+    constraints: [{ name: "sc_articles_pkey", type: "PRIMARY KEY", columns: ["id"], definition: "PRIMARY KEY (id)" }],
+    foreignKeys: [],
+    indexes: [{ name: "sc_articles_pkey", unique: true, primary: true, method: "btree", definition: "CREATE UNIQUE INDEX sc_articles_pkey" }],
+  })),
   previewExternalSource: vi.fn(async () => ({ rows: [{ id: "article-1" }] })),
   createExternalDataset: vi.fn(async () => ({ id: "dataset-scopus" })),
   renameDataset: vi.fn(async () => ({ id: "dataset-a", name: "Renamed catalog", revision: 2 })),
@@ -65,6 +70,8 @@ describe("DatasetsPage project ownership", () => {
   it("shows datasets returned by the active project API only", async () => {
     render(<MemoryRouter><DatasetsPage /></MemoryRouter>);
 
+    expect(await screen.findByRole("button", { name: "sc_articles" })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("button", { name: "สร้างกราฟ" })).toBeEnabled());
     expect(screen.queryByText("แคตตาล็อก")).not.toBeInTheDocument();
     expect(screen.queryByText("Project A dataset")).not.toBeInTheDocument();
     expect(screen.queryByText("Project B dataset")).not.toBeInTheDocument();
@@ -75,15 +82,11 @@ describe("DatasetsPage project ownership", () => {
 
     expect(await screen.findByLabelText("Table context")).toHaveTextContent("PostgreSQL");
     expect(screen.getByText("อ่านอย่างเดียว")).toBeInTheDocument();
-    expect(await screen.findByRole("region", { name: "PostgreSQL external source browser" })).toBeInTheDocument();
-    expect(screen.getByText("Read only")).toBeInTheDocument();
-    expect(await screen.findByText(/ไม่ทราบจำนวน rows/)).toBeInTheDocument();
+    expect(await screen.findByRole("tree", { name: "Object Explorer" })).toBeInTheDocument();
+    expect(screen.getByText("อ่านอย่างเดียว")).toBeInTheDocument();
+    expect(await screen.findByText(/ไม่ทราบจำนวนแถว/)).toBeInTheDocument();
     expect(screen.queryByText(/-1 rows/)).not.toBeInTheDocument();
-    await waitFor(() => expect(screen.getByRole("combobox", { name: "Schema" })).toHaveValue("scopus"));
-    await waitFor(() => expect(screen.getByRole("combobox", { name: "Table" })).toHaveValue("sc_articles"));
-    await waitFor(() => expect(screen.getByRole("button", { name: "Create live dataset" })).toBeEnabled());
-    fireEvent.click(screen.getByRole("button", { name: "Create live dataset" }));
-    expect(await screen.findByRole("button", { name: "Create chart" })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("button", { name: "สร้างกราฟ" })).toBeEnabled());
   });
 
   it("submits a live dataset only once when the create button is double-clicked", async () => {
@@ -92,32 +95,30 @@ describe("DatasetsPage project ownership", () => {
     let finishCreate;
     api.createExternalDataset.mockImplementationOnce(() => new Promise((resolve) => { finishCreate = resolve; }));
     render(<MemoryRouter><DatasetsPage /></MemoryRouter>);
-    const button = await screen.findByRole("button", { name: "Create live dataset" });
+    const button = await screen.findByRole("button", { name: "สร้างกราฟ" });
     await waitFor(() => expect(button).toBeEnabled());
     fireEvent.click(button);
     fireEvent.click(button);
     expect(api.createExternalDataset).toHaveBeenCalledTimes(1);
     finishCreate({ id: "dataset-scopus" });
-    await screen.findByRole("button", { name: "Create chart" });
+    await waitFor(() => expect(api.createExternalDataset).toHaveBeenCalledTimes(1));
   });
 
   it("lists every table in each allowed schema and selects one for live preview", async () => {
     render(<MemoryRouter><DatasetsPage /></MemoryRouter>);
-    expect(await screen.findByRole("tree", { name: "External schema tables" })).toBeInTheDocument();
-    expect(await screen.findByRole("button", { name: /sc_articles/ })).toBeInTheDocument();
-    const authors = await screen.findByRole("button", { name: /sc_authors/ });
+    expect(await screen.findByRole("tree", { name: "Object Explorer" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "sc_articles" })).toBeInTheDocument();
+    const authors = await screen.findByRole("button", { name: "sc_authors" });
     fireEvent.click(authors);
-    await waitFor(() => expect(screen.getByRole("combobox", { name: "Table" })).toHaveValue("sc_authors"));
-    await waitFor(() => expect(screen.getByRole("combobox", { name: "Filter column" })).toHaveValue("id"));
+    await waitFor(() => expect(screen.getByLabelText("Table context")).toHaveTextContent("scopus/sc_authors"));
+    await waitFor(() => expect(screen.getByRole("combobox", { name: "คอลัมน์สำหรับค้นหา" })).toHaveValue("id"));
     expect(screen.queryByText("External column is not allowed.")).not.toBeInTheDocument();
   });
 
-  it("renames only the selected catalog metadata through the API", async () => {
-    const api = await import("@modules/datasets/api/datasetApi");
+  it("shows API-backed structure tabs without duplicating the data preview", async () => {
     render(<MemoryRouter><DatasetsPage /></MemoryRouter>);
-    const input = await screen.findByRole("textbox", { name: "Catalog dataset name" });
-    fireEvent.change(input, { target: { value: "Renamed catalog" } });
-    fireEvent.click(screen.getByRole("button", { name: "Save name" }));
-    await waitFor(() => expect(api.renameDataset).toHaveBeenCalledWith("dataset-a", { name: "Renamed catalog", revision: 1 }));
+    fireEvent.click(await screen.findByRole("tab", { name: "Indexes" }));
+    expect(await screen.findByText("sc_articles_pkey")).toBeInTheDocument();
+    expect(screen.getAllByRole("table")).toHaveLength(1);
   });
 });

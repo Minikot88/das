@@ -1,7 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageContainer, PageHeader } from "@app/layouts/Layout";
-import EnterpriseDataTable from "@shared/components/ui/EnterpriseDataTable";
 import { useStore } from "@app/store/useStore";
 import {
   API_ACTIVE_PROJECT_KEY,
@@ -10,543 +9,698 @@ import {
 } from "@modules/projects";
 import { parseCsvTextAsync, validateCsvFile } from "@modules/datasets/lib/csvImport";
 import {
-  archiveDataset,
-  getDatasetFields,
+  createExternalDataset,
   importDatasetCsv,
-  listDatasets,
-  queryDataset,
+  listExternalColumns,
+  listExternalMetadata,
   listExternalSources,
   listExternalTables,
-  listExternalColumns,
   previewExternalSource,
-  createExternalDataset,
-  renameDataset,
 } from "@modules/datasets/api/datasetApi";
 
 const EMPTY_TABLES = [];
+const EMPTY_METADATA = { constraints: [], foreignKeys: [], indexes: [] };
+const PAGE_SIZE = 50;
+const TABS = [
+  { id: "data", label: "Data" },
+  { id: "columns", label: "Columns" },
+  { id: "constraints", label: "Constraints" },
+  { id: "foreignKeys", label: "Foreign Keys" },
+  { id: "indexes", label: "Indexes" },
+];
 
-function datasetSummary(dataset) {
-  return {
-    rows: dataset?.rows?.length ?? dataset?.rowCount ?? null,
-    columns: dataset?.fields?.length ?? dataset?.fieldCount ?? dataset?.columnCount ?? 0,
-  };
-}
-
-function datasetColumns(dataset) {
-  return (dataset?.fields ?? []).map((field) => ({
-    key: field.name,
-    label: field.label || field.name,
-  }));
-}
-
-function uniqueCatalogDatasets(items = []) {
-  const seen = new Set();
-  return items.filter((dataset) => {
-    const config = dataset?.sourceConfigJson;
-    const key = dataset?.sourceType === "postgres_schema" && config?.schemaName && config?.tableName
-      ? `live:${config.schemaName}.${config.tableName}`
-      : `dataset:${dataset?.id}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-}
-
-function formatRowEstimate(value) {
+function formatRowEstimate(value, prefix = false) {
   const count = Number(value);
-  return Number.isFinite(count) && count >= 0 ? `${count}` : "ไม่ทราบจำนวน";
+  if (!Number.isFinite(count) || count < 0) return "ไม่ทราบจำนวนแถว";
+  return `${prefix ? "ประมาณ " : ""}${count.toLocaleString("th-TH")} แถว`;
 }
 
-function createColumnStats(rows = [], fields = []) {
-  return fields.map((field) => {
-    const values = rows.map((row) => row?.[field.name]).filter((value) => value !== "" && value !== null && value !== undefined);
-    const numericValues = values.map(Number).filter(Number.isFinite);
-    const uniqueCount = new Set(values.map((value) => String(value))).size;
-    const average = numericValues.length
-      ? numericValues.reduce((sum, value) => sum + value, 0) / numericValues.length
-      : null;
-    return {
-      ...field,
-      nonEmpty: values.length,
-      uniqueCount,
-      min: numericValues.length ? Math.min(...numericValues) : null,
-      max: numericValues.length ? Math.max(...numericValues) : null,
-      average,
-    };
-  });
+function tableKey(schemaName, tableName) {
+  return `${schemaName}.${tableName}`;
 }
 
-function formatStat(value) {
-  if (value === null || value === undefined) return "-";
-  if (typeof value === "number") return Number.isInteger(value) ? String(value) : value.toFixed(2);
-  return String(value);
+function Toggle({ open }) {
+  return <span className="db-tree-toggle" aria-hidden="true">{open ? "⌄" : "›"}</span>;
 }
 
-function formatFieldType(type) {
-  const labels = {
-    string: "ข้อความ",
-    number: "ตัวเลข",
-    date: "วันที่",
-    boolean: "บูลีน",
-    category: "หมวดหมู่",
-  };
-  return labels[type] ?? type;
+function TypeMark({ type }) {
+  const value = String(type || "").toLowerCase();
+  const mark = /(int|numeric|decimal|real|double|money)/.test(value)
+    ? "123"
+    : /(date|time)/.test(value)
+      ? "▣"
+      : /(bool)/.test(value)
+        ? "◉"
+        : "A";
+  return <span className="db-type-mark" aria-hidden="true">{mark}</span>;
+}
+
+function EmptyMetadata({ children }) {
+  return <div className="db-metadata-empty">{children}</div>;
+}
+
+function MetadataTable({ columns, rows, empty }) {
+  if (!rows.length) return <EmptyMetadata>{empty}</EmptyMetadata>;
+  return (
+    <div className="db-metadata-table-wrap">
+      <table className="db-metadata-table">
+        <thead>
+          <tr>{columns.map((column) => <th key={column.key}>{column.label}</th>)}</tr>
+        </thead>
+        <tbody>
+          {rows.map((row, index) => (
+            <tr key={row.name || row.columnName || index}>
+              {columns.map((column) => <td key={column.key}>{column.render ? column.render(row) : String(row[column.key] ?? "—")}</td>)}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function ObjectExplorer({
+  sources,
+  catalog,
+  columns,
+  metadata,
+  selectedSchema,
+  selectedTable,
+  search,
+  onSearch,
+  expanded,
+  onToggle,
+  onSelectTable,
+  onToggleField,
+  selectedFields,
+  open,
+  onClose,
+}) {
+  const normalizedSearch = search.trim().toLowerCase();
+
+  return (
+    <aside className={`db-object-explorer${open ? " is-open" : ""}`}>
+      <header className="db-object-explorer__head">
+        <div>
+          <strong>Object Explorer</strong>
+          <span>PostgreSQL objects</span>
+        </div>
+        <button type="button" className="db-icon-button db-explorer-close" onClick={onClose} aria-label="ปิด Object Explorer">×</button>
+      </header>
+      <label className="db-explorer-search">
+        <span className="sr-only">ค้นหา Object Explorer</span>
+        <input
+          type="search"
+          value={search}
+          onChange={(event) => onSearch(event.target.value)}
+          placeholder="ค้นหา schema, table หรือ field"
+        />
+      </label>
+      <div className="db-tree-scroll" role="tree" aria-label="Object Explorer">
+        <button type="button" className="db-tree-row level-0" onClick={() => onToggle("connection")} aria-expanded={expanded.has("connection")}>
+          <Toggle open={expanded.has("connection")} /><span className="db-tree-icon">◉</span><strong>Application PostgreSQL</strong>
+        </button>
+        {expanded.has("connection") ? (
+          <>
+            <button type="button" className="db-tree-row level-1" onClick={() => onToggle("database")} aria-expanded={expanded.has("database")}>
+              <Toggle open={expanded.has("database")} /><span className="db-tree-icon">▱</span><strong>PostgreSQL</strong>
+            </button>
+            {expanded.has("database") ? sources.map((source) => {
+              const schemaId = `schema:${source.schemaName}`;
+              const tablesId = `tables:${source.schemaName}`;
+              const filteredTables = (catalog[source.schemaName] ?? []).filter((table) => {
+                if (!normalizedSearch) return true;
+                if (`${source.schemaName}.${table.name}`.toLowerCase().includes(normalizedSearch)) return true;
+                return source.schemaName === selectedSchema
+                  && table.name === selectedTable
+                  && columns.some((column) => `${column.name} ${column.dataType}`.toLowerCase().includes(normalizedSearch));
+              });
+              if (normalizedSearch && !filteredTables.length && !source.schemaName.toLowerCase().includes(normalizedSearch)) return null;
+              return (
+                <div key={source.schemaName} role="treeitem" aria-label={source.schemaName}>
+                  <button type="button" className="db-tree-row level-2" onClick={() => onToggle(schemaId)} aria-expanded={expanded.has(schemaId)}>
+                    <Toggle open={expanded.has(schemaId)} /><span className="db-tree-icon">◇</span><strong>{source.displayName || source.schemaName}</strong>
+                  </button>
+                  {expanded.has(schemaId) ? (
+                    <>
+                      <button type="button" className="db-tree-row level-3" onClick={() => onToggle(tablesId)} aria-expanded={expanded.has(tablesId)}>
+                        <Toggle open={expanded.has(tablesId)} /><span className="db-tree-icon">▦</span><span>Tables</span><small>{filteredTables.length}</small>
+                      </button>
+                      {expanded.has(tablesId) ? filteredTables.map((table) => {
+                        const active = source.schemaName === selectedSchema && table.name === selectedTable;
+                        const currentTableId = `table:${tableKey(source.schemaName, table.name)}`;
+                        return (
+                          <div key={table.name}>
+                            <button
+                              type="button"
+                              className={`db-tree-row level-4${active ? " is-active" : ""}`}
+                              aria-current={active ? "true" : undefined}
+                              aria-expanded={active ? expanded.has(currentTableId) : undefined}
+                              aria-label={table.name}
+                              onClick={() => {
+                                onSelectTable(source.schemaName, table.name);
+                                if (active) onToggle(currentTableId);
+                              }}
+                            >
+                              <Toggle open={active && expanded.has(currentTableId)} /><span className="db-tree-icon">▤</span><span>{table.name}</span>
+                              <small>{Number(table.rowCountEstimate) >= 0 ? Number(table.rowCountEstimate).toLocaleString("th-TH") : "ไม่ทราบจำนวนแถว"}</small>
+                            </button>
+                            {active && expanded.has(currentTableId) ? (
+                              <div role="group">
+                                {[
+                                  ["columns", "Columns", columns.length],
+                                  ["constraints", "Constraints", metadata.constraints.length],
+                                  ["foreignKeys", "Foreign Keys", metadata.foreignKeys.length],
+                                  ["indexes", "Indexes", metadata.indexes.length],
+                                ].map(([id, label, count]) => {
+                                  const folderId = `${id}:${currentTableId}`;
+                                  return (
+                                    <React.Fragment key={id}>
+                                      <button type="button" className="db-tree-row level-5" onClick={() => onToggle(folderId)} aria-expanded={expanded.has(folderId)}>
+                                        <Toggle open={expanded.has(folderId)} /><span className="db-tree-icon">⌘</span><span>{label}</span><small>{count}</small>
+                                      </button>
+                                      {id === "columns" && expanded.has(folderId) ? columns.map((column) => (
+                                        <label className="db-tree-column level-6" key={column.name}>
+                                          <input
+                                            type="checkbox"
+                                            checked={selectedFields.includes(column.name)}
+                                            onChange={() => onToggleField(column.name)}
+                                          />
+                                          <TypeMark type={column.dataType} />
+                                          <span>{column.name}</span>
+                                          <small>{column.dataType}</small>
+                                        </label>
+                                      )) : null}
+                                    </React.Fragment>
+                                  );
+                                })}
+                              </div>
+                            ) : null}
+                          </div>
+                        );
+                      }) : null}
+                    </>
+                  ) : null}
+                </div>
+              );
+            }) : null}
+          </>
+        ) : null}
+      </div>
+    </aside>
+  );
+}
+
+function DataGrid({ rows, columns, sortField, sortDirection, onSort }) {
+  return (
+    <div className="db-data-grid-wrap">
+      <table className="db-data-grid">
+        <thead>
+          <tr>
+            {columns.map((column) => (
+              <th key={column.name} aria-sort={sortField === column.name ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}>
+                <button type="button" onClick={() => onSort(column.name)}>
+                  <span>{column.name}</span>
+                  <small>{column.dataType}{column.primaryKey ? " · PK" : ""}</small>
+                </button>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.length ? rows.map((row, rowIndex) => (
+            <tr key={row.id ?? rowIndex}>
+              {columns.map((column) => {
+                const value = row?.[column.name];
+                return <td key={column.name} title={value == null ? "" : String(value)}>{value === null || value === undefined || value === "" ? "—" : String(value)}</td>;
+              })}
+            </tr>
+          )) : (
+            <tr><td colSpan={Math.max(columns.length, 1)}><div className="db-data-empty">ไม่พบข้อมูลในเงื่อนไขปัจจุบัน</div></td></tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
 export default function DatasetsPage() {
   const navigate = useNavigate();
   const storeActiveProjectId = useStore((state) => state.activeProjectId);
-  const appSettings = useStore((state) => state.appSettings);
   const [activeProjectId, setActiveProjectId] = useState(null);
-  const [datasets, setDatasets] = useState([]);
-  const [selectedDatasetId, setSelectedDatasetId] = useState("");
-  const [datasetRows, setDatasetRows] = useState([]);
-  const [datasetFields, setDatasetFields] = useState([]);
-  const [parsedCsv, setParsedCsv] = useState(null);
+  const [sources, setSources] = useState([]);
+  const [catalog, setCatalog] = useState({});
+  const [schemaName, setSchemaName] = useState("");
+  const [tableName, setTableName] = useState("");
+  const [columns, setColumns] = useState([]);
+  const [metadata, setMetadata] = useState(EMPTY_METADATA);
+  const [preview, setPreview] = useState({ rows: [], truncated: false });
+  const [selectedFields, setSelectedFields] = useState([]);
+  const [filterField, setFilterField] = useState("");
+  const [filterValue, setFilterValue] = useState("");
+  const [sortField, setSortField] = useState("");
+  const [sortDirection, setSortDirection] = useState("asc");
+  const [page, setPage] = useState(1);
+  const [activeTab, setActiveTab] = useState("data");
+  const [explorerSearch, setExplorerSearch] = useState("");
+  const [expanded, setExpanded] = useState(() => new Set(["connection", "database"]));
+  const [explorerOpen, setExplorerOpen] = useState(false);
+  const [refreshVersion, setRefreshVersion] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [creatingChart, setCreatingChart] = useState(false);
+  const creatingChartRef = useRef(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [fileName, setFileName] = useState("");
   const [datasetName, setDatasetName] = useState("");
-  const [importError, setImportError] = useState("");
-  const [externalSources, setExternalSources] = useState([]);
-  const [externalSchema, setExternalSchema] = useState("");
-  const [externalTableCatalog, setExternalTableCatalog] = useState({});
-  const [externalTableSearch, setExternalTableSearch] = useState("");
-  const [externalTable, setExternalTable] = useState("");
-  const [externalColumns, setExternalColumns] = useState([]);
-  const [externalPreview, setExternalPreview] = useState([]);
-  const [selectedExternalFields, setSelectedExternalFields] = useState([]);
-  const [externalFilterField, setExternalFilterField] = useState("");
-  const [externalFilterValue, setExternalFilterValue] = useState("");
-  const [externalSortField, setExternalSortField] = useState("");
-  const [externalSortDirection, setExternalSortDirection] = useState("asc");
-  const [externalPage, setExternalPage] = useState(1);
-  const [savedExternalDatasetId, setSavedExternalDatasetId] = useState("");
-  const [savingExternalDataset, setSavingExternalDataset] = useState(false);
-  const [catalogName, setCatalogName] = useState("");
-
-  const reloadDatasets = useCallback(async (preferredId = "") => {
-    if (!activeProjectId) {
-      return;
-    }
-
-    try {
-      const response = await listDatasets({ projectId: activeProjectId });
-      const items = Array.isArray(response?.items) ? response.items : [];
-      setDatasets(uniqueCatalogDatasets(items));
-      setSelectedDatasetId((current) => {
-        const candidate = preferredId || current;
-        return items.some((item) => item.id === candidate) ? candidate : (items[0]?.id ?? "");
-      });
-      setImportError("");
-    } catch (error) {
-      setDatasets([]);
-      setSelectedDatasetId("");
-      setImportError(error?.message || "ไม่สามารถโหลดชุดข้อมูลได้");
-    }
-  }, [activeProjectId]);
+  const [parsedCsv, setParsedCsv] = useState(null);
+  const [importingCsv, setImportingCsv] = useState(false);
 
   useEffect(() => {
     let active = true;
-
-    getProjects()
-      .then((items) => {
-        if (!active) return;
-
-        const projects = Array.isArray(items) ? items : [];
-        const selectedProject = resolveApiActiveProject(
-          projects,
-          window.localStorage.getItem(API_ACTIVE_PROJECT_KEY),
-          storeActiveProjectId,
-        );
-
-        if (!selectedProject) {
-          setActiveProjectId(null);
-          setDatasets([]);
-          setExternalSources([]);
-          return;
-        }
-
-        window.localStorage.setItem(API_ACTIVE_PROJECT_KEY, selectedProject.id);
-        useStore.setState?.({ activeProjectId: selectedProject.id });
-        setActiveProjectId(selectedProject.id);
-      })
-      .catch((error) => {
-        if (!active) return;
-        setActiveProjectId(null);
-        setDatasets([]);
-        setExternalSources([]);
-        setImportError(error?.message || "ไม่สามารถโหลดโปรเจกต์ได้");
-      });
-
-    return () => {
-      active = false;
-    };
+    getProjects().then((items) => {
+      if (!active) return;
+      const projects = Array.isArray(items) ? items : [];
+      const selected = resolveApiActiveProject(
+        projects,
+        window.localStorage.getItem(API_ACTIVE_PROJECT_KEY),
+        storeActiveProjectId,
+      );
+      if (!selected) {
+        setError("ไม่พบโปรเจกต์สำหรับเปิดข้อมูล");
+        setLoading(false);
+        return;
+      }
+      window.localStorage.setItem(API_ACTIVE_PROJECT_KEY, selected.id);
+      useStore.setState?.({ activeProjectId: selected.id });
+      setActiveProjectId(selected.id);
+    }).catch((requestError) => {
+      if (active) {
+        setError(requestError?.message || "ไม่สามารถโหลดโปรเจกต์ได้");
+        setLoading(false);
+      }
+    });
+    return () => { active = false; };
   }, [storeActiveProjectId]);
 
   useEffect(() => {
-    if (activeProjectId) {
-      void reloadDatasets();
-    }
-  }, [activeProjectId, reloadDatasets]);
-
-  useEffect(() => { if (!activeProjectId) return; listExternalSources(activeProjectId).then(result => { const items = result?.items ?? []; setExternalSources(items); setExternalSchema(items[0]?.schemaName ?? ""); }).catch(() => setExternalSources([])); }, [activeProjectId]);
-  useEffect(() => {
-    if (!activeProjectId || !externalSources.length) { setExternalTableCatalog({}); return undefined; }
+    if (!activeProjectId) return undefined;
     let active = true;
-    Promise.all(externalSources.map(async (source) => [source.schemaName, (await listExternalTables(source.schemaName, activeProjectId))?.items ?? []]))
-      .then((entries) => { if (active) setExternalTableCatalog(Object.fromEntries(entries)); })
-      .catch((error) => { if (active) setImportError(error?.message || "ไม่สามารถโหลดรายการตารางได้"); });
+    setLoading(true);
+    listExternalSources(activeProjectId)
+      .then(async (result) => {
+        const nextSources = Array.isArray(result?.items) ? result.items : [];
+        const entries = await Promise.all(nextSources.map(async (source) => [
+          source.schemaName,
+          (await listExternalTables(source.schemaName, activeProjectId))?.items ?? [],
+        ]));
+        if (!active) return;
+        setSources(nextSources);
+        setCatalog(Object.fromEntries(entries));
+        setSchemaName((current) => nextSources.some((source) => source.schemaName === current) ? current : (nextSources[0]?.schemaName ?? ""));
+        setError("");
+        setExpanded((current) => {
+          const next = new Set(current);
+          nextSources.forEach((source) => {
+            next.add(`schema:${source.schemaName}`);
+            next.add(`tables:${source.schemaName}`);
+          });
+          return next;
+        });
+      })
+      .catch((requestError) => { if (active) setError(requestError?.message || "ไม่สามารถโหลด schema และตารางได้"); })
+      .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [activeProjectId, externalSources]);
-  const externalTables = useMemo(() => externalTableCatalog[externalSchema] ?? EMPTY_TABLES, [externalSchema, externalTableCatalog]);
-  useEffect(() => { setExternalTable((current) => externalTables.some((table) => table.name === current) ? current : (externalTables[0]?.name ?? "")); }, [externalTables]);
-  useEffect(() => {
-    setImportError("");
-    setExternalColumns([]);
-    setSelectedExternalFields([]);
-    setExternalPreview([]);
-    setExternalFilterField("");
-    setExternalSortField("");
-    setExternalPage(1);
-  }, [externalSchema, externalTable]);
-  useEffect(() => { if (!externalSchema || !externalTable) return; listExternalColumns(externalSchema, externalTable, activeProjectId).then(result => { const items = result?.items ?? []; setExternalColumns(items); setSelectedExternalFields(items.map(column => column.name)); setExternalFilterField(items[0]?.name ?? ""); setExternalSortField(items[0]?.name ?? ""); setExternalPage(1); }).catch(error => setImportError(error.message)); }, [activeProjectId, externalSchema, externalTable]);
-  useEffect(() => {
-    if (!externalSchema || !externalTable || !selectedExternalFields.length) return undefined;
-    let active = true;
-    previewExternalSource({ projectId: activeProjectId, schemaName: externalSchema, tableName: externalTable, select: selectedExternalFields, filters: externalFilterValue ? [{ field: externalFilterField, operator: "contains", value: externalFilterValue }] : [], sort: externalSortField ? { field: externalSortField, direction: externalSortDirection } : undefined, page: externalPage, pageSize: 50 })
-      .then(result => { if (active) setExternalPreview(result?.rows ?? []); })
-      .catch(error => { if (active) setImportError(error.message); });
-    return () => { active = false; };
-  }, [activeProjectId, externalFilterField, externalFilterValue, externalPage, externalSchema, externalSortDirection, externalSortField, externalTable, selectedExternalFields]);
+  }, [activeProjectId, refreshVersion]);
 
-  async function saveExternalDataset() {
-    if (savingExternalDataset || !externalTable) return;
-    setSavingExternalDataset(true);
+  const tables = useMemo(() => catalog[schemaName] ?? EMPTY_TABLES, [catalog, schemaName]);
+  const selectedTableMetadata = useMemo(
+    () => tables.find((table) => table.name === tableName) ?? null,
+    [tableName, tables],
+  );
+
+  useEffect(() => {
+    setTableName((current) => tables.some((table) => table.name === current) ? current : (tables[0]?.name ?? ""));
+  }, [tables]);
+
+  useEffect(() => {
+    if (!activeProjectId || !schemaName || !tableName) return undefined;
+    let active = true;
+    setColumns([]);
+    setMetadata(EMPTY_METADATA);
+    setPreview({ rows: [], truncated: false });
+    setPage(1);
+    setFilterValue("");
+    setLoading(true);
+    Promise.all([
+      listExternalColumns(schemaName, tableName, activeProjectId),
+      listExternalMetadata(schemaName, tableName, activeProjectId),
+    ]).then(([columnResult, metadataResult]) => {
+      if (!active) return;
+      const nextColumns = Array.isArray(columnResult?.items) ? columnResult.items : [];
+      setColumns(nextColumns);
+      setSelectedFields(nextColumns.map((column) => column.name));
+      setFilterField(nextColumns[0]?.name ?? "");
+      setSortField(nextColumns.find((column) => column.primaryKey)?.name ?? nextColumns[0]?.name ?? "");
+      setMetadata({
+        constraints: metadataResult?.constraints ?? [],
+        foreignKeys: metadataResult?.foreignKeys ?? [],
+        indexes: metadataResult?.indexes ?? [],
+      });
+      setExpanded((current) => {
+        const next = new Set(current);
+        const id = `table:${tableKey(schemaName, tableName)}`;
+        next.add(id);
+        next.add(`columns:${id}`);
+        return next;
+      });
+      setError("");
+    }).catch((requestError) => {
+      if (active) setError(requestError?.message || "ไม่สามารถโหลดโครงสร้างตารางได้");
+    }).finally(() => {
+      if (active) setLoading(false);
+    });
+    return () => { active = false; };
+  }, [activeProjectId, refreshVersion, schemaName, tableName]);
+
+  useEffect(() => {
+    if (!activeProjectId || !schemaName || !tableName || !selectedFields.length) return undefined;
+    let active = true;
+    setLoading(true);
+    previewExternalSource({
+      projectId: activeProjectId,
+      schemaName,
+      tableName,
+      select: selectedFields,
+      filters: filterValue && filterField ? [{ field: filterField, operator: "contains", value: filterValue }] : [],
+      sort: sortField ? { field: sortField, direction: sortDirection } : undefined,
+      page,
+      pageSize: PAGE_SIZE,
+    }).then((result) => {
+      if (!active) return;
+      setPreview({ rows: result?.rows ?? [], truncated: Boolean(result?.truncated) });
+      setError("");
+    }).catch((requestError) => {
+      if (active) setError(requestError?.message || "ไม่สามารถโหลดข้อมูลตารางได้");
+    }).finally(() => {
+      if (active) setLoading(false);
+    });
+    return () => { active = false; };
+  }, [activeProjectId, filterField, filterValue, page, refreshVersion, schemaName, selectedFields, sortDirection, sortField, tableName]);
+
+  const selectTable = useCallback((nextSchema, nextTable) => {
+    setSchemaName(nextSchema);
+    setTableName(nextTable);
+    setPage(1);
+    setActiveTab("data");
+    setExplorerOpen(false);
+  }, []);
+
+  const toggleExpanded = useCallback((id) => {
+    setExpanded((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const toggleField = useCallback((fieldName) => {
+    setSelectedFields((current) => {
+      if (current.includes(fieldName)) {
+        return current.length === 1 ? current : current.filter((name) => name !== fieldName);
+      }
+      return columns.filter((column) => [...current, fieldName].includes(column.name)).map((column) => column.name);
+    });
+    setPage(1);
+  }, [columns]);
+
+  function handleSort(columnName) {
+    setSortField((current) => {
+      if (current === columnName) setSortDirection((direction) => direction === "asc" ? "desc" : "asc");
+      else setSortDirection("asc");
+      return columnName;
+    });
+    setPage(1);
+  }
+
+  async function createChart() {
+    if (creatingChartRef.current || !activeProjectId || !schemaName || !tableName || !selectedFields.length) return;
+    creatingChartRef.current = true;
+    setCreatingChart(true);
     try {
       const dataset = await createExternalDataset({
         projectId: activeProjectId,
-        name: `${externalSchema}.${externalTable}`,
-        schemaName: externalSchema,
-        tableName: externalTable,
-        selectedFields: selectedExternalFields,
-        filters: externalFilterValue ? [{ field: externalFilterField, operator: "contains", value: externalFilterValue }] : [],
-        sort: externalSortField ? { field: externalSortField, direction: externalSortDirection } : undefined,
+        name: `${schemaName}.${tableName}`,
+        schemaName,
+        tableName,
+        selectedFields,
+        filters: filterValue && filterField ? [{ field: filterField, operator: "contains", value: filterValue }] : [],
+        sort: sortField ? { field: sortField, direction: sortDirection } : undefined,
       });
-      setSavedExternalDatasetId(dataset?.id ?? "");
-      await reloadDatasets(dataset?.id ?? "");
-    } catch (error) {
-      setImportError(error.message);
+      navigate(`/dashboard-v2?projectId=${encodeURIComponent(activeProjectId)}&datasetId=${encodeURIComponent(dataset.id)}`);
+    } catch (requestError) {
+      setError(requestError?.message || "ไม่สามารถสร้างกราฟจากตารางนี้ได้");
     } finally {
-      setSavingExternalDataset(false);
+      creatingChartRef.current = false;
+      setCreatingChart(false);
     }
   }
-
-  useEffect(() => {
-    if (!selectedDatasetId) {
-      setDatasetRows([]);
-      setDatasetFields([]);
-      return;
-    }
-    let active = true;
-    Promise.all([
-      getDatasetFields(selectedDatasetId),
-      queryDataset(selectedDatasetId, { page: 1, pageSize: 200 }),
-    ]).then(([fields, result]) => {
-      if (!active) return;
-      setDatasetFields(fields);
-      setDatasetRows(Array.isArray(result?.rows) ? result.rows : []);
-      setImportError("");
-    }).catch((error) => {
-      if (active) setImportError(error?.message || "ไม่สามารถโหลดตัวอย่างข้อมูลได้");
-    });
-    return () => {
-      active = false;
-    };
-  }, [selectedDatasetId]);
-
-  useEffect(() => {
-    function handleRibbonCommand(event) {
-      const detail = event.detail;
-      if (detail?.scope !== "datasets" || detail?.command !== "focus-search") return;
-
-      const searchInput = document.querySelector(".datasets-page .enterprise-table-controls input[type='search']");
-      if (searchInput instanceof HTMLInputElement) {
-        searchInput.focus();
-        searchInput.select();
-        searchInput.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-    }
-
-    window.addEventListener("mini-bi:ribbon-command", handleRibbonCommand);
-    return () => {
-      window.removeEventListener("mini-bi:ribbon-command", handleRibbonCommand);
-    };
-  }, []);
-
-  const selectedDataset = datasets.find((dataset) => dataset.id === selectedDatasetId) ?? null;
-
-  useEffect(() => {
-    setCatalogName(selectedDataset?.name ?? "");
-  }, [selectedDataset?.id, selectedDataset?.name]);
-
-  async function renameSelectedDataset() {
-    if (!selectedDataset || !catalogName.trim()) return;
-    try {
-      const updated = await renameDataset(selectedDataset.id, {
-        name: catalogName.trim(),
-        revision: selectedDataset.revision,
-      });
-      await reloadDatasets(updated?.id ?? selectedDataset.id);
-      setImportError("");
-    } catch (error) {
-      setImportError(error?.message || "ไม่สามารถบันทึกชื่อชุดข้อมูลได้");
-    }
-  }
-  const previewRows = useMemo(
-    () => parsedCsv?.rows ?? datasetRows,
-    [datasetRows, parsedCsv?.rows]
-  );
-  const activeFields = useMemo(
-    () => parsedCsv?.fields ?? datasetFields,
-    [datasetFields, parsedCsv?.fields]
-  );
-  const previewColumns = useMemo(
-    () => parsedCsv
-      ? parsedCsv.fields.map((field) => ({ key: field.name, label: field.label }))
-      : datasetColumns({ fields: datasetFields }),
-    [datasetFields, parsedCsv]
-  );
-  const activeStats = useMemo(
-    () => createColumnStats(previewRows, activeFields),
-    [activeFields, previewRows]
-  );
-  const activeSummary = datasetSummary({
-    rows: previewRows,
-    fields: activeFields,
-  });
 
   async function handleFileChange(event) {
-    const file = event.target.files?.[0];
-    setImportError("");
+    const file = event.target.files?.[0] ?? null;
+    setSelectedFile(file);
     setParsedCsv(null);
-    setSelectedFile(file ?? null);
+    setError("");
     if (!file) return;
-
     try {
       validateCsvFile(file);
-      const text = await file.text();
-      const parsed = await parseCsvTextAsync(text);
+      const parsed = await parseCsvTextAsync(await file.text());
       setFileName(file.name);
       setDatasetName(file.name.replace(/\.[^.]+$/, ""));
       setParsedCsv(parsed);
-    } catch (error) {
-      setImportError(error?.message || "ไม่สามารถอ่านไฟล์ CSV นี้ได้");
+    } catch (parseError) {
+      setError(parseError?.message || "ไม่สามารถอ่านไฟล์ CSV นี้ได้");
     }
   }
 
-  async function handleImport() {
-    if (!parsedCsv?.validation?.valid) {
-      setImportError("แก้ข้อผิดพลาดของ CSV ก่อนนำเข้า");
-      return;
-    }
+  async function importCsv() {
+    if (!selectedFile || !parsedCsv?.validation?.valid || importingCsv) return;
+    setImportingCsv(true);
     try {
-      if (!selectedFile) throw new Error("กรุณาเลือกไฟล์ CSV อีกครั้ง");
-      const response = await importDatasetCsv({
+      await importDatasetCsv({
         file: selectedFile,
         projectId: activeProjectId,
         name: datasetName,
         idempotencyKey: `dataset-import-${activeProjectId}-${selectedFile.name}-${selectedFile.size}`,
       });
-      const datasetId = response?.dataset?.id ?? "";
-      setParsedCsv(null);
       setSelectedFile(null);
+      setParsedCsv(null);
       setFileName("");
       setDatasetName("");
-      setImportError("");
-      await reloadDatasets(datasetId);
-    } catch (error) {
-      setImportError(error?.message || "ไม่สามารถนำเข้าชุดข้อมูลได้");
+      setError("");
+    } catch (requestError) {
+      setError(requestError?.message || "ไม่สามารถนำเข้าชุดข้อมูลได้");
+    } finally {
+      setImportingCsv(false);
     }
   }
 
+  const visibleColumns = columns.filter((column) => selectedFields.includes(column.name));
+
   return (
-    <PageContainer className="datasets-page">
+    <PageContainer className="datasets-page db-browser-page">
       <PageHeader
         kicker="ข้อมูล"
         title="ชุดข้อมูล"
-        subtitle="จัดการแหล่งข้อมูล ตาราง และไฟล์สำหรับแดชบอร์ด"
+        subtitle="สำรวจโครงสร้างและเปิดดูข้อมูลจริงจาก PostgreSQL"
         actions={(
-          <button type="button" className="dashboard-toolbar-btn is-primary" onClick={() => navigate("/connections")}>
+          <button type="button" className="dashboard-toolbar-btn" onClick={() => navigate("/connections")}>
             เชื่อมต่อฐานข้อมูล
           </button>
         )}
       />
 
-      <div className="datasets-workbench-status" aria-label="Table context">
-        <span>PostgreSQL</span><span>/</span><span>{externalSchema || "..."}</span><span>/</span><strong>{externalTable || "..."}</strong>
-        <span className="datasets-source-browser__readonly" title="ข้อมูล Scopus เปิดดู ส่งออก และสร้างชุดข้อมูลได้ แต่แก้ไขไม่ได้">อ่านอย่างเดียว</span>
-      </div>
+      <details className="db-csv-import">
+        <summary>นำเข้า CSV</summary>
+        <div className="db-csv-import__body">
+          <label className="dashboard-toolbar-btn datasets-file-picker" htmlFor="dataset-csv-input">เลือกไฟล์ CSV</label>
+          <input id="dataset-csv-input" className="sr-only" type="file" accept=".csv,text/csv" onChange={handleFileChange} />
+          <span>{fileName || "ยังไม่ได้เลือกไฟล์"}</span>
+          {parsedCsv ? (
+            <>
+              <label><span>ชื่อชุดข้อมูล</span><input value={datasetName} onChange={(event) => setDatasetName(event.target.value)} /></label>
+              <span>{parsedCsv.rows.length.toLocaleString("th-TH")} แถว · {parsedCsv.fields.length} คอลัมน์</span>
+              <button type="button" className="dashboard-toolbar-btn is-primary" disabled={!parsedCsv.validation.valid || importingCsv} onClick={importCsv}>
+                {importingCsv ? "กำลังนำเข้า…" : "นำเข้า"}
+              </button>
+            </>
+          ) : null}
+        </div>
+      </details>
 
-      <div className="datasets-layout">
-        <section className="datasets-main" aria-label="รายการชุดข้อมูล">
-          <section className="datasets-import-panel">
-            <div className="datasets-import-copy">
-              <span>นำเข้า CSV</span>
-              <h2>อัปโหลด ดูตัวอย่าง ตรวจสอบ และนำเข้า</h2>
-              <p>ชุดข้อมูล CSV ที่นำเข้าจะถูกตรวจสอบและบันทึกผ่านระบบหลังบ้าน</p>
-            </div>
-            <div className="datasets-import-controls">
-              <label className="dashboard-toolbar-btn datasets-file-picker" htmlFor="dataset-csv-input">
-                เลือกไฟล์ CSV
-              </label>
-              <input
-                id="dataset-csv-input"
-                className="sr-only"
-                type="file"
-                accept=".csv,text/csv"
-                onChange={handleFileChange}
-              />
-              <span className="datasets-selected-file">{fileName || "ยังไม่ได้เลือกไฟล์"}</span>
-              {parsedCsv ? (
-                <>
-                  <label>
-                    <span>ชื่อชุดข้อมูล</span>
-                    <input value={datasetName} onChange={(event) => setDatasetName(event.target.value)} />
-                  </label>
-                  <button type="button" className="dashboard-toolbar-btn is-primary" onClick={handleImport}>
-                    นำเข้าชุดข้อมูล
-                  </button>
-                </>
-              ) : null}
-            </div>
-            {importError ? <div className="datasets-validation is-error">{importError}</div> : null}
-            {parsedCsv ? (
-              <div className="datasets-validation">
-                <strong>{parsedCsv.validation.valid ? "CSV ถูกต้อง" : "ตรวจสอบไม่ผ่าน"}</strong>
-                <span>ตรวจพบ {parsedCsv.rows.length} แถว / {parsedCsv.fields.length} คอลัมน์</span>
-                {parsedCsv.validation.errors.map((error) => <span key={error}>{error}</span>)}
-                {parsedCsv.validation.warnings.map((warning) => <span key={warning}>{warning}</span>)}
-              </div>
-            ) : null}
-          </section>
-          <section className="datasets-source-browser" aria-label="PostgreSQL external source browser">
-            <header className="datasets-source-browser__head">
-              <div>
-                <span>PostgreSQL source</span>
-                <h2>External schema browser</h2>
-                <p>เลือก schema และตารางที่ได้รับอนุญาต ข้อมูลต้นทางเป็นแบบอ่านอย่างเดียว</p>
-              </div>
-              <div className="datasets-source-browser__actions">
-                <span className="datasets-source-browser__readonly" title="External source rows can be previewed and exported, but cannot be changed here.">Read only</span>
-                <button type="button" className="dashboard-toolbar-btn is-primary" disabled={!externalTable || savingExternalDataset} onClick={saveExternalDataset}>{savingExternalDataset ? "กำลังบันทึก…" : "Create live dataset"}</button>
-                {savedExternalDatasetId ? <button type="button" className="dashboard-toolbar-btn" onClick={() => navigate(`/dashboard-v2?projectId=${encodeURIComponent(activeProjectId)}&datasetId=${encodeURIComponent(savedExternalDatasetId)}`)}>Create chart</button> : null}
-              </div>
-            </header>
-            <section className="datasets-source-table-catalog" aria-label="Allowed schema table catalog">
-              <div className="datasets-source-table-catalog__head">
-                <strong>Tables in allowed schemas</strong>
-                <label><span>Search tables</span><input value={externalTableSearch} onChange={(event) => setExternalTableSearch(event.target.value)} placeholder="Search table" /></label>
-              </div>
-              <div className="datasets-source-table-catalog__tree" role="tree" aria-label="External schema tables">
-                {externalSources.map((source) => {
-                  const tables = (externalTableCatalog[source.schemaName] ?? []).filter((table) => `${source.schemaName}.${table.name}`.toLowerCase().includes(externalTableSearch.trim().toLowerCase()));
-                  return <section className="datasets-source-table-catalog__schema" key={source.schemaName} role="treeitem" aria-label={source.displayName || source.schemaName}>
-                    <header><strong>{source.displayName || source.schemaName}</strong><span>{tables.length} tables</span></header>
-                    {tables.length ? <div>{tables.map((table) => <button type="button" key={table.name} className={source.schemaName === externalSchema && table.name === externalTable ? "is-active" : ""} onClick={() => { setExternalSchema(source.schemaName); setExternalTable(table.name); setExternalPage(1); }}><span>{table.name}</span><small>{table.objectType || "table"} · {formatRowEstimate(table.rowCountEstimate)} rows · read only</small></button>)}</div> : <p>No matching tables.</p>}
-                  </section>;
-                })}
-              </div>
-            </section>
-            <div className="datasets-source-browser__controls">
-              <label><span>Schema</span><select value={externalSchema} onChange={(event) => setExternalSchema(event.target.value)}>{externalSources.map(source => <option key={source.schemaName} value={source.schemaName}>{source.displayName}</option>)}</select></label>
-              <label><span>Table</span><select value={externalTable} onChange={(event) => setExternalTable(event.target.value)}>{externalTables.map(table => <option key={table.name} value={table.name}>{table.name} ({formatRowEstimate(table.rowCountEstimate)})</option>)}</select></label>
-              <label><span>Filter column</span><select value={externalFilterField} onChange={(event) => { setExternalFilterField(event.target.value); setExternalPage(1); }}>{externalColumns.map(column => <option key={column.name} value={column.name}>{column.name}</option>)}</select></label>
-              <label><span>Contains</span><input value={externalFilterValue} onChange={(event) => { setExternalFilterValue(event.target.value); setExternalPage(1); }} /></label>
-              <label><span>Sort</span><select value={externalSortField} onChange={(event) => setExternalSortField(event.target.value)}>{externalColumns.map(column => <option key={column.name} value={column.name}>{column.name}</option>)}</select></label>
-              <label><span>Direction</span><select value={externalSortDirection} onChange={(event) => setExternalSortDirection(event.target.value)}><option value="asc">Ascending</option><option value="desc">Descending</option></select></label>
-            </div>
-            <div className="datasets-source-browser__fields">{externalColumns.map(column => <label className="datasets-field-card" key={column.name}><input type="checkbox" checked={selectedExternalFields.includes(column.name)} onChange={(event) => setSelectedExternalFields(current => event.target.checked ? [...new Set([...current, column.name])] : current.filter(field => field !== column.name))} /><strong>{column.name}</strong><small>{column.dataType}{column.primaryKey ? " · PK" : ""}</small></label>)}</div>
-            {externalPreview.length ? <EnterpriseDataTable title={`Preview ${externalSchema}.${externalTable}`} rows={externalPreview} columns={Object.keys(externalPreview[0]).map(key => ({ key, label: key }))} density={appSettings.density} /> : <div className="datasets-empty-state">No rows to preview.</div>}
-            <footer className="datasets-source-browser__pagination"><button type="button" className="dashboard-toolbar-btn" disabled={externalPage <= 1} onClick={() => setExternalPage(page => Math.max(1, page - 1))}>Previous</button><span>Page {externalPage}</span><button type="button" className="dashboard-toolbar-btn" disabled={externalPreview.length < 50} onClick={() => setExternalPage(page => page + 1)}>Next</button></footer>
-          </section>
+      {error ? <div className="db-browser-alert" role="alert">{error}</div> : null}
 
-          <section className="datasets-schema-panel">
-            <div className="datasets-schema-head">
-              <div>
-                <span>{parsedCsv ? "แมปคอลัมน์" : "โครงสร้างข้อมูล"}</span>
-                <h2>{parsedCsv ? fileName : selectedDataset?.name}</h2>
+      <section className="db-browser-workbench" aria-label="PostgreSQL data browser">
+        <button type="button" className={`db-explorer-backdrop${explorerOpen ? " is-open" : ""}`} onClick={() => setExplorerOpen(false)} aria-label="ปิด Object Explorer" />
+        <ObjectExplorer
+          sources={sources}
+          catalog={catalog}
+          columns={columns}
+          metadata={metadata}
+          selectedSchema={schemaName}
+          selectedTable={tableName}
+          search={explorerSearch}
+          onSearch={setExplorerSearch}
+          expanded={expanded}
+          onToggle={toggleExpanded}
+          onSelectTable={selectTable}
+          onToggleField={toggleField}
+          selectedFields={selectedFields}
+          open={explorerOpen}
+          onClose={() => setExplorerOpen(false)}
+        />
+
+        <main className="db-table-workspace">
+          <header className="db-table-workspace__head">
+            <div className="db-table-context">
+              <button type="button" className="db-mobile-explorer-button" onClick={() => setExplorerOpen(true)}>Object Explorer</button>
+              <div className="db-breadcrumb" aria-label="Table context">
+                <span>PostgreSQL</span><span>/</span><span>{schemaName || "…"}</span><span>/</span><strong>{tableName || "…"}</strong>
               </div>
-              {!parsedCsv && selectedDataset ? (
-                <button
-                  type="button"
-                  className="dashboard-toolbar-btn"
-                  onClick={async () => {
-                    try {
-                      await archiveDataset(selectedDataset.id, selectedDataset.revision);
-                      await reloadDatasets();
-                    } catch (error) {
-                      setImportError(error?.message || "ไม่สามารถลบชุดข้อมูลได้");
-                    }
-                  }}
-                >
-                  ลบ
-                </button>
-              ) : null}
+              <div className="db-table-meta">
+                <span>{selectedTableMetadata?.objectType || "table"}</span>
+                <span>{formatRowEstimate(selectedTableMetadata?.rowCountEstimate, true)}</span>
+                <span>อ่านอย่างเดียว</span>
+              </div>
             </div>
-            {!parsedCsv && selectedDataset ? (
-              <div className="datasets-catalog-editor" aria-label="Catalog editor">
+            <div className="db-table-actions">
+              <button type="button" className="dashboard-toolbar-btn" onClick={() => setRefreshVersion((value) => value + 1)} disabled={!tableName || loading}>
+                {loading ? "กำลังโหลด…" : "รีเฟรช"}
+              </button>
+              <button type="button" className="dashboard-toolbar-btn is-primary" onClick={createChart} disabled={!tableName || !selectedFields.length || creatingChart}>
+                {creatingChart ? "กำลังเปิด…" : "สร้างกราฟ"}
+              </button>
+            </div>
+          </header>
+
+          <div className="db-workspace-tabs" role="tablist" aria-label="รายละเอียดตาราง">
+            {TABS.map((tab) => (
+              <button
+                type="button"
+                role="tab"
+                key={tab.id}
+                aria-label={tab.label}
+                aria-selected={activeTab === tab.id}
+                className={activeTab === tab.id ? "is-active" : ""}
+                onClick={() => setActiveTab(tab.id)}
+              >
+                {tab.label}
+                {tab.id !== "data" ? <small>{tab.id === "columns" ? columns.length : metadata[tab.id]?.length ?? 0}</small> : null}
+              </button>
+            ))}
+          </div>
+
+          {activeTab === "data" ? (
+            <section className="db-data-panel" role="tabpanel" aria-label="Data">
+              <div className="db-data-toolbar">
                 <label>
-                  <span>Catalog dataset name</span>
-                  <input aria-label="Catalog dataset name" value={catalogName} onChange={(event) => setCatalogName(event.target.value)} maxLength={180} />
+                  <span>คอลัมน์สำหรับค้นหา</span>
+                  <select aria-label="คอลัมน์สำหรับค้นหา" value={filterField} onChange={(event) => { setFilterField(event.target.value); setPage(1); }}>
+                    {columns.map((column) => <option key={column.name} value={column.name}>{column.name}</option>)}
+                  </select>
                 </label>
-                <button type="button" className="dashboard-toolbar-btn is-primary" disabled={!catalogName.trim() || catalogName.trim() === selectedDataset.name} onClick={renameSelectedDataset}>Save name</button>
+                <label className="db-filter-value">
+                  <span>ค้นหาในข้อมูล</span>
+                  <input type="search" value={filterValue} onChange={(event) => { setFilterValue(event.target.value); setPage(1); }} placeholder="พิมพ์ค่าที่ต้องการค้นหา" />
+                </label>
+                <label>
+                  <span>เรียงตาม</span>
+                  <select value={sortField} onChange={(event) => { setSortField(event.target.value); setPage(1); }}>
+                    {columns.map((column) => <option key={column.name} value={column.name}>{column.name}</option>)}
+                  </select>
+                </label>
+                <label>
+                  <span>ลำดับ</span>
+                  <select value={sortDirection} onChange={(event) => { setSortDirection(event.target.value); setPage(1); }}>
+                    <option value="asc">น้อยไปมาก</option>
+                    <option value="desc">มากไปน้อย</option>
+                  </select>
+                </label>
+                {filterValue ? <button type="button" className="db-clear-filter" onClick={() => { setFilterValue(""); setPage(1); }}>ล้างตัวกรอง</button> : null}
               </div>
-            ) : null}
-            <div className="datasets-field-grid">
-              {activeFields.map((field) => (
-                <div className="datasets-field-card" key={field.name}>
-                  <strong>{field.label || field.name}</strong>
-                  <span>{field.name}</span>
-                  <small>{formatFieldType(field.type)}</small>
+              <DataGrid rows={preview.rows} columns={visibleColumns} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+              <footer className="db-data-footer">
+                <span>{formatRowEstimate(selectedTableMetadata?.rowCountEstimate, true)} · แสดงสูงสุด {PAGE_SIZE} แถวต่อหน้า</span>
+                <div>
+                  <button type="button" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={page === 1}>ก่อนหน้า</button>
+                  <strong>หน้า {page}</strong>
+                  <button type="button" onClick={() => setPage((value) => value + 1)} disabled={!preview.truncated}>ถัดไป</button>
                 </div>
-              ))}
-            </div>
-          </section>
+              </footer>
+            </section>
+          ) : null}
 
-          <section className="datasets-schema-panel">
-            <div className="datasets-schema-head">
-              <div>
-                <span>สถิติ</span>
-                <h2>{activeSummary.rows} แถว / {activeSummary.columns} คอลัมน์</h2>
-              </div>
-            </div>
-            <div className="datasets-stat-grid">
-              {activeStats.map((stat) => (
-                <article className="datasets-stat-card" key={stat.name}>
-                  <div>
-                    <strong>{stat.label || stat.name}</strong>
-                    <span>{formatFieldType(stat.type)}</span>
-                  </div>
-                  <dl>
-                    <div><dt>มีค่า</dt><dd>{formatStat(stat.nonEmpty)}</dd></div>
-                    <div><dt>ไม่ซ้ำ</dt><dd>{formatStat(stat.uniqueCount)}</dd></div>
-                    <div><dt>ต่ำสุด</dt><dd>{formatStat(stat.min)}</dd></div>
-                    <div><dt>สูงสุด</dt><dd>{formatStat(stat.max)}</dd></div>
-                    <div><dt>เฉลี่ย</dt><dd>{formatStat(stat.average)}</dd></div>
-                  </dl>
-                </article>
-              ))}
-            </div>
-          </section>
+          {activeTab === "columns" ? (
+            <section role="tabpanel" aria-label="Columns">
+              <MetadataTable
+                empty="ตารางนี้ไม่มีคอลัมน์ที่เปิดดูได้"
+                rows={columns}
+                columns={[
+                  { key: "name", label: "Column" },
+                  { key: "dataType", label: "Type" },
+                  { key: "nullable", label: "Nullable", render: (row) => row.nullable ? "Yes" : "No" },
+                  { key: "primaryKey", label: "Key", render: (row) => row.primaryKey ? "Primary key" : row.foreignKeys?.length ? "Foreign key" : "—" },
+                ]}
+              />
+            </section>
+          ) : null}
 
-          <EnterpriseDataTable
-            title={parsedCsv ? "ตัวอย่าง CSV" : selectedDataset?.name ? `ตัวอย่าง ${selectedDataset.name}` : "ตัวอย่างข้อมูล"}
-            rows={previewRows}
-            columns={previewColumns}
-            density={appSettings.density}
-          />
-        </section>
-      </div>
+          {activeTab === "constraints" ? (
+            <section role="tabpanel" aria-label="Constraints">
+              <MetadataTable
+                empty="ไม่พบ constraint สำหรับตารางนี้"
+                rows={metadata.constraints}
+                columns={[
+                  { key: "name", label: "Constraint" },
+                  { key: "type", label: "Type" },
+                  { key: "columns", label: "Columns", render: (row) => Array.isArray(row.columns) ? row.columns.join(", ") : "—" },
+                  { key: "definition", label: "Definition" },
+                ]}
+              />
+            </section>
+          ) : null}
+
+          {activeTab === "foreignKeys" ? (
+            <section role="tabpanel" aria-label="Foreign Keys">
+              <MetadataTable
+                empty="ตารางนี้ไม่มี Foreign Key"
+                rows={metadata.foreignKeys}
+                columns={[
+                  { key: "name", label: "Foreign key" },
+                  { key: "columnName", label: "Column" },
+                  { key: "referencedTable", label: "References", render: (row) => `${row.referencedSchema}.${row.referencedTable}.${row.referencedColumn}` },
+                ]}
+              />
+            </section>
+          ) : null}
+
+          {activeTab === "indexes" ? (
+            <section role="tabpanel" aria-label="Indexes">
+              <MetadataTable
+                empty="ตารางนี้ไม่มี index"
+                rows={metadata.indexes}
+                columns={[
+                  { key: "name", label: "Index" },
+                  { key: "method", label: "Method" },
+                  { key: "unique", label: "Unique", render: (row) => row.unique ? "Yes" : "No" },
+                  { key: "definition", label: "Definition" },
+                ]}
+              />
+            </section>
+          ) : null}
+        </main>
+      </section>
     </PageContainer>
   );
 }

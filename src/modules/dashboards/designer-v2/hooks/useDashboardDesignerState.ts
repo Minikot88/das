@@ -30,7 +30,7 @@ import {
 import { useLocation } from "react-router-dom";
 import { isMockMode } from "@infrastructure/http/client";
 import { getChartById, createChart, updateChart } from "@modules/charts/public/api";
-import { listDatasets, listExternalSources, listExternalTables, loadDataset } from "@modules/datasets/public/api";
+import { createExternalDataset, listDatasets, listExternalSources, listExternalTables, loadDataset } from "@modules/datasets/public/api";
 import type {
   Aggregation,
   ChartCategory,
@@ -137,6 +137,31 @@ function toDesignerFields(fields: Array<Record<string, unknown>>, table = "datas
       defaultAggregation: isMeasure ? "Sum" : "None",
     };
   });
+}
+
+function toRemoteDatasource(item: Record<string, unknown>): DemoDatasource {
+  const sourceConfig = item.sourceConfigJson && typeof item.sourceConfigJson === "object"
+    ? item.sourceConfigJson as Record<string, unknown>
+    : {};
+  const schema = String(sourceConfig.schemaName || "public");
+  const table = String(sourceConfig.tableName || item.name || item.id);
+  return {
+    id: String(item.id),
+    name: String(item.name || `${schema}.${table}`),
+    database: "PostgreSQL",
+    schema,
+    table,
+    rowCount: Number(item.rowCount || sourceConfig.estimatedRowCount || 0),
+    fieldCount: Number(item.fieldCount || 0),
+    lastUpdated: String(item.updatedAt || ""),
+  };
+}
+
+function remapFieldsToDatasource(currentFields: DataField[], nextFields: DataField[]) {
+  const nextById = new Map(nextFields.map((field) => [field.id, field]));
+  return currentFields
+    .map((field) => nextById.get(field.id))
+    .filter((field): field is DataField => Boolean(field));
 }
 
 function resolveSavedFields(savedSlot: Record<string, unknown>, fallbackFields: DataField[], availableFields = dataFields) {
@@ -808,6 +833,7 @@ export function useDashboardDesignerState() {
   );
   const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const requestedChartId = queryParams.get("chartId");
+  const requestedDatasetId = queryParams.get("datasetId");
   const returnToDashboard = queryParams.get("from") === "dashboard";
   const returnProjectId = queryParams.get("projectId");
   const returnDashboardId = queryParams.get("dashboardId");
@@ -903,37 +929,23 @@ export function useDashboardDesignerState() {
       .then(async (response) => {
         const items = Array.isArray(response?.items) ? response.items : [];
         if (!active) return;
-        setRemoteDatasources(items.map((item: Record<string, unknown>) => {
-          const sourceConfig = item.sourceConfigJson && typeof item.sourceConfigJson === "object"
-            ? item.sourceConfigJson as Record<string, unknown>
-            : {};
-          const schema = String(sourceConfig.schemaName || "public");
-          const table = String(sourceConfig.tableName || item.name || item.id);
-          return {
-          id: String(item.id),
-          name: String(item.name || "Dataset"),
-          database: "PostgreSQL",
-          schema,
-          table,
-          rowCount: Number(item.rowCount || 0),
-          fieldCount: Number(item.fieldCount || 0),
-          lastUpdated: String(item.updatedAt || ""),
-          sourceType: String(item.sourceType || "postgres"),
-        };
-        }));
+        const nextDatasources = items.map((item: Record<string, unknown>) => toRemoteDatasource(item));
+        setRemoteDatasources(nextDatasources);
         if (!items.length) {
           setRows([]);
           setFields([]);
           setSnackbar("โปรเจกต์นี้ยังไม่มีชุดข้อมูล");
           return;
         }
-        const dataset = await loadDataset(String(items[0].id));
+        const selectedItem = items.find((item: Record<string, unknown>) => String(item.id) === requestedDatasetId) ?? items[0];
+        const selectedDatasource = toRemoteDatasource(selectedItem);
+        const dataset = await loadDataset(String(selectedItem.id));
         if (!active) return;
-        const nextFields = toDesignerFields(dataset.fields ?? [], dataset.name);
+        const nextFields = toDesignerFields(dataset.fields ?? [], `${selectedDatasource.schema}.${selectedDatasource.table}`);
         setRows((dataset.rows ?? []) as DemoDatasetRow[]);
         setFields(nextFields);
         setActiveDatasourceId(dataset.id);
-        setSelectedTable(dataset.name);
+        setSelectedTable(selectedDatasource.table);
         setConfig((current) => ({
           ...current,
           sourceType: "dataset",
@@ -962,7 +974,7 @@ export function useDashboardDesignerState() {
     return () => {
       active = false;
     };
-  }, [mockMode, returnProjectId]);
+  }, [mockMode, requestedDatasetId, returnProjectId]);
 
   useEffect(() => {
     if (mockMode) { setExternalSchemaCatalog([]); return undefined; }
@@ -1153,22 +1165,21 @@ export function useDashboardDesignerState() {
       try {
         setIsLoading(true);
         const dataset = await loadDataset(datasource.id);
-        const nextFields = toDesignerFields(dataset.fields ?? [], dataset.name);
+        const nextFields = toDesignerFields(dataset.fields ?? [], `${datasource.schema}.${datasource.table}`);
         setRows((dataset.rows ?? []) as DemoDatasetRow[]);
         setFields(nextFields);
         setActiveDatasourceId(dataset.id);
-        setSelectedTable(dataset.name);
+        setSelectedTable(datasource.table);
         setSelectedFieldId(null);
         setSearchValue("");
         setActiveTemplateId(null);
-        const availableFieldIds = new Set(nextFields.map((field) => field.id));
         commitConfig((current) => ({
           ...current,
           sourceType: "dataset",
           datasetId: dataset.id,
           mappings: current.mappings.map((slot) => ({
             ...slot,
-            fields: slot.fields.filter((field) => availableFieldIds.has(field.id)),
+            fields: remapFieldsToDatasource(slot.fields, nextFields),
           })),
           filters: {},
         }));
@@ -1193,18 +1204,67 @@ export function useDashboardDesignerState() {
     setSelectedFieldId(null);
     setSearchValue("");
     setActiveTemplateId(null);
-    const availableFieldIds = new Set(schema.fields.map((field) => field.id));
     commitConfig((current) => ({
       ...current,
       sourceType: "dataset",
       datasetId: schema.datasetId,
       mappings: current.mappings.map((slot) => ({
         ...slot,
-        fields: slot.fields.filter((field) => availableFieldIds.has(field.id)),
+        fields: remapFieldsToDatasource(slot.fields, schema.fields),
       })),
       filters: {},
     }));
   }, [activateDemoDataset, availableDatasources, commitConfig, config.sourceType, mockMode, sqlResult, workspaceSnapshot]);
+
+  const activateCatalogTable = useCallback(async (schemaName: string, tableName: string) => {
+    const existing = availableDatasources.find((item) => item.schema === schemaName && item.table === tableName);
+    if (existing) {
+      await updateDatasource(existing.id);
+      return;
+    }
+    if (mockMode) {
+      setSnackbar("ตารางนี้ไม่มีใน Demo Dataset");
+      return;
+    }
+    if (!returnProjectId) {
+      setSnackbar("ไม่พบโปรเจกต์สำหรับเปิดตาราง");
+      return;
+    }
+    try {
+      setIsLoading(true);
+      const created = await createExternalDataset({
+        projectId: returnProjectId,
+        name: `${schemaName}.${tableName}`,
+        schemaName,
+        tableName,
+      });
+      const dataset = await loadDataset(String(created.id));
+      const datasource = toRemoteDatasource({ ...created, ...dataset });
+      const nextFields = toDesignerFields(dataset.fields ?? [], `${schemaName}.${tableName}`);
+      setRemoteDatasources((current) => current.some((item) => item.id === datasource.id) ? current : [...current, datasource]);
+      setRows((dataset.rows ?? []) as DemoDatasetRow[]);
+      setFields(nextFields);
+      setActiveDatasourceId(datasource.id);
+      setSelectedTable(tableName);
+      setSelectedFieldId(null);
+      setSearchValue("");
+      setActiveTemplateId(null);
+      commitConfig((current) => ({
+        ...current,
+        sourceType: "dataset",
+        datasetId: datasource.id,
+        mappings: current.mappings.map((slot) => ({
+          ...slot,
+          fields: remapFieldsToDatasource(slot.fields, nextFields),
+        })),
+        filters: {},
+      }), `เปลี่ยนตารางเป็น ${schemaName}.${tableName}`);
+    } catch (error) {
+      setSnackbar(errorMessage(error, "ไม่สามารถเปิดตารางนี้ได้"));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [availableDatasources, commitConfig, mockMode, returnProjectId, updateDatasource]);
 
   const executeSqlQuery = useCallback((query: string, message = "รัน SQL Query แล้ว") => {
     if (!mockMode) {
@@ -1791,7 +1851,7 @@ export function useDashboardDesignerState() {
       setZoom: updateZoom,
       setSearchValue,
       setActiveDatasourceId: updateDatasource,
-      setSelectedTable,
+      setSelectedTable: activateCatalogTable,
       setSelectedField: (field: DataField) => setSelectedFieldId(field.id),
       setPreviewMode,
       togglePreviewMode,

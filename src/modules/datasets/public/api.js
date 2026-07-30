@@ -8,5 +8,8 @@ export {
   loadDefaultProjectDataset,
   listExternalSources,
   listExternalTables,
+  listExternalColumns,
+  listExternalMetadata,
+  createExternalDataset,
   queryDataset,
 } from "@modules/datasets/api/datasetApi.js";

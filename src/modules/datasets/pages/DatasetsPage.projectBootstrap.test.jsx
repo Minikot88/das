@@ -57,12 +57,11 @@ describe("DatasetsPage API project bootstrap", () => {
     window.localStorage.clear();
   });
 
-  it("resolves a real API project before requesting datasets or external sources", async () => {
+  it("resolves a real API project before requesting external sources", async () => {
     render(<MemoryRouter><DatasetsPage /></MemoryRouter>);
 
-    await waitFor(() => expect(mocks.listDatasets).toHaveBeenCalledWith({ projectId: "project-real" }));
-    expect(mocks.listExternalSources).toHaveBeenCalledWith("project-real");
-    expect(mocks.listDatasets).not.toHaveBeenCalledWith({ projectId: "project-1" });
+    await waitFor(() => expect(mocks.listExternalSources).toHaveBeenCalledWith("project-real"));
+    expect(mocks.listDatasets).not.toHaveBeenCalled();
     expect(mocks.listExternalSources).not.toHaveBeenCalledWith("project-1");
     expect(mocks.setState).toHaveBeenCalledWith({ activeProjectId: "project-real" });
   });

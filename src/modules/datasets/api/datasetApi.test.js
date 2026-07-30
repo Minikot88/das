@@ -75,4 +75,13 @@ describe("datasetApi production repository", () => {
       expect.objectContaining({ name: "published_at", type: "date", sourceType: "timestamp without time zone" }),
     ]);
   });
+
+  it("loads real table constraints, foreign keys and indexes from the metadata endpoint", async () => {
+    apiRequest.mockResolvedValueOnce({ constraints: [], foreignKeys: [], indexes: [] });
+    const { listExternalMetadata } = await import("./datasetApi");
+    await listExternalMetadata("scopus", "sc_articles", "project-1");
+    expect(apiRequest).toHaveBeenCalledWith(
+      "/api/v1/external-sources/scopus/tables/sc_articles/metadata?projectId=project-1",
+    );
+  });
 });

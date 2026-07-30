@@ -6,6 +6,7 @@ import "@shared/styles/homeCorporatePolish.css";
 import "@shared/styles/settingsDatasetsCorporatePolish.css";
 import "@shared/styles/unifiedVisualDirection.css";
 import "@shared/styles/realDarkMode.css";
+import "@shared/styles/datasetsObjectBrowser.css";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
