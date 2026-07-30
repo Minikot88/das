@@ -50,4 +50,98 @@ describe('ExternalSourcesService policy', () => {
     expect(tableConnection.end).toHaveBeenCalledOnce();
     expect(metadataConnection.end).toHaveBeenCalledOnce();
   });
+
+  it('discovers both outgoing and incoming foreign-key paths for auto join', async () => {
+    const tableConnection = {
+      query: vi.fn().mockResolvedValue({ rowCount: 1, rows: [{ relkind: 'r' }] }),
+      end: vi.fn().mockResolvedValue(undefined),
+    };
+    const relationshipConnection = {
+      query: vi.fn().mockResolvedValue({ rows: [
+        { name: 'article_journal_fk', columnName: 'journal_id', referencedSchema: 'scopus', referencedTable: 'sc_journals', referencedColumn: 'id', direction: 'outgoing' },
+        { name: 'keyword_article_fk', columnName: 'id', referencedSchema: 'scopus', referencedTable: 'sc_keywords', referencedColumn: 'article_id', direction: 'incoming' },
+      ] }),
+      end: vi.fn().mockResolvedValue(undefined),
+    };
+    vi.spyOn(service as unknown as { pool: () => unknown }, 'pool')
+      .mockReturnValueOnce(tableConnection)
+      .mockReturnValueOnce(relationshipConnection);
+
+    const result = await service.relationships('scopus', 'sc_articles');
+    expect(result.items).toEqual(expect.arrayContaining([
+      expect.objectContaining({ direction: 'outgoing', referencedTable: 'sc_journals' }),
+      expect.objectContaining({ direction: 'incoming', referencedTable: 'sc_keywords' }),
+    ]));
+    expect(String(relationshipConnection.query.mock.calls[0][0])).toContain('UNION ALL');
+  });
+
+  it('executes a validated multi-table query and returns a read-only SQL preview', async () => {
+    vi.spyOn(service, 'columns').mockImplementation(async (_schema, table) => ({
+      schemaName: 'scopus',
+      tableName: table,
+      readOnly: true,
+      capabilities: { canRead: true, canInsert: false, canUpdate: false, canDelete: false, canExport: true },
+      items: table === 'sc_articles'
+        ? [
+            { name: 'journal_id', dataType: 'bigint', nullable: true, ordinal: 1, primaryKey: false, foreignKeys: [] },
+            { name: 'publication_year', dataType: 'integer', nullable: true, ordinal: 2, primaryKey: false, foreignKeys: [] },
+          ]
+        : [{ name: 'id', dataType: 'bigint', nullable: false, ordinal: 1, primaryKey: true, foreignKeys: [] }],
+    }));
+    const connection = {
+      query: vi.fn().mockResolvedValue({ rows: [{ publication_year: 2025 }] }),
+      end: vi.fn().mockResolvedValue(undefined),
+    };
+    vi.spyOn(service as unknown as { pool: () => unknown }, 'pool').mockReturnValue(connection);
+
+    const result = await service.previewStructured({
+      sourceSchema: 'scopus',
+      baseTable: 'sc_articles',
+      selectedTables: [
+        { schema: 'scopus', table: 'sc_articles', alias: 'articles' },
+        { schema: 'scopus', table: 'sc_journals', alias: 'journals' },
+      ],
+      selectedFields: [{ tableAlias: 'articles', column: 'publication_year', alias: 'publication_year' }],
+      joins: [{
+        left: { schema: 'scopus', table: 'sc_articles', alias: 'articles', column: 'journal_id' },
+        right: { schema: 'scopus', table: 'sc_journals', alias: 'journals', column: 'id' },
+        operator: 'eq',
+        joinType: 'left',
+      }],
+      rowLimit: 100,
+    });
+
+    expect(result.rows).toEqual([{ publication_year: 2025 }]);
+    expect(result.sqlPreview).toContain('LEFT JOIN');
+    expect(result.sqlPreview).not.toContain('2025');
+    expect(result.queryDurationMs).toEqual(expect.any(Number));
+    expect(connection.query).toHaveBeenCalledWith(expect.objectContaining({
+      text: expect.stringContaining('LEFT JOIN'),
+      values: [100, 0],
+    }));
+  });
+
+  it('rejects unsafe casts with sample values before executing the preview query', async () => {
+    vi.spyOn(service, 'columns').mockResolvedValue({
+      schemaName: 'scopus', tableName: 'sc_articles', readOnly: true,
+      capabilities: { canRead: true, canInsert: false, canUpdate: false, canDelete: false, canExport: true },
+      items: [{ name: 'year_text', dataType: 'text', nullable: true, ordinal: 1, primaryKey: false, foreignKeys: [] }],
+    });
+    const connection = {
+      query: vi.fn().mockResolvedValueOnce({ rows: [{ value: 'not-a-number' }] }),
+      end: vi.fn().mockResolvedValue(undefined),
+    };
+    vi.spyOn(service as unknown as { pool: () => unknown }, 'pool').mockReturnValue(connection);
+
+    await expect(service.previewStructured({
+      sourceSchema: 'scopus',
+      baseTable: 'sc_articles',
+      selectedTables: [{ schema: 'scopus', table: 'sc_articles', alias: 'articles' }],
+      selectedFields: [{ tableAlias: 'articles', column: 'year_text', cast: { targetType: 'numeric' } }],
+    })).rejects.toMatchObject({
+      code: 'UNSAFE_CAST_VALUES',
+      message: expect.stringContaining('not-a-number'),
+    });
+    expect(connection.query).toHaveBeenCalledOnce();
+  });
 });
