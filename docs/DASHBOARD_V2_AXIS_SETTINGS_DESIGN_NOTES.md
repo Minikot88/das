@@ -371,6 +371,70 @@ Y Axis · Count(id)
 - console errors, focus order, screen reader labels และ browser zoom 200%
 - preview/save/reload ให้ผลตรงกันกับ PostgreSQL/API จริง
 
+## คำสั่งสำหรับโมเดลเพื่อทำงานค้าง
+
+### ค่าที่แนะนำ
+
+```text
+Model: gpt-5.6-terra
+Reasoning: high
+```
+
+ใช้ `gpt-5.6-sol` เฉพาะการวิเคราะห์ปัญหาเชิง architecture, query/state ที่ซับซ้อน หรือ code review รอบสุดท้าย ไม่จำเป็นต้องใช้กับงาน UI ปกติทุกขั้น
+
+### Prompt สำหรับคัดลอกใช้
+
+```text
+ทำงานต่อในโปรเจกต์ DashboardMiniBi บน branch ปัจจุบัน โดยทำเฉพาะงานที่ค้างตามเอกสาร
+docs/DASHBOARD_V2_AXIS_SETTINGS_DESIGN_NOTES.md
+
+เป้าหมายคือปรับหน้า dashboard-v2 chart builder และส่วน DATA/Field Mapping ให้ responsive,
+เข้าใจง่าย และใช้งานจริง โดยคง UX/UI language เดิมของ DashboardMiniBi อย่างเคร่งครัด
+
+ก่อนแก้ไข:
+1. อ่าน AGENTS.md และเอกสาร notes ทั้งหมด
+2. ตรวจ component, styles และ data flow ที่มีอยู่จริง
+3. ระบุ root cause ของ overflow, duplicate status, panel ที่กินพื้นที่ และ console errors
+4. ห้ามเดา API หรือ hardcode table/field; ใช้ PostgreSQL/API เดิมเท่านั้น
+
+ขอบเขตที่ทำได้:
+- responsive layout ของ DATA, Field Mapping, Preview และ Settings ตาม breakpoint ใน notes
+- ปรับ spacing, sizing, collapse/drawer presentation และ microcopy เท่าที่จำเป็น
+- เอาสถานะ/ข้อความซ้ำ หรือ CTA ที่ไม่ทำงานจริงออก
+- ทำให้สลับ table ได้อย่างชัดเจนโดยใช้ active table เดียวต่อหนึ่งกราฟ หากยังไม่มี join จริง
+- แก้ console error ที่ reproduce ได้ โดยทำ reproduce → root cause → fix → regression test
+
+ข้อห้าม:
+- ห้าม redesign ทั้งเว็บ หรือเปลี่ยนสี, typography, icon style, top nav, chart builder flow หรือ visual language เดิม
+- ห้ามเปลี่ยน backend, PostgreSQL schema, API contract, routing, state management, chart calculation หรือ save flow
+- ห้ามเพิ่ม mock/demo/localStorage เป็น source of truth
+- ห้ามสร้าง cross-table join, fake button, fake status, duplicate preview/status หรือ feature ที่ backend ไม่รองรับ
+- ห้าม deploy, push หรือ merge
+
+การทำงาน:
+1. ทำทีละ phase เล็ก ๆ และรายงานไฟล์/ผลกระทบก่อนเริ่ม phase ถัดไป
+2. รักษา behavior เดิม ยกเว้น bug ที่พิสูจน์ได้และอยู่ในขอบเขต
+3. เมื่อแก้แต่ละ phase ให้ตรวจ lint, typecheck, tests ที่เกี่ยวข้อง และ browser QA ตามความเสี่ยง
+4. ทดสอบ desktop, tablet, mobile, keyboard, 200% zoom และไม่มี horizontal overflow
+5. ตรวจ preview, save และ reload กับ API จริง
+
+สรุป final ให้สั้น: สิ่งที่เปลี่ยน, commit, สิ่งที่ทดสอบ, gap ที่เหลือ และ local preview URL
+```
+
+### ลำดับงานที่คุ้มค่า
+
+1. **Audit/bug inventory:** ระบุจุด overflow, console error, duplicate status และ component ที่เกี่ยวข้อง
+2. **P0:** เอาสถานะซ้ำ/ข้อความ Auto save ที่ไม่จริงออก และแก้ overflow โดยไม่เปลี่ยน visual language
+3. **P1:** ปรับ DATA, Mapping และ Settings ให้ collapse/drawer ตาม breakpoint พร้อมเก็บ state เดิม
+4. **P1:** ทำ tap/keyboard fallback สำหรับการเลือก field และ validation ที่ตรงกับ active table
+5. **P2:** ตรวจ resize, rotate, zoom, preview/save/reload และ regression ทั้งหมด
+
+### เกณฑ์หยุดและส่งต่อ
+
+- หยุดถามผู้ใช้ก่อน หากการแก้ต้องเปลี่ยน API, query/data model, state architecture หรือรองรับ cross-table join จริง
+- ไม่สร้างปุ่มหรือ UI ชั่วคราวเพื่อทำให้ดูเหมือนทำงานได้
+- ถ้าบาง feature ยังไม่รองรับ ให้ซ่อนและระบุ gap ใน final แทน
+
 ## Acceptance Criteria
 
 - ผู้ใช้มองเห็น field และความหมายของ X/Y ได้โดยไม่เปิด Advanced
