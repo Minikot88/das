@@ -1,5 +1,6 @@
 import React, { Suspense, lazy } from "react";
-import { Alert, Box, CssBaseline, GlobalStyles, Skeleton, Snackbar, Stack, ThemeProvider } from "@mui/material";
+import { Alert, Box, Button, CssBaseline, Drawer, GlobalStyles, Skeleton, Snackbar, Stack, ThemeProvider, useMediaQuery } from "@mui/material";
+import { shouldRenderDesignerPreview } from "@modules/dashboards/designer-v2/components/utils/designerLayout";
 import { useLocation, useNavigate } from "react-router-dom";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { DndProvider } from "react-dnd";
@@ -18,17 +19,19 @@ import { dashboardV2Theme, dashboardV2Tokens as tokens } from "@modules/dashboar
 import { DashboardDesignerProvider } from "@modules/dashboards/designer-v2/context/DashboardDesignerContext";
 import { useDashboardDesigner } from "@modules/dashboards/designer-v2/context/useDashboardDesigner";
 import type { ChartType } from "@modules/dashboards/designer-v2/components/types";
+import { countActiveFilters } from "@modules/dashboards/designer-v2/components/utils/filterStatus";
 
 const PreviewCanvas = lazy(() => import("@modules/dashboards/designer-v2/components/PreviewCanvas"));
 const PropertyPanel = lazy(() => import("@modules/dashboards/designer-v2/components/PropertyPanel"));
 
-type MobileDesignerTab = "data" | "design" | "preview" | "settings";
+type MobileDesignerTab = "data" | "mapping" | "preview" | "settings";
 
-const mobileTabs: Array<{ id: MobileDesignerTab; label: string }> = [
-  { id: "data", label: "DATA" },
-  { id: "design", label: "DESIGN" },
-  { id: "preview", label: "PREVIEW" },
-  { id: "settings", label: "SETTINGS" },
+const mobileTabs: Array<{ id: MobileDesignerTab | "save"; label: string }> = [
+  { id: "data", label: "1 ข้อมูล" },
+  { id: "mapping", label: "2 Mapping" },
+  { id: "preview", label: "3 Preview" },
+  { id: "settings", label: "4 รูปแบบ" },
+  { id: "save", label: "5 บันทึก" },
 ];
 
 function GallerySkeleton() {
@@ -57,11 +60,16 @@ function DashboardDesignerContent() {
   const location = useLocation();
   const [templateOpen, setTemplateOpen] = React.useState(false);
   const [featurePreviewId, setFeaturePreviewId] = React.useState<string | null>(null);
-  const [mobileTab, setMobileTab] = React.useState<MobileDesignerTab>("preview");
+  const [mobileTab, setMobileTab] = React.useState<MobileDesignerTab>("data");
+  const [dataPanelOpen, setDataPanelOpen] = React.useState(true);
+  const [settingsPanelOpen, setSettingsPanelOpen] = React.useState(true);
+  const [settingsDrawerOpen, setSettingsDrawerOpen] = React.useState(false);
+  const tabletOrMobile = useMediaQuery("(max-width:820px)");
+  const laptop = useMediaQuery("(min-width:821px) and (max-width:1360px)");
   const activeDatasource = state.datasources.find((datasource) => datasource.id === state.activeDatasourceId) ?? state.datasources[0];
   const mobilePreviewOnly = !state.previewMode && mobileTab === "preview";
   const centerRows = state.previewMode ? "minmax(0, 1fr)" : "minmax(150px, auto) minmax(78px, auto) minmax(0, 1fr)";
-  const mobileCenterRows = state.previewMode || mobilePreviewOnly ? "minmax(0, 1fr)" : "minmax(156px, auto) minmax(78px, auto) minmax(0, 1fr)";
+  const mobileCenterRows = state.previewMode || mobilePreviewOnly ? "minmax(0, 1fr)" : "minmax(156px, auto) minmax(78px, auto)";
   const currentPresets = state.chartPresets.filter((preset) => !state.config.chartType || preset.chartTypes.includes(state.config.chartType));
   const featurePreview = getFutureFeature(featurePreviewId);
   const returnContext = React.useMemo(() => {
@@ -209,8 +217,16 @@ function DashboardDesignerContent() {
                 key={tab.id}
                 component="button"
                 type="button"
-                onClick={() => setMobileTab(tab.id)}
+                onClick={() => {
+                  if (tab.id === "save") {
+                    handleSaveChart();
+                    return;
+                  }
+                  setMobileTab(tab.id);
+                }}
                 aria-pressed={selected}
+                aria-selected={selected}
+                role="tab"
                 sx={{
                   appearance: "none",
                   height: 26,
@@ -235,6 +251,40 @@ function DashboardDesignerContent() {
               </Box>
             );
           })}
+        </Box>
+      ) : null}
+
+      {!state.previewMode && !tabletOrMobile ? (
+        <Box
+          sx={{
+            height: 34,
+            flex: "0 0 34px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "flex-end",
+            gap: 0.5,
+            px: 1,
+            borderBottom: "1px solid",
+            borderColor: tokens.color.borderSubtle,
+            bgcolor: tokens.color.surface,
+          }}
+        >
+          <Button
+            size="small"
+            variant="text"
+            aria-expanded={dataPanelOpen}
+            onClick={() => setDataPanelOpen((open) => !open)}
+          >
+            {dataPanelOpen ? "ยุบ DATA" : "เปิด DATA"}
+          </Button>
+          <Button
+            size="small"
+            variant="text"
+            aria-expanded={laptop ? settingsDrawerOpen : settingsPanelOpen}
+            onClick={() => laptop ? setSettingsDrawerOpen(true) : setSettingsPanelOpen((open) => !open)}
+          >
+            {laptop ? "เปิด Settings" : settingsPanelOpen ? "ยุบ Settings" : "เปิด Settings"}
+          </Button>
         </Box>
       ) : null}
 
@@ -289,11 +339,16 @@ function DashboardDesignerContent() {
           minHeight: 0,
           overflow: "hidden",
           display: "grid",
-          gridTemplateColumns: state.previewMode ? "minmax(0, 1fr)" : "280px minmax(0, 1fr) 336px",
+          position: "relative",
+          gridTemplateColumns: state.previewMode
+            ? "minmax(0, 1fr)"
+            : `${dataPanelOpen ? "280px" : ""} minmax(0, 1fr) ${settingsPanelOpen ? "336px" : ""}`.trim(),
           gap: "10px",
           p: "10px",
           "@media (max-width: 1360px)": {
-            gridTemplateColumns: state.previewMode ? "minmax(0, 1fr)" : "240px minmax(0, 1fr) 304px",
+            gridTemplateColumns: state.previewMode
+              ? "minmax(0, 1fr)"
+              : dataPanelOpen ? "240px minmax(0, 1fr)" : "minmax(0, 1fr)",
             gap: "8px",
             p: "8px",
           },
@@ -309,8 +364,18 @@ function DashboardDesignerContent() {
           },
         }}
       >
+        {state.datasetError ? (
+          <Alert
+            severity="error"
+            role="alert"
+            action={<Button color="inherit" size="small" onClick={actions.refreshDataset}>ลองใหม่</Button>}
+            sx={{ position: "absolute", zIndex: tokens.zIndex.sticky, top: 8, left: "50%", transform: "translateX(-50%)", maxWidth: "calc(100% - 32px)" }}
+          >
+            {state.datasetError}
+          </Alert>
+        ) : null}
         {!state.previewMode ? (
-        <Box sx={{ minHeight: 0, display: { xs: mobileTab === "data" ? "block" : "none", md: "block" } }}>
+        <Box sx={{ minHeight: 0, display: { xs: mobileTab === "data" ? "block" : "none", md: dataPanelOpen ? "block" : "none" } }}>
           <DataPanel
             datasources={state.datasources}
             schemaCatalog={state.externalSchemaCatalog}
@@ -332,7 +397,7 @@ function DashboardDesignerContent() {
           sx={{
             minWidth: 0,
             minHeight: 0,
-            display: { xs: mobileTab === "design" || mobileTab === "preview" || state.previewMode ? "grid" : "none", md: "grid" },
+            display: { xs: mobileTab === "mapping" || mobileTab === "preview" || state.previewMode ? "grid" : "none", md: "grid" },
             gridTemplateColumns: "minmax(0, 1fr)",
             gridTemplateRows: { xs: mobileCenterRows, md: centerRows },
             gap: "10px",
@@ -379,8 +444,9 @@ function DashboardDesignerContent() {
             </Box>
           ) : null}
 
-          <Suspense fallback={<Skeleton variant="rounded" height="100%" />}>
-            <PreviewCanvas
+          {shouldRenderDesignerPreview(tabletOrMobile, mobileTab, state.previewMode) ? (
+            <Suspense fallback={<Skeleton variant="rounded" height="100%" />}>
+              <PreviewCanvas
               chart={state.selectedChart}
               config={state.config}
               datasetRows={state.rows}
@@ -400,17 +466,19 @@ function DashboardDesignerContent() {
               onRedo={actions.redo}
               onRefresh={actions.refreshDataset}
               onResetChart={actions.resetConfig}
-            />
-          </Suspense>
+              />
+            </Suspense>
+          ) : null}
         </Box>
 
         {!state.previewMode ? (
-        <Box sx={{ minHeight: 0, display: { xs: mobileTab === "settings" ? "block" : "none", md: "block" } }}>
+        <Box sx={{ minHeight: 0, display: { xs: mobileTab === "settings" ? "block" : "none", md: laptop || !settingsPanelOpen ? "none" : "block" } }}>
           <Suspense fallback={<Skeleton variant="rounded" height="100%" />}>
             <PropertyPanel
               config={state.config}
               themePresets={state.demoThemes}
               onSettingsChange={actions.updateSettings}
+              onSortChange={actions.changeSort}
               onThemePresetChange={actions.applyThemePreset}
               onSave={handleSaveChart}
               onPreview={actions.togglePreviewMode}
@@ -429,6 +497,37 @@ function DashboardDesignerContent() {
         ) : null}
       </Box>
 
+      {!state.previewMode && laptop ? (
+        <Drawer
+          anchor="right"
+          open={settingsDrawerOpen}
+          onClose={() => setSettingsDrawerOpen(false)}
+          ModalProps={{ keepMounted: true }}
+          PaperProps={{ sx: { width: 336, maxWidth: "92vw", p: 1 } }}
+        >
+          <Box role="dialog" aria-label="Settings drawer" sx={{ height: "100%", minHeight: 0 }}>
+            <Suspense fallback={<Skeleton variant="rounded" height="100%" />}>
+              <PropertyPanel
+                config={state.config}
+                themePresets={state.demoThemes}
+                onSettingsChange={actions.updateSettings}
+                onSortChange={actions.changeSort}
+                onThemePresetChange={actions.applyThemePreset}
+                onSave={handleSaveChart}
+                onPreview={actions.togglePreviewMode}
+                onShare={() => actions.setShareOpen(true)}
+                onExportJson={actions.exportJson}
+                onExportCsv={actions.exportCsv}
+                onExportPng={actions.exportPng}
+                onReset={actions.resetConfig}
+                onCopyConfig={() => { void actions.copyConfig(); }}
+                onReplaceConfig={actions.replaceConfig}
+              />
+            </Suspense>
+          </Box>
+        </Drawer>
+      ) : null}
+
       <BottomStatus
         chart={state.selectedChart}
         mappings={state.config.mappings}
@@ -437,6 +536,7 @@ function DashboardDesignerContent() {
         rowCount={state.rows.length}
         fieldCount={state.fields.length}
         filteredRowCount={state.transformedData.filteredRows.length}
+        activeFilterCount={countActiveFilters(state.config.filters)}
         saveStatus={state.saveStatus}
         lastSavedAt={state.lastSavedAt}
       />
