@@ -19,7 +19,15 @@ import {
 } from "@modules/dashboards/designer-v2/components/sql/sqlQueryEngine";
 import { exportRowsToCsv, transformChartData } from "@modules/dashboards/designer-v2/components/utils/chartDataEngine";
 import { getLatestEChartsDataUrl } from "@modules/dashboards/designer-v2/components/utils/echartsInstanceRegistry";
-import { validateChartConfig, validateFieldForSlot } from "@modules/dashboards/designer-v2/components/utils/chartValidation";
+import {
+  validateAggregationForField,
+  validateChartConfig,
+  validateFieldForSlot,
+} from "@modules/dashboards/designer-v2/components/utils/chartValidation";
+import {
+  mappingRecommendationFor,
+  preferredAggregationFor,
+} from "@modules/dashboards/designer-v2/components/utils/axisTitles";
 import { getChartDefinition } from "@modules/dashboards/designer-v2/components/utils/chartRegistry";
 import { getSavedChartById, upsertSavedChart } from "@modules/charts/public/savedCharts";
 import {
@@ -116,6 +124,27 @@ function cloneConfig(config: ChartConfig): ChartConfig {
   return structuredClone(config);
 }
 
+export function persistChartEditLocation(chartId: string) {
+  if (typeof window === "undefined") return;
+  const url = new URL(window.location.href);
+  url.searchParams.set("chartId", chartId);
+  window.history.replaceState(window.history.state, "", url);
+}
+
+export function createApiDesignerConfig(): ChartConfig {
+  const config = createDefaultConfig();
+  config.sourceType = "dataset";
+  config.datasetId = "";
+  config.settings.general.title = "";
+  config.settings.general.subtitle = "";
+  config.settings.axis.xAxisLabel = "";
+  config.settings.axis.yAxisLabel = "";
+  config.mappings = config.mappings.map((mapping) => ({ ...mapping, fields: [] }));
+  config.filters = {};
+  config.sort = "none";
+  return config;
+}
+
 function toDesignerFields(fields: Array<Record<string, unknown>>, table = "dataset"): DataField[] {
   return fields.map((field) => {
     const rawType = String(field.type || field.dataType || "string").toLowerCase();
@@ -127,6 +156,7 @@ function toDesignerFields(fields: Array<Record<string, unknown>>, table = "datas
           ? "boolean"
           : "text";
     const name = String(field.name || field.fieldKey || "");
+    const isPrimaryKey = field.primaryKey === true || /(^id$|_id$|^id_)/i.test(name);
     const isMeasure = type === "number";
     return {
       id: String(field.id || name),
@@ -139,7 +169,8 @@ function toDesignerFields(fields: Array<Record<string, unknown>>, table = "datas
       sampleValues: [],
       isMeasure,
       isDimension: !isMeasure,
-      defaultAggregation: isMeasure ? "Sum" : "None",
+      defaultAggregation: isPrimaryKey ? "Count" : isMeasure ? "Sum" : "None",
+      isPrimaryKey,
     };
   });
 }
@@ -160,6 +191,15 @@ function toRemoteDatasource(item: Record<string, unknown>): DemoDatasource {
     fieldCount: Number(item.fieldCount || 0),
     lastUpdated: String(item.updatedAt || ""),
   };
+}
+
+export function datasetSourceIdentity(dataset: Record<string, unknown>) {
+  const sourceConfig = isObject(dataset.sourceConfigJson) ? dataset.sourceConfigJson : {};
+  const name = String(dataset.name || "dataset");
+  const [nameSchema, ...nameTableParts] = name.split(".");
+  const schema = String(sourceConfig.schemaName || (nameTableParts.length ? nameSchema : ""));
+  const table = String(sourceConfig.tableName || (nameTableParts.length ? nameTableParts.join(".") : name));
+  return { schema, table, context: schema ? `${schema}.${table}` : table };
 }
 
 function remapFieldsToDatasource(currentFields: DataField[], nextFields: DataField[]) {
@@ -186,7 +226,7 @@ function savedMappingsFrom(value: Record<string, unknown>) {
   return [];
 }
 
-function serializeChartConfig(config: ChartConfig, sqlSnapshot?: { query: string; result: SqlQueryResult | null }) {
+export function serializeChartConfig(config: ChartConfig, sqlSnapshot?: { query: string; result: SqlQueryResult | null }) {
   const aggregations = config.mappings.reduce<Record<string, Aggregation | undefined>>((result, slot) => {
     result[slot.id] = slot.aggregation;
     return result;
@@ -290,7 +330,7 @@ function exportFilename(config: ChartConfig, extension: string) {
   return `${dashboard}-${chart}-${timestampForFilename()}.${extension}`;
 }
 
-function normalizeConfig(value: unknown, availableFields = dataFields): ChartConfig {
+export function normalizeConfig(value: unknown, availableFields = dataFields): ChartConfig {
   const fallback = createDefaultConfig();
   if (!isObject(value)) return fallback;
 
@@ -303,7 +343,18 @@ function normalizeConfig(value: unknown, availableFields = dataFields): ChartCon
         ...defaultChartSettings,
         ...value.settings,
         general: { ...defaultChartSettings.general, ...(isObject(value.settings.general) ? value.settings.general : {}) },
-        axis: { ...defaultChartSettings.axis, ...(isObject(value.settings.axis) ? value.settings.axis : {}) },
+        axis: {
+          ...defaultChartSettings.axis,
+          ...(isObject(value.settings.axis) ? value.settings.axis : {}),
+          xTitle: {
+            ...defaultChartSettings.axis.xTitle,
+            ...(isObject(value.settings.axis) && isObject(value.settings.axis.xTitle) ? value.settings.axis.xTitle : {}),
+          },
+          yTitle: {
+            ...defaultChartSettings.axis.yTitle,
+            ...(isObject(value.settings.axis) && isObject(value.settings.axis.yTitle) ? value.settings.axis.yTitle : {}),
+          },
+        },
         labels: { ...defaultChartSettings.labels, ...(isObject(value.settings.labels) ? value.settings.labels : {}) },
         legend: { ...defaultChartSettings.legend, ...(isObject(value.settings.legend) ? value.settings.legend : {}) },
         colors: { ...defaultChartSettings.colors, ...(isObject(value.settings.colors) ? value.settings.colors : {}) },
@@ -670,9 +721,9 @@ function applyChartTypeDefaults(mappings: MappingSlot[], chartType: ChartType, a
     const hasDimension = nextMappings.find((slot) => slot.id === "legend")?.fields.length || nextMappings.find((slot) => slot.id === "xAxis")?.fields.length;
     if (!hasDimension) nextMappings = updateSlot(nextMappings, "legend", [categoryField], "None");
     nextMappings = updateSlot(nextMappings, "category", [categoryField], "None");
-    nextMappings = updateSlot(nextMappings, "value", [salesField], "Sum");
+    nextMappings = updateSlot(nextMappings, "value", [salesField], preferredAggregationFor(salesField));
     if (!nextMappings.find((slot) => slot.id === "yAxis")?.fields.length) {
-      nextMappings = updateSlot(nextMappings, "yAxis", [salesField], "Sum");
+      nextMappings = updateSlot(nextMappings, "yAxis", [salesField], preferredAggregationFor(salesField));
     }
   }
 
@@ -753,6 +804,20 @@ function applyChartTypeDefaults(mappings: MappingSlot[], chartType: ChartType, a
     nextMappings = updateSlot(nextMappings, "rows", [monthField, categoryField, channelField].filter(Boolean) as DataField[], "None");
     nextMappings = updateSlot(nextMappings, "columns", [categoryField], "None");
     nextMappings = updateSlot(nextMappings, "value", [salesField], "Sum");
+  }
+
+  const currentX = nextMappings.find((slot) => slot.id === "xAxis")?.fields[0];
+  const currentY = nextMappings.find((slot) => slot.id === "yAxis")?.fields[0];
+  const recommendedX = currentX ?? fieldPool.find((field) => mappingRecommendationFor(field).slotId === "xAxis");
+  const recommendedY = currentY ?? fieldPool.find((field) => mappingRecommendationFor(field).slotId === "yAxis");
+  if (["pie", "donut"].includes(chartType)) {
+    const category = nextMappings.find((slot) => slot.id === "category")?.fields[0] ?? recommendedX;
+    const value = nextMappings.find((slot) => slot.id === "value")?.fields[0] ?? recommendedY;
+    if (category) nextMappings = updateSlot(nextMappings, "category", [category], "None");
+    if (value) nextMappings = updateSlot(nextMappings, "value", [value], preferredAggregationFor(value));
+  } else {
+    if (!currentX && recommendedX) nextMappings = updateSlot(nextMappings, "xAxis", [recommendedX], "None");
+    if (!currentY && recommendedY) nextMappings = updateSlot(nextMappings, "yAxis", [recommendedY], preferredAggregationFor(recommendedY));
   }
 
   return nextMappings;
@@ -846,8 +911,9 @@ export function useDashboardDesignerState() {
   const [resolvedProjectId, setResolvedProjectId] = useState<string | null>(returnProjectId);
   const [initialSnapshot] = useState(() => {
     if (mockMode) return loadInitialDesignerSnapshot(createMode ? null : requestedChartId);
+    const apiConfig = createApiDesignerConfig();
     return {
-      config: { ...createDefaultConfig(), sourceType: "dataset" as const, datasetId: "" },
+      config: apiConfig,
       rows: [] as DemoDatasetRow[],
       fields: [] as DataField[],
       activeDatasourceId: "",
@@ -887,9 +953,10 @@ export function useDashboardDesignerState() {
         : "โหลดแดชบอร์ดสำเร็จ"
   );
   const [isLoading, setIsLoading] = useState(!mockMode);
+  const [datasetError, setDatasetError] = useState<string | null>(null);
   const [historyPast, setHistoryPast] = useState<ChartConfig[]>([]);
   const [historyFuture, setHistoryFuture] = useState<ChartConfig[]>([]);
-  const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "unsaved">("saved");
+  const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "unsaved" | "failed">("saved");
   const [lastSavedAt, setLastSavedAt] = useState(formatSavedTime());
   const [activeSavedChartId, setActiveSavedChartId] = useState<string | null>(() => initialSnapshot.loadedSavedChartId);
   const [activeChartRevision, setActiveChartRevision] = useState<number | undefined>(undefined);
@@ -936,6 +1003,7 @@ export function useDashboardDesignerState() {
 
     let active = true;
     setIsLoading(true);
+    setDatasetError(null);
     getProjects()
       .then((projects) => {
         if (!active) return;
@@ -979,6 +1047,7 @@ export function useDashboardDesignerState() {
           setSnackbar("โปรเจกต์นี้ยังไม่มีชุดข้อมูล");
           return;
         }
+        if (requestedChartId) return;
         const selectedItem = items.find((item: Record<string, unknown>) => String(item.id) === requestedDatasetId) ?? items[0];
         const selectedDatasource = toRemoteDatasource(selectedItem);
         const dataset = await loadDataset(String(selectedItem.id));
@@ -999,7 +1068,7 @@ export function useDashboardDesignerState() {
                 general: {
                   ...current.settings.general,
                   title: dataset.name || "Live dataset",
-                  subtitle: "Live PostgreSQL source",
+                  subtitle: `ข้อมูลจาก ${selectedDatasource.schema}.${selectedDatasource.table}`,
                 },
               },
           mappings: current.chartType
@@ -1009,6 +1078,7 @@ export function useDashboardDesignerState() {
       })
       .catch((error) => {
         if (active) setSnackbar(errorMessage(error, "ไม่สามารถโหลดชุดข้อมูลจาก API ได้"));
+        if (active) setDatasetError(errorMessage(error, "ไม่สามารถโหลดชุดข้อมูลจาก API ได้"));
       })
       .finally(() => {
         if (active) setIsLoading(false);
@@ -1016,7 +1086,7 @@ export function useDashboardDesignerState() {
     return () => {
       active = false;
     };
-  }, [mockMode, requestedDatasetId, resolvedProjectId]);
+  }, [mockMode, requestedChartId, requestedDatasetId, resolvedProjectId]);
 
   useEffect(() => {
     if (mockMode) { setExternalSchemaCatalog([]); return undefined; }
@@ -1045,7 +1115,8 @@ export function useDashboardDesignerState() {
         .then(async (chart) => {
           if (!chart) throw new Error("ไม่พบกราฟที่ต้องการแก้ไข");
           const dataset = chart.datasetId ? await loadDataset(chart.datasetId) : null;
-          const nextFields = toDesignerFields(dataset?.fields ?? [], dataset?.name ?? "dataset");
+          const sourceIdentity = dataset ? datasetSourceIdentity(dataset as Record<string, unknown>) : { schema: "", table: "", context: "dataset" };
+          const nextFields = toDesignerFields(dataset?.fields ?? [], sourceIdentity.context);
           const nextConfig = normalizeConfig({
             ...(chart.config ?? {}),
             chartId: chart.id,
@@ -1057,7 +1128,7 @@ export function useDashboardDesignerState() {
           setRows((dataset?.rows ?? []) as DemoDatasetRow[]);
           setFields(nextFields);
           setActiveDatasourceId(dataset?.id ?? "");
-          setSelectedTable(dataset?.name ?? "");
+          setSelectedTable(sourceIdentity.table);
           setActiveSavedChartId(chart.id);
           setActiveChartRevision(Number(chart.revision || 0));
           setSaveStatus("saved");
@@ -1095,10 +1166,7 @@ export function useDashboardDesignerState() {
   }, [mockMode, requestedChartId, returnDashboardId, returnProjectId]);
 
   useEffect(() => {
-    if (!mockMode) {
-      setSaveStatus("unsaved");
-      return undefined;
-    }
+    if (!mockMode) return undefined;
     setSaveStatus("saving");
     const timer = window.setTimeout(() => {
       const record = persistDesignerChartConfig(config, { query: sqlQuery, result: sqlResult }, activeSavedChartId);
@@ -1207,6 +1275,7 @@ export function useDashboardDesignerState() {
     if (!mockMode) {
       try {
         setIsLoading(true);
+        setDatasetError(null);
         const dataset = await loadDataset(datasource.id);
         const nextFields = toDesignerFields(dataset.fields ?? [], `${datasource.schema}.${datasource.table}`);
         setRows((dataset.rows ?? []) as DemoDatasetRow[]);
@@ -1220,14 +1289,24 @@ export function useDashboardDesignerState() {
           ...current,
           sourceType: "dataset",
           datasetId: dataset.id,
-          mappings: current.mappings.map((slot) => ({
+          settings: {
+            ...current.settings,
+            general: {
+              ...current.settings.general,
+              title: `${datasource.schema}.${datasource.table}`,
+              subtitle: `ข้อมูลจาก ${datasource.schema}.${datasource.table}`,
+            },
+          },
+          mappings: applyChartTypeDefaults(current.mappings.map((slot) => ({
             ...slot,
             fields: remapFieldsToDatasource(slot.fields, nextFields),
-          })),
+          })), current.chartType ?? "bar", nextFields),
           filters: {},
         }));
       } catch (error) {
-        setSnackbar(errorMessage(error, "ไม่สามารถโหลดชุดข้อมูลได้"));
+        const message = errorMessage(error, "ไม่สามารถโหลดชุดข้อมูลได้");
+        setSnackbar(message);
+        setDatasetError(message);
       } finally {
         setIsLoading(false);
       }
@@ -1275,6 +1354,7 @@ export function useDashboardDesignerState() {
     }
     try {
       setIsLoading(true);
+      setDatasetError(null);
       const created = await createExternalDataset({
         projectId: resolvedProjectId,
         name: `${schemaName}.${tableName}`,
@@ -1296,14 +1376,24 @@ export function useDashboardDesignerState() {
         ...current,
         sourceType: "dataset",
         datasetId: datasource.id,
-        mappings: current.mappings.map((slot) => ({
+        settings: {
+          ...current.settings,
+          general: {
+            ...current.settings.general,
+            title: `${schemaName}.${tableName}`,
+            subtitle: `ข้อมูลจาก ${schemaName}.${tableName}`,
+          },
+        },
+        mappings: applyChartTypeDefaults(current.mappings.map((slot) => ({
           ...slot,
           fields: remapFieldsToDatasource(slot.fields, nextFields),
-        })),
+        })), current.chartType ?? "bar", nextFields),
         filters: {},
       }), `เปลี่ยนตารางเป็น ${schemaName}.${tableName}`);
     } catch (error) {
-      setSnackbar(errorMessage(error, "ไม่สามารถเปิดตารางนี้ได้"));
+      const message = errorMessage(error, "ไม่สามารถเปิดตารางนี้ได้");
+      setSnackbar(message);
+      setDatasetError(message);
     } finally {
       setIsLoading(false);
     }
@@ -1463,11 +1553,25 @@ export function useDashboardDesignerState() {
       setSnackbar(definition?.disabledReason ?? "กราฟนี้ยังไม่พร้อมใช้งาน");
       return;
     }
-    commitConfig((current) => ({
-      ...current,
-      chartType: chartId,
-      mappings: applyChartTypeDefaults(current.mappings, chartId, fields),
-    }), "เปลี่ยนประเภทกราฟแล้ว");
+    commitConfig((current) => {
+      let mappings = applyChartTypeDefaults(current.mappings, chartId, fields);
+      if (chartId === "pie" || chartId === "donut") {
+        const category = current.mappings.find((item) => item.id === "category")?.fields[0]
+          ?? current.mappings.find((item) => item.id === "xAxis")?.fields[0];
+        const valueSlot = current.mappings.find((item) => item.id === "value");
+        const ySlot = current.mappings.find((item) => item.id === "yAxis");
+        const value = valueSlot?.fields[0] ?? ySlot?.fields[0];
+        if (category) mappings = updateSlot(mappings, "category", [category], "None");
+        if (value) mappings = updateSlot(mappings, "value", [value], valueSlot?.fields.length ? valueSlot.aggregation : ySlot?.aggregation);
+      } else {
+        mappings = mappings.map((mapping) => {
+          const existing = current.mappings.find((item) => item.id === mapping.id);
+          if (!existing?.fields.length || !existing.fields.every((field) => validateFieldForSlot(mapping.id, field, chartId))) return mapping;
+          return { ...mapping, fields: existing.fields, aggregation: existing.aggregation };
+        });
+      }
+      return { ...current, chartType: chartId, mappings };
+    }, "เปลี่ยนประเภทกราฟแล้ว");
     setActiveTemplateId(null);
   }, [commitConfig, fields]);
 
@@ -1493,6 +1597,26 @@ export function useDashboardDesignerState() {
   }, [commitConfig, fields]);
 
   const resetConfig = useCallback(() => {
+    if (!mockMode) {
+      setSelectedFieldId(null);
+      setActiveSavedChartId(null);
+      loadedQueryChartIdRef.current = null;
+      commitConfig((current) => {
+        const clean = createApiDesignerConfig();
+        clean.dashboardId = current.dashboardId;
+        clean.chartId = current.chartId;
+        clean.chartType = current.chartType;
+        clean.sourceType = current.sourceType;
+        clean.datasetId = current.datasetId;
+        clean.settings.general.subtitle = current.settings.general.subtitle;
+        clean.mappings = current.chartType
+          ? applyChartTypeDefaults(clean.mappings, current.chartType, fields)
+          : clean.mappings;
+        return clean;
+      }, "รีเซ็ตการตั้งค่ากราฟแล้ว");
+      setActiveTemplateId(null);
+      return;
+    }
     setRows(getDatasetRows(DEFAULT_DATASET_ID));
     setFields(dataFields);
     setActiveDatasourceId(INITIAL_DATASOURCES[0]?.id ?? "researchdb");
@@ -1502,12 +1626,23 @@ export function useDashboardDesignerState() {
     loadedQueryChartIdRef.current = null;
     commitConfig(() => createDefaultConfig(), "รีเซ็ตการตั้งค่ากราฟแล้ว");
     setActiveTemplateId(null);
-  }, [commitConfig]);
+  }, [commitConfig, fields, mockMode]);
 
   const applyDemoTemplate = useCallback((templateId: DemoTemplate["id"]) => {
     const template = demoTemplates.find((item) => item.id === templateId);
     if (!template) {
       setSnackbar("ไม่พบ Template ที่เลือก");
+      return;
+    }
+    if (!mockMode) {
+      commitConfig((current) => ({
+        ...current,
+        chartType: template.chartType,
+        settings: mergeSettingsPatch(applyThemeToSettings(current.settings, template.themeId), template.settings),
+        mappings: applyChartTypeDefaults(current.mappings, template.chartType, fields),
+        sort: template.sort ?? current.sort,
+      }), `ใช้ Template: ${template.name}`);
+      setActiveTemplateId(template.id);
       return;
     }
     if (config.sourceType === "demo-sql") {
@@ -1530,12 +1665,26 @@ export function useDashboardDesignerState() {
       `ใช้ Template: ${template.name}`
     );
     setActiveTemplateId(template.id);
-  }, [commitConfig, config.sourceType]);
+  }, [commitConfig, config.sourceType, fields, mockMode]);
 
   const applyChartPreset = useCallback((presetId: ChartPreset["id"]) => {
     const preset = chartPresets.find((item) => item.id === presetId);
     if (!preset) {
       setSnackbar("ไม่พบ Preset ที่เลือก");
+      return;
+    }
+    if (!mockMode) {
+      commitConfig((current) => ({
+        ...current,
+        chartType: preset.chartType,
+        settings: mergeSettingsPatch(
+          preset.themeId ? applyThemeToSettings(current.settings, preset.themeId) : current.settings,
+          preset.settings,
+        ),
+        mappings: applyChartTypeDefaults(current.mappings, preset.chartType, fields),
+        sort: preset.sort ?? current.sort,
+      }), `ใช้ Preset: ${preset.name}`);
+      setActiveTemplateId(null);
       return;
     }
     if (config.sourceType === "demo-sql") {
@@ -1558,7 +1707,7 @@ export function useDashboardDesignerState() {
       `ใช้ Preset: ${preset.name}`
     );
     setActiveTemplateId(null);
-  }, [commitConfig, config.sourceType]);
+  }, [commitConfig, config.sourceType, fields, mockMode]);
 
   const applyThemePreset = useCallback((themeId: DemoThemeId) => {
     const theme = demoThemes.find((item) => item.id === themeId);
@@ -1575,7 +1724,8 @@ export function useDashboardDesignerState() {
 
   const dropField = useCallback((slotId: MappingSlotId, field: DataField, sourceSlotId?: MappingSlotId) => {
     if (!validateFieldForSlot(slotId, field, config.chartType)) {
-      setSnackbar(`ฟิลด์ ${field.name} ไม่เหมาะกับช่อง ${slotId}`);
+      const slotLabel = slotId === "yAxis" ? "Y Axis" : slotId === "xAxis" ? "X Axis" : slotId;
+      setSnackbar(`ฟิลด์ \`${field.name}\` จากตาราง ${field.table} เป็นชนิด ${field.type} จึงไม่เหมาะกับ ${slotLabel}`);
       return;
     }
 
@@ -1593,7 +1743,11 @@ export function useDashboardDesignerState() {
               ? nextFields
               : [...nextFields, field];
         }
-        return { ...slot, fields: nextFields };
+        const nextAggregation =
+          slot.id === slotId && ["yAxis", "value", "size"].includes(slotId)
+            ? preferredAggregationFor(field)
+            : slot.aggregation;
+        return { ...slot, fields: nextFields, aggregation: nextAggregation };
       });
       const nextFilters = { ...current.filters };
       if (slotId === "filter" && !nextFilters[field.id]) {
@@ -1624,10 +1778,22 @@ export function useDashboardDesignerState() {
   }, [commitConfig]);
 
   const changeAggregation = useCallback((slotId: MappingSlotId, aggregation: Aggregation) => {
+    const target = configRef.current.mappings.find((slot) => slot.id === slotId);
+    const invalid = target?.fields
+      .map((field) => validateAggregationForField(field, aggregation, slotId))
+      .find((result) => !result.valid);
+    if (invalid) {
+      setSnackbar(invalid.message);
+      return;
+    }
     commitConfig((current) => ({
       ...current,
       mappings: current.mappings.map((slot) => (slot.id === slotId ? { ...slot, aggregation } : slot)),
     }), `เปลี่ยน Aggregation เป็น ${aggregation}`);
+  }, [commitConfig]);
+
+  const changeSort = useCallback((sort: ChartConfig["sort"]) => {
+    commitConfig((current) => ({ ...current, sort }), "เปลี่ยนการเรียงข้อมูลแล้ว");
   }, [commitConfig]);
 
   const updateFilter = useCallback((field: DataField, value: FilterValue) => {
@@ -1693,13 +1859,19 @@ export function useDashboardDesignerState() {
         const saved = activeSavedChartId
           ? await updateChart(activeSavedChartId, payload)
           : await createChart(payload);
+        setConfig((current) => {
+          const next = { ...current, chartId: saved.id };
+          configRef.current = next;
+          return next;
+        });
         setActiveSavedChartId(saved.id);
         setActiveChartRevision(Number(saved.revision || 0));
+        persistChartEditLocation(saved.id);
         setSaveStatus("saved");
         setLastSavedAt(formatSavedTime());
         setSnackbar("บันทึกกราฟลง PostgreSQL แล้ว");
       } catch (error) {
-        setSaveStatus("unsaved");
+        setSaveStatus("failed");
         setSnackbar(errorStatus(error) === 409
           ? "กราฟถูกแก้ไขจากอีกหน้าต่าง กรุณาโหลดข้อมูลล่าสุด"
           : errorMessage(error, "ไม่สามารถบันทึกกราฟได้"));
@@ -1732,13 +1904,16 @@ export function useDashboardDesignerState() {
     }
     if (!mockMode) {
       try {
+        setDatasetError(null);
         const dataset = await loadDataset(config.datasetId);
         const nextFields = toDesignerFields(dataset.fields ?? [], dataset.name);
         setRows((dataset.rows ?? []) as DemoDatasetRow[]);
         setFields(nextFields);
         setSnackbar("รีเฟรชข้อมูลจาก PostgreSQL แล้ว");
       } catch (error) {
-        setSnackbar(errorMessage(error, "ไม่สามารถรีเฟรชชุดข้อมูลได้"));
+        const message = errorMessage(error, "ไม่สามารถรีเฟรชชุดข้อมูลได้");
+        setSnackbar(message);
+        setDatasetError(message);
       }
       return;
     }
@@ -1879,6 +2054,7 @@ export function useDashboardDesignerState() {
       sqlSourceActive: config.sourceType === "demo-sql",
       snackbar,
       isLoading,
+      datasetError,
       canUndo: historyPast.length > 0,
       canRedo: historyFuture.length > 0,
       saveStatus,
@@ -1901,6 +2077,7 @@ export function useDashboardDesignerState() {
       setShareOpen: updateShareOpen,
       setShareAccess,
       updateSettings,
+      changeSort,
       replaceConfig,
       resetConfig,
       applyDemoTemplate,
