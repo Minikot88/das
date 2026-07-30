@@ -3,7 +3,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
-const listDatasets = vi.fn().mockResolvedValue({
+const datasetListResponse = {
   items: [{
     id: "dataset-scopus-articles",
     name: "Scopus articles",
@@ -13,7 +13,15 @@ const listDatasets = vi.fn().mockResolvedValue({
     fieldCount: 2,
     updatedAt: "2026-07-29T00:00:00.000Z",
   }],
+};
+const listDatasets = vi.fn(async ({ projectId }: { projectId?: string }) => {
+  if (projectId !== "project-scopus") throw new Error("Project was not found.");
+  return datasetListResponse;
 });
+const getProjects = vi.fn(async () => [
+  { id: "project-archive", name: "Archive" },
+  { id: "project-scopus", name: "Scopus" },
+]);
 const loadDataset = vi.fn(async (datasetId: string) => datasetId === "dataset-scopus-authors" ? {
   id: "dataset-scopus-authors",
   name: "scopus.sc_authors",
@@ -46,12 +54,35 @@ const createExternalDataset = vi.fn().mockResolvedValue({
 vi.mock("@infrastructure/http/client", () => ({ isMockMode: () => false }));
 vi.mock("@modules/datasets/public/api", () => ({ createExternalDataset, listDatasets, loadDataset, listExternalSources, listExternalTables }));
 vi.mock("@modules/charts/public/api", () => ({ getChartById: vi.fn(), createChart: vi.fn(), updateChart: vi.fn() }));
+vi.mock("@modules/projects", () => ({
+  API_ACTIVE_PROJECT_KEY: "mini-bi-api-active-project-id",
+  getProjects,
+  resolveApiActiveProject: (projects: Array<{ id: string }>, preferredProjectId?: string | null) =>
+    projects.find((project) => project.id === preferredProjectId) ?? projects[0] ?? null,
+}));
 
 function Wrapper({ children }: PropsWithChildren) {
   return <MemoryRouter initialEntries={["/dashboard-v2?projectId=project-scopus"]}>{children}</MemoryRouter>;
 }
 
+function WrapperWithoutProject({ children }: PropsWithChildren) {
+  return <MemoryRouter initialEntries={["/dashboard-v2"]}>{children}</MemoryRouter>;
+}
+
 describe("useDashboardDesignerState API source", () => {
+  it("resolves the stored API project before loading a direct dashboard-v2 route", async () => {
+    window.localStorage.setItem("mini-bi-api-active-project-id", "project-scopus");
+    const { useDashboardDesignerState } = await import("@modules/dashboards/designer-v2/hooks/useDashboardDesignerState");
+    const { result } = renderHook(() => useDashboardDesignerState(), { wrapper: WrapperWithoutProject });
+
+    await waitFor(() => expect(result.current.state.isLoading).toBe(false));
+
+    expect(result.current.state.datasources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ schema: "scopus", table: "sc_articles" }),
+    ]));
+    expect(result.current.state.snackbar).not.toBe("Project was not found.");
+  });
+
   it("renders Scopus dataset metadata from the API without writing legacy project context", async () => {
     window.localStorage.clear();
     const { useDashboardDesignerState } = await import("@modules/dashboards/designer-v2/hooks/useDashboardDesignerState");

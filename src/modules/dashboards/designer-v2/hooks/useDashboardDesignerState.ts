@@ -31,6 +31,11 @@ import { useLocation } from "react-router-dom";
 import { isMockMode } from "@infrastructure/http/client";
 import { getChartById, createChart, updateChart } from "@modules/charts/public/api";
 import { createExternalDataset, listDatasets, listExternalSources, listExternalTables, loadDataset } from "@modules/datasets/public/api";
+import {
+  API_ACTIVE_PROJECT_KEY,
+  getProjects,
+  resolveApiActiveProject,
+} from "@modules/projects";
 import type {
   Aggregation,
   ChartCategory,
@@ -838,6 +843,7 @@ export function useDashboardDesignerState() {
   const returnProjectId = queryParams.get("projectId");
   const returnDashboardId = queryParams.get("dashboardId");
   const createMode = queryParams.get("mode") === "create";
+  const [resolvedProjectId, setResolvedProjectId] = useState<string | null>(returnProjectId);
   const [initialSnapshot] = useState(() => {
     if (mockMode) return loadInitialDesignerSnapshot(createMode ? null : requestedChartId);
     return {
@@ -923,9 +929,45 @@ export function useDashboardDesignerState() {
 
   useEffect(() => {
     if (mockMode) return undefined;
+    if (returnProjectId) {
+      setResolvedProjectId(returnProjectId);
+      return undefined;
+    }
+
     let active = true;
     setIsLoading(true);
-    listDatasets({ projectId: returnProjectId ?? undefined, page: 1, pageSize: 200 })
+    getProjects()
+      .then((projects) => {
+        if (!active) return;
+        const preferredProjectId = window.localStorage.getItem(API_ACTIVE_PROJECT_KEY);
+        const project = resolveApiActiveProject(projects, preferredProjectId, null);
+        if (project) {
+          setResolvedProjectId(project.id);
+          return;
+        }
+        setResolvedProjectId(null);
+        setRemoteDatasources([]);
+        setRows([]);
+        setFields([]);
+        setSnackbar("ยังไม่มีโปรเจกต์สำหรับสร้างกราฟ");
+        setIsLoading(false);
+      })
+      .catch((error) => {
+        if (!active) return;
+        setSnackbar(errorMessage(error, "ไม่สามารถโหลดโปรเจกต์จาก API ได้"));
+        setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [mockMode, returnProjectId]);
+
+  useEffect(() => {
+    if (mockMode) return undefined;
+    if (!resolvedProjectId) return undefined;
+    let active = true;
+    setIsLoading(true);
+    listDatasets({ projectId: resolvedProjectId, page: 1, pageSize: 200 })
       .then(async (response) => {
         const items = Array.isArray(response?.items) ? response.items : [];
         if (!active) return;
@@ -974,24 +1016,25 @@ export function useDashboardDesignerState() {
     return () => {
       active = false;
     };
-  }, [mockMode, requestedDatasetId, returnProjectId]);
+  }, [mockMode, requestedDatasetId, resolvedProjectId]);
 
   useEffect(() => {
     if (mockMode) { setExternalSchemaCatalog([]); return undefined; }
+    if (!resolvedProjectId) { setExternalSchemaCatalog([]); return undefined; }
     let active = true;
-    listExternalSources(returnProjectId ?? undefined)
+    listExternalSources(resolvedProjectId)
       .then(async (result) => {
         const sources = Array.isArray(result?.items) ? result.items : [];
         const entries = await Promise.all(sources.map(async (source: { schemaName?: unknown; displayName?: unknown }) => {
           const schemaName = String(source.schemaName || "");
-          const tables = schemaName ? (await listExternalTables(schemaName, returnProjectId ?? undefined))?.items ?? [] : [];
+          const tables = schemaName ? (await listExternalTables(schemaName, resolvedProjectId))?.items ?? [] : [];
           return { schemaName, displayName: String(source.displayName || schemaName), tables };
         }));
         if (active) setExternalSchemaCatalog(entries.filter((entry) => entry.schemaName));
       })
       .catch(() => { if (active) setExternalSchemaCatalog([]); });
     return () => { active = false; };
-  }, [mockMode, returnProjectId]);
+  }, [mockMode, resolvedProjectId]);
 
   useEffect(() => {
     if (!requestedChartId || requestedChartId === loadedQueryChartIdRef.current) return;
@@ -1226,14 +1269,14 @@ export function useDashboardDesignerState() {
       setSnackbar("ตารางนี้ไม่มีใน Demo Dataset");
       return;
     }
-    if (!returnProjectId) {
+    if (!resolvedProjectId) {
       setSnackbar("ไม่พบโปรเจกต์สำหรับเปิดตาราง");
       return;
     }
     try {
       setIsLoading(true);
       const created = await createExternalDataset({
-        projectId: returnProjectId,
+        projectId: resolvedProjectId,
         name: `${schemaName}.${tableName}`,
         schemaName,
         tableName,
@@ -1264,7 +1307,7 @@ export function useDashboardDesignerState() {
     } finally {
       setIsLoading(false);
     }
-  }, [availableDatasources, commitConfig, mockMode, returnProjectId, updateDatasource]);
+  }, [availableDatasources, commitConfig, mockMode, resolvedProjectId, updateDatasource]);
 
   const executeSqlQuery = useCallback((query: string, message = "รัน SQL Query แล้ว") => {
     if (!mockMode) {
@@ -1628,7 +1671,7 @@ export function useDashboardDesignerState() {
 
   const saveChart = useCallback(async () => {
     if (!mockMode) {
-      if (!returnProjectId || !config.datasetId) {
+      if (!resolvedProjectId || !config.datasetId) {
         setSnackbar("ต้องเลือกโปรเจกต์และชุดข้อมูลก่อนบันทึก");
         return;
       }
@@ -1636,7 +1679,7 @@ export function useDashboardDesignerState() {
       try {
         const serialized = serializeChartConfig(config, { query: sqlQuery, result: sqlResult });
         const payload = {
-          projectId: returnProjectId,
+          projectId: resolvedProjectId,
           datasetId: config.datasetId,
           name: config.settings.general.title || "กราฟที่บันทึก",
           title: config.settings.general.title || "กราฟที่บันทึก",
@@ -1670,7 +1713,7 @@ export function useDashboardDesignerState() {
     setSaveStatus("saved");
     setLastSavedAt(formatSavedTime());
     setSnackbar(consumeStorageRecoveryMessage() || "บันทึกกราฟแล้ว");
-  }, [activeChartRevision, activeSavedChartId, config, mockMode, returnProjectId, sqlQuery, sqlResult]);
+  }, [activeChartRevision, activeSavedChartId, config, mockMode, resolvedProjectId, sqlQuery, sqlResult]);
 
   const refreshDataset = useCallback(async () => {
     if (config.sourceType === "demo-sql" && sqlQuery.trim()) {
