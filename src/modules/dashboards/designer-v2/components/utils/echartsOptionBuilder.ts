@@ -1,6 +1,7 @@
 import type { EChartsOption } from "echarts/types/dist/shared";
 import type { ChartConfig, ChartType, TransformedChartData, ValidationResult } from "@modules/dashboards/designer-v2/components/types";
 import { chartPalettes, enterpriseChartTheme, formatValue } from "@modules/dashboards/designer-v2/components/utils/chartFormatters";
+import { resolvedAxisTitle } from "@modules/dashboards/designer-v2/components/utils/axisTitles";
 
 type ChartTheme = {
   palette?: string[];
@@ -328,6 +329,10 @@ function buildCartesianOption(input: BuilderInput, chartKind: "bar" | "line" | "
   const names = categories(data);
   const colors = palette(settings, input.chartTheme);
   const series: SeriesObject[] = [];
+  const xMapping = input.fieldMappings.find((slot) => slot.id === "xAxis");
+  const yMapping = input.fieldMappings.find((slot) => slot.id === "yAxis");
+  const xTitle = resolvedAxisTitle(settings.axis.xTitle, data.xField, xMapping?.aggregation);
+  const yTitle = resolvedAxisTitle(settings.axis.yTitle, data.yField, yMapping?.aggregation);
 
   if (chartKind === "waterfall") {
     const theme = chartVisualTheme(settings);
@@ -375,8 +380,8 @@ function buildCartesianOption(input: BuilderInput, chartKind: "bar" | "line" | "
   return {
     ...option,
     grid: buildCartesianGridOption(settings),
-    xAxis: horizontal ? valueAxis(settings, data.yField?.name) : categoryAxis(settings, names, data.xField?.name),
-    yAxis: horizontal ? categoryAxis(settings, names, data.xField?.name) : valueAxis(settings, data.yField?.name),
+    xAxis: horizontal ? valueAxis(settings, yTitle) : categoryAxis(settings, names, xTitle),
+    yAxis: horizontal ? categoryAxis(settings, names, xTitle) : valueAxis(settings, yTitle),
     series,
   };
 }

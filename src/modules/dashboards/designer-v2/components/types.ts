@@ -41,6 +41,7 @@ export type DataField = {
   isMeasure: boolean;
   isDimension: boolean;
   defaultAggregation: Aggregation;
+  isPrimaryKey?: boolean;
 };
 
 export type MappingSlotId =
@@ -120,6 +121,8 @@ export type ChartSettings = {
     showAxisLabels: boolean;
     xAxisLabel: string;
     yAxisLabel: string;
+    xTitle: AxisTitleSetting;
+    yTitle: AxisTitleSetting;
     rotateXLabels: 0 | 30 | 45 | 90;
     numberFormat: "default" | "compact" | "currency" | "percent";
     dateFormat: "MMM" | "MMM YYYY" | "DD/MM/YYYY";
@@ -160,6 +163,11 @@ export type ChartSettings = {
     duration: number;
     easing: "ease" | "ease-in" | "ease-out" | "ease-in-out";
   };
+};
+
+export type AxisTitleSetting = {
+  titleMode: "auto" | "custom";
+  customTitle: string;
 };
 
 export type ChartConfig = {
