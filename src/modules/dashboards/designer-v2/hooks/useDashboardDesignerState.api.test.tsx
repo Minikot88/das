@@ -22,7 +22,16 @@ const getProjects = vi.fn(async () => [
   { id: "project-archive", name: "Archive" },
   { id: "project-scopus", name: "Scopus" },
 ]);
-const loadDataset = vi.fn(async (datasetId: string) => datasetId === "dataset-scopus-authors" ? {
+const loadDataset = vi.fn(async (datasetId: string) => datasetId === "dataset-scopus-affiliations" ? {
+  id: "dataset-scopus-affiliations",
+  name: "scopus.sc_affiliations",
+  sourceConfigJson: { schemaName: "scopus", tableName: "sc_affiliations" },
+  fields: [
+    { id: "field-city", fieldKey: "city", name: "city", dataType: "text" },
+    { id: "field-id", fieldKey: "id", name: "id", dataType: "integer", primaryKey: true },
+  ],
+  rows: [{ city: "Bangkok", id: 1 }],
+} : datasetId === "dataset-scopus-authors" ? {
   id: "dataset-scopus-authors",
   name: "scopus.sc_authors",
   sourceConfigJson: { schemaName: "scopus", tableName: "sc_authors" },
@@ -50,10 +59,17 @@ const createExternalDataset = vi.fn().mockResolvedValue({
   sourceConfigJson: { schemaName: "scopus", tableName: "sc_authors" },
   fieldCount: 1,
 });
+const createChart = vi.fn().mockResolvedValue({ id: "chart-scopus", revision: 1 });
+const getChartById = vi.fn(async (chartId: string) => chartId === "chart-saved" ? {
+  id: "chart-saved",
+  datasetId: "dataset-scopus-affiliations",
+  revision: 2,
+  config: { chartType: "bar" },
+} : null);
 
 vi.mock("@infrastructure/http/client", () => ({ isMockMode: () => false }));
 vi.mock("@modules/datasets/public/api", () => ({ createExternalDataset, listDatasets, loadDataset, listExternalSources, listExternalTables }));
-vi.mock("@modules/charts/public/api", () => ({ getChartById: vi.fn(), createChart: vi.fn(), updateChart: vi.fn() }));
+vi.mock("@modules/charts/public/api", () => ({ getChartById, createChart, updateChart: vi.fn() }));
 vi.mock("@modules/projects", () => ({
   API_ACTIVE_PROJECT_KEY: "mini-bi-api-active-project-id",
   getProjects,
@@ -67,6 +83,10 @@ function Wrapper({ children }: PropsWithChildren) {
 
 function WrapperWithoutProject({ children }: PropsWithChildren) {
   return <MemoryRouter initialEntries={["/dashboard-v2"]}>{children}</MemoryRouter>;
+}
+
+function WrapperSavedChart({ children }: PropsWithChildren) {
+  return <MemoryRouter initialEntries={["/dashboard-v2?projectId=project-scopus&chartId=chart-saved"]}>{children}</MemoryRouter>;
 }
 
 describe("useDashboardDesignerState API source", () => {
@@ -101,6 +121,33 @@ describe("useDashboardDesignerState API source", () => {
     expect(window.localStorage.getItem("mini-bi-active-project-id")).toBeNull();
   });
 
+  it("keeps a newly saved API chart addressable for reload", async () => {
+    const { useDashboardDesignerState } = await import("@modules/dashboards/designer-v2/hooks/useDashboardDesignerState");
+    const { result } = renderHook(() => useDashboardDesignerState(), { wrapper: Wrapper });
+    await waitFor(() => expect(result.current.state.config.datasetId).toBe("dataset-scopus-articles"));
+
+    await act(async () => {
+      await result.current.actions.saveChart();
+    });
+
+    expect(result.current.state.saveStatus).toBe("saved");
+    expect(result.current.state.config.chartId).toBe("chart-scopus");
+    expect(new URL(window.location.href).searchParams.get("chartId")).toBe("chart-scopus");
+  });
+
+  it("reloads the saved chart dataset instead of replacing it with the first project dataset", async () => {
+    const { useDashboardDesignerState } = await import("@modules/dashboards/designer-v2/hooks/useDashboardDesignerState");
+    const { result } = renderHook(() => useDashboardDesignerState(), { wrapper: WrapperSavedChart });
+
+    await waitFor(() => expect(result.current.state.selectedTable).toBe("sc_affiliations"));
+
+    expect(result.current.state.config.datasetId).toBe("dataset-scopus-affiliations");
+    expect(result.current.state.rows).toEqual([{ city: "Bangkok", id: 1 }]);
+    expect(result.current.state.fields).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: "city", table: "scopus.sc_affiliations" }),
+    ]));
+  });
+
   it("activates an unsaved catalog table through the real external dataset API and resets mappings to that table", async () => {
     const { useDashboardDesignerState } = await import("@modules/dashboards/designer-v2/hooks/useDashboardDesignerState");
     const { result } = renderHook(() => useDashboardDesignerState(), { wrapper: Wrapper });
@@ -128,5 +175,7 @@ describe("useDashboardDesignerState API source", () => {
       expect.objectContaining({ id: "field-year", table: "scopus.sc_authors" }),
     ]);
     expect(result.current.state.config.datasetId).toBe("dataset-scopus-authors");
+    expect(result.current.state.config.settings.general.title).toBe("scopus.sc_authors");
+    expect(result.current.state.config.settings.general.subtitle).toBe("ข้อมูลจาก scopus.sc_authors");
   });
 });

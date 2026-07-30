@@ -60,4 +60,32 @@ describe("FieldMapping keyboard assignment", () => {
 
     expect(onDropField).toHaveBeenCalledWith("xAxis", revenueField);
   });
+
+  it("lets a keyboard user replace a populated mapping target", async () => {
+    const user = userEvent.setup();
+    const onDropField = vi.fn();
+    const currentField = { ...revenueField, id: "cost", name: "Cost", label: "Cost" };
+
+    render(
+      <FieldMapping
+        mappings={[{ ...mappings[0], fields: [currentField] }]}
+        rows={[]}
+        filters={{}}
+        chartType="bar"
+        focusedSlotId={null}
+        selectedField={revenueField}
+        onDropField={onDropField}
+        onRemoveField={vi.fn()}
+        onAggregationChange={vi.fn()}
+        onFilterChange={vi.fn()}
+        onSortSlot={vi.fn()}
+      />
+    );
+
+    const target = screen.getByRole("button", { name: "แทนที่ X Axis ด้วย Revenue" });
+    target.focus();
+    await user.keyboard("{Enter}");
+
+    expect(onDropField).toHaveBeenCalledWith("xAxis", revenueField);
+  });
 });
