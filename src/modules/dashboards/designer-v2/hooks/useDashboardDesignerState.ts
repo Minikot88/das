@@ -28,6 +28,11 @@ import {
   mappingRecommendationFor,
   preferredAggregationFor,
 } from "@modules/dashboards/designer-v2/components/utils/axisTitles";
+import {
+  createTableAlias,
+  relationToJoin,
+  toQualifiedFields,
+} from "@modules/dashboards/designer-v2/components/utils/multiTableDataset";
 import { getChartDefinition } from "@modules/dashboards/designer-v2/components/utils/chartRegistry";
 import { getSavedChartById, upsertSavedChart } from "@modules/charts/public/savedCharts";
 import {
@@ -38,7 +43,18 @@ import {
 import { useLocation } from "react-router-dom";
 import { isMockMode } from "@infrastructure/http/client";
 import { getChartById, createChart, updateChart } from "@modules/charts/public/api";
-import { createExternalDataset, listDatasets, listExternalSources, listExternalTables, loadDataset } from "@modules/datasets/public/api";
+import {
+  createExternalDataset,
+  getDatasetDetail,
+  getDatasetFields,
+  listDatasets,
+  listExternalColumns,
+  listExternalRelationships,
+  listExternalSources,
+  listExternalTables,
+  loadDataset,
+  previewExternalSource,
+} from "@modules/datasets/public/api";
 import {
   API_ACTIVE_PROJECT_KEY,
   getProjects,
@@ -51,6 +67,8 @@ import type {
   ChartSettings,
   ChartType,
   DataField,
+  DatasetJoin,
+  DatasetTable,
   DeviceMode,
   DragFieldItem,
   FilterValue,
@@ -158,12 +176,13 @@ function toDesignerFields(fields: Array<Record<string, unknown>>, table = "datas
     const name = String(field.name || field.fieldKey || "");
     const isPrimaryKey = field.primaryKey === true || /(^id$|_id$|^id_)/i.test(name);
     const isMeasure = type === "number";
+    const storedSemantic = String(field.semanticType || "").toLowerCase();
     return {
       id: String(field.id || name),
       name,
       label: String(field.label || field.name || field.fieldKey || name),
       type,
-      semanticType: type === "date" ? "date" : isMeasure ? "quantity" : type === "boolean" ? "boolean" : "category",
+      semanticType: (storedSemantic || (type === "date" ? "date" : isMeasure ? "quantity" : type === "boolean" ? "boolean" : "category")) as DataField["semanticType"],
       table,
       description: "",
       sampleValues: [],
@@ -171,6 +190,8 @@ function toDesignerFields(fields: Array<Record<string, unknown>>, table = "datas
       isDimension: !isMeasure,
       defaultAggregation: isPrimaryKey ? "Count" : isMeasure ? "Sum" : "None",
       isPrimaryKey,
+      physicalType: String(field.dataType || field.type || "text"),
+      nullable: field.nullable !== false,
     };
   });
 }
@@ -191,6 +212,35 @@ function toRemoteDatasource(item: Record<string, unknown>): DemoDatasource {
     fieldCount: Number(item.fieldCount || 0),
     lastUpdated: String(item.updatedAt || ""),
   };
+}
+
+export function persistedMultiTableState(dataset: Record<string, unknown>) {
+  const source = dataset.sourceConfigJson && typeof dataset.sourceConfigJson === "object"
+    ? dataset.sourceConfigJson as Record<string, unknown>
+    : {};
+  const tables = Array.isArray(source.selectedTables) ? source.selectedTables as DatasetTable[] : [];
+  const joins = Array.isArray(source.joins) ? source.joins as DatasetJoin[] : [];
+  const selectedFields = Array.isArray(source.selectedFields) ? source.selectedFields as Array<Record<string, unknown>> : [];
+  return {
+    tables,
+    joins,
+    semanticTypeOverrides: source.semanticTypeOverrides && typeof source.semanticTypeOverrides === "object"
+      ? source.semanticTypeOverrides as Record<string, string>
+      : {},
+    safeCasts: Object.fromEntries(selectedFields.flatMap((field) => {
+      const cast = field.cast && typeof field.cast === "object" ? field.cast as Record<string, unknown> : null;
+      return cast?.targetType ? [[`${field.tableAlias}.${field.column}`, String(cast.targetType)]] : [];
+    })) as Record<string, "numeric" | "date" | "text">,
+    calculatedFields: Array.isArray(source.calculatedFields) ? source.calculatedFields as Array<Record<string, unknown>> : [],
+  };
+}
+
+function applyPersistedFieldSource(fields: DataField[], tables: DatasetTable[]) {
+  return fields.map((field) => {
+    const alias = field.label.includes(".") ? field.label.split(".")[0] : "";
+    const table = tables.find((item) => item.alias === alias);
+    return table ? { ...field, sourceAlias: alias, sourceSchema: table.schema, sourceTable: table.table, table: `${table.schema}.${table.table}` } : field;
+  });
 }
 
 export function datasetSourceIdentity(dataset: Record<string, unknown>) {
@@ -927,6 +977,12 @@ export function useDashboardDesignerState() {
   const [config, setConfig] = useState<ChartConfig>(() => initialSnapshot.config);
   const [rows, setRows] = useState<DemoDatasetRow[]>(() => initialSnapshot.rows);
   const [fields, setFields] = useState<DataField[]>(() => initialSnapshot.fields);
+  const [selectedTables, setSelectedTables] = useState<DatasetTable[]>([]);
+  const [datasetJoins, setDatasetJoins] = useState<DatasetJoin[]>([]);
+  const [queryPreview, setQueryPreview] = useState<{ sql: string; durationMs: number } | null>(null);
+  const [semanticTypeOverrides, setSemanticTypeOverrides] = useState<Record<string, string>>({});
+  const [safeCasts, setSafeCasts] = useState<Record<string, "numeric" | "date" | "text">>({});
+  const [calculatedFields, setCalculatedFields] = useState<Array<Record<string, unknown>>>([]);
   const [selectedCategory, setSelectedCategory] = useState<ChartCategory>("all");
   const [deviceMode, setDeviceMode] = useState<DeviceMode>("desktop");
   const [zoom, setZoom] = useState(100);
@@ -964,6 +1020,7 @@ export function useDashboardDesignerState() {
   const configRef = useRef(config);
   const pendingPersistenceRef = useRef({ config, sqlQuery, sqlResult, activeSavedChartId });
   const previewRef = useRef<HTMLDivElement | null>(null);
+  const previewAbortRef = useRef<AbortController | null>(null);
 
   const selectedChart = useMemo(
     () => chartCatalog.find((chart) => chart.id === config.chartType),
@@ -1050,11 +1107,27 @@ export function useDashboardDesignerState() {
         if (requestedChartId) return;
         const selectedItem = items.find((item: Record<string, unknown>) => String(item.id) === requestedDatasetId) ?? items[0];
         const selectedDatasource = toRemoteDatasource(selectedItem);
-        const dataset = await loadDataset(String(selectedItem.id));
+        const [dataset, columnResult] = await Promise.all([
+          loadDataset(String(selectedItem.id), { pageSize: 500 }),
+          listExternalColumns(selectedDatasource.schema, selectedDatasource.table, resolvedProjectId),
+        ]);
         if (!active) return;
-        const nextFields = toDesignerFields(dataset.fields ?? [], `${selectedDatasource.schema}.${selectedDatasource.table}`);
+        const persisted = persistedMultiTableState(dataset as Record<string, unknown>);
+        const tableRef = { schema: selectedDatasource.schema, table: selectedDatasource.table, alias: createTableAlias(selectedDatasource.table, []) };
+        const metadataFields = toQualifiedFields(tableRef, columnResult?.items ?? []);
+        let nextFields = toDesignerFields(dataset.fields ?? [], `${selectedDatasource.schema}.${selectedDatasource.table}`).map((field) => {
+          const metadata = metadataFields.find((item) => item.name.endsWith(`.${field.name}`));
+          return metadata ? { ...field, ...metadata, id: field.id, name: field.name, label: metadata.label } : field;
+        });
+        if (persisted.tables.length) nextFields = applyPersistedFieldSource(nextFields, persisted.tables);
         setRows((dataset.rows ?? []) as DemoDatasetRow[]);
         setFields(nextFields);
+        setSelectedTables(persisted.tables.length ? persisted.tables : [tableRef]);
+        setDatasetJoins(persisted.joins);
+        setSemanticTypeOverrides(persisted.semanticTypeOverrides);
+        setSafeCasts(persisted.safeCasts);
+        setCalculatedFields(persisted.calculatedFields);
+        setQueryPreview(null);
         setActiveDatasourceId(dataset.id);
         setSelectedTable(selectedDatasource.table);
         setConfig((current) => ({
@@ -1114,9 +1187,11 @@ export function useDashboardDesignerState() {
       void getChartById(requestedChartId)
         .then(async (chart) => {
           if (!chart) throw new Error("ไม่พบกราฟที่ต้องการแก้ไข");
-          const dataset = chart.datasetId ? await loadDataset(chart.datasetId) : null;
+          const dataset = chart.datasetId ? await loadDataset(chart.datasetId, { pageSize: 500 }) : null;
           const sourceIdentity = dataset ? datasetSourceIdentity(dataset as Record<string, unknown>) : { schema: "", table: "", context: "dataset" };
-          const nextFields = toDesignerFields(dataset?.fields ?? [], sourceIdentity.context);
+          const persisted = dataset ? persistedMultiTableState(dataset as Record<string, unknown>) : null;
+          const rawFields = toDesignerFields(dataset?.fields ?? [], sourceIdentity.context);
+          const nextFields = persisted?.tables.length ? applyPersistedFieldSource(rawFields, persisted.tables) : rawFields;
           const nextConfig = normalizeConfig({
             ...(chart.config ?? {}),
             chartId: chart.id,
@@ -1127,6 +1202,11 @@ export function useDashboardDesignerState() {
           setConfig(nextConfig);
           setRows((dataset?.rows ?? []) as DemoDatasetRow[]);
           setFields(nextFields);
+          setSelectedTables(persisted?.tables ?? []);
+          setDatasetJoins(persisted?.joins ?? []);
+          setSemanticTypeOverrides(persisted?.semanticTypeOverrides ?? {});
+          setSafeCasts(persisted?.safeCasts ?? {});
+          setCalculatedFields(persisted?.calculatedFields ?? []);
           setActiveDatasourceId(dataset?.id ?? "");
           setSelectedTable(sourceIdentity.table);
           setActiveSavedChartId(chart.id);
@@ -1276,8 +1356,16 @@ export function useDashboardDesignerState() {
       try {
         setIsLoading(true);
         setDatasetError(null);
-        const dataset = await loadDataset(datasource.id);
-        const nextFields = toDesignerFields(dataset.fields ?? [], `${datasource.schema}.${datasource.table}`);
+        const [dataset, columnResult] = await Promise.all([
+          loadDataset(datasource.id, { pageSize: 500 }),
+          listExternalColumns(datasource.schema, datasource.table, resolvedProjectId),
+        ]);
+        const tableRef = { schema: datasource.schema, table: datasource.table, alias: createTableAlias(datasource.table, []) };
+        const metadataFields = toQualifiedFields(tableRef, columnResult?.items ?? []);
+        const nextFields = toDesignerFields(dataset.fields ?? [], `${datasource.schema}.${datasource.table}`).map((field) => {
+          const metadata = metadataFields.find((item) => item.name.endsWith(`.${field.name}`));
+          return metadata ? { ...field, ...metadata, id: field.id, name: field.name, label: metadata.label } : field;
+        });
         setRows((dataset.rows ?? []) as DemoDatasetRow[]);
         setFields(nextFields);
         setActiveDatasourceId(dataset.id);
@@ -1336,9 +1424,232 @@ export function useDashboardDesignerState() {
       })),
       filters: {},
     }));
-  }, [activateDemoDataset, availableDatasources, commitConfig, config.sourceType, mockMode, sqlResult, workspaceSnapshot]);
+  }, [activateDemoDataset, availableDatasources, commitConfig, config.sourceType, mockMode, resolvedProjectId, sqlResult, workspaceSnapshot]);
+
+  const materializeMultiTable = useCallback(async (
+    tables: DatasetTable[],
+    joins: DatasetJoin[],
+    nextFields: DataField[],
+    overrides = semanticTypeOverrides,
+    casts = safeCasts,
+    calculations = calculatedFields,
+  ) => {
+    if (!resolvedProjectId || !tables.length) return;
+    const selectedFields = nextFields.map((field) => ({
+      tableAlias: field.sourceAlias,
+      column: field.name.includes(".") ? field.name.split(".").at(-1) : field.label.split(".").at(-1),
+      alias: `${field.sourceAlias}_${field.label.split(".").at(-1)}`,
+      cast: casts[`${field.sourceAlias}.${field.label.split(".").at(-1)}`]
+        ? { targetType: casts[`${field.sourceAlias}.${field.label.split(".").at(-1)}`] }
+        : undefined,
+    }));
+    const definition = {
+      projectId: resolvedProjectId,
+      name: tables.map((table) => table.alias).join(" + "),
+      sourceSchema: tables[0].schema,
+      baseTable: tables[0].table,
+      selectedTables: tables,
+      selectedFields,
+      joins,
+      filters: [],
+      groupBy: [],
+      aggregations: [],
+      sorting: [],
+      rowLimit: 500,
+      semanticTypeOverrides: overrides,
+      calculatedFields: calculations,
+      revision: 1,
+    };
+    previewAbortRef.current?.abort();
+    const previewController = new AbortController();
+    previewAbortRef.current = previewController;
+    const preview = await previewExternalSource({ ...definition, pageSize: 500 }, { signal: previewController.signal });
+    const created = await createExternalDataset(definition);
+    const [datasetDetail, datasetFields] = await Promise.all([
+      getDatasetDetail(String(created.id)),
+      getDatasetFields(String(created.id)),
+    ]);
+    const dataset = { ...created, ...datasetDetail, fields: datasetFields, rows: preview.rows ?? [] };
+    const designerFields = toDesignerFields(dataset.fields ?? [], tables.map((table) => `${table.schema}.${table.table}`).join(", "));
+    setRows((preview.rows ?? dataset.rows ?? []) as DemoDatasetRow[]);
+    setFields(designerFields.map((field) => {
+      const qualified = nextFields.find((candidate) => `${candidate.sourceAlias}_${candidate.label.split(".").at(-1)}` === field.name);
+      return qualified ? { ...field, ...qualified, id: field.id, name: field.name, label: qualified.label } : field;
+    }));
+    setActiveDatasourceId(String(created.id));
+    setSelectedTable(tables[0].table);
+    setQueryPreview({ sql: String(preview.sqlPreview || ""), durationMs: Number(preview.queryDurationMs || 0) });
+    setRemoteDatasources((current) => current.some((item) => item.id === created.id)
+      ? current
+      : [...current, toRemoteDatasource({ ...created, ...dataset })]);
+    commitConfig((current) => ({
+      ...current,
+      sourceType: "dataset",
+      datasetId: String(created.id),
+      mappings: current.mappings.map((slot) => ({
+        ...slot,
+        fields: slot.fields.flatMap((mapped) => {
+          const sourceAlias = mapped.sourceAlias || tables[0]?.alias;
+          const sourceColumn = mapped.label.split(".").at(-1) || mapped.name;
+          const replacement = designerFields.find((field) => field.name === `${sourceAlias}_${sourceColumn}`);
+          return replacement ? [replacement] : [];
+        }),
+      })),
+      filters: {},
+      settings: {
+        ...current.settings,
+        general: {
+          ...current.settings.general,
+          title: current.settings.general.title || tables.map((table) => table.alias).join(" + "),
+          subtitle: `ข้อมูลจาก ${tables.map((table) => `${table.schema}.${table.table}`).join(", ")}`,
+        },
+      },
+    }), `เชื่อม ${tables.length} ตารางและอัปเดต Preview แล้ว`);
+  }, [calculatedFields, commitConfig, resolvedProjectId, safeCasts, semanticTypeOverrides]);
+
+  const setManualJoin = useCallback(async (join: DatasetJoin) => {
+    const nextJoins = [...datasetJoins.filter((item) => item.right.alias !== join.right.alias), join];
+    setDatasetJoins(nextJoins);
+    try {
+      setIsLoading(true);
+      setDatasetError(null);
+      await materializeMultiTable(selectedTables, nextJoins, fields);
+    } catch (error) {
+      const message = errorMessage(error, "เงื่อนไข Join ไม่ถูกต้อง");
+      setDatasetError(message);
+      setSnackbar(message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [datasetJoins, fields, materializeMultiTable, selectedTables]);
+
+  const removeDatasetTable = useCallback((alias: string) => {
+    if (selectedTables[0]?.alias === alias) {
+      setSnackbar("ลบ Base Table ไม่ได้ขณะที่ยังมี Field หรือ Join อ้างถึง");
+      return;
+    }
+    const affected = config.mappings.flatMap((slot) => slot.fields).filter((field) => field.sourceAlias === alias);
+    if (affected.length) {
+      setSnackbar(`ลบไม่ได้: ${affected.length} Mapping ยังอ้างถึงตาราง ${alias}`);
+      return;
+    }
+    setSelectedTables((current) => current.filter((table) => table.alias !== alias));
+    setDatasetJoins((current) => current.filter((join) => join.left.alias !== alias && join.right.alias !== alias));
+    setFields((current) => current.filter((field) => field.sourceAlias !== alias));
+    setSnackbar(`ลบตาราง ${alias} แล้ว`);
+  }, [config.mappings, selectedTables]);
+
+  const updateSemanticType = useCallback(async (fieldId: string, semanticType: string) => {
+    const field = fields.find((item) => item.id === fieldId);
+    if (!field) return;
+    const key = `${field.sourceAlias}.${field.label.split(".").at(-1)}`;
+    const nextOverrides = { ...semanticTypeOverrides, [key]: semanticType };
+    const nextFields = fields.map((item) => item.id === fieldId ? { ...item, semanticType: semanticType as DataField["semanticType"] } : item);
+    setSemanticTypeOverrides(nextOverrides);
+    setFields(nextFields);
+    setSaveStatus("unsaved");
+    setSnackbar(`ตั้ง Semantic Type ของ ${field.label} เป็น ${semanticType}`);
+    if (selectedTables.length > 1 && datasetJoins.length >= selectedTables.length - 1) {
+      try {
+        setIsLoading(true);
+        await materializeMultiTable(selectedTables, datasetJoins, nextFields, nextOverrides);
+      } catch (error) {
+        const message = errorMessage(error, "ไม่สามารถบันทึก Semantic Type ได้");
+        setDatasetError(message);
+        setSnackbar(message);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  }, [datasetJoins, fields, materializeMultiTable, selectedTables, semanticTypeOverrides]);
+
+  const updateSafeCast = useCallback(async (fieldId: string, targetType: string) => {
+    const field = fields.find((item) => item.id === fieldId);
+    if (!field) return;
+    const key = `${field.sourceAlias}.${field.label.split(".").at(-1)}`;
+    const next = { ...safeCasts };
+    if (targetType === "none") delete next[key];
+    else next[key] = targetType as "numeric" | "date" | "text";
+    setSafeCasts(next);
+    if (selectedTables.length > 1 && datasetJoins.length >= selectedTables.length - 1) {
+      try {
+        setIsLoading(true);
+        await materializeMultiTable(selectedTables, datasetJoins, fields, semanticTypeOverrides, next);
+        setSnackbar(`ตรวจสอบ Safe Cast ของ ${field.label} แล้ว`);
+      } catch (error) {
+        const message = errorMessage(error, `ค่าบางรายการใน ${field.label} ไม่สามารถแปลงชนิดได้`);
+        setDatasetError(message);
+        setSnackbar(message);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  }, [datasetJoins, fields, materializeMultiTable, safeCasts, selectedTables, semanticTypeOverrides]);
+
+  const addCalculatedField = useCallback(async (calculated: Record<string, unknown>) => {
+    const next = [...calculatedFields, calculated];
+    try {
+      setIsLoading(true);
+      setDatasetError(null);
+      await materializeMultiTable(selectedTables, datasetJoins, fields, semanticTypeOverrides, safeCasts, next);
+      setCalculatedFields(next);
+      setSnackbar(`เพิ่ม Calculated Field ${String(calculated.name || "")} แล้ว`);
+    } catch (error) {
+      const message = errorMessage(error, "Calculated Field ไม่ผ่านการตรวจสอบ");
+      setDatasetError(message);
+      setSnackbar(message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [calculatedFields, datasetJoins, fields, materializeMultiTable, safeCasts, selectedTables, semanticTypeOverrides]);
 
   const activateCatalogTable = useCallback(async (schemaName: string, tableName: string) => {
+    const alreadySelected = selectedTables.some((table) => table.schema === schemaName && table.table === tableName);
+    if (alreadySelected) {
+      setSelectedTable(tableName);
+      return;
+    }
+    if (selectedTables.length >= 6) {
+      setSnackbar("หนึ่ง Dataset ใช้ได้สูงสุด 6 ตาราง");
+      return;
+    }
+    if (!mockMode && selectedTables.length) {
+      try {
+        setIsLoading(true);
+        setDatasetError(null);
+        const alias = createTableAlias(tableName, selectedTables.map((table) => table.alias));
+        const nextTable: DatasetTable = { schema: schemaName, table: tableName, alias };
+        const [columnResult, relationResults] = await Promise.all([
+          listExternalColumns(schemaName, tableName, resolvedProjectId),
+          Promise.all(selectedTables.map((table) => listExternalRelationships(table.schema, table.table, resolvedProjectId))),
+        ]);
+        const newFields = toQualifiedFields(nextTable, columnResult?.items ?? []);
+        const candidates = relationResults.flatMap((result, index) =>
+          (result?.items ?? []).map((relation: Parameters<typeof relationToJoin>[2]) =>
+            relationToJoin(selectedTables[index], nextTable, relation)).filter(Boolean)) as DatasetJoin[];
+        const nextTables = [...selectedTables, nextTable];
+        const nextFields = [...fields, ...newFields];
+        setSelectedTables(nextTables);
+        setFields(nextFields);
+        setSelectedTable(tableName);
+        if (candidates.length === 1) {
+          const nextJoins = [...datasetJoins, candidates[0]];
+          setDatasetJoins(nextJoins);
+          await materializeMultiTable(nextTables, nextJoins, nextFields);
+        } else {
+          setSnackbar(candidates.length > 1
+            ? `พบหลายความสัมพันธ์สำหรับ ${alias} กรุณาเลือก Join`
+            : `ไม่พบ Foreign Key สำหรับ ${alias} กรุณากำหนด Manual Join`);
+        }
+      } catch (error) {
+        const message = errorMessage(error, "ไม่สามารถเพิ่มตารางได้");
+        setDatasetError(message);
+        setSnackbar(message);
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
     const existing = availableDatasources.find((item) => item.schema === schemaName && item.table === tableName);
     if (existing) {
       await updateDatasource(existing.id);
@@ -1361,12 +1672,23 @@ export function useDashboardDesignerState() {
         schemaName,
         tableName,
       });
-      const dataset = await loadDataset(String(created.id));
+      const [dataset, columnResult] = await Promise.all([
+        loadDataset(String(created.id), { pageSize: 500 }),
+        listExternalColumns(schemaName, tableName, resolvedProjectId),
+      ]);
       const datasource = toRemoteDatasource({ ...created, ...dataset });
-      const nextFields = toDesignerFields(dataset.fields ?? [], `${schemaName}.${tableName}`);
+      const tableRef = { schema: schemaName, table: tableName, alias: createTableAlias(tableName, []) };
+      const metadataFields = toQualifiedFields(tableRef, columnResult?.items ?? []);
+      const nextFields = toDesignerFields(dataset.fields ?? [], `${schemaName}.${tableName}`).map((field) => {
+        const metadata = metadataFields.find((item) => item.name.endsWith(`.${field.name}`));
+        return metadata ? { ...field, ...metadata, id: field.id, name: field.name, label: metadata.label } : field;
+      });
       setRemoteDatasources((current) => current.some((item) => item.id === datasource.id) ? current : [...current, datasource]);
       setRows((dataset.rows ?? []) as DemoDatasetRow[]);
       setFields(nextFields);
+      setSelectedTables([tableRef]);
+      setDatasetJoins([]);
+      setQueryPreview(null);
       setActiveDatasourceId(datasource.id);
       setSelectedTable(tableName);
       setSelectedFieldId(null);
@@ -1397,7 +1719,7 @@ export function useDashboardDesignerState() {
     } finally {
       setIsLoading(false);
     }
-  }, [availableDatasources, commitConfig, mockMode, resolvedProjectId, updateDatasource]);
+  }, [availableDatasources, commitConfig, datasetJoins, fields, materializeMultiTable, mockMode, resolvedProjectId, selectedTables, updateDatasource]);
 
   const executeSqlQuery = useCallback((query: string, message = "รัน SQL Query แล้ว") => {
     if (!mockMode) {
@@ -1905,7 +2227,7 @@ export function useDashboardDesignerState() {
     if (!mockMode) {
       try {
         setDatasetError(null);
-        const dataset = await loadDataset(config.datasetId);
+        const dataset = await loadDataset(config.datasetId, { pageSize: 500 });
         const nextFields = toDesignerFields(dataset.fields ?? [], dataset.name);
         setRows((dataset.rows ?? []) as DemoDatasetRow[]);
         setFields(nextFields);
@@ -2034,6 +2356,12 @@ export function useDashboardDesignerState() {
       fields,
       datasources,
       externalSchemaCatalog,
+      selectedTables,
+      datasetJoins,
+      queryPreview,
+      semanticTypeOverrides,
+      safeCasts,
+      calculatedFields,
       transformedData,
       validation,
       templates: demoTemplates,
@@ -2072,6 +2400,11 @@ export function useDashboardDesignerState() {
       setActiveDatasourceId: updateDatasource,
       setSelectedTable: activateCatalogTable,
       setSelectedField: (field: DataField) => setSelectedFieldId(field.id),
+      setManualJoin,
+      removeDatasetTable,
+      updateSemanticType,
+      updateSafeCast,
+      addCalculatedField,
       setPreviewMode,
       togglePreviewMode,
       setShareOpen: updateShareOpen,

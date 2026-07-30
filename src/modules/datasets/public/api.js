@@ -9,7 +9,9 @@ export {
   listExternalSources,
   listExternalTables,
   listExternalColumns,
+  listExternalRelationships,
   listExternalMetadata,
+  previewExternalSource,
   createExternalDataset,
   queryDataset,
 } from "@modules/datasets/api/datasetApi.js";

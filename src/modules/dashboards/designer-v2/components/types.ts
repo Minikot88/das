@@ -42,6 +42,21 @@ export type DataField = {
   isDimension: boolean;
   defaultAggregation: Aggregation;
   isPrimaryKey?: boolean;
+  physicalType?: string;
+  sourceSchema?: string;
+  sourceTable?: string;
+  sourceAlias?: string;
+  nullable?: boolean;
+  foreignKeys?: Array<{ referencedSchema: string; referencedTable: string; referencedColumn: string }>;
+};
+
+export type DatasetTable = { schema: string; table: string; alias: string };
+export type DatasetJoin = {
+  left: DatasetTable & { column: string };
+  right: DatasetTable & { column: string };
+  operator: "eq";
+  joinType: "inner" | "left";
+  automatic?: boolean;
 };
 
 export type MappingSlotId =

@@ -119,7 +119,16 @@ export class CoreDataService {
     if (dataset.sourceType === 'postgres_schema') {
       const config = dataset.sourceConfigJson as JsonObject | null;
       if (!config) throw new ApiError(409, 'EXTERNAL_SOURCE_CONFIG_MISSING', 'External dataset configuration is missing.');
-      const result = await this.external.run({ ...config, ...input, schemaName: config.schemaName, tableName: config.tableName });
+      const multiTable = Array.isArray(config.selectedTables);
+      const result = await this.external.run(multiTable
+        ? {
+            ...config,
+            page: input.page,
+            pageSize: input.pageSize,
+            filters: input.filters ?? config.filters,
+            sorting: input.sorting ?? config.sorting,
+          }
+        : { ...config, ...input, schemaName: config.schemaName, tableName: config.tableName });
       await this.prisma.auditLog.create({ data: { organizationId: principal.organizationId, projectId: dataset.projectId, actorUserId: principal.userId, requestId: `external-${randomUUID()}`, entityType: 'dataset', entityId: dataset.id, action: 'external.dataset.query', outcome: 'succeeded', metadataJson: { schema: String(config.schemaName), table: String(config.tableName), rowCount: result.rows.length } } });
       return result;
     }
@@ -158,6 +167,96 @@ export class CoreDataService {
   async previewExternal(principal: RequestPrincipal, input: JsonObject) { await this.project(principal, String(input.projectId || '')); return this.external.preview(input); }
   async createExternalDataset(principal: RequestPrincipal, input: JsonObject) {
     const projectId = String(input.projectId || ''); await this.project(principal, projectId, 'write');
+    const selectedTables = Array.isArray(input.selectedTables) ? input.selectedTables as JsonObject[] : [];
+    if (selectedTables.length) {
+      const sourceSchema = String(input.sourceSchema || '');
+      const baseTable = String(input.baseTable || '');
+      const selectedFields = Array.isArray(input.selectedFields) ? input.selectedFields as JsonObject[] : [];
+      const definition = {
+        sourceSchema,
+        baseTable,
+        selectedTables: selectedTables.map(table => ({
+          schema: String(table.schema || ''),
+          table: String(table.table || ''),
+          alias: String(table.alias || ''),
+        })),
+        selectedFields: selectedFields.map(field => ({
+          tableAlias: String(field.tableAlias || ''),
+          column: String(field.column || ''),
+          alias: field.alias ? String(field.alias) : undefined,
+          cast: isRecord(field.cast) ? field.cast : undefined,
+        })),
+        joins: Array.isArray(input.joins) ? input.joins : [],
+        filters: Array.isArray(input.filters) ? input.filters : [],
+        groupBy: Array.isArray(input.groupBy) ? input.groupBy : [],
+        aggregations: Array.isArray(input.aggregations) ? input.aggregations : [],
+        sorting: Array.isArray(input.sorting) ? input.sorting : [],
+        rowLimit: bounded(Number(input.rowLimit || 500), 1, 10_000),
+        semanticTypeOverrides: isRecord(input.semanticTypeOverrides) ? input.semanticTypeOverrides : {},
+        calculatedFields: Array.isArray(input.calculatedFields) ? input.calculatedFields : [],
+        revision: Number.isInteger(Number(input.revision)) ? Number(input.revision) : 1,
+        sourceMode: 'live',
+        connectionId: 'application-postgres',
+        schemaName: sourceSchema,
+        tableName: baseTable,
+      };
+      await this.external.previewStructured({ ...definition, pageSize: 1 } as never);
+      const persistedDefinition = JSON.parse(JSON.stringify(definition)) as JsonObject;
+
+      const tableColumns = new Map<string, Array<{ name: string; dataType: string; nullable: boolean; ordinal: number; primaryKey: boolean }>>();
+      for (const table of definition.selectedTables) {
+        const columns = await this.external.columns(table.schema, table.table);
+        tableColumns.set(table.alias, columns.items);
+      }
+      const overrides = definition.semanticTypeOverrides as Record<string, unknown>;
+      const fields = definition.selectedFields.map((field, ordinal) => {
+        const column = tableColumns.get(field.tableAlias)?.find(item => item.name === field.column);
+        if (!column) throw new ApiError(400, 'INVALID_COLUMN', `Selected field ${field.tableAlias}.${field.column} is not allowed.`);
+        const fieldKey = `${field.tableAlias}.${field.column}`;
+        const queryKey = field.alias || `${field.tableAlias}_${field.column}`;
+        return {
+          id: `field-${randomUUID()}`,
+          fieldKey: queryKey,
+          name: queryKey,
+          label: fieldKey,
+          dataType: field.cast?.targetType ? String(field.cast.targetType) : column.dataType,
+          nullable: column.nullable,
+          ordinal,
+          semanticType: overrides[fieldKey] ? String(overrides[fieldKey]) : undefined,
+        };
+      });
+      for (const calculated of definition.calculatedFields as JsonObject[]) {
+        const name = String(calculated.name || '');
+        fields.push({
+          id: `field-${randomUUID()}`,
+          fieldKey: name,
+          name,
+          label: name,
+          dataType: String(calculated.resultType || 'text'),
+          nullable: true,
+          ordinal: fields.length,
+          semanticType: String(calculated.resultType || 'Text'),
+        });
+      }
+      const id = `dataset-${randomUUID()}`;
+      return this.prisma.$transaction(async tx => {
+        const dataset = await tx.dataset.create({ data: {
+          id,
+          organizationId: principal.organizationId,
+          projectId,
+          name: String(input.name || `${sourceSchema}.${baseTable}`).slice(0, 180),
+          sourceType: 'postgres_schema',
+          sourceConfigJson: persistedDefinition as never,
+          status: 'ready',
+          rowCount: 0,
+          fieldCount: fields.length,
+          revision: 1,
+        } });
+        await tx.datasetField.createMany({ data: fields.map(field => ({ ...field, datasetId: id })) });
+        await tx.datasetVersion.create({ data: { id: `dataset-version-${randomUUID()}`, datasetId: id, version: 1, schemaJson: persistedDefinition as never, rowCount: 0 } });
+        return dataset;
+      });
+    }
     const schemaName = String(input.schemaName || ''); const tableName = String(input.tableName || '');
     const existing = await this.prisma.dataset.findMany({ where: { organizationId: principal.organizationId, projectId, sourceType: 'postgres_schema', deletedAt: null, sourceConfigJson: { path: ['schemaName'], equals: schemaName } }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] });
     const matching = existing.find((dataset: { sourceConfigJson?: unknown }) => (dataset.sourceConfigJson as JsonObject | null)?.tableName === tableName);
@@ -371,6 +470,7 @@ function safeImportMessage(error: unknown) { const text = error instanceof Error
 function bounded(value: number, min: number, max: number) { const parsed = Number.isFinite(value) ? Math.trunc(value) : min; return Math.min(max, Math.max(min, parsed)); }
 function optionalString(value: unknown) { const text = value == null ? '' : String(value); return text || null; }
 function requiredName(value: unknown, label: string) { const text = String(value || '').trim(); if (!text) throw new ApiError(400, 'VALIDATION_ERROR', `${label} name is required.`); return text.slice(0, 180); }
+function isRecord(value: unknown): value is JsonObject { return Boolean(value) && typeof value === 'object' && !Array.isArray(value); }
 function asJson(value: unknown) { return value === undefined ? undefined : value as never; }
 function integer(value: unknown, fallback: number) { const parsed = Number(value); return Number.isInteger(parsed) ? parsed : fallback; }
 function assertField(allowed: Set<string>, field: string) { if (!allowed.has(field)) throw new ApiError(400, 'UNKNOWN_FIELD', `Unknown dataset field: ${field}`); }

@@ -62,12 +62,12 @@ export async function queryDataset(datasetId, query = {}) {
   });
 }
 
-export async function loadDataset(datasetId) {
+export async function loadDataset(datasetId, { pageSize = 10000 } = {}) {
   if (isMockMode()) return mockDataset;
   const [dataset, fields, result] = await Promise.all([
     getDatasetDetail(datasetId),
     getDatasetFields(datasetId),
-    queryDataset(datasetId, { page: 1, pageSize: 10000 }),
+    queryDataset(datasetId, { page: 1, pageSize }),
   ]);
   return { ...dataset, fields, rows: result?.rows ?? [] };
 }
@@ -123,8 +123,8 @@ export async function listExternalRelationships(schemaName, tableName, projectId
 export async function listExternalMetadata(schemaName, tableName, projectId = activeProjectId()) {
   return apiRequest(`/api/v1/external-sources/${encodeApiPathSegment(schemaName)}/tables/${encodeApiPathSegment(tableName)}/metadata?projectId=${encodeURIComponent(projectId)}`);
 }
-export async function previewExternalSource(input) {
-  return apiRequest('/api/v1/external-sources/preview', { method: 'POST', body: JSON.stringify(input) });
+export async function previewExternalSource(input, { signal } = {}) {
+  return apiRequest('/api/v1/external-sources/preview', { method: 'POST', body: JSON.stringify(input), signal });
 }
 export async function createExternalDataset(input) {
   return apiRequest('/api/v1/datasets/external', { method: 'POST', body: JSON.stringify(input) });
