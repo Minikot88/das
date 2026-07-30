@@ -382,6 +382,11 @@ export default function DatasetsPage() {
         )}
       />
 
+      <div className="datasets-workbench-status" aria-label="Table context">
+        <span>PostgreSQL</span><span>/</span><span>{externalSchema || "..."}</span><span>/</span><strong>{externalTable || "..."}</strong>
+        <span className="datasets-source-browser__readonly" title="ข้อมูล Scopus เปิดดู ส่งออก และสร้างชุดข้อมูลได้ แต่แก้ไขไม่ได้">อ่านอย่างเดียว</span>
+      </div>
+
       <div className="datasets-layout">
         <section className="datasets-main" aria-label="รายการชุดข้อมูล">
           <section className="datasets-import-panel">

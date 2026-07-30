@@ -73,6 +73,8 @@ describe("DatasetsPage project ownership", () => {
   it("keeps the live external source controls available beside API-backed datasets", async () => {
     render(<MemoryRouter><DatasetsPage /></MemoryRouter>);
 
+    expect(await screen.findByLabelText("Table context")).toHaveTextContent("PostgreSQL");
+    expect(screen.getByText("อ่านอย่างเดียว")).toBeInTheDocument();
     expect(await screen.findByRole("region", { name: "PostgreSQL external source browser" })).toBeInTheDocument();
     expect(screen.getByText("Read only")).toBeInTheDocument();
     expect(await screen.findByText(/ไม่ทราบจำนวน rows/)).toBeInTheDocument();
