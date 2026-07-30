@@ -1,7 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { resolveChartDesignerNavigation } from "./appHeaderNavigation";
+import { chartDesignerRibbonItems, resolveChartDesignerNavigation } from "./appHeaderNavigation";
 
 describe("resolveChartDesignerNavigation", () => {
+  it("disables chart actions that would otherwise open demo or editable SQL controls", () => {
+    const items = chartDesignerRibbonItems;
+    expect(items.find((item) => item.label === "Templates")).toMatchObject({ disabled: true });
+    expect(items.find((item) => item.label === "SQL")).toMatchObject({
+      disabled: true,
+      title: expect.stringContaining("อ่านอย่างเดียว"),
+    });
+    expect(items.find((item) => item.label === "Presets")?.disabled).not.toBe(true);
+  });
   it("uses API-backed project and dashboard context in production", () => {
     expect(resolveChartDesignerNavigation({
       route: "/dashboard-v2",

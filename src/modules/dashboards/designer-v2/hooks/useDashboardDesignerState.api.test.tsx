@@ -52,6 +52,12 @@ const loadDataset = vi.fn(async (datasetId: string) => datasetId === "dataset-sc
 });
 const listExternalSources = vi.fn().mockResolvedValue({ items: [{ schemaName: "scopus", displayName: "scopus" }] });
 const listExternalTables = vi.fn().mockResolvedValue({ items: [{ name: "sc_articles", rowCountEstimate: 6004 }, { name: "sc_authors", rowCountEstimate: 16299 }] });
+const listExternalColumns = vi.fn().mockResolvedValue({ items: [
+  { name: "publication_year", dataType: "integer", nullable: true, primaryKey: false, foreignKeys: [] },
+  { name: "author_name", dataType: "text", nullable: true, primaryKey: false, foreignKeys: [] },
+] });
+const listExternalRelationships = vi.fn().mockResolvedValue({ items: [] });
+const previewExternalSource = vi.fn().mockResolvedValue({ rows: [], sqlPreview: "SELECT 1", queryDurationMs: 1 });
 const createExternalDataset = vi.fn().mockResolvedValue({
   id: "dataset-scopus-authors",
   name: "scopus.sc_authors",
@@ -68,7 +74,16 @@ const getChartById = vi.fn(async (chartId: string) => chartId === "chart-saved" 
 } : null);
 
 vi.mock("@infrastructure/http/client", () => ({ isMockMode: () => false }));
-vi.mock("@modules/datasets/public/api", () => ({ createExternalDataset, listDatasets, loadDataset, listExternalSources, listExternalTables }));
+vi.mock("@modules/datasets/public/api", () => ({
+  createExternalDataset,
+  listDatasets,
+  loadDataset,
+  listExternalColumns,
+  listExternalRelationships,
+  listExternalSources,
+  listExternalTables,
+  previewExternalSource,
+}));
 vi.mock("@modules/charts/public/api", () => ({ getChartById, createChart, updateChart: vi.fn() }));
 vi.mock("@modules/projects", () => ({
   API_ACTIVE_PROJECT_KEY: "mini-bi-api-active-project-id",
@@ -90,6 +105,27 @@ function WrapperSavedChart({ children }: PropsWithChildren) {
 }
 
 describe("useDashboardDesignerState API source", () => {
+  it("hydrates saved multi-table joins, semantic overrides, casts, and calculated fields", async () => {
+    const { persistedMultiTableState } = await import("@modules/dashboards/designer-v2/hooks/useDashboardDesignerState");
+    expect(persistedMultiTableState({
+      sourceConfigJson: {
+        selectedTables: [
+          { schema: "scopus", table: "sc_articles", alias: "articles" },
+          { schema: "scopus", table: "sc_journals", alias: "journals" },
+        ],
+        joins: [{ left: { alias: "articles", column: "journal_id" }, right: { alias: "journals", column: "id" }, joinType: "left" }],
+        selectedFields: [{ tableAlias: "articles", column: "year_text", cast: { targetType: "numeric" } }],
+        semanticTypeOverrides: { "articles.year_text": "year" },
+        calculatedFields: [{ name: "citation_ratio", resultType: "number" }],
+      },
+    })).toMatchObject({
+      tables: [{ alias: "articles" }, { alias: "journals" }],
+      joins: [expect.objectContaining({ joinType: "left" })],
+      safeCasts: { "articles.year_text": "numeric" },
+      semanticTypeOverrides: { "articles.year_text": "year" },
+      calculatedFields: [{ name: "citation_ratio" }],
+    });
+  });
   it("resolves the stored API project before loading a direct dashboard-v2 route", async () => {
     window.localStorage.setItem("mini-bi-api-active-project-id", "project-scopus");
     const { useDashboardDesignerState } = await import("@modules/dashboards/designer-v2/hooks/useDashboardDesignerState");
@@ -148,7 +184,7 @@ describe("useDashboardDesignerState API source", () => {
     ]));
   });
 
-  it("activates an unsaved catalog table through the real external dataset API and resets mappings to that table", async () => {
+  it("adds a second catalog table and waits for a validated manual join when no FK exists", async () => {
     const { useDashboardDesignerState } = await import("@modules/dashboards/designer-v2/hooks/useDashboardDesignerState");
     const { result } = renderHook(() => useDashboardDesignerState(), { wrapper: Wrapper });
     await waitFor(() => expect(result.current.state.isLoading).toBe(false));
@@ -160,22 +196,17 @@ describe("useDashboardDesignerState API source", () => {
       await result.current.actions.setSelectedTable("scopus", "sc_authors");
     });
 
-    expect(createExternalDataset).toHaveBeenCalledWith({
-      projectId: "project-scopus",
-      name: "scopus.sc_authors",
-      schemaName: "scopus",
-      tableName: "sc_authors",
-    });
+    expect(result.current.state.selectedTables).toEqual([
+      expect.objectContaining({ table: "sc_articles", alias: "articles" }),
+      expect.objectContaining({ table: "sc_authors", alias: "authors" }),
+    ]);
+    expect(result.current.state.datasetJoins).toEqual([]);
     expect(result.current.state.selectedTable).toBe("sc_authors");
     expect(result.current.state.fields).toEqual(expect.arrayContaining([
-      expect.objectContaining({ name: "publication_year", table: "scopus.sc_authors" }),
-      expect.objectContaining({ name: "author_name", table: "scopus.sc_authors" }),
+      expect.objectContaining({ name: "authors.publication_year", physicalType: "integer" }),
+      expect.objectContaining({ name: "authors.author_name", physicalType: "text" }),
     ]));
-    expect(result.current.state.config.mappings.find((slot) => slot.id === "xAxis")?.fields).toEqual([
-      expect.objectContaining({ id: "field-year", table: "scopus.sc_authors" }),
-    ]);
-    expect(result.current.state.config.datasetId).toBe("dataset-scopus-authors");
-    expect(result.current.state.config.settings.general.title).toBe("scopus.sc_authors");
-    expect(result.current.state.config.settings.general.subtitle).toBe("ข้อมูลจาก scopus.sc_authors");
+    expect(result.current.state.config.datasetId).toBe("dataset-scopus-articles");
+    expect(result.current.state.snackbar).toContain("Manual Join");
   });
 });

@@ -13,7 +13,9 @@ describe("Chart Designer responsive layout", () => {
   });
 
   it("does not initialize the chart renderer inside hidden mobile steps", () => {
-    expect(shouldRenderDesignerPreview(true, "data", false)).toBe(false);
+    expect(shouldRenderDesignerPreview(true, "tables", false)).toBe(false);
+    expect(shouldRenderDesignerPreview(true, "relationships", false)).toBe(false);
+    expect(shouldRenderDesignerPreview(true, "fields", false)).toBe(false);
     expect(shouldRenderDesignerPreview(true, "mapping", false)).toBe(false);
     expect(shouldRenderDesignerPreview(true, "preview", false)).toBe(true);
     expect(shouldRenderDesignerPreview(false, "mapping", false)).toBe(true);

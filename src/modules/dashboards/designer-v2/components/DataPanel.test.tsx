@@ -54,6 +54,6 @@ describe("DataPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: /^Tables/ }));
     fireEvent.click(screen.getByRole("button", { name: "sc_authors" }));
     expect(onSelectTable).toHaveBeenCalledWith("scopus", "sc_authors");
-    expect(screen.getByText("ใช้ได้ครั้งละ 1 ตาราง")).toBeInTheDocument();
+    expect(screen.getByText("เลือกเพิ่มได้สูงสุด 6 ตาราง")).toBeInTheDocument();
   });
 });

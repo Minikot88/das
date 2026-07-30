@@ -59,6 +59,75 @@ describe('CoreDataService dataset query validation', () => {
     expect(external.columns).not.toHaveBeenCalled();
   });
 
+  it('persists a validated multi-table dataset definition and qualified fields', async () => {
+    const datasetCreate = vi.fn(async ({ data }) => data);
+    const fieldCreateMany = vi.fn().mockResolvedValue({ count: 2 });
+    const versionCreate = vi.fn().mockResolvedValue({});
+    const tx = {
+      dataset: { create: datasetCreate },
+      datasetField: { createMany: fieldCreateMany },
+      datasetVersion: { create: versionCreate },
+    };
+    const prisma = {
+      biProjectMember: { findMany: vi.fn().mockResolvedValue([]) },
+      biProject: { findFirst: vi.fn().mockResolvedValue({ id: 'project-1', organizationId: 'org-default', ownerUserId: 'user-development' }) },
+      dataset: { findMany: vi.fn().mockResolvedValue([]) },
+      $transaction: vi.fn(async callback => callback(tx)),
+    };
+    const external = {
+      columns: vi.fn(async (_schema, table) => ({
+        items: table === 'sc_articles'
+          ? [{ name: 'publication_year', dataType: 'integer', nullable: true, ordinal: 1, primaryKey: false }]
+          : [{ name: 'name', dataType: 'character varying', nullable: true, ordinal: 1, primaryKey: false }],
+      })),
+      tables: vi.fn().mockResolvedValue({ items: [{ name: 'sc_articles', rowCountEstimate: 6004 }] }),
+      previewStructured: vi.fn().mockResolvedValue({ rows: [], sqlPreview: 'SELECT ...', queryDurationMs: 2 }),
+    };
+    const instance = new CoreDataService(prisma as never, { assertProjectPermission: vi.fn().mockResolvedValue(undefined) } as never, external as never);
+    const definition = {
+      projectId: 'project-1',
+      name: 'Articles with journals',
+      sourceSchema: 'scopus',
+      baseTable: 'sc_articles',
+      selectedTables: [
+        { schema: 'scopus', table: 'sc_articles', alias: 'articles' },
+        { schema: 'scopus', table: 'sc_journals', alias: 'journals' },
+      ],
+      selectedFields: [
+        { tableAlias: 'articles', column: 'publication_year', alias: 'publication_year' },
+        { tableAlias: 'journals', column: 'name', alias: 'journal_name' },
+      ],
+      joins: [{
+        left: { schema: 'scopus', table: 'sc_articles', alias: 'articles', column: 'journal_id' },
+        right: { schema: 'scopus', table: 'sc_journals', alias: 'journals', column: 'id' },
+        joinType: 'left',
+        operator: 'eq',
+      }],
+      semanticTypeOverrides: { 'articles.publication_year': 'Year' },
+      rowLimit: 500,
+    };
+
+    await instance.createExternalDataset(principal, definition);
+
+    expect(external.previewStructured).toHaveBeenCalledWith(expect.objectContaining({ selectedTables: definition.selectedTables }));
+    expect(datasetCreate).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        sourceConfigJson: expect.objectContaining({
+          baseTable: 'sc_articles',
+          selectedTables: definition.selectedTables,
+          joins: definition.joins,
+          semanticTypeOverrides: definition.semanticTypeOverrides,
+        }),
+      }),
+    }));
+    expect(fieldCreateMany).toHaveBeenCalledWith({
+      data: expect.arrayContaining([
+      expect.objectContaining({ fieldKey: 'publication_year', label: 'articles.publication_year', semanticType: 'Year' }),
+      expect.objectContaining({ fieldKey: 'journal_name', label: 'journals.name' }),
+      ]),
+    });
+  });
+
   it('rejects a viewer attempting to create a dashboard', async () => {
     const prisma = {} as never;
     const authorization = { assertProjectPermission: vi.fn().mockRejectedValue({ status: 403, code: 'FORBIDDEN' }) };
