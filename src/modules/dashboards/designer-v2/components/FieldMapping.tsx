@@ -27,6 +27,7 @@ import { useDrag, useDrop } from "react-dnd";
 import { getDistinctFieldValues } from "@modules/dashboards/designer-v2/components/services/datasetService";
 import { dashboardV2Tokens as tokens } from "@modules/dashboards/designer-v2/components/theme";
 import { validateFieldForSlot } from "@modules/dashboards/designer-v2/components/utils/chartValidation";
+import { mappingSummary } from "@modules/dashboards/designer-v2/components/utils/axisTitles";
 import type { Aggregation, ChartType, DataField, DragFieldItem, FilterValue, MappingSlot, MappingSlotId } from "@modules/dashboards/designer-v2/components/types";
 
 type FieldMappingProps = {
@@ -265,6 +266,7 @@ function MappingDropZone({
   }), [chartType, onDropField, slot.id]);
 
   const aggregation = options.includes(slot.aggregation ?? "None") ? slot.aggregation ?? "None" : options[0];
+  const firstFieldSummary = slot.fields[0] ? mappingSummary(slot.id, slot.fields[0], aggregation) : null;
   const showAggregationControl = !compact && measureSlotIds.includes(slot.id);
   const selectedFieldCompatible = selectedField ? validateFieldForSlot(slot.id, selectedField, chartType) : false;
   const selectedFieldIncompatible = Boolean(selectedField && !selectedFieldCompatible);
@@ -312,8 +314,8 @@ function MappingDropZone({
           <Typography variant="subtitle2" noWrap sx={{ fontSize: 11, fontWeight: 500, lineHeight: 1.35 }}>
             {slot.label}
           </Typography>
-          <Typography variant="caption" color="text.secondary" noWrap sx={{ display: "none", fontSize: 10, lineHeight: 1.25 }}>
-            {slot.helper}
+          <Typography variant="caption" color="text.secondary" noWrap sx={{ display: firstFieldSummary ? "block" : "none", fontSize: 10, lineHeight: 1.25 }}>
+            {firstFieldSummary?.reason ?? slot.helper}
           </Typography>
         </Box>
         {compact ? (
@@ -391,6 +393,21 @@ function MappingDropZone({
           )}
         </Stack>
 
+        {["xAxis", "legend", "color", "size", "category", "series", "columns", "source", "target", "open", "high", "low", "close"].includes(slot.id)
+          && slot.fields.length
+          && selectedFieldCompatible
+          && selectedField
+          && !slot.fields.some((field) => field.id === selectedField.id) ? (
+          <Button
+            size="small"
+            onClick={() => onDropField(slot.id, selectedField)}
+            aria-label={`แทนที่ ${slot.label} ด้วย ${selectedField.name}`}
+            sx={{ minWidth: 0, px: 0.75, py: 0.25, fontSize: 10, lineHeight: 1.35 }}
+          >
+            ใช้ {selectedField.name}
+          </Button>
+        ) : null}
+
         {showAggregationControl ? (
           <Select
             size="small"
@@ -446,8 +463,12 @@ function FieldMapping({
 }: FieldMappingProps) {
   const [moreAnchorEl, setMoreAnchorEl] = useState<HTMLElement | null>(null);
   const moreButtonRef = useRef<HTMLButtonElement | null>(null);
-  const primarySlots = mappings.filter((slot) => primarySlotIds.includes(slot.id));
-  const secondarySlots = mappings.filter((slot) => secondarySlotIds.includes(slot.id));
+  const axislessPrimary = chartType === "pie" || chartType === "donut";
+  const activePrimarySlotIds: MappingSlotId[] = axislessPrimary
+    ? ["category", "value", "legend", "tooltip"]
+    : primarySlotIds;
+  const primarySlots = mappings.filter((slot) => activePrimarySlotIds.includes(slot.id));
+  const secondarySlots = mappings.filter((slot) => secondarySlotIds.includes(slot.id) && !activePrimarySlotIds.includes(slot.id));
   const secondaryHasContent = secondarySlots.some((slot) => slot.fields.length > 0);
   const moreOpen = Boolean(moreAnchorEl);
 

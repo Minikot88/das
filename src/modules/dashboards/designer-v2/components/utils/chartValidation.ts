@@ -1,7 +1,8 @@
 import { isNumericField } from "@modules/dashboards/designer-v2/components/utils/chartAggregations";
 import { getMappingSlot } from "@modules/dashboards/designer-v2/components/utils/chartDataEngine";
 import { getChartDefinition } from "@modules/dashboards/designer-v2/components/utils/chartRegistry";
-import type { ChartConfig, DataField, MappingSlot, MappingSlotId, ValidationResult } from "@modules/dashboards/designer-v2/components/types";
+import type { Aggregation, ChartConfig, DataField, MappingSlot, MappingSlotId, ValidationResult } from "@modules/dashboards/designer-v2/components/types";
+import { isIdentifierField } from "@modules/dashboards/designer-v2/components/utils/axisTitles";
 import type { MappingRequirement } from "@modules/dashboards/designer-v2/components/types/chartTypes";
 
 const slotAliases: Record<MappingSlotId, MappingSlotId[]> = {
@@ -26,10 +27,10 @@ const slotAliases: Record<MappingSlotId, MappingSlotId[]> = {
 };
 
 const friendlySlotExamples: Partial<Record<MappingSlotId, string>> = {
-  xAxis: "แกนนอน: เดือน / หมวดหมู่ / ภูมิภาค",
-  yAxis: "ค่า: ยอดขาย / กำไร / จำนวน",
-  category: "หมวดหมู่: หมวดหมู่ / ช่องทาง / ภูมิภาค",
-  value: "ค่า: ยอดขาย / กำไร / จำนวน",
+  xAxis: "X Axis: เลือกข้อความ หมวดหมู่ หรือวันที่",
+  yAxis: "Y Axis: เลือกตัวเลขหรือใช้ Count",
+  category: "Category: เลือกหนึ่งฟิลด์สำหรับแบ่งส่วน",
+  value: "Value: เลือกหนึ่งฟิลด์ตัวเลขหรือใช้ Count",
   legend: "กลุ่ม: ช่องทาง / หมวดหมู่ / ภูมิภาค",
   rows: "แถว: เดือน / หมวดหมู่ / ช่องทาง",
   columns: "คอลัมน์: หมวดหมู่ / ช่องทาง",
@@ -77,10 +78,13 @@ function allowedTypes(requirement: MappingRequirement) {
 
 function hasRequiredFields(fields: DataField[], requirement: MappingRequirement) {
   const allowed = allowedTypes(requirement);
-  const validFields = allowed.length ? fields.filter((field) => allowed.includes(field.type)) : fields;
+  const countableIdentifierSlot = requirement.slot === "value" || requirement.slot === "yAxis";
+  const validFields = allowed.length
+    ? fields.filter((field) => allowed.includes(field.type) || (countableIdentifierSlot && isIdentifierField(field)))
+    : fields;
   const numericOnly = allowed.length > 0 && allowed.every((type) => type === "number" || type === "currency" || type === "percentage");
   if (numericOnly || requirement.slot === "value" || requirement.slot === "size" || requirement.slot === "open" || requirement.slot === "high" || requirement.slot === "low" || requirement.slot === "close") {
-    return validFields.filter(isNumericField).length >= (requirement.minFields ?? 1);
+    return validFields.filter((field) => isNumericField(field) || (countableIdentifierSlot && isIdentifierField(field))).length >= (requirement.minFields ?? 1);
   }
   return validFields.length >= (requirement.minFields ?? 1);
 }
@@ -101,6 +105,30 @@ function isDimensionSlot(slotId: MappingSlotId) {
   return ["xAxis", "legend", "category", "series", "rows", "columns", "source", "target", "filter", "tooltip", "color"].includes(slotId);
 }
 
+export function validateAggregationForField(
+  field: DataField,
+  aggregation: Aggregation,
+  slotId: MappingSlotId,
+): ValidationResult {
+  const slotLabel = slotId === "yAxis" ? "Y Axis" : slotId === "value" ? "Value" : slotId;
+  const fieldContext = `ฟิลด์ \`${field.name}\` จากตาราง ${field.table} เป็น${fieldRoleName(field)}`;
+  if (aggregation === "Sum" && isIdentifierField(field)) {
+    return missing(
+      "การคำนวณไม่เหมาะกับฟิลด์",
+      `${fieldContext}ประเภท Primary Key/ID จึงไม่ควรใช้ Sum ใน ${slotLabel} แนะนำให้ใช้ Count แทน`,
+      [`Field: ${field.name}`, `Table: ${field.table}`, `Data type: ${field.type}`, `Mapping slot: ${slotLabel}`],
+    );
+  }
+  if (["Sum", "Average", "Min", "Max", "Median"].includes(aggregation) && !isNumericField(field)) {
+    return missing(
+      "การคำนวณไม่เหมาะกับฟิลด์",
+      `${fieldContext}ข้อความ จึงไม่สามารถใช้ ${aggregation} ใน ${slotLabel} ได้`,
+      [`Field: ${field.name}`, `Table: ${field.table}`, `Data type: ${field.type}`, `Mapping slot: ${slotLabel}`],
+    );
+  }
+  return success();
+}
+
 export function validateFieldForSlot(slotId: MappingSlot["id"], field: DataField, chartType: ChartConfig["chartType"]) {
   if (slotId === "tooltip") return true;
 
@@ -111,9 +139,13 @@ export function validateFieldForSlot(slotId: MappingSlot["id"], field: DataField
 
   if (allowed.length && !allowed.includes(field.type)) {
     const dimensionNumberAllowed = field.type === "number" && field.isDimension && isDimensionSlot(slotId);
-    if (!dimensionNumberAllowed) return false;
+    const countableIdentifierAllowed = (slotId === "yAxis" || slotId === "value") && isIdentifierField(field);
+    if (!dimensionNumberAllowed && !countableIdentifierAllowed) return false;
   }
-  if (numericOnly || (isMeasureSlot(slotId) && !allowed.length)) return isNumericField(field);
+  if (numericOnly || (isMeasureSlot(slotId) && !allowed.length)) {
+    if ((slotId === "yAxis" || slotId === "value") && isIdentifierField(field)) return true;
+    return isNumericField(field);
+  }
   if ((chartType === "scatter" || chartType === "bubble" || chartType === "correlation-scatter") && slotId === "xAxis") return isNumericField(field);
   if (chartType === "horizontal-bar" && slotId === "xAxis") return isNumericField(field);
   if (chartType === "horizontal-bar" && slotId === "yAxis") return !isNumericField(field) || field.type === "date";
@@ -146,6 +178,12 @@ export function validateChartConfig(config: ChartConfig): ValidationResult {
       ["เลือกกราฟที่เปิดใช้งานแล้ว", "หรือเปิด Coming soon เพื่อดูรายละเอียด"]
     );
   }
+
+  const invalidAggregation = config.mappings
+    .filter((slot) => slot.aggregation && slot.aggregation !== "None")
+    .flatMap((slot) => slot.fields.map((field) => validateAggregationForField(field, slot.aggregation ?? "None", slot.id)))
+    .find((result) => !result.valid);
+  if (invalidAggregation) return invalidAggregation;
 
   if (config.chartType === "table" || config.chartType === "summary-table" || config.chartType === "matrix-table") {
     return selectedFields(config.mappings).length > 0
