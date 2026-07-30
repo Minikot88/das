@@ -14,7 +14,8 @@ type BottomStatusProps = {
   rowCount: number;
   fieldCount: number;
   filteredRowCount: number;
-  saveStatus: "saved" | "saving" | "unsaved";
+  activeFilterCount: number;
+  saveStatus: "saved" | "saving" | "unsaved" | "failed";
   lastSavedAt: string;
 };
 
@@ -26,11 +27,11 @@ function BottomStatus({
   rowCount,
   fieldCount,
   filteredRowCount,
+  activeFilterCount,
   saveStatus,
   lastSavedAt,
 }: BottomStatusProps) {
   const yAxis = mappings.find((slot) => slot.id === "yAxis");
-  const filters = mappings.find((slot) => slot.id === "filter")?.fields.length ?? 0;
 
   return (
     <Box
@@ -73,7 +74,7 @@ function BottomStatus({
           {fieldCount} Fields
         </Typography>
         <Typography variant="caption" color="text.secondary" noWrap>
-          {filters} Filters
+          {activeFilterCount} Filters
         </Typography>
       </Stack>
 
@@ -91,9 +92,9 @@ function BottomStatus({
       </Stack>
 
       <Stack direction="row" spacing={1} alignItems="center" justifyContent="flex-end" minWidth={0} sx={{ display: { xs: "none", md: "flex" } }}>
-        <CheckCircleRoundedIcon color={saveStatus === "unsaved" ? "warning" : "success"} fontSize="small" />
+        <CheckCircleRoundedIcon color={saveStatus === "failed" ? "error" : saveStatus === "unsaved" ? "warning" : "success"} fontSize="small" />
         <Typography variant="caption" color="text.secondary" noWrap>
-          {saveStatus === "saving" ? "กำลังบันทึก" : saveStatus === "unsaved" ? "ยังไม่ได้บันทึก" : "บันทึกแล้ว"}
+          {saveStatus === "saving" ? "กำลังบันทึก" : saveStatus === "failed" ? "บันทึกไม่สำเร็จ" : saveStatus === "unsaved" ? "ยังไม่ได้บันทึก" : "บันทึกแล้ว"}
         </Typography>
         <Typography variant="caption" color="text.secondary" noWrap>
           บันทึกล่าสุด {lastSavedAt}
