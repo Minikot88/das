@@ -3,6 +3,11 @@ import { Pool } from 'pg';
 import type { RuntimeEnvironment } from '../../app/config/environment.js';
 import { ENVIRONMENT } from '../../app/config/token.js';
 import { ApiError } from '../../shared/http/api-error.js';
+import {
+  buildStructuredExternalQuery,
+  type StructuredExternalQuery,
+  type StructuredQueryMetadata,
+} from './structured-query.js';
 
 type Input = Record<string, unknown>;
 const identifier = (value: string) => `"${value.replaceAll('"', '""')}"`;
@@ -16,7 +21,7 @@ export class ExternalSourcesService {
   constructor(@Inject(ENVIRONMENT) private readonly env: RuntimeEnvironment) {
     this.allowedSchemas = new Set((env.externalSourceSchemas || []).map(value => value.toLowerCase()));
   }
-  private pool() { return new Pool({ connectionString: this.env.databaseUrl, max: 2, statement_timeout: this.env.queryTimeoutMs, query_timeout: this.env.queryTimeoutMs, application_name: 'dashboard-mini-bi-external-readonly' }); }
+  private pool() { return new Pool({ connectionString: this.env.databaseUrl, max: 2, statement_timeout: this.env.queryTimeoutMs, query_timeout: this.env.queryTimeoutMs, application_name: 'dashboard-mini-bi-external-readonly', options: '-c default_transaction_read_only=on' }); }
   private schema(name: string) { const schema = String(name || '').toLowerCase(); if (!this.allowedSchemas.has(schema)) throw new ApiError(403, 'EXTERNAL_SCHEMA_FORBIDDEN', 'This schema is not an allowed external source.'); return schema; }
   async sources() {
     return { items: [...this.allowedSchemas].map(name => ({
@@ -53,11 +58,18 @@ export class ExternalSourcesService {
   async relationships(schemaName: string, tableName: string) {
     const schema = this.schema(schemaName); const table = await this.table(schema, tableName); const db = this.pool();
     try {
-      const result = await db.query(`SELECT tc.constraint_name AS name,kcu.column_name AS "columnName",ccu.table_schema AS "referencedSchema",ccu.table_name AS "referencedTable",ccu.column_name AS "referencedColumn"
+      const result = await db.query(`SELECT tc.constraint_name AS name,kcu.column_name AS "columnName",ccu.table_schema AS "referencedSchema",ccu.table_name AS "referencedTable",ccu.column_name AS "referencedColumn",'outgoing' AS direction
         FROM information_schema.table_constraints tc
         JOIN information_schema.key_column_usage kcu ON kcu.constraint_name=tc.constraint_name AND kcu.constraint_schema=tc.constraint_schema
         JOIN information_schema.constraint_column_usage ccu ON ccu.constraint_name=tc.constraint_name AND ccu.constraint_schema=tc.constraint_schema
-        WHERE tc.constraint_type='FOREIGN KEY' AND tc.table_schema=$1 AND tc.table_name=$2 ORDER BY tc.constraint_name,kcu.ordinal_position`, [schema, table]);
+        WHERE tc.constraint_type='FOREIGN KEY' AND tc.table_schema=$1 AND tc.table_name=$2
+        UNION ALL
+        SELECT tc.constraint_name AS name,ccu.column_name AS "columnName",kcu.table_schema AS "referencedSchema",kcu.table_name AS "referencedTable",kcu.column_name AS "referencedColumn",'incoming' AS direction
+        FROM information_schema.table_constraints tc
+        JOIN information_schema.key_column_usage kcu ON kcu.constraint_name=tc.constraint_name AND kcu.constraint_schema=tc.constraint_schema
+        JOIN information_schema.constraint_column_usage ccu ON ccu.constraint_name=tc.constraint_name AND ccu.constraint_schema=tc.constraint_schema
+        WHERE tc.constraint_type='FOREIGN KEY' AND ccu.table_schema=$1 AND ccu.table_name=$2
+        ORDER BY name,"columnName"`, [schema, table]);
       return { schemaName: schema, tableName: table, items: result.rows };
     } finally { await db.end(); }
   }
@@ -102,8 +114,64 @@ export class ExternalSourcesService {
       };
     } finally { await db.end(); }
   }
-  async preview(input: Input) { return this.run(input); }
-  async run(input: Input) {
+  async preview(input: Input) {
+    return Array.isArray(input.selectedTables)
+      ? this.previewStructured(input as StructuredExternalQuery)
+      : this.run(input);
+  }
+  async previewStructured(input: StructuredExternalQuery) {
+    const metadata: StructuredQueryMetadata = { allowedSchemas: this.allowedSchemas, tables: {} };
+    for (const table of input.selectedTables ?? []) {
+      const schema = this.schema(table.schema);
+      const columns = await this.columns(schema, table.table);
+      metadata.tables[table.alias] = {
+        schema,
+        table: table.table,
+        columns: Object.fromEntries(columns.items.map((column: { name: string; dataType: string; nullable: boolean; primaryKey: boolean }) => [
+          column.name,
+          {
+            dataType: column.dataType,
+            nullable: column.nullable,
+            primaryKey: column.primaryKey,
+          },
+        ])),
+      };
+    }
+    const requestedPageSize = Math.max(1, Math.min(Number(input.pageSize || input.rowLimit || 100), this.env.queryRowLimit, 10_000));
+    const query = buildStructuredExternalQuery({ ...input, pageSize: requestedPageSize }, metadata);
+    const startedAt = Date.now();
+    const db = this.pool();
+    try {
+      for (const field of input.selectedFields ?? []) {
+        if (!field.cast || field.cast.targetType === 'text') continue;
+        const table = input.selectedTables.find(item => item.alias === field.tableAlias);
+        if (!table) continue;
+        const source = `${identifier(field.column)}::text`;
+        const validPattern = field.cast.targetType === 'numeric'
+          ? `'^[+-]?(\\d+(\\.\\d+)?|\\.\\d+)$'`
+          : `'^\\d{4}-\\d{2}-\\d{2}$'`;
+        const invalid = await db.query(`SELECT ${source} AS value FROM ${identifier(table.schema)}.${identifier(table.table)} WHERE ${identifier(field.column)} IS NOT NULL AND NOT (${source} ~ ${validPattern}) LIMIT 5`);
+        if (invalid.rows.length) {
+          const samples = invalid.rows.map(row => String(row.value).slice(0, 80)).join(', ');
+          throw new ApiError(400, 'UNSAFE_CAST_VALUES', `ค่าบางรายการใน ${field.tableAlias}.${field.column} ไม่สามารถแปลงเป็น ${field.cast.targetType} ได้: ${samples}`);
+        }
+      }
+      const result = await db.query({ text: query.text, values: query.values });
+      return {
+        rows: result.rows,
+        page: query.page,
+        pageSize: query.pageSize,
+        truncated: result.rows.length === query.pageSize,
+        queryDurationMs: Date.now() - startedAt,
+        sqlPreview: query.text,
+        readOnly: true,
+      };
+    } finally {
+      await db.end();
+    }
+  }
+  async run(input: Input): Promise<{ rows: Input[]; page: number; pageSize: number; truncated: boolean; queryDurationMs?: number; sqlPreview?: string; readOnly?: boolean }> {
+    if (Array.isArray(input.selectedTables)) return this.previewStructured(input as StructuredExternalQuery);
     const schema = this.schema(String(input.schemaName || '')); const table = await this.table(schema, String(input.tableName || ''));
     const columns = await this.columns(schema, table); const allowed = new Set(columns.items.map((x: { name: string }) => x.name));
     const select = (Array.isArray(input.select) && input.select.length ? input.select : [...allowed]).map(String); select.forEach(field => this.field(allowed, field));
