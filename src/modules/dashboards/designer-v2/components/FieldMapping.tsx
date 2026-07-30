@@ -109,6 +109,8 @@ function MappingChip({
       label={label}
       onDelete={onRemove}
       deleteIcon={<CloseRoundedIcon />}
+      aria-label={`${label} · ${field.table} · ${field.physicalType || field.type} · ${field.semanticType}`}
+      title={`${field.table} · Physical: ${field.physicalType || field.type} · Semantic: ${field.semanticType}`}
       sx={{
         height: compact ? 22 : 24,
         maxWidth: "100%",
@@ -351,8 +353,8 @@ function MappingDropZone({
                 compact={compact}
                 label={
                   showAggregationControl
-                    ? field.name
-                    : `${field.name}${slot.aggregation && slot.aggregation !== "None" ? ` (${slot.aggregation})` : ""}`
+                    ? field.label
+                    : `${field.label}${slot.aggregation && slot.aggregation !== "None" ? ` (${slot.aggregation})` : ""}`
                 }
                 onRemove={() => onRemoveField(slot.id, field.id)}
               />
@@ -430,6 +432,12 @@ function MappingDropZone({
           </Select>
         ) : null}
       </Box>
+      {slot.fields[0] ? (
+        <Typography variant="caption" color="text.secondary" noWrap sx={{ fontSize: 9.5 }}>
+          {slot.fields[0].sourceAlias || slot.fields[0].table} · {slot.fields[0].physicalType || slot.fields[0].type} · {slot.fields[0].semanticType}
+          {slot.aggregation && slot.aggregation !== "None" ? ` · ${slot.aggregation}` : ""}
+        </Typography>
+      ) : null}
 
       {!compact && slot.id === "filter" && slot.fields.length ? (
           <Stack spacing={0.5} sx={{ mt: 0.25, overflow: "visible" }}>

@@ -9,6 +9,7 @@ import ChartGallery from "@modules/dashboards/designer-v2/components/ChartGaller
 import DataPanel from "@modules/dashboards/designer-v2/components/DataPanel";
 import FeaturePreviewDialog from "@modules/dashboards/designer-v2/components/FeaturePreviewDialog";
 import FieldMapping from "@modules/dashboards/designer-v2/components/FieldMapping";
+import MultiTableContext from "@modules/dashboards/designer-v2/components/MultiTableContext";
 import PresentationBar from "@modules/dashboards/designer-v2/components/PresentationBar";
 import ShareDialog from "@modules/dashboards/designer-v2/components/ShareDialog";
 import SqlQueryPanel from "@modules/dashboards/designer-v2/components/SqlQueryPanel";
@@ -24,14 +25,15 @@ import { countActiveFilters } from "@modules/dashboards/designer-v2/components/u
 const PreviewCanvas = lazy(() => import("@modules/dashboards/designer-v2/components/PreviewCanvas"));
 const PropertyPanel = lazy(() => import("@modules/dashboards/designer-v2/components/PropertyPanel"));
 
-type MobileDesignerTab = "data" | "mapping" | "preview" | "settings";
+type MobileDesignerTab = "tables" | "relationships" | "fields" | "mapping" | "preview" | "settings";
 
 const mobileTabs: Array<{ id: MobileDesignerTab | "save"; label: string }> = [
-  { id: "data", label: "1 ข้อมูล" },
-  { id: "mapping", label: "2 Mapping" },
-  { id: "preview", label: "3 Preview" },
-  { id: "settings", label: "4 รูปแบบ" },
-  { id: "save", label: "5 บันทึก" },
+  { id: "tables", label: "1 ตาราง" },
+  { id: "relationships", label: "2 ความสัมพันธ์" },
+  { id: "fields", label: "3 ฟิลด์" },
+  { id: "mapping", label: "4 Mapping" },
+  { id: "preview", label: "5 Preview" },
+  { id: "save", label: "6 บันทึก" },
 ];
 
 function GallerySkeleton() {
@@ -60,7 +62,7 @@ function DashboardDesignerContent() {
   const location = useLocation();
   const [templateOpen, setTemplateOpen] = React.useState(false);
   const [featurePreviewId, setFeaturePreviewId] = React.useState<string | null>(null);
-  const [mobileTab, setMobileTab] = React.useState<MobileDesignerTab>("data");
+  const [mobileTab, setMobileTab] = React.useState<MobileDesignerTab>("tables");
   const [dataPanelOpen, setDataPanelOpen] = React.useState(true);
   const [settingsPanelOpen, setSettingsPanelOpen] = React.useState(true);
   const [settingsDrawerOpen, setSettingsDrawerOpen] = React.useState(false);
@@ -198,16 +200,17 @@ function DashboardDesignerContent() {
       {!state.previewMode ? (
         <Box
           sx={{
-            display: { xs: "flex", md: "none" },
-            height: 34,
-            flex: "0 0 34px",
+            display: { xs: "grid", sm: "flex", md: "none" },
+            gridTemplateColumns: { xs: "repeat(3, minmax(0, 1fr))", sm: "none" },
+            height: { xs: 64, sm: 34 },
+            flex: { xs: "0 0 64px", sm: "0 0 34px" },
             alignItems: "center",
             gap: 0.5,
             px: 1,
             borderBottom: "1px solid",
             borderColor: tokens.color.borderSubtle,
             bgcolor: tokens.color.surface,
-            overflowX: "auto",
+            overflowX: { xs: "hidden", sm: "auto" },
           }}
         >
           {mobileTabs.map((tab) => {
@@ -231,6 +234,7 @@ function DashboardDesignerContent() {
                   appearance: "none",
                   height: 26,
                   px: 1,
+                  minWidth: 0,
                   border: "1px solid",
                   borderColor: selected ? tokens.color.selectedBorder : "transparent",
                   borderRadius: `${tokens.radius.control}px`,
@@ -375,7 +379,7 @@ function DashboardDesignerContent() {
           </Alert>
         ) : null}
         {!state.previewMode ? (
-        <Box sx={{ minHeight: 0, display: { xs: mobileTab === "data" ? "block" : "none", md: dataPanelOpen ? "block" : "none" } }}>
+        <Box sx={{ minHeight: 0, display: { xs: mobileTab === "tables" || mobileTab === "fields" ? "block" : "none", md: dataPanelOpen ? "block" : "none" } }}>
           <DataPanel
             datasources={state.datasources}
             schemaCatalog={state.externalSchemaCatalog}
@@ -385,6 +389,7 @@ function DashboardDesignerContent() {
             searchValue={state.searchValue}
             selectedTable={state.selectedTable}
             selectedFieldId={state.selectedFieldId}
+            selectedTables={state.selectedTables}
             onSearchChange={actions.setSearchValue}
             onDatasourceChange={actions.setActiveDatasourceId}
             onSelectTable={actions.setSelectedTable}
@@ -397,7 +402,7 @@ function DashboardDesignerContent() {
           sx={{
             minWidth: 0,
             minHeight: 0,
-            display: { xs: mobileTab === "mapping" || mobileTab === "preview" || state.previewMode ? "grid" : "none", md: "grid" },
+            display: { xs: mobileTab === "relationships" || mobileTab === "mapping" || mobileTab === "preview" || state.previewMode ? "grid" : "none", md: "grid" },
             gridTemplateColumns: "minmax(0, 1fr)",
             gridTemplateRows: { xs: mobileCenterRows, md: centerRows },
             gap: "10px",
@@ -409,6 +414,21 @@ function DashboardDesignerContent() {
         >
           {!state.previewMode ? (
           <Box sx={{ minHeight: 0, overflow: "visible", display: { xs: mobilePreviewOnly ? "none" : "block", md: "block" } }}>
+            <Box sx={{ display: { xs: mobileTab === "relationships" ? "block" : "none", md: "block" } }}>
+              <MultiTableContext
+                tables={state.selectedTables}
+                joins={state.datasetJoins}
+                fields={state.fields}
+                queryPreview={state.queryPreview}
+                safeCasts={state.safeCasts}
+                onSetJoin={actions.setManualJoin}
+                onRemoveTable={actions.removeDatasetTable}
+                onSemanticTypeChange={actions.updateSemanticType}
+                onSafeCastChange={actions.updateSafeCast}
+                onAddCalculatedField={actions.addCalculatedField}
+              />
+            </Box>
+            <Box sx={{ display: { xs: mobileTab === "mapping" ? "block" : "none", md: "block" } }}>
             <FieldMapping
               mappings={state.config.mappings}
               rows={state.rows}
@@ -422,6 +442,7 @@ function DashboardDesignerContent() {
               onFilterChange={actions.updateFilter}
               onSortSlot={actions.sortSlot}
             />
+            </Box>
             </Box>
           ) : null}
 

@@ -10,7 +10,7 @@ import { Box, InputAdornment, Paper, Stack, TextField, Typography } from "@mui/m
 import DraggableField from "@modules/dashboards/designer-v2/components/DraggableField";
 import { dashboardV2Tokens as tokens } from "@modules/dashboards/designer-v2/components/theme";
 import type { DemoDatasource, DemoDatasetRow } from "@modules/dashboards/designer-v2/components/services/datasetService";
-import type { DataField } from "@modules/dashboards/designer-v2/components/types";
+import type { DataField, DatasetTable } from "@modules/dashboards/designer-v2/components/types";
 
 type SchemaCatalogEntry = {
   schemaName: string;
@@ -27,6 +27,7 @@ type DataPanelProps = {
   searchValue: string;
   selectedTable: string;
   selectedFieldId: string | null;
+  selectedTables?: DatasetTable[];
   onSearchChange: (value: string) => void;
   onDatasourceChange?: (datasourceId: string) => void;
   onSelectTable: (schemaName: string, tableName: string) => void;
@@ -73,6 +74,7 @@ function DataPanel({
   searchValue,
   selectedTable,
   selectedFieldId,
+  selectedTables = [],
   onSearchChange,
   onSelectTable,
   onSelectField,
@@ -226,7 +228,12 @@ function DataPanel({
                             {openNodes.has(tablesId) ? (
                               <Box sx={{ pl: 1.5 }}>
                                 {schema.tables.map((table) => {
-                                  const active = schema.schemaName === datasource.schema && table.name === datasource.table;
+                                  const selectedTableEntry = selectedTables.find((item) => item.schema === schema.schemaName && item.table === table.name);
+                                  const active = Boolean(selectedTableEntry) || (schema.schemaName === datasource.schema && table.name === datasource.table);
+                                  const tableFields = fields.filter((field) =>
+                                    field.sourceSchema && field.sourceTable
+                                      ? field.sourceSchema === schema.schemaName && field.sourceTable === table.name
+                                      : schema.schemaName === datasource.schema && table.name === datasource.table);
                                   const tableId = `table:${schema.schemaName}.${table.name}`;
                                   const columnsId = `columns:${schema.schemaName}.${table.name}`;
                                   const knownEstimate = Number.isFinite(Number(table.rowCountEstimate)) && Number(table.rowCountEstimate) >= 0;
@@ -271,11 +278,11 @@ function DataPanel({
                                             <ToggleIcon open={openNodes.has(columnsId)} />
                                             <AbcRoundedIcon />
                                             <Typography variant="body2" noWrap>Columns</Typography>
-                                            <Typography variant="caption" color="text.secondary">{fields.length}</Typography>
+                                            <Typography variant="caption" color="text.secondary">{tableFields.length}</Typography>
                                           </Box>
                                           {openNodes.has(columnsId) ? (
                                             <Box sx={{ pl: 1.25, pt: 0.125 }}>
-                                              {filteredFields.length ? filteredFields.map((field) => (
+                                              {tableFields.length ? tableFields.filter((field) => filteredFields.some((item) => item.id === field.id)).map((field) => (
                                                 <DraggableField
                                                   key={field.id}
                                                   field={field}
@@ -318,7 +325,7 @@ function DataPanel({
           <Box sx={{ width: 16, height: 16, display: "grid", placeItems: "center", borderRadius: "50%", color: "primary.main", bgcolor: tokens.color.primarySoft, fontSize: 10, fontWeight: 700 }}>i</Box>
           <Box minWidth={0}>
             <Typography variant="caption" color="text.primary" sx={{ display: "block", fontSize: 10.5, fontWeight: 600 }}>
-              ใช้ได้ครั้งละ 1 ตาราง
+              {selectedTables.length > 1 ? `${selectedTables.length} ตารางใน Dataset` : "เลือกเพิ่มได้สูงสุด 6 ตาราง"}
             </Typography>
             <Typography variant="caption" color="text.secondary" noWrap sx={{ display: "block", fontSize: 9.5 }}>
               {selectedTable ? `${datasource.schema}.${selectedTable} · ${rows.length.toLocaleString("th-TH")} แถวที่โหลด` : "เลือก table เพื่อดู fields"}
