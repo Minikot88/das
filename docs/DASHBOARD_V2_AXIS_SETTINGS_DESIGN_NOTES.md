@@ -181,6 +181,139 @@ Y Axis · Count(id)
 - ทำภาษาและคำเรียกให้สม่ำเสมอ
 - ตรวจ responsive และ accessibility
 
+## Responsive UX/UI Specification
+
+### ปัญหาที่เห็นจากภาพอ้างอิง
+
+1. Field Mapping แสดง X, Y, Legend และ Tooltip เป็น 4 คอลัมน์ตลอด ทำให้พื้นที่แคบเร็วและข้อความ/ตัวเลือก aggregation เบียดกัน
+2. แถบเลือกชนิดกราฟมีรายการจำนวนมากในแถวเดียว แต่ Preview ด้านล่างกินพื้นที่มากแม้ยังไม่มีกราฟ
+3. Settings panel ใช้พื้นที่เฉพาะด้านบน แล้วเหลือพื้นที่ว่างยาว ขณะที่การตั้งค่าแกนที่จำเป็นถูกซ่อนใน Advanced
+4. DATA, Preview และ Settings ถูกเปิดพร้อมกันตลอด จึงทำให้จุดโฟกัสของงานไม่ชัดบนจอ laptop และ tablet
+5. สถานะ `Unsaved`, `Auto save` และ `Last saved` แสดงซ้ำทั้งท้าย Settings และ global status bar รวมทั้งคำว่า Auto save ยังไม่ตรงกับพฤติกรรมจริง
+6. ตัวอักษรและ control บางส่วนเล็กเกินไป โดยเฉพาะเมื่อจอแคบหรือซูม
+
+### หลักการจัดวาง
+
+- ให้ Preview เป็นพื้นที่หลัก และเปิด DATA/Settings เท่าที่จำเป็นตามขั้นตอนงาน
+- แต่ละ breakpoint ต้องเปลี่ยน composition ไม่ใช่เพียงย่อสาม panel เดิม
+- หน้าไม่ควรมี horizontal page scroll; panel ที่มีเนื้อหายาวต้อง scroll ภายในตัวเอง
+- หลีกเลี่ยง nested vertical scroll มากกว่าสองระดับ
+- แสดงสถานะบันทึกเพียงจุดเดียวใน global status/action bar
+- action หลัก ได้แก่ Preview และ Save ต้องเข้าถึงได้เสมอ
+- Field Mapping ต้องรองรับทั้ง drag-and-drop และการแตะ/คลิกเลือก field
+- touch target ขั้นต่ำ 40px และแนะนำ 44px บน tablet/mobile
+- เนื้อหาหลักใช้ตัวอักษรอย่างน้อย 14px; metadata ไม่ต่ำกว่า 12px
+
+### Layout ตามขนาดหน้าจอ
+
+| ขนาด | Layout | DATA | Field Mapping | Settings |
+| --- | --- | --- | --- | --- |
+| Desktop ใหญ่ `>= 1440px` | 3 panel | กว้าง 280–320px ยุบได้ | 4 ช่องได้เมื่อพื้นที่กลางพอ | กว้าง 320–380px ยุบได้ |
+| Laptop `1024–1439px` | Canvas + side panel หนึ่งฝั่ง | 260–280px หรือ drawer | 2x2: X/Y แล้ว Legend/Tooltip | drawer/overlay 320–360px |
+| Tablet `768–1023px` | Canvas เป็นหลัก | drawer ซ้าย เปิดทีละ panel | 2 คอลัมน์หรือเรียงแนวตั้ง | drawer ขวาหรือ full-height sheet |
+| Mobile `< 768px` | single-column step flow | full-screen sheet | เรียง X, Y, Legend, Tooltip | full-screen sheet แยกหมวด |
+
+### Desktop ขนาดใหญ่
+
+```text
+[ DATA 280–320 ] [ Mapping + Chart type + Preview: flexible ] [ Settings 320–380 ]
+```
+
+- DATA และ Settings ยุบ/ขยายได้ โดยคงความกว้างขั้นต่ำของ canvas ที่ใช้งานได้จริง
+- เมื่อเลือก field ครบแล้ว ผู้ใช้ยุบ DATA ได้ และเห็น source/table ปัจจุบันเป็น chip ขนาดเล็กเหนือ Preview
+- Mapping ใช้ 4 คอลัมน์เฉพาะเมื่อพื้นที่กลางเพียงพอ; ห้ามลดแต่ละช่องจนอ่าน field และ aggregation ไม่ได้
+- Chart type ใช้หมวด + horizontal overflow ภายใน component หรือปุ่ม “เพิ่มเติม” ที่เปิดรายการจริง
+- Preview ใช้พื้นที่ที่เหลือ แต่ empty state ไม่ควรขยายข้อความหรือกรอบจนดูเหมือนงานหลักหายไป
+- Settings แสดง “พื้นฐาน” และ “ข้อมูลและแกน” ก่อน ส่วน “ขั้นสูง” ปิดไว้ตามค่าเริ่มต้น
+
+### Laptop
+
+- ไม่แสดง DATA และ Settings แบบเปิดกว้างพร้อมกัน หากทำให้ canvas แคบกว่า 600px
+- ให้ DATA เป็น side panel และ Settings เป็น drawer/overlay หรือสลับกันเปิดทีละฝั่ง
+- Field Mapping เปลี่ยนเป็นตาราง 2x2:
+
+```text
+[ X Axis ] [ Y Axis ]
+[ Legend ] [ Tooltip ]
+```
+
+- ปุ่มเปิด DATA และ Settings ต้องบอกสถานะว่ากำลังเปิด panel ใด
+- toolbar ของ Preview รวมคำสั่งที่ใช้บ่อย และซ่อนคำสั่งรองในเมนูเดียวที่ใช้งานได้จริง
+
+### Tablet
+
+- ใช้พื้นที่กลางเป็น Preview/Mapping และให้ DATA กับ Settings เป็น drawer ที่เปิดทีละอัน
+- มี navigation ระดับงานที่เข้าใจทันที เช่น `ข้อมูล | Mapping | Preview | ตั้งค่า`
+- Mapping ใช้ 2 คอลัมน์เมื่อกว้างพอ และเรียงแนวตั้งเมื่อข้อความเริ่มตัด
+- Save/Preview อยู่ใน sticky action bar ที่ไม่บังเนื้อหา
+- เมื่อ drawer เปิด ต้อง trap focus, ปิดด้วย Escape ได้ และคืน focus ไปยังปุ่มเดิม
+- ไม่ให้ tree, page และ drawer scroll พร้อมกันจนควบคุมยาก
+
+### Mobile
+
+ใช้ flow แบบทีละขั้น:
+
+```text
+ข้อมูล → Mapping → Preview → รูปแบบ → บันทึก
+```
+
+- DATA และ Settings เปิดเป็น full-screen sheet ไม่วางซ้าย/ขวาของ Preview
+- Field Mapping เรียง X, Y, Legend และ Tooltip ลงมาในคอลัมน์เดียว
+- ผู้ใช้แตะ field แล้วเลือกปลายทางได้ เพราะ drag-and-drop อย่างเดียวไม่เหมาะกับ touch
+- Chart type ใช้ horizontal carousel ที่มี label ชัด หรือ bottom sheet สำหรับรายการทั้งหมด
+- Preview แสดงเต็มความกว้างใน tab/step ของตัวเอง พร้อมปุ่มกลับไปแก้ Mapping
+- sticky bottom action แสดงเฉพาะ action หลัก เช่น ย้อนกลับ, Preview และบันทึก
+- ไม่มี page overflow แนวนอนที่ความกว้าง 360px; tree และตารางเลื่อนภายในพื้นที่ของตนเอง
+
+### พฤติกรรมของ Panel และ Scroll
+
+- เปิดได้พร้อมกัน 3 panel เฉพาะ desktop ใหญ่
+- Laptop/Tablet เปิด side panel ได้ทีละฝั่ง เพื่อรักษาพื้นที่ Preview
+- Mobile ใช้ full-screen sheet และมีหัวข้อ, ปุ่มปิด และตำแหน่งย้อนกลับชัดเจน
+- DATA กับ Settings มี internal scroll ของตัวเอง ส่วน canvas ไม่ควรเกิด scroll ซ้อนโดยไม่จำเป็น
+- หากรองรับ resize ให้มี minimum/maximum width และปุ่ม reset; การจำความกว้างต้องแยกตาม breakpoint
+- หลังเปลี่ยน breakpoint ต้องคืน layout ที่เหมาะกับขนาดใหม่ ไม่ใช้ค่าความกว้างจาก desktop บน mobile
+
+### ลำดับข้อมูลและสถานะ
+
+- แสดง source/table ปัจจุบันเพียงจุดเดียวใกล้ Mapping หรือ Preview
+- สถานะบันทึกแสดงเพียงจุดเดียว:
+  - `ยังไม่ได้บันทึก`
+  - `กำลังบันทึก…`
+  - `บันทึกแล้ว 13:30`
+  - `บันทึกไม่สำเร็จ — ลองอีกครั้ง`
+- ไม่แสดง `Auto save` จนกว่าจะมีการบันทึกอัตโนมัติจริง
+- Validation ต้องอยู่ใกล้ slot ที่ผิด และบอกวิธีแก้ เช่น “Y Axis ต้องเป็นตัวเลข หรือเลือก Count”
+- control ที่ chart type ไม่รองรับต้องซ่อน หรือ disabled พร้อมคำอธิบายที่ตรงกับความจริง
+
+### Accessibility และความชัดเจน
+
+- รองรับ keyboard สำหรับเลือก field, ย้าย field ระหว่าง slot และลบ field
+- focus ring ต้องมองเห็นชัดบน tree, mapping slot, accordion, drawer และปุ่ม
+- ไม่ใช้สีเพียงอย่างเดียวเพื่อบอก selected, enabled, error หรือ saved state
+- toggle ต้องมี label ที่บอกผลลัพธ์ เช่น “แสดงคำอธิบายกราฟ”
+- label ยาวต้อง wrap หรือมี tooltip; ห้ามตัดจนแยก table/field ไม่ได้
+- ทดสอบที่ browser zoom 200% โดย action หลักยังเข้าถึงได้และไม่มี content loss
+
+### ลำดับการปรับ Responsive
+
+1. **P0 — แก้ความสับสน:** เอาสถานะบันทึกซ้ำออก, แก้คำว่า Auto save, ป้องกัน page overflow
+2. **P1 — ปรับ composition:** ทำ panel collapse/drawer, Mapping 4 → 2 → 1 คอลัมน์ และจัด Preview เป็นพื้นที่หลัก
+3. **P1 — Mobile interaction:** เพิ่ม tap-to-map, full-screen DATA/Settings และ sticky action
+4. **P2 — ปรับความลื่นไหล:** resize panel, จำขนาดแยก breakpoint และ focus mode สำหรับ Preview
+
+### Responsive Acceptance Criteria
+
+- ตรวจที่ viewport อย่างน้อย 1920, 1440, 1280, 1024, 768, 390 และ 360px
+- ไม่มี horizontal page overflow และไม่มี control หลุด/ทับกัน
+- ชื่อ field, aggregation และ validation อ่านได้โดยไม่ต้องเดาความหมาย
+- Desktop ใหญ่ใช้ 3 panel ได้; laptop/tablet ไม่ถูกบังคับให้เปิด 3 panel พร้อมกัน
+- Mobile ทำ flow เลือกข้อมูล → mapping → preview → save ได้ครบ
+- drag-and-drop มี tap/keyboard fallback
+- DATA/Settings drawer เปิด ปิด เลื่อน และคืน focus ได้ถูกต้อง
+- สถานะ save มีจุดเดียวและตรงกับ backend behavior
+- 200% zoom ยังเข้าถึง navigation, mapping, preview และ save ได้
+
 ## Acceptance Criteria
 
 - ผู้ใช้มองเห็น field และความหมายของ X/Y ได้โดยไม่เปิด Advanced
