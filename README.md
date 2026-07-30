@@ -36,8 +36,13 @@ The aggregate gate runs ESLint, strict TypeScript, Vitest/Testing Library/axe-co
 ## Docker
 
 ```bash
-docker compose up --build
+docker compose -f docker-compose.yml -f docker-compose.local.yml up --build
 ```
+
+The local override enables the backend's internal single-user session used by
+the default local frontend configuration. Starting only `docker-compose.yml`
+while `VITE_INTERNAL_SINGLE_USER=true` leaves protected API requests
+unauthenticated.
 
 The frontend listens on `http://127.0.0.1:8080` by default. `FRONTEND_PORT` changes the port; `FRONTEND_HOST` changes the bind address. Keep the loopback default for local/demo data. nginx provides SPA fallback, immutable hashed-asset caching, HTML revalidation, security headers, and a deliberate same-origin frame policy.
 

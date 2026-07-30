@@ -65,11 +65,24 @@ function ProtectedRoute() {
 
   if (authStatus === "loading") return <RouteFallback />;
 
-  if (!isInternalSingleUserMode() && !isAuthenticated) {
+  if (!isAuthenticated) {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
   return <Outlet />;
+}
+
+function PublicAuthRoute({ children }) {
+  const isAuthenticated = useStore((state) => state.isAuthenticated);
+  const authStatus = useStore((state) => state.authStatus);
+
+  if (authStatus === "loading") return <RouteFallback />;
+
+  if (isInternalSingleUserMode() && isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return children;
 }
 
 function withRouteBoundary(element) {
@@ -90,8 +103,8 @@ export default function AppRoutes() {
   return (
     <Suspense fallback={<RouteFallback />}>
       <Routes>
-        <Route path="/login" element={isInternalSingleUserMode() ? <Navigate to="/dashboard" replace /> : withRouteBoundary(<LoginPage />)} />
-        <Route path="/register" element={isInternalSingleUserMode() ? <Navigate to="/dashboard" replace /> : withRouteBoundary(<RegisterPage />)} />
+        <Route path="/login" element={<PublicAuthRoute>{withRouteBoundary(<LoginPage />)}</PublicAuthRoute>} />
+        <Route path="/register" element={<PublicAuthRoute>{withRouteBoundary(<RegisterPage />)}</PublicAuthRoute>} />
         <Route path="/share/:sheetId" element={withRouteBoundary(<SharePage />)} />
         <Route path="/dashboard/:dashboardId/view" element={withRouteBoundary(<DashboardPublicPage />)} />
         <Route path="/dashboard/:dashboardId/embed" element={withRouteBoundary(<DashboardPublicPage />)} />
