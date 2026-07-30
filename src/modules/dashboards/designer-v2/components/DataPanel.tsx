@@ -79,7 +79,7 @@ function DataPanel({
         borderColor: "divider",
         borderRadius: 0,
         display: "grid",
-        gridTemplateRows: "auto auto minmax(0, 1fr) auto",
+        gridTemplateRows: "auto auto minmax(0, 1fr)",
         overflow: "hidden",
         boxShadow: "none",
         bgcolor: "background.paper",
@@ -330,35 +330,6 @@ function DataPanel({
         </Stack>
       </Box>
 
-      <Box
-        sx={{
-          px: 1,
-          py: 0.5,
-          minHeight: 44,
-          borderTop: "1px solid",
-          borderColor: "divider",
-          bgcolor: tokens.color.surface,
-        }}
-      >
-        <Stack spacing={0.125}>
-          <Stack direction="row" justifyContent="space-between" gap={1} minWidth={0}>
-            <Typography variant="caption" color="text.secondary" noWrap>
-              {datasource.name}
-            </Typography>
-            <Typography variant="caption" color="text.secondary" noWrap>
-              อัปเดต {datasource.lastUpdated}
-            </Typography>
-          </Stack>
-          <Stack direction="row" justifyContent="space-between" gap={1} minWidth={0}>
-            <Typography variant="caption" sx={{ color: tokens.color.text, fontWeight: 500 }} noWrap>
-              {selectedTable}
-            </Typography>
-            <Typography variant="caption" color="text.secondary" noWrap>
-              {rows.length.toLocaleString("th-TH")} rows · {fields.length} fields
-            </Typography>
-          </Stack>
-        </Stack>
-      </Box>
     </Paper>
   );
 }
