@@ -68,6 +68,12 @@ describe('parseEnvironment', () => {
       .toThrow(/demo connector/i);
   });
 
+  it('forbids every supported demo-seed flag in production', () => {
+    for (const key of ['INCLUDE_DEMO_SEED', 'ENABLE_DEMO_SEED']) {
+      expect(() => parseEnvironment({ ...productionBase, [key]: 'true' })).toThrow(/demo seed/i);
+    }
+  });
+
   it('validates origins and operational limits', () => {
     expect(() => parseEnvironment({ NODE_ENV: 'test', DATABASE_URL: 'mysql://app:secret@database/app' })).toThrow(/PostgreSQL/i);
     expect(() => parseEnvironment({ NODE_ENV: 'test', CORS_ORIGINS: '*' })).toThrow(/CORS/i);

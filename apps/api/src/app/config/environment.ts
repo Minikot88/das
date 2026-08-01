@@ -89,7 +89,9 @@ export function parseEnvironment(input: NodeJS.ProcessEnv | Record<string, strin
 
   if (nodeEnv === 'production' && input.DEBUG === 'true') throw new Error('DEBUG mode is forbidden in production');
   if (nodeEnv === 'production' && input.DEMO_CONNECTOR_ENABLED === 'true') throw new Error('Demo connector is forbidden in production');
-  if (nodeEnv === 'production' && input.INCLUDE_DEMO_SEED === 'true') throw new Error('Demo seed is forbidden in production');
+  if (nodeEnv === 'production' && (input.INCLUDE_DEMO_SEED === 'true' || input.ENABLE_DEMO_SEED === 'true')) {
+    throw new Error('Demo seed is forbidden in production');
+  }
 
   if (nodeEnv === 'production' && !databaseUrlValue) throw new Error('DATABASE_URL is required in production');
   if (nodeEnv === 'production' && !secretMasterKeyValue) throw new Error('SECRET_MASTER_KEY or SECRET_ENCRYPTION_KEY is required in production');
