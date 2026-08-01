@@ -159,7 +159,171 @@ export class CoreDataService {
     return { rows, total, page, pageSize, truncated: total > page * pageSize };
   }
 
-  async externalSources(principal: RequestPrincipal, projectId: string) { await this.project(principal, projectId); return this.external.sources(); }
+  async externalSources(principal: RequestPrincipal, projectId: string) {
+    await this.project(principal, projectId);
+    const fallback = await this.external.sources();
+    if (!this.prisma.dataSourceConnection?.findMany) return fallback;
+    const records = await this.prisma.dataSourceConnection.findMany({
+      where: {
+        organizationId: principal.organizationId,
+        deletedAt: null,
+        status: 'ready',
+        OR: [{ projectId }, { projectId: null }],
+      },
+      include: {
+        data_source_types: { select: { code: true, capabilitiesJson: true } },
+        data_source_schemas: { select: { name: true, readOnly: true } },
+      },
+      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+    });
+    if (!records.length) return fallback;
+    return {
+      items: records.flatMap(connection => connection.data_source_schemas.map(sourceSchema => ({
+        id: connection.id,
+        displayName: connection.name,
+        schemaName: sourceSchema.name,
+        connectorType: connection.data_source_types.code,
+        sourceMode: connection.mode,
+        readOnly: connection.readOnly && sourceSchema.readOnly,
+        capabilities: connection.data_source_types.capabilitiesJson,
+      }))),
+    };
+  }
+  async refreshExternalSource(principal: RequestPrincipal, projectId: string, sourceId: string) {
+    await this.project(principal, projectId, 'connection');
+    if (!this.prisma.dataSourceConnection?.findFirst) throw new ApiError(503, 'SOURCE_CATALOG_NOT_READY', 'Source catalog is not ready.', undefined, true);
+    const source = await this.prisma.dataSourceConnection.findFirst({
+      where: {
+        id: sourceId,
+        organizationId: principal.organizationId,
+        deletedAt: null,
+        readOnly: true,
+        OR: [{ projectId }, { projectId: null }],
+      },
+      include: {
+        data_source_schemas: {
+          where: { readOnly: true },
+          select: { name: true, readOnly: true },
+          orderBy: { name: 'asc' },
+        },
+      },
+    });
+    if (!source) throw new ApiError(404, 'SOURCE_NOT_FOUND', 'External source was not found.');
+    if (!source.data_source_schemas.length) throw new ApiError(409, 'SOURCE_SCOPE_EMPTY', 'External source has no allowed schemas.');
+
+    const schemas: Array<{
+      name: string;
+      readOnly: boolean;
+      objects: Array<{
+        name: string;
+        objectType: string;
+        estimatedRows: bigint | null;
+        metadataJson: JsonObject;
+        columns: Array<{ name: string; dataType: string; nullable: boolean; ordinal: number; primaryKey: boolean; foreignKey: boolean }>;
+      }>;
+    }> = [];
+    const relationships: Array<{
+      constraintName: string;
+      leftSchema: string;
+      leftTable: string;
+      leftColumn: string;
+      rightSchema: string;
+      rightTable: string;
+      rightColumn: string;
+    }> = [];
+
+    for (const allowedSchema of source.data_source_schemas) {
+      const discoveredObjects = await this.external.tables(allowedSchema.name) as { items?: JsonObject[] };
+      const objects: typeof schemas[number]['objects'] = [];
+      for (const object of discoveredObjects.items || []) {
+        const objectName = String(object.name || object.tableName || '');
+        if (!objectName) continue;
+        const [discoveredColumns, discoveredRelationships] = await Promise.all([
+          this.external.columns(allowedSchema.name, objectName) as Promise<{ items?: JsonObject[] }>,
+          this.external.relationships(allowedSchema.name, objectName) as Promise<{ items?: JsonObject[] }>,
+        ]);
+        const columns = (discoveredColumns.items || []).map(column => ({
+          name: String(column.name || ''),
+          dataType: String(column.dataType || 'text'),
+          nullable: column.nullable !== false,
+          ordinal: Number(column.ordinal || 0),
+          primaryKey: column.primaryKey === true,
+          foreignKey: Array.isArray(column.foreignKeys) && column.foreignKeys.length > 0,
+        })).filter(column => column.name);
+        objects.push({
+          name: objectName,
+          objectType: String(object.objectType || 'table'),
+          estimatedRows: safeBigInt(object.rowCountEstimate),
+          metadataJson: {
+            readOnly: true,
+            primaryKey: Array.isArray(object.primaryKey) ? object.primaryKey : [],
+          },
+          columns,
+        });
+        for (const relation of discoveredRelationships.items || []) {
+          if (String(relation.direction || 'outgoing') !== 'outgoing') continue;
+          relationships.push({
+            constraintName: String(relation.name || ''),
+            leftSchema: allowedSchema.name,
+            leftTable: objectName,
+            leftColumn: String(relation.columnName || ''),
+            rightSchema: String(relation.referencedSchema || ''),
+            rightTable: String(relation.referencedTable || ''),
+            rightColumn: String(relation.referencedColumn || ''),
+          });
+        }
+      }
+      schemas.push({ name: allowedSchema.name, readOnly: allowedSchema.readOnly, objects });
+    }
+
+    await this.prisma.$transaction(async tx => {
+      await tx.dataSourceRelationship.deleteMany({ where: { connectionId: source.id } });
+      await tx.dataSourceSchema.deleteMany({ where: { connectionId: source.id } });
+      for (const schema of schemas) {
+        const schemaRow = await tx.dataSourceSchema.create({ data: {
+          id: metadataId('schema', source.id, schema.name),
+          connectionId: source.id,
+          name: schema.name,
+          readOnly: schema.readOnly,
+          tablePolicyJson: { mode: 'allow_all_discovered' },
+          refreshedAt: new Date(),
+        } });
+        for (const object of schema.objects) {
+          const tableRow = await tx.dataSourceTable.create({ data: {
+            id: metadataId('object', source.id, schema.name, object.name),
+            connectionId: source.id,
+            schemaId: schemaRow.id,
+            name: object.name,
+            tableType: object.objectType,
+            estimatedRows: object.estimatedRows,
+            metadataJson: object.metadataJson as never,
+            refreshedAt: new Date(),
+          } });
+          if (object.columns.length) await tx.dataSourceColumn.createMany({ data: object.columns.map(column => ({
+            id: metadataId('field', source.id, schema.name, object.name, column.name),
+            tableId: tableRow.id,
+            ...column,
+            refreshedAt: new Date(),
+          })) });
+        }
+      }
+      if (relationships.length) await tx.dataSourceRelationship.createMany({ data: relationships.map(relation => ({
+        id: metadataId('relation', source.id, relation.constraintName, relation.leftColumn),
+        connectionId: source.id,
+        ...relation,
+        relationshipType: 'foreign_key',
+        refreshedAt: new Date(),
+      })) });
+      await tx.dataSourceConnection.update({ where: { id: source.id }, data: { status: 'ready', revision: { increment: 1 } } });
+    });
+    return {
+      sourceId: source.id,
+      schemas: schemas.length,
+      objects: schemas.reduce((count, schema) => count + schema.objects.length, 0),
+      fields: schemas.reduce((count, schema) => count + schema.objects.reduce((sum, object) => sum + object.columns.length, 0), 0),
+      relationships: relationships.length,
+    };
+  }
   async externalTables(principal: RequestPrincipal, projectId: string, schemaName: string) { await this.project(principal, projectId); return this.external.tables(schemaName); }
   async externalColumns(principal: RequestPrincipal, projectId: string, schemaName: string, tableName: string) { await this.project(principal, projectId); return this.external.columns(schemaName, tableName); }
   async externalRelationships(principal: RequestPrincipal, projectId: string, schemaName: string, tableName: string) { await this.project(principal, projectId); return this.external.relationships(schemaName, tableName); }
@@ -167,10 +331,26 @@ export class CoreDataService {
   async previewExternal(principal: RequestPrincipal, input: JsonObject) { await this.project(principal, String(input.projectId || '')); return this.external.preview(input); }
   async createExternalDataset(principal: RequestPrincipal, input: JsonObject) {
     const projectId = String(input.projectId || ''); await this.project(principal, projectId, 'write');
+    const resolveSource = async (schemaName: string) => {
+      if (!this.prisma.dataSourceConnection?.findFirst) return null;
+      return this.prisma.dataSourceConnection.findFirst({
+        where: {
+          organizationId: principal.organizationId,
+          deletedAt: null,
+          status: 'ready',
+          readOnly: true,
+          OR: [{ projectId }, { projectId: null }],
+          data_source_schemas: { some: { name: schemaName, readOnly: true } },
+        },
+        orderBy: [{ projectId: 'desc' }, { id: 'asc' }],
+        select: { id: true },
+      });
+    };
     const selectedTables = Array.isArray(input.selectedTables) ? input.selectedTables as JsonObject[] : [];
     if (selectedTables.length) {
       const sourceSchema = String(input.sourceSchema || '');
       const baseTable = String(input.baseTable || '');
+      const sourceConnection = await resolveSource(sourceSchema);
       const selectedFields = Array.isArray(input.selectedFields) ? input.selectedFields as JsonObject[] : [];
       const definition = {
         sourceSchema,
@@ -196,7 +376,7 @@ export class CoreDataService {
         calculatedFields: Array.isArray(input.calculatedFields) ? input.calculatedFields : [],
         revision: Number.isInteger(Number(input.revision)) ? Number(input.revision) : 1,
         sourceMode: 'live',
-        connectionId: 'application-postgres',
+        connectionId: sourceConnection?.id || 'application-postgres',
         schemaName: sourceSchema,
         tableName: baseTable,
       };
@@ -238,14 +418,36 @@ export class CoreDataService {
           semanticType: String(calculated.resultType || 'Text'),
         });
       }
+      for (const aggregate of definition.aggregations as JsonObject[]) {
+        const fieldReference = isRecord(aggregate.field) ? aggregate.field : {};
+        const tableAlias = String(fieldReference.tableAlias || '');
+        const columnName = String(fieldReference.column || '');
+        const operation = String(aggregate.operation || '').toLowerCase();
+        const alias = String(aggregate.alias || `${operation}_${tableAlias}_${columnName}`);
+        const sourceColumn = tableColumns.get(tableAlias)?.find(item => item.name === columnName);
+        if (!sourceColumn) throw new ApiError(400, 'INVALID_COLUMN', `Aggregate field ${tableAlias}.${columnName} is not allowed.`);
+        if (fields.some(field => field.fieldKey === alias)) throw new ApiError(400, 'DUPLICATE_FIELD_ALIAS', `Field alias ${alias} is already used.`);
+        fields.push({
+          id: `field-${randomUUID()}`,
+          fieldKey: alias,
+          name: alias,
+          label: `${aggregateLabel(operation)}(${tableAlias}.${columnName})`,
+          dataType: ['count', 'countdistinct'].includes(operation) ? 'bigint' : ['sum', 'avg'].includes(operation) ? 'numeric' : sourceColumn.dataType,
+          nullable: !['count', 'countdistinct'].includes(operation),
+          ordinal: fields.length,
+          semanticType: 'Number',
+        });
+      }
       const id = `dataset-${randomUUID()}`;
       return this.prisma.$transaction(async tx => {
         const dataset = await tx.dataset.create({ data: {
           id,
           organizationId: principal.organizationId,
           projectId,
+          dataSourceId: sourceConnection?.id,
           name: String(input.name || `${sourceSchema}.${baseTable}`).slice(0, 180),
           sourceType: 'postgres_schema',
+          sourceMode: 'live',
           sourceConfigJson: persistedDefinition as never,
           status: 'ready',
           rowCount: 0,
@@ -258,6 +460,7 @@ export class CoreDataService {
       });
     }
     const schemaName = String(input.schemaName || ''); const tableName = String(input.tableName || '');
+    const sourceConnection = await resolveSource(schemaName);
     const existing = await this.prisma.dataset.findMany({ where: { organizationId: principal.organizationId, projectId, sourceType: 'postgres_schema', deletedAt: null, sourceConfigJson: { path: ['schemaName'], equals: schemaName } }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] });
     const matching = existing.find((dataset: { sourceConfigJson?: unknown }) => (dataset.sourceConfigJson as JsonObject | null)?.tableName === tableName);
     if (matching) return matching;
@@ -266,9 +469,9 @@ export class CoreDataService {
     const allowed = new Set(columns.items.map((column: { name: string }) => column.name)); if (selected.some(field => !allowed.has(field))) throw new ApiError(400, 'INVALID_COLUMN', 'Selected field is not allowed.');
     const tables = await this.external.tables(schemaName); const tableMetadata = tables.items.find((item: { name: string }) => item.name === tableName);
     const rowCountEstimate = Number(tableMetadata?.rowCountEstimate);
-    const id = `dataset-${randomUUID()}`; const config = { sourceMode: 'live', connectionId: 'application-postgres', schemaName, tableName, estimatedRowCount: Number.isFinite(rowCountEstimate) && rowCountEstimate >= 0 ? rowCountEstimate : null, select: selected, filters: Array.isArray(input.filters) ? input.filters : [], groupBy: Array.isArray(input.groupBy) ? input.groupBy : [], aggregates: Array.isArray(input.aggregates) ? input.aggregates : [], sort: input.sort || null };
+    const id = `dataset-${randomUUID()}`; const config = { sourceMode: 'live', connectionId: sourceConnection?.id || 'application-postgres', schemaName, tableName, estimatedRowCount: Number.isFinite(rowCountEstimate) && rowCountEstimate >= 0 ? rowCountEstimate : null, select: selected, filters: Array.isArray(input.filters) ? input.filters : [], groupBy: Array.isArray(input.groupBy) ? input.groupBy : [], aggregates: Array.isArray(input.aggregates) ? input.aggregates : [], sort: input.sort || null };
     return this.prisma.$transaction(async tx => {
-      const dataset = await tx.dataset.create({ data: { id, organizationId: principal.organizationId, projectId, name: String(input.name || tableName).slice(0, 180), sourceType: 'postgres_schema', sourceConfigJson: config, status: 'ready', rowCount: Number.isFinite(rowCountEstimate) && rowCountEstimate >= 0 ? Math.min(Math.trunc(rowCountEstimate), 2_147_483_647) : 0, fieldCount: selected.length, revision: 1 } });
+      const dataset = await tx.dataset.create({ data: { id, organizationId: principal.organizationId, projectId, dataSourceId: sourceConnection?.id, name: String(input.name || tableName).slice(0, 180), sourceType: 'postgres_schema', sourceMode: 'live', sourceConfigJson: config, status: 'ready', rowCount: Number.isFinite(rowCountEstimate) && rowCountEstimate >= 0 ? Math.min(Math.trunc(rowCountEstimate), 2_147_483_647) : 0, fieldCount: selected.length, revision: 1 } });
       await tx.datasetField.createMany({ data: columns.items.filter((column: { name: string }) => selected.includes(column.name)).map((column: { name: string; dataType: string; nullable: boolean; ordinal: number }) => ({ id: `field-${randomUUID()}`, datasetId: id, fieldKey: column.name, name: column.name, label: column.name, dataType: column.dataType, nullable: column.nullable, ordinal: column.ordinal })) });
       await tx.datasetVersion.create({ data: { id: `dataset-version-${randomUUID()}`, datasetId: id, version: 1, schemaJson: config, rowCount: 0 } }); return dataset;
     });
@@ -480,3 +683,6 @@ function matches(actual: unknown, operator: string, expected: unknown) { if (ope
 function compare(left: unknown, right: unknown) { if (left == null && right == null) return 0; if (left == null) return -1; if (right == null) return 1; const leftNumber = Number(left); const rightNumber = Number(right); if (Number.isFinite(leftNumber) && Number.isFinite(rightNumber)) return leftNumber - rightNumber; return String(left).localeCompare(String(right), undefined, { numeric: true, sensitivity: 'base' }); }
 function aggregateRows(rows: JsonObject[], groupBy: string[], aggregates: Aggregate[]) { const groups = new Map<string, JsonObject[]>(); for (const row of rows) { const key = JSON.stringify(groupBy.map(field => row[field])); const items = groups.get(key) || []; items.push(row); groups.set(key, items); } return [...groups.values()].map(items => { const output: JsonObject = Object.fromEntries(groupBy.map(field => [field, items[0]?.[field]])); for (const item of aggregates) { const key = item.alias || `${item.operation}_${item.field}`; const values = items.map(row => Number(row[item.field])).filter(Number.isFinite); if (item.operation === 'count') output[key] = items.filter(row => row[item.field] != null).length; if (item.operation === 'sum') output[key] = values.reduce((sum, value) => sum + value, 0); if (item.operation === 'average') output[key] = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null; if (item.operation === 'min') output[key] = values.length ? Math.min(...values) : null; if (item.operation === 'max') output[key] = values.length ? Math.max(...values) : null; } return output; }); }
 function findSecretPaths(value: unknown) { const findings: string[] = []; const secretKeys = new Set(['password','passwd','passphrase','token','accesstoken','refreshtoken','apikey','secret','secretkey','privatekey','clientsecret','connectionstring','credentials']); const visit = (current: unknown, path: string, opaqueRows = false) => { if (Array.isArray(current)) return current.forEach((item, index) => visit(item, `${path}[${index}]`, opaqueRows || /\.rows$/.test(path))); if (!current || typeof current !== 'object') return; for (const [key,item] of Object.entries(current as JsonObject)) { const normalized = key.toLowerCase().replace(/[^a-z0-9]/g, ''); const nextPath = path ? `${path}.${key}` : key; if (!opaqueRows && secretKeys.has(normalized) && item != null && item !== '' && item !== false) findings.push(nextPath); if (!opaqueRows && typeof item === 'string' && /:\/\/[^/@\s]+:[^/@\s]+@/.test(item)) findings.push(`${nextPath} URL credentials`); visit(item, nextPath, opaqueRows); } }; visit(value, ''); return findings; }
+function metadataId(kind: string, ...parts: string[]) { return `${kind}-${createHash('sha256').update(parts.join('\0')).digest('hex').slice(0, 48)}`; }
+function safeBigInt(value: unknown) { try { const parsed = BigInt(String(value ?? '')); return parsed >= 0n ? parsed : null; } catch { return null; } }
+function aggregateLabel(operation: string) { return ({ count: 'Count', countdistinct: 'Count distinct', sum: 'Sum', avg: 'Average', min: 'Min', max: 'Max' } as Record<string, string>)[operation] || operation; }
