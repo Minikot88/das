@@ -535,6 +535,14 @@
       "mergedInto": null
     },
     {
+      "name": "data_source_relationships",
+      "module": "MOD-07",
+      "classification": "P0_CORE",
+      "approvalStatus": "APPROVED",
+      "migration": "0007_connector_source_metadata",
+      "mergedInto": null
+    },
+    {
       "name": "datasets",
       "module": "MOD-06",
       "classification": "P0_CORE",

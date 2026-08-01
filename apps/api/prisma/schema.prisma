@@ -6,6 +6,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  schemas  = ["dashboard_core"]
 }
 
 model Organization {
@@ -26,6 +27,7 @@ model Organization {
   user_profiles             UserProfile[]
 
   @@map("organizations")
+  @@schema("dashboard_core")
 }
 
 model UserProfile {
@@ -58,6 +60,7 @@ model UserProfile {
   @@unique([organizationId, externalAuthProvider, externalUserId], map: "uq_user_profiles_external")
   @@index([organizationId, email], map: "idx_user_profiles_org_email")
   @@map("user_profiles")
+  @@schema("dashboard_core")
 }
 
 model UserCredential {
@@ -72,6 +75,7 @@ model UserCredential {
   user_profiles     UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_credentials")
+  @@schema("dashboard_core")
 }
 
 model AuthSession {
@@ -93,6 +97,7 @@ model AuthSession {
   @@index([userId, revokedAt, createdAt], map: "idx_auth_sessions_user_active")
   @@index([idleExpiresAt, absoluteExpiresAt], map: "idx_auth_sessions_expiry")
   @@map("auth_sessions")
+  @@schema("dashboard_core")
 }
 
 model PasswordResetToken {
@@ -107,6 +112,7 @@ model PasswordResetToken {
 
   @@index([userId, createdAt], map: "idx_password_reset_tokens_user")
   @@map("password_reset_tokens")
+  @@schema("dashboard_core")
 }
 
 model Invitation {
@@ -128,6 +134,7 @@ model Invitation {
 
   @@index([organizationId, normalizedEmail, createdAt], map: "idx_invitations_org_email")
   @@map("invitations")
+  @@schema("dashboard_core")
 }
 
 model OrganizationMember {
@@ -143,6 +150,7 @@ model OrganizationMember {
   @@unique([organizationId, userId], map: "uq_organization_members_org_user")
   @@index([userId, organizationId], map: "idx_organization_members_user")
   @@map("organization_members")
+  @@schema("dashboard_core")
 }
 
 model AuthenticationAuditLog {
@@ -161,6 +169,7 @@ model AuthenticationAuditLog {
   @@index([organizationId, occurredAt, id], map: "idx_authentication_audit_org_time")
   @@index([userId, occurredAt, id], map: "idx_authentication_audit_user_time")
   @@map("authentication_audit_logs")
+  @@schema("dashboard_core")
 }
 
 model Role {
@@ -175,6 +184,7 @@ model Role {
 
   @@unique([organizationId, code], map: "uq_roles_org_code")
   @@map("roles")
+  @@schema("dashboard_core")
 }
 
 model Permission {
@@ -184,6 +194,7 @@ model Permission {
   role_permissions RolePermission[]
 
   @@map("permissions")
+  @@schema("dashboard_core")
 }
 
 model RolePermission {
@@ -196,6 +207,7 @@ model RolePermission {
   @@unique([roleId, permissionId], map: "uq_role_permissions")
   @@index([permissionId], map: "idx_role_permissions_permission")
   @@map("role_permissions")
+  @@schema("dashboard_core")
 }
 
 model UserRole {
@@ -209,6 +221,7 @@ model UserRole {
   @@unique([userId, roleId], map: "uq_user_roles")
   @@index([roleId], map: "idx_user_roles_role")
   @@map("user_roles")
+  @@schema("dashboard_core")
 }
 
 model BiProject {
@@ -242,6 +255,7 @@ model BiProject {
   @@unique([organizationId, name], map: "uq_bi_projects_org_name")
   @@index([organizationId, updatedAt, id], map: "idx_bi_projects_org_updated")
   @@map("bi_projects")
+  @@schema("dashboard_core")
 }
 
 model BiProjectMember {
@@ -256,6 +270,7 @@ model BiProjectMember {
   @@unique([projectId, userId], map: "uq_bi_project_members")
   @@index([organizationId, userId], map: "idx_bi_project_members_org_user")
   @@map("bi_project_members")
+  @@schema("dashboard_core")
 }
 
 model BiSheet {
@@ -274,6 +289,7 @@ model BiSheet {
   @@unique([projectId, name], map: "uq_bi_sheets_project_name")
   @@index([projectId, position, id], map: "idx_bi_sheets_project_position")
   @@map("bi_sheets")
+  @@schema("dashboard_core")
 }
 
 model WorkspaceContext {
@@ -291,6 +307,7 @@ model WorkspaceContext {
 
   @@unique([organizationId, userId], map: "uq_workspace_contexts_org_user")
   @@map("workspace_contexts")
+  @@schema("dashboard_core")
 }
 
 model BiDashboard {
@@ -315,6 +332,7 @@ model BiDashboard {
 
   @@index([projectId, updatedAt, id], map: "idx_bi_dashboards_project_updated")
   @@map("bi_dashboards")
+  @@schema("dashboard_core")
 }
 
 model DashboardVersion {
@@ -329,6 +347,7 @@ model DashboardVersion {
 
   @@unique([dashboardId, revision], map: "uq_dashboard_versions_revision")
   @@map("dashboard_versions")
+  @@schema("dashboard_core")
 }
 
 model DashboardWidget {
@@ -352,6 +371,7 @@ model DashboardWidget {
   @@index([dashboardId, zIndex, id], map: "idx_dashboard_widgets_order")
   @@index([chartId], map: "idx_dashboard_widgets_chart")
   @@map("dashboard_widgets")
+  @@schema("dashboard_core")
 }
 
 model SavedView {
@@ -371,6 +391,7 @@ model SavedView {
 
   @@index([projectId, userId, updatedAt], map: "idx_saved_views_project_user")
   @@map("saved_views")
+  @@schema("dashboard_core")
 }
 
 model ChartType {
@@ -384,6 +405,7 @@ model ChartType {
   charts                  Chart[]
 
   @@map("chart_types")
+  @@schema("dashboard_core")
 }
 
 model ChartTypeRequirement {
@@ -397,6 +419,7 @@ model ChartTypeRequirement {
 
   @@unique([chartTypeId, slot], map: "uq_chart_type_requirements_slot")
   @@map("chart_type_requirements")
+  @@schema("dashboard_core")
 }
 
 model ChartTemplate {
@@ -410,6 +433,7 @@ model ChartTemplate {
 
   @@index([chartTypeId], map: "idx_chart_templates_type")
   @@map("chart_templates")
+  @@schema("dashboard_core")
 }
 
 model Chart {
@@ -439,6 +463,7 @@ model Chart {
   @@index([projectId, updatedAt, id], map: "idx_charts_project_updated")
   @@index([datasetId], map: "idx_charts_dataset")
   @@map("charts")
+  @@schema("dashboard_core")
 }
 
 model ChartVersion {
@@ -451,6 +476,7 @@ model ChartVersion {
 
   @@unique([chartId, revision], map: "uq_chart_versions_revision")
   @@map("chart_versions")
+  @@schema("dashboard_core")
 }
 
 model DataSourceType {
@@ -462,31 +488,42 @@ model DataSourceType {
   data_source_connections DataSourceConnection[]
 
   @@map("data_source_types")
+  @@schema("dashboard_core")
 }
 
 model DataSourceConnection {
   id                            String                     @id @db.VarChar(64)
   organizationId                String                     @map("organization_id") @db.VarChar(64)
-  projectId                     String                     @map("project_id") @db.VarChar(64)
+  projectId                     String?                    @map("project_id") @db.VarChar(64)
   typeId                        String                     @map("type_id") @db.VarChar(64)
   name                          String                     @db.VarChar(180)
+  host                          String?                    @db.VarChar(255)
+  port                          Int?
+  databaseName                  String?                    @map("database_name") @db.VarChar(191)
+  connectionOptionsJson         Json?                      @map("connection_options_json")
+  mode                          String                     @default("live") @db.VarChar(20)
+  readOnly                      Boolean                    @default(true) @map("read_only")
   metadataJson                  Json?                      @map("metadata_json")
   status                        String                     @default("untested") @db.VarChar(32)
   revision                      Int                        @default(0)
   createdAt                     DateTime                   @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt                     DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt                     DateTime?                  @map("deleted_at") @db.Timestamptz(3)
-  bi_projects                   BiProject                  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  bi_projects                   BiProject?                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
   data_source_types             DataSourceType             @relation(fields: [typeId], references: [id])
   data_source_schemas           DataSourceSchema[]
   data_source_secret_references DataSourceSecretReference?
   data_source_tables            DataSourceTable[]
+  data_source_relationships     DataSourceRelationship[]
   data_source_test_runs         DataSourceTestRun[]
+  datasets                      Dataset[]
   sql_queries                   SqlQuery[]
   sql_query_runs                SqlQueryRun[]
 
   @@index([projectId, updatedAt, id], map: "idx_data_source_connections_project")
+  @@index([organizationId, status, updatedAt, id], map: "idx_data_source_connections_org_status")
   @@map("data_source_connections")
+  @@schema("dashboard_core")
 }
 
 model DataSourceSecretReference {
@@ -494,13 +531,15 @@ model DataSourceSecretReference {
   organizationId          String               @map("organization_id") @db.VarChar(64)
   connectionId            String               @unique(map: "uq_data_source_secret_connection") @map("connection_id") @db.VarChar(64)
   provider                String               @db.VarChar(40)
+  secretRef               String?              @map("secret_ref") @db.VarChar(255)
   keyVersion              Int                  @default(1) @map("key_version")
-  encryptedJson           String               @map("encrypted_json")
+  encryptedJson           String?              @map("encrypted_json")
   createdAt               DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
   rotatedAt               DateTime?            @map("rotated_at") @db.Timestamptz(3)
   data_source_connections DataSourceConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
 
   @@map("data_source_secret_references")
+  @@schema("dashboard_core")
 }
 
 model DataSourceTestRun {
@@ -516,18 +555,23 @@ model DataSourceTestRun {
 
   @@index([connectionId, createdAt], map: "idx_data_source_test_runs_connection")
   @@map("data_source_test_runs")
+  @@schema("dashboard_core")
 }
 
 model DataSourceSchema {
   id                      String               @id @db.VarChar(64)
   connectionId            String               @map("connection_id") @db.VarChar(64)
   name                    String               @db.VarChar(191)
+  readOnly                Boolean              @default(true) @map("read_only")
+  tablePolicyJson         Json?                @map("table_policy_json")
   discoveredAt            DateTime             @default(now()) @map("discovered_at") @db.Timestamptz(3)
+  refreshedAt             DateTime             @default(now()) @map("refreshed_at") @db.Timestamptz(3)
   data_source_connections DataSourceConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
   data_source_tables      DataSourceTable[]
 
   @@unique([connectionId, name], map: "uq_data_source_schemas")
   @@map("data_source_schemas")
+  @@schema("dashboard_core")
 }
 
 model DataSourceTable {
@@ -536,6 +580,9 @@ model DataSourceTable {
   schemaId                String               @map("schema_id") @db.VarChar(64)
   name                    String               @db.VarChar(191)
   tableType               String               @map("table_type") @db.VarChar(40)
+  estimatedRows           BigInt?              @map("estimated_rows")
+  metadataJson            Json?                @map("metadata_json")
+  refreshedAt             DateTime             @default(now()) @map("refreshed_at") @db.Timestamptz(3)
   data_source_columns     DataSourceColumn[]
   data_source_connections DataSourceConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
   data_source_schemas     DataSourceSchema     @relation(fields: [schemaId], references: [id], onDelete: Cascade)
@@ -543,6 +590,7 @@ model DataSourceTable {
   @@unique([schemaId, name], map: "uq_data_source_tables")
   @@index([connectionId], map: "idx_data_source_tables_connection")
   @@map("data_source_tables")
+  @@schema("dashboard_core")
 }
 
 model DataSourceColumn {
@@ -552,19 +600,46 @@ model DataSourceColumn {
   dataType           String          @map("data_type") @db.VarChar(100)
   nullable           Boolean         @default(true)
   ordinal            Int
+  primaryKey         Boolean         @default(false) @map("primary_key")
+  foreignKey         Boolean         @default(false) @map("foreign_key")
+  refreshedAt        DateTime        @default(now()) @map("refreshed_at") @db.Timestamptz(3)
   data_source_tables DataSourceTable @relation(fields: [tableId], references: [id], onDelete: Cascade)
 
   @@unique([tableId, name], map: "uq_data_source_columns")
   @@index([tableId, ordinal], map: "idx_data_source_columns_order")
   @@map("data_source_columns")
+  @@schema("dashboard_core")
+}
+
+model DataSourceRelationship {
+  id                      String               @id @db.VarChar(64)
+  connectionId            String               @map("connection_id") @db.VarChar(64)
+  constraintName          String               @map("constraint_name") @db.VarChar(191)
+  leftSchema              String               @map("left_schema") @db.VarChar(191)
+  leftTable               String               @map("left_table") @db.VarChar(191)
+  leftColumn              String               @map("left_column") @db.VarChar(191)
+  rightSchema             String               @map("right_schema") @db.VarChar(191)
+  rightTable              String               @map("right_table") @db.VarChar(191)
+  rightColumn             String               @map("right_column") @db.VarChar(191)
+  relationshipType        String               @default("foreign_key") @map("relationship_type") @db.VarChar(40)
+  refreshedAt             DateTime             @default(now()) @map("refreshed_at") @db.Timestamptz(3)
+  data_source_connections DataSourceConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@unique([connectionId, constraintName, leftColumn], map: "uq_data_source_relationships_constraint")
+  @@index([connectionId, leftSchema, leftTable], map: "idx_data_source_relationships_left")
+  @@index([connectionId, rightSchema, rightTable], map: "idx_data_source_relationships_right")
+  @@map("data_source_relationships")
+  @@schema("dashboard_core")
 }
 
 model Dataset {
   id                         String                    @id @db.VarChar(64)
   organizationId             String                    @map("organization_id") @db.VarChar(64)
   projectId                  String                    @map("project_id") @db.VarChar(64)
+  dataSourceId               String?                   @map("data_source_id") @db.VarChar(64)
   name                       String                    @db.VarChar(180)
   sourceType                 String                    @map("source_type") @db.VarChar(40)
+  sourceMode                 String                    @default("imported") @map("source_mode") @db.VarChar(20)
   status                     String                    @default("processing") @db.VarChar(32)
   rowCount                   Int                       @default(0) @map("row_count")
   fieldCount                 Int                       @default(0) @map("field_count")
@@ -582,12 +657,15 @@ model Dataset {
   dataset_validation_results DatasetValidationResult[]
   dataset_versions           DatasetVersion[]
   bi_projects                BiProject                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  data_source_connections    DataSourceConnection?     @relation(fields: [dataSourceId], references: [id], onDelete: SetNull)
   import_jobs                ImportJob[]
   sql_queries                SqlQuery[]
   sql_query_runs             SqlQueryRun[]
 
   @@index([projectId, updatedAt, id], map: "idx_datasets_project_updated")
+  @@index([dataSourceId, updatedAt, id], map: "idx_datasets_source_updated")
   @@map("datasets")
+  @@schema("dashboard_core")
 }
 
 model DatasetVersion {
@@ -601,6 +679,7 @@ model DatasetVersion {
 
   @@unique([datasetId, version], map: "uq_dataset_versions")
   @@map("dataset_versions")
+  @@schema("dashboard_core")
 }
 
 model DatasetField {
@@ -620,6 +699,7 @@ model DatasetField {
   @@unique([datasetId, fieldKey], map: "uq_dataset_fields_key")
   @@index([datasetId, ordinal], map: "idx_dataset_fields_order")
   @@map("dataset_fields")
+  @@schema("dashboard_core")
 }
 
 model DatasetRow {
@@ -634,6 +714,7 @@ model DatasetRow {
   @@index([datasetId, id], map: "idx_dataset_rows_dataset_cursor")
   @@index([rowJson(ops: JsonbPathOps)], map: "idx_dataset_rows_row_json_gin", type: Gin)
   @@map("dataset_rows")
+  @@schema("dashboard_core")
 }
 
 model DatasetStatistic {
@@ -648,6 +729,7 @@ model DatasetStatistic {
 
   @@index([datasetId, fieldId], map: "idx_dataset_statistics_field")
   @@map("dataset_statistics")
+  @@schema("dashboard_core")
 }
 
 model DatasetValidationResult {
@@ -664,6 +746,7 @@ model DatasetValidationResult {
 
   @@index([datasetId, severity], map: "idx_dataset_validation_severity")
   @@map("dataset_validation_results")
+  @@schema("dashboard_core")
 }
 
 model ImportJob {
@@ -687,6 +770,7 @@ model ImportJob {
   @@unique([organizationId, idempotencyKey], map: "uq_import_jobs_idempotency")
   @@index([projectId, createdAt], map: "idx_import_jobs_project")
   @@map("import_jobs")
+  @@schema("dashboard_core")
 }
 
 model ImportJobRow {
@@ -699,6 +783,7 @@ model ImportJobRow {
 
   @@unique([importId, rowNumber], map: "uq_import_job_rows")
   @@map("import_job_rows")
+  @@schema("dashboard_core")
 }
 
 model ImportError {
@@ -713,6 +798,7 @@ model ImportError {
 
   @@index([importId, rowNumber], map: "idx_import_errors_row")
   @@map("import_errors")
+  @@schema("dashboard_core")
 }
 
 model SqlQuery {
@@ -734,6 +820,7 @@ model SqlQuery {
 
   @@index([projectId, updatedAt], map: "idx_sql_queries_project")
   @@map("sql_queries")
+  @@schema("dashboard_core")
 }
 
 model SqlQueryRun {
@@ -757,6 +844,7 @@ model SqlQueryRun {
 
   @@index([projectId, createdAt], map: "idx_sql_query_runs_project")
   @@map("sql_query_runs")
+  @@schema("dashboard_core")
 }
 
 model SqlQueryResult {
@@ -771,6 +859,7 @@ model SqlQueryResult {
   sql_query_runs           SqlQueryRun            @relation(fields: [runId], references: [id], onDelete: Cascade)
 
   @@map("sql_query_results")
+  @@schema("dashboard_core")
 }
 
 model SqlQueryResultColumn {
@@ -783,6 +872,7 @@ model SqlQueryResultColumn {
 
   @@unique([resultId, ordinal], map: "uq_sql_query_result_columns")
   @@map("sql_query_result_columns")
+  @@schema("dashboard_core")
 }
 
 model SqlQueryResultRow {
@@ -794,6 +884,7 @@ model SqlQueryResultRow {
 
   @@unique([resultId, rowNumber], map: "uq_sql_query_result_rows")
   @@map("sql_query_result_rows")
+  @@schema("dashboard_core")
 }
 
 model DashboardShareLink {
@@ -816,6 +907,7 @@ model DashboardShareLink {
 
   @@index([dashboardId, createdAt], map: "idx_dashboard_share_links_dashboard")
   @@map("dashboard_share_links")
+  @@schema("dashboard_core")
 }
 
 model DashboardShareSnapshot {
@@ -828,6 +920,7 @@ model DashboardShareSnapshot {
   dashboard_share_links DashboardShareLink @relation(fields: [shareId], references: [id], onDelete: Cascade)
 
   @@map("dashboard_share_snapshots")
+  @@schema("dashboard_core")
 }
 
 model DashboardShareAccessLog {
@@ -842,6 +935,7 @@ model DashboardShareAccessLog {
 
   @@index([shareId, accessedAt], map: "idx_dashboard_share_access_logs_share")
   @@map("dashboard_share_access_logs")
+  @@schema("dashboard_core")
 }
 
 model EmbedSetting {
@@ -853,6 +947,7 @@ model EmbedSetting {
   dashboard_share_links DashboardShareLink @relation(fields: [shareId], references: [id], onDelete: Cascade)
 
   @@map("embed_settings")
+  @@schema("dashboard_core")
 }
 
 model ExportJob {
@@ -872,6 +967,7 @@ model ExportJob {
 
   @@index([projectId, createdAt], map: "idx_export_jobs_project")
   @@map("export_jobs")
+  @@schema("dashboard_core")
 }
 
 model ExportFile {
@@ -884,6 +980,7 @@ model ExportFile {
 
   @@unique([exportId, fileId], map: "uq_export_files")
   @@map("export_files")
+  @@schema("dashboard_core")
 }
 
 model UserPreference {
@@ -902,6 +999,7 @@ model UserPreference {
 
   @@unique([organizationId, userId], map: "uq_user_preferences_org_user")
   @@map("user_preferences")
+  @@schema("dashboard_core")
 }
 
 model FileRecord {
@@ -923,6 +1021,7 @@ model FileRecord {
 
   @@index([organizationId, projectId, createdAt], map: "idx_files_scope")
   @@map("files")
+  @@schema("dashboard_core")
 }
 
 model AuditLog {
@@ -941,6 +1040,7 @@ model AuditLog {
   @@index([organizationId, occurredAt, id], map: "idx_audit_logs_org_time")
   @@index([organizationId, entityType, entityId], map: "idx_audit_logs_entity")
   @@map("audit_logs")
+  @@schema("dashboard_core")
 }
 
 model ErrorLog {
@@ -954,6 +1054,7 @@ model ErrorLog {
 
   @@index([occurredAt, id], map: "idx_error_logs_time")
   @@map("error_logs")
+  @@schema("dashboard_core")
 }
 
 model ApiRequestLog {
@@ -969,4 +1070,5 @@ model ApiRequestLog {
 
   @@index([organizationId, occurredAt, id], map: "idx_api_request_logs_org_time")
   @@map("api_request_logs")
+  @@schema("dashboard_core")
 }
