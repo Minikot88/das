@@ -72,11 +72,15 @@ describe('ExternalSourcesService policy', () => {
       expect.objectContaining({ direction: 'outgoing', referencedTable: 'sc_journals' }),
       expect.objectContaining({ direction: 'incoming', referencedTable: 'sc_keywords' }),
     ]));
-    expect(String(relationshipConnection.query.mock.calls[0][0])).toContain('UNION ALL');
+    const relationshipSql = String(relationshipConnection.query.mock.calls[0][0]);
+    expect(relationshipSql).toContain('UNION ALL');
+    expect(relationshipSql).toContain('pg_constraint');
+    expect(relationshipSql).not.toContain('information_schema.table_constraints');
   });
 
   it('executes a validated multi-table query and returns a read-only SQL preview', async () => {
-    vi.spyOn(service, 'columns').mockImplementation(async (_schema, table) => ({
+    const connector = (service as unknown as { connector: { listColumns: typeof service.columns } }).connector;
+    vi.spyOn(connector, 'listColumns').mockImplementation(async (_schema, table) => ({
       schemaName: 'scopus',
       tableName: table,
       readOnly: true,
@@ -122,7 +126,8 @@ describe('ExternalSourcesService policy', () => {
   });
 
   it('rejects unsafe casts with sample values before executing the preview query', async () => {
-    vi.spyOn(service, 'columns').mockResolvedValue({
+    const connector = (service as unknown as { connector: { listColumns: typeof service.columns } }).connector;
+    vi.spyOn(connector, 'listColumns').mockResolvedValue({
       schemaName: 'scopus', tableName: 'sc_articles', readOnly: true,
       capabilities: { canRead: true, canInsert: false, canUpdate: false, canDelete: false, canExport: true },
       items: [{ name: 'year_text', dataType: 'text', nullable: true, ordinal: 1, primaryKey: false, foreignKeys: [] }],

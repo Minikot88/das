@@ -103,6 +103,9 @@ describe('CoreDataService dataset query validation', () => {
         joinType: 'left',
         operator: 'eq',
       }],
+      aggregations: [
+        { field: { tableAlias: 'articles', column: 'publication_year' }, operation: 'count', alias: 'article_count' },
+      ],
       semanticTypeOverrides: { 'articles.publication_year': 'Year' },
       rowLimit: 500,
     };
@@ -124,7 +127,81 @@ describe('CoreDataService dataset query validation', () => {
       data: expect.arrayContaining([
       expect.objectContaining({ fieldKey: 'publication_year', label: 'articles.publication_year', semanticType: 'Year' }),
       expect.objectContaining({ fieldKey: 'journal_name', label: 'journals.name' }),
+      expect.objectContaining({ fieldKey: 'article_count', label: 'Count(articles.publication_year)', semanticType: 'Number' }),
       ]),
+    });
+  });
+
+  it('refreshes connector metadata cache from live PostgreSQL catalogs', async () => {
+    const schemaCreate = vi.fn().mockResolvedValue({ id: 'schema-cache' });
+    const tableCreate = vi.fn().mockResolvedValue({ id: 'table-cache' });
+    const columnCreateMany = vi.fn().mockResolvedValue({ count: 2 });
+    const relationshipCreateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const tx = {
+      dataSourceRelationship: { deleteMany: vi.fn(), createMany: relationshipCreateMany },
+      dataSourceTable: { deleteMany: vi.fn(), create: tableCreate },
+      dataSourceSchema: { deleteMany: vi.fn(), create: schemaCreate },
+      dataSourceColumn: { createMany: columnCreateMany },
+      dataSourceConnection: { update: vi.fn() },
+    };
+    const prisma = {
+      biProjectMember: { findMany: vi.fn().mockResolvedValue([]) },
+      biProject: { findFirst: vi.fn().mockResolvedValue({ id: 'project-1', organizationId: 'org-default', ownerUserId: 'user-development' }) },
+      dataSourceConnection: {
+        findFirst: vi.fn().mockResolvedValue({
+          id: 'source-scopus',
+          data_source_schemas: [{ name: 'scopus', readOnly: true }],
+        }),
+      },
+      $transaction: vi.fn(async callback => callback(tx)),
+    };
+    const external = {
+      tables: vi.fn().mockResolvedValue({
+        items: [{ name: 'sc_articles', objectType: 'table', rowCountEstimate: 6004 }],
+      }),
+      columns: vi.fn().mockResolvedValue({
+        items: [
+          { name: 'id', dataType: 'bigint', nullable: false, ordinal: 1, primaryKey: true, foreignKeys: [] },
+          { name: 'journal_id', dataType: 'bigint', nullable: true, ordinal: 2, primaryKey: false, foreignKeys: [{}] },
+        ],
+      }),
+      relationships: vi.fn().mockResolvedValue({
+        items: [{
+          name: 'sc_articles_journal_id_fkey',
+          columnName: 'journal_id',
+          referencedSchema: 'scopus',
+          referencedTable: 'sc_journals',
+          referencedColumn: 'id',
+          direction: 'outgoing',
+        }],
+      }),
+    };
+    const instance = new CoreDataService(
+      prisma as never,
+      { assertProjectPermission: vi.fn().mockResolvedValue(undefined) } as never,
+      external as never,
+    );
+
+    await expect(instance.refreshExternalSource(principal, 'project-1', 'source-scopus')).resolves.toEqual({
+      sourceId: 'source-scopus',
+      schemas: 1,
+      objects: 1,
+      fields: 2,
+      relationships: 1,
+    });
+    expect(columnCreateMany).toHaveBeenCalledWith({
+      data: expect.arrayContaining([
+        expect.objectContaining({ name: 'id', primaryKey: true, foreignKey: false }),
+        expect.objectContaining({ name: 'journal_id', primaryKey: false, foreignKey: true }),
+      ]),
+    });
+    expect(relationshipCreateMany).toHaveBeenCalledWith({
+      data: [expect.objectContaining({
+        leftTable: 'sc_articles',
+        leftColumn: 'journal_id',
+        rightTable: 'sc_journals',
+        rightColumn: 'id',
+      })],
     });
   });
 
