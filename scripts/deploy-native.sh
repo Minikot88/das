@@ -22,6 +22,8 @@ npm --prefix apps/api run build
 cd apps/api
 DATABASE_URL="$MIGRATION_DATABASE_URL" npx prisma migrate deploy
 cd "$release_dir"
+bash "$release_dir/scripts/apply-database-grants.sh"
+bash "$release_dir/scripts/harden-database-owner.sh"
 
 if test -L "$project_root/current"; then
   current_target="$(readlink -f "$project_root/current")"

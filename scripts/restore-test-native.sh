@@ -17,8 +17,18 @@ trap cleanup EXIT
 
 docker exec server-postgres sh -lc 'createdb -U "$POSTGRES_USER" "$1"' sh "$restore_database"
 docker cp "$archive" "server-postgres:$container_file" >/dev/null
-docker exec server-postgres sh -lc 'pg_restore -U "$POSTGRES_USER" -d "$1" --no-owner --no-privileges "$2"' sh "$restore_database" "$container_file"
-docker exec server-postgres sh -lc 'psql -v ON_ERROR_STOP=1 -At -U "$POSTGRES_USER" -d "$1" -c "select count(*) from _prisma_migrations; select count(*) from user_profiles; select count(*) from bi_projects;"' sh "$restore_database"
+docker exec server-postgres sh -lc 'pg_restore -U "$POSTGRES_USER" -d "$1" --no-privileges "$2"' sh "$restore_database" "$container_file"
+set -a
+# shellcheck disable=SC1090
+source "$project_root/shared/backend.env"
+set +a
+without_query="${MIGRATION_DATABASE_URL%%\?*}"
+query=''
+if [[ "$MIGRATION_DATABASE_URL" == *'?'* ]]; then query="?${MIGRATION_DATABASE_URL#*\?}"; fi
+restore_migration_url="${without_query%/*}/$restore_database${query}"
+(cd "$project_root/current/apps/api" && DATABASE_URL="$restore_migration_url" npx prisma migrate deploy)
+DASHBOARDMINI_DATABASE_NAME="$restore_database" bash "$project_root/current/scripts/apply-database-grants.sh"
+docker exec server-postgres sh -lc 'psql -v ON_ERROR_STOP=1 -At -U "$POSTGRES_USER" -d "$1" -c "select count(*) from public._prisma_migrations; select count(*) from dashboard_core.user_profiles; select count(*) from dashboard_core.bi_projects;"' sh "$restore_database"
 docker exec server-postgres sh -lc 'dropdb -U "$POSTGRES_USER" "$1"' sh "$restore_database"
 docker exec server-postgres rm -f "$container_file"
 trap - EXIT

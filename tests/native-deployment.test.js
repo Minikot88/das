@@ -20,6 +20,8 @@ describe('native server deployment tooling', () => {
     expect(deploy).toContain('ln -sfn');
     expect(deploy).toContain('prisma migrate deploy');
     expect(deploy).toContain('VITE_USE_MOCK=false npm run build');
+    expect(deploy).toContain('apply-database-grants.sh');
+    expect(deploy).toContain('harden-database-owner.sh');
     expect(deploy).toContain('verify-native.sh');
     expect(deploy).not.toContain('git reset --hard');
     expect(deploy).not.toContain('docker compose');
@@ -50,8 +52,10 @@ describe('native server deployment tooling', () => {
     expect(backup.indexOf('umask 077')).toBeLessThan(backup.indexOf('exec 9>'));
     expect(restore).toContain('dashboardmini_restore_');
     expect(restore).toContain('pg_restore');
-    expect(restore).toContain('from user_profiles');
-    expect(restore).toContain('from bi_projects');
+    expect(restore).not.toContain('--no-owner');
+    expect(restore).toContain('prisma migrate deploy');
+    expect(restore).toContain('from dashboard_core.user_profiles');
+    expect(restore).toContain('from dashboard_core.bi_projects');
     expect(restore).not.toContain('from users');
     expect(restore).toContain('dropdb');
     expect(restore).not.toContain('dropdb dashboardmini');

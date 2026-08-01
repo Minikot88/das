@@ -26,7 +26,7 @@ trap - EXIT
   printf 'created_at_utc=%s\n' "$timestamp"
   printf 'database=dashboardmini\n'
   printf 'migration_count='
-  docker exec server-postgres sh -lc 'psql -At -U "$POSTGRES_USER" -d dashboardmini -c "select count(*) from _prisma_migrations where finished_at is not null and rolled_back_at is null"'
+  docker exec server-postgres sh -lc 'psql -At -U "$POSTGRES_USER" -d dashboardmini -c "select count(*) from public._prisma_migrations where finished_at is not null and rolled_back_at is null"'
   printf 'storage_files_sha256\n'
   for directory in storage uploads exports; do
     if test -d "$project_root/shared/$directory"; then
