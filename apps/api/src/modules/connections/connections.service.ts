@@ -31,6 +31,7 @@ export class ConnectionsService {
   private async connection(principal: RequestPrincipal, id: string, permission: ProjectPermission = 'connection') {
     const item = await this.prisma.dataSourceConnection.findFirst({ where: { id, organizationId: principal.organizationId, deletedAt: null } });
     if (!item) throw new ApiError(404, 'CONNECTION_NOT_FOUND', 'Connection was not found.');
+    if (!item.projectId) throw new ApiError(403, 'MANAGED_SOURCE', 'This organization source is managed by the application.');
     await this.project(principal, item.projectId, permission);
     return item;
   }
@@ -49,10 +50,24 @@ export class ConnectionsService {
     if (!typeRow) throw new ApiError(503, 'CONNECTION_CATALOG_NOT_READY', 'Connection catalog is not ready.', undefined, true);
     const secret = parseSecret(input);
     await validateDestination(secret.host, secret.port, this.environment.connectorNetworkAllowlist);
-    const id = String(input.id || `connection-${randomUUID()}`);
+    const id = `connection-${randomUUID()}`;
     const encrypted = await this.secrets.seal(secret);
     return this.prisma.$transaction(async tx => {
-      const connection = await tx.dataSourceConnection.create({ data: { id, organizationId: principal.organizationId, projectId, typeId: typeRow.id, name: String(input.name || 'PostgreSQL').slice(0, 180), metadataJson: { host: secret.host, port: secret.port, database: secret.database, user: secret.user, ssl: secret.ssl }, status: 'untested' }, select: safeConnectionSelect });
+      const connection = await tx.dataSourceConnection.create({ data: {
+        id,
+        organizationId: principal.organizationId,
+        projectId,
+        typeId: typeRow.id,
+        name: String(input.name || 'PostgreSQL').slice(0, 180),
+        host: secret.host,
+        port: secret.port,
+        databaseName: secret.database,
+        connectionOptionsJson: { ssl: secret.ssl },
+        mode: 'live',
+        readOnly: true,
+        metadataJson: { user: secret.user },
+        status: 'untested',
+      }, select: safeConnectionSelect });
       await tx.dataSourceSecretReference.create({ data: { id: `secret-${randomUUID()}`, organizationId: principal.organizationId, connectionId: id, provider: 'encrypted_database', encryptedJson: JSON.stringify(encrypted) } });
       return connection;
     });
@@ -119,6 +134,8 @@ export class ConnectionsService {
 
   async execute(principal: RequestPrincipal, id: string, sql: string, parameters: unknown[], requestId: string) {
     const connection = await this.connection(principal, id);
+    const projectId = connection.projectId;
+    if (!projectId) throw new ApiError(403, 'MANAGED_SOURCE', 'This organization source is managed by the application.');
     let normalizedSql: string;
     try { normalizedSql = validateReadOnlySql(sql).normalizedSql; } catch (error) { throw new ApiError(400, 'UNSAFE_QUERY', error instanceof Error ? error.message : 'Query is not allowed.'); }
     const secret = await this.openSecret(id);
@@ -133,12 +150,12 @@ export class ConnectionsService {
       const truncated = result.rows.length > limit;
       const rows = result.rows.slice(0, limit);
       await this.prisma.$transaction([
-        this.prisma.sqlQueryRun.create({ data: { id: runId, organizationId: principal.organizationId, projectId: connection.projectId, connectionId: id, sqlHash: createHash('sha256').update(normalizedSql).digest('hex'), status: 'succeeded', durationMs: Date.now() - started, rowCount: rows.length, truncated } }),
-        this.prisma.auditLog.create({ data: { organizationId: principal.organizationId, projectId: connection.projectId, actorUserId: principal.userId, requestId, entityType: 'connection', entityId: id, action: 'connection.query.execute', outcome: 'succeeded', metadataJson: { rowCount: rows.length, truncated } } }),
+        this.prisma.sqlQueryRun.create({ data: { id: runId, organizationId: principal.organizationId, projectId, connectionId: id, sqlHash: createHash('sha256').update(normalizedSql).digest('hex'), status: 'succeeded', durationMs: Date.now() - started, rowCount: rows.length, truncated } }),
+        this.prisma.auditLog.create({ data: { organizationId: principal.organizationId, projectId, actorUserId: principal.userId, requestId, entityType: 'connection', entityId: id, action: 'connection.query.execute', outcome: 'succeeded', metadataJson: { rowCount: rows.length, truncated } } }),
       ]);
       return { columns: result.fields.map(field => ({ name: field.name, dataTypeId: field.dataTypeID })), rows, rowCount: rows.length, truncated, durationMs: Date.now() - started };
     } catch (error) {
-      await this.prisma.sqlQueryRun.create({ data: { id: runId, organizationId: principal.organizationId, projectId: connection.projectId, connectionId: id, sqlHash: createHash('sha256').update(normalizedSql).digest('hex'), status: 'failed', durationMs: Date.now() - started, rowCount: 0 } });
+      await this.prisma.sqlQueryRun.create({ data: { id: runId, organizationId: principal.organizationId, projectId, connectionId: id, sqlHash: createHash('sha256').update(normalizedSql).digest('hex'), status: 'failed', durationMs: Date.now() - started, rowCount: 0 } });
       throw new ApiError(400, 'QUERY_FAILED', 'PostgreSQL query failed.');
     } finally { await pool.end(); }
   }
@@ -153,6 +170,18 @@ export class ConnectionsService {
   private async openSecret(connectionId: string): Promise<ConnectionSecret> {
     const row = await this.prisma.dataSourceSecretReference.findUnique({ where: { connectionId } });
     if (!row) throw new ApiError(503, 'SECRET_NOT_AVAILABLE', 'Connection secret is not available.', undefined, true);
+    if (row.provider === 'runtime_environment' && row.secretRef === 'DATABASE_URL' && this.environment.databaseUrl) {
+      const url = new URL(this.environment.databaseUrl);
+      return parseSecret({
+        host: url.hostname,
+        port: Number(url.port || 5432),
+        database: url.pathname.replace(/^\//, ''),
+        user: decodeURIComponent(url.username),
+        password: decodeURIComponent(url.password),
+        ssl: ['require', 'verify-ca', 'verify-full'].includes(url.searchParams.get('sslmode') || ''),
+      });
+    }
+    if (!row.encryptedJson) throw new ApiError(503, 'SECRET_NOT_AVAILABLE', 'Connection secret is not available.', undefined, true);
     const opened = await this.secrets.open(JSON.parse(row.encryptedJson) as EncryptedSecret);
     return parseSecret(opened);
   }
@@ -163,7 +192,24 @@ export class ConnectionsService {
   }
 }
 
-const safeConnectionSelect = { id: true, organizationId: true, projectId: true, typeId: true, name: true, metadataJson: true, status: true, revision: true, createdAt: true, updatedAt: true } as const;
+const safeConnectionSelect = {
+  id: true,
+  organizationId: true,
+  projectId: true,
+  typeId: true,
+  name: true,
+  host: true,
+  port: true,
+  databaseName: true,
+  connectionOptionsJson: true,
+  mode: true,
+  readOnly: true,
+  metadataJson: true,
+  status: true,
+  revision: true,
+  createdAt: true,
+  updatedAt: true,
+} as const;
 function parseSecret(input: JsonObject): ConnectionSecret { const host = String(input.host || '').trim().toLowerCase(); const port = Number(input.port || 5432); const database = String(input.database || '').trim(); const user = String(input.user || input.username || '').trim(); const password = String(input.password || ''); const ssl = input.ssl === true || input.ssl === 'true' || input.sslMode === 'require'; if (!host || !database || !user || !password) throw new ApiError(400, 'VALIDATION_ERROR', 'host, database, user and password are required.'); if (!Number.isInteger(port) || port !== 5432) throw new ApiError(400, 'PORT_NOT_ALLOWED', 'Only PostgreSQL port 5432 is allowed.'); return { host, port, database, user, password, ssl }; }
 export async function validateDestination(host: string, port: number, allowlist: string[]) { if (port !== 5432) throw new ApiError(400, 'PORT_NOT_ALLOWED', 'Only PostgreSQL port 5432 is allowed.'); const normalizedAllowlist = new Set(allowlist.map(item => item.toLowerCase())); let addresses: Array<{ address: string }>; try { addresses = await lookup(host, { all: true, verbatim: true }); } catch { throw new ApiError(400, 'HOST_RESOLUTION_FAILED', 'Connection host could not be resolved.'); } if (!addresses.length) throw new ApiError(400, 'HOST_RESOLUTION_FAILED', 'Connection host could not be resolved.'); for (const { address } of addresses) { if (isBlockedAddress(address) && !normalizedAllowlist.has(host) && !normalizedAllowlist.has(address.toLowerCase())) throw new ApiError(400, 'SSRF_DESTINATION_BLOCKED', 'Connection destination is blocked.'); } }
 export function isBlockedAddress(address: string) { if (isIP(address) === 6) { const value = address.toLowerCase(); return value === '::' || value === '::1' || value.startsWith('fc') || value.startsWith('fd') || value.startsWith('fe8') || value.startsWith('fe9') || value.startsWith('fea') || value.startsWith('feb') || value.startsWith('ff'); } const octets = address.split('.').map(Number); const [a,b,c] = octets; return a === 0 || a === 10 || a === 127 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127) || (a === 192 && b === 0 && c === 0) || a >= 224; }
