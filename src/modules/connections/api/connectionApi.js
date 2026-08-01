@@ -2,6 +2,9 @@ import { apiRequest, encodeApiPathSegment, isMockMode } from "@infrastructure/ht
 
 function mapConnection(record) {
   const metadata = record?.metadataJson && typeof record.metadataJson === "object" ? record.metadataJson : {};
+  const options = record?.connectionOptionsJson && typeof record.connectionOptionsJson === "object"
+    ? record.connectionOptionsJson
+    : {};
   return {
     id: record.id,
     projectId: record.projectId,
@@ -9,14 +12,14 @@ function mapConnection(record) {
     type: "postgresql",
     typeName: "PostgreSQL",
     mode: "host",
-    host: metadata.host ?? "",
-    port: String(metadata.port ?? 5432),
-    database: metadata.database ?? "",
+    host: record.host ?? metadata.host ?? "",
+    port: String(record.port ?? metadata.port ?? 5432),
+    database: record.databaseName ?? metadata.database ?? "",
     username: metadata.user ?? "",
     passwordSaved: true,
     credentialState: "server-managed",
     secretRef: "server-managed",
-    ssl: { enabled: Boolean(metadata.ssl), mode: metadata.ssl ? "Require" : "Disable" },
+    ssl: { enabled: Boolean(options.ssl ?? metadata.ssl), mode: options.ssl ?? metadata.ssl ? "Require" : "Disable" },
     status: record.status,
     revision: record.revision,
     createdAt: record.createdAt,
