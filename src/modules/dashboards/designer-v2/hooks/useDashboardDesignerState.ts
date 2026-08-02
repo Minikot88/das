@@ -1629,10 +1629,12 @@ export function useDashboardDesignerState() {
             relationToJoin(selectedTables[index], nextTable, relation)).filter(Boolean)) as DatasetJoin[];
         const nextTables = [...selectedTables, nextTable];
         const nextFields = [...fields, ...newFields];
-        const pathCandidates = candidates.length ? [] : relationResults.flatMap((result, index) => {
+        const discoveredPaths = candidates.length ? [] : relationResults.flatMap((result, index) => {
           const paths = Array.isArray(result?.paths) ? result.paths : [];
           return paths.map((path: Array<Parameters<typeof relationToJoin>[2]>) => ({ start: selectedTables[index], path }));
         });
+        const shortestPathLength = discoveredPaths.reduce((shortest, candidate) => Math.min(shortest, candidate.path.length), Number.POSITIVE_INFINITY);
+        const pathCandidates = discoveredPaths.filter((candidate) => candidate.path.length === shortestPathLength);
         setSelectedTables(nextTables);
         setFields(nextFields);
         setSelectedTable(tableName);

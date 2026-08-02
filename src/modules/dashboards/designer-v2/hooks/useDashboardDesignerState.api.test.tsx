@@ -250,4 +250,43 @@ describe("useDashboardDesignerState API source", () => {
       selectedTables: expect.arrayContaining([expect.objectContaining({ table: "sc_article_keywords" })]),
     }), expect.anything());
   });
+
+  it("uses the unique shortest relationship path when more than one selected table can reach the target", async () => {
+    listExternalRelationships.mockImplementation(async (_schema, table, _projectId, targetTable) => {
+      if (targetTable === "sc_journals" && table === "sc_articles") {
+        return { items: [{ name: "article_journal", columnName: "journal_id", referencedSchema: "scopus", referencedTable: "sc_journals", referencedColumn: "id", direction: "outgoing" }], paths: [] };
+      }
+      if (targetTable === "sc_keywords" && table === "sc_articles") {
+        return { items: [], paths: [[
+          { name: "article_keywords_article", columnName: "id", referencedSchema: "scopus", referencedTable: "sc_article_keywords", referencedColumn: "article_id", direction: "incoming" },
+          { name: "article_keywords_keyword", columnName: "keyword_id", referencedSchema: "scopus", referencedTable: "sc_keywords", referencedColumn: "id", direction: "outgoing" },
+        ]] };
+      }
+      if (targetTable === "sc_keywords" && table === "sc_journals") {
+        return { items: [], paths: [[
+          { name: "journal_articles", columnName: "id", referencedSchema: "scopus", referencedTable: "sc_articles", referencedColumn: "journal_id", direction: "incoming" },
+          { name: "article_keywords_article", columnName: "id", referencedSchema: "scopus", referencedTable: "sc_article_keywords", referencedColumn: "article_id", direction: "incoming" },
+          { name: "article_keywords_keyword", columnName: "keyword_id", referencedSchema: "scopus", referencedTable: "sc_keywords", referencedColumn: "id", direction: "outgoing" },
+        ]] };
+      }
+      return { items: [], paths: [] };
+    });
+    const { useDashboardDesignerState } = await import("@modules/dashboards/designer-v2/hooks/useDashboardDesignerState");
+    const { result } = renderHook(() => useDashboardDesignerState(), { wrapper: Wrapper });
+    await waitFor(() => expect(result.current.state.isLoading).toBe(false));
+
+    await act(async () => {
+      await result.current.actions.setSelectedTable("scopus", "sc_journals");
+    });
+    await waitFor(() => expect(result.current.state.selectedTables).toHaveLength(2));
+    await act(async () => {
+      await result.current.actions.setSelectedTable("scopus", "sc_keywords");
+    });
+
+    expect(result.current.state.selectedTables.map((table) => table.table)).toEqual([
+      "sc_articles", "sc_journals", "sc_article_keywords", "sc_keywords",
+    ]);
+    expect(result.current.state.datasetJoins).toHaveLength(3);
+    expect(result.current.state.snackbar).not.toContain("Manual Join");
+  });
 });
