@@ -37,8 +37,8 @@ export class ExternalSourcesService {
   async columns(schemaName: string, tableName: string) {
     return this.connector.listColumns(schemaName, tableName);
   }
-  async relationships(schemaName: string, tableName: string) {
-    return this.connector.listRelationships(schemaName, tableName);
+  async relationships(schemaName: string, tableName: string, targetTable?: string) {
+    return this.connector.listRelationships(schemaName, tableName, targetTable);
   }
   async metadata(schemaName: string, tableName: string) {
     const schema = this.schema(schemaName); const table = await this.table(schema, tableName); const db = this.pool();

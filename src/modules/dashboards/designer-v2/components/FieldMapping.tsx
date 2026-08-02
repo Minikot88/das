@@ -28,6 +28,7 @@ import { getDistinctFieldValues } from "@modules/dashboards/designer-v2/componen
 import { dashboardV2Tokens as tokens } from "@modules/dashboards/designer-v2/components/theme";
 import { validateFieldForSlot } from "@modules/dashboards/designer-v2/components/utils/chartValidation";
 import { mappingSummary } from "@modules/dashboards/designer-v2/components/utils/axisTitles";
+import { getAggregationOptions } from "@modules/dashboards/designer-v2/components/utils/fieldAggregation";
 import type { Aggregation, ChartType, DataField, DragFieldItem, FilterValue, MappingSlot, MappingSlotId } from "@modules/dashboards/designer-v2/components/types";
 
 type FieldMappingProps = {
@@ -44,8 +45,6 @@ type FieldMappingProps = {
   onSortSlot: (slotId: MappingSlotId) => void;
 };
 
-const numberAggregations: Aggregation[] = ["Sum", "Average", "Min", "Max", "Median", "Count", "Count Distinct", "First", "Last"];
-const dimensionAggregations: Aggregation[] = ["None", "Count"];
 const primarySlotIds: MappingSlotId[] = ["xAxis", "yAxis", "legend", "tooltip"];
 const secondarySlotIds: MappingSlotId[] = ["filter", "color", "size", "value", "category", "series", "rows", "columns"];
 const measureSlotIds: MappingSlotId[] = ["yAxis", "value", "size", "color", "open", "high", "low", "close"];
@@ -70,13 +69,6 @@ const slotTone: Record<MappingSlotId, { bg: string; color: string }> = {
   low: { bg: tokens.color.numberSoft, color: tokens.color.number },
   close: { bg: tokens.color.numberSoft, color: tokens.color.number },
 };
-
-function getAggregationOptions(slot: MappingSlot) {
-  if (!measureSlotIds.includes(slot.id)) return dimensionAggregations;
-  const firstField = slot.fields[0];
-  if (!firstField || firstField.type === "number" || firstField.type === "currency" || firstField.type === "percentage" || firstField.isMeasure) return numberAggregations;
-  return ["Count"] satisfies Aggregation[];
-}
 
 function isInteractiveTarget(target: EventTarget | null) {
   return target instanceof Element && Boolean(target.closest("button,input,textarea,select,[role='button'],.MuiSelect-select,.MuiChip-root"));

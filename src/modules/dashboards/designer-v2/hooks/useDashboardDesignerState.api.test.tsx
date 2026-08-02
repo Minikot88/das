@@ -209,4 +209,45 @@ describe("useDashboardDesignerState API source", () => {
     expect(result.current.state.config.datasetId).toBe("dataset-scopus-articles");
     expect(result.current.state.snackbar).toContain("Manual Join");
   });
+
+  it("adds a junction table from a unique FK path before materializing the target table", async () => {
+    listExternalRelationships.mockImplementation(async (_schema, table, _projectId, targetTable) => {
+      if (table === "sc_articles" && targetTable === "sc_keywords") {
+        return {
+          items: [],
+          paths: [[
+            { name: "article_keywords_article", columnName: "id", referencedSchema: "scopus", referencedTable: "sc_article_keywords", referencedColumn: "article_id", direction: "incoming" },
+            { name: "article_keywords_keyword", columnName: "keyword_id", referencedSchema: "scopus", referencedTable: "sc_keywords", referencedColumn: "id", direction: "outgoing" },
+          ]],
+        };
+      }
+      return { items: [], paths: [] };
+    });
+    listExternalColumns.mockImplementation(async (_schema, table) => ({
+      items: table === "sc_article_keywords"
+        ? [
+            { name: "article_id", dataType: "bigint", nullable: false, primaryKey: false, foreignKeys: [] },
+            { name: "keyword_id", dataType: "bigint", nullable: false, primaryKey: false, foreignKeys: [] },
+          ]
+        : [
+            { name: "id", dataType: "bigint", nullable: false, primaryKey: true, foreignKeys: [] },
+            { name: "name", dataType: "text", nullable: false, primaryKey: false, foreignKeys: [] },
+          ],
+    }));
+    const { useDashboardDesignerState } = await import("@modules/dashboards/designer-v2/hooks/useDashboardDesignerState");
+    const { result } = renderHook(() => useDashboardDesignerState(), { wrapper: Wrapper });
+    await waitFor(() => expect(result.current.state.isLoading).toBe(false));
+
+    await act(async () => {
+      await result.current.actions.setSelectedTable("scopus", "sc_keywords");
+    });
+
+    expect(result.current.state.selectedTables.map((table) => table.table)).toEqual([
+      "sc_articles", "sc_article_keywords", "sc_keywords",
+    ]);
+    expect(result.current.state.datasetJoins).toHaveLength(2);
+    expect(previewExternalSource).toHaveBeenLastCalledWith(expect.objectContaining({
+      selectedTables: expect.arrayContaining([expect.objectContaining({ table: "sc_article_keywords" })]),
+    }), expect.anything());
+  });
 });

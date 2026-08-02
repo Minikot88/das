@@ -136,8 +136,11 @@ export function buildStructuredExternalQuery(input: StructuredExternalQuery, met
     if (!compatibleJoinTypes(leftColumn.dataType, rightColumn.dataType)) {
       fail('INCOMPATIBLE_JOIN_TYPES', `ฟิลด์ ${join.left.alias}.${join.left.column} (${leftColumn.dataType}) และ ${join.right.alias}.${join.right.column} (${rightColumn.dataType}) มี Physical Type ไม่เข้ากัน`);
     }
-    if (!connected.has(join.left.alias) && !connected.has(join.right.alias)) fail('DISCONNECTED_JOIN', 'Join must connect to an already selected table.');
-    const joiningAlias = connected.has(join.left.alias) ? join.right.alias : join.left.alias;
+    const leftConnected = connected.has(join.left.alias);
+    const rightConnected = connected.has(join.right.alias);
+    if (!leftConnected && !rightConnected) fail('DISCONNECTED_JOIN', 'Join must connect to an already selected table.');
+    if (leftConnected && rightConnected) fail('JOIN_CYCLE', 'A table can be joined only once; remove the join that creates a cycle.');
+    const joiningAlias = leftConnected ? join.right.alias : join.left.alias;
     const joiningTable = input.selectedTables.find(table => table.alias === joiningAlias);
     if (!joiningTable) fail('INVALID_TABLE_ALIAS', 'Join references an unknown table.');
     connected.add(join.left.alias);

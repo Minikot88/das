@@ -117,8 +117,9 @@ export async function listExternalTables(schemaName, projectId = activeProjectId
 export async function listExternalColumns(schemaName, tableName, projectId = activeProjectId()) {
   return apiRequest(`/api/v1/external-sources/${encodeApiPathSegment(schemaName)}/tables/${encodeApiPathSegment(tableName)}/columns?projectId=${encodeURIComponent(projectId)}`);
 }
-export async function listExternalRelationships(schemaName, tableName, projectId = activeProjectId()) {
-  return apiRequest(`/api/v1/external-sources/${encodeApiPathSegment(schemaName)}/tables/${encodeApiPathSegment(tableName)}/relationships?projectId=${encodeURIComponent(projectId)}`);
+export async function listExternalRelationships(schemaName, tableName, projectId = activeProjectId(), targetTable) {
+  const target = targetTable ? `&targetTable=${encodeURIComponent(targetTable)}` : "";
+  return apiRequest(`/api/v1/external-sources/${encodeApiPathSegment(schemaName)}/tables/${encodeApiPathSegment(tableName)}/relationships?projectId=${encodeURIComponent(projectId)}${target}`);
 }
 export async function listExternalMetadata(schemaName, tableName, projectId = activeProjectId()) {
   return apiRequest(`/api/v1/external-sources/${encodeApiPathSegment(schemaName)}/tables/${encodeApiPathSegment(tableName)}/metadata?projectId=${encodeURIComponent(projectId)}`);
