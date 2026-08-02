@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactGridLayout, { WidthProvider } from "react-grid-layout";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router";
 import ChartPreview from "@modules/dashboards/designer-v2/components/components/charts/ChartPreview";
 import { chartWidgetDensity } from "./chartWidgetDensity";
 import { normalizeDashboardChartFields, toDashboardMappingSlots } from "./chartMappingAdapter";

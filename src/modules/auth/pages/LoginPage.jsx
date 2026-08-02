@@ -1,5 +1,5 @@
 ﻿import React, { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router";
 import { forgotPassword, login as loginApi, resetPassword as resetPasswordApi } from "@modules/auth/api/authApi";
 import { isMockMode } from "@infrastructure/http/client";
 import { useI18n } from "@shared/lib/i18n";

@@ -1,7 +1,7 @@
 import React, { Suspense, lazy } from "react";
 import { Alert, Box, Button, CssBaseline, Drawer, GlobalStyles, Skeleton, Snackbar, Stack, ThemeProvider, useMediaQuery } from "@mui/material";
 import { shouldRenderDesignerPreview } from "@modules/dashboards/designer-v2/components/utils/designerLayout";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { DndProvider } from "react-dnd";
 import BottomStatus from "@modules/dashboards/designer-v2/components/BottomStatus";

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation } from "react-router";
 import AppHeader from "@app/layouts/AppHeader";
 import SidebarRight from "@app/layouts/SidebarRight";
 import { useStore } from "@app/store/useStore";

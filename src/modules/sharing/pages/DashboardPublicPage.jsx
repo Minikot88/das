@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useMemo } from "react";
-import { useLocation, useParams } from "react-router-dom";
+import { useLocation, useParams } from "react-router";
 import { useState } from "react";
 import { DashboardGrid } from "@modules/dashboards/public/legacyDashboard";
 import { findDashboardContextById } from "@modules/dashboards/public/workspace";

@@ -40,7 +40,7 @@ import {
   consumeStorageRecoveryMessage,
   safeSetLocalStorage,
 } from "@infrastructure/persistence/project-storage/projectStorage";
-import { useLocation } from "react-router-dom";
+import { useLocation } from "react-router";
 import { isMockMode } from "@infrastructure/http/client";
 import { getChartById, createChart, updateChart } from "@modules/charts/public/api";
 import {

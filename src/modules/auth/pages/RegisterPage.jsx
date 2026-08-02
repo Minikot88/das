@@ -1,5 +1,5 @@
 ﻿import React, { useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import { register as registerApi } from "@modules/auth/api/authApi";
 import { useI18n } from "@shared/lib/i18n";
 

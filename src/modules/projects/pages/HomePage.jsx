@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { PageContainer } from "@app/layouts/Layout";
 import Button from "@shared/components/ui/Button";
 import EmptyState from "@shared/components/ui/EmptyState";
