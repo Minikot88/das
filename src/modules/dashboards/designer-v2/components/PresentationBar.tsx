@@ -16,7 +16,7 @@ type PresentationBarProps = {
   onExit: () => void;
   onDeviceChange: (mode: DeviceMode) => void;
   onZoomChange: (zoom: number) => void;
-  onShare: () => void;
+  onShare?: () => void;
   onExportPng: () => void;
 };
 
@@ -68,9 +68,9 @@ function PresentationBar({ deviceMode, zoom, onExit, onDeviceChange, onZoomChang
             </IconButton>
           </Tooltip>
         </ButtonGroup>
-        <Button variant="outlined" size="small" startIcon={<ShareRoundedIcon />} onClick={onShare} sx={{ height: 28, minHeight: 28 }}>
+        {onShare ? <Button variant="outlined" size="small" startIcon={<ShareRoundedIcon />} onClick={onShare} sx={{ height: 28, minHeight: 28 }}>
           แชร์
-        </Button>
+        </Button> : null}
         <Button variant="contained" size="small" startIcon={<DownloadRoundedIcon />} onClick={onExportPng} sx={{ height: 28, minHeight: 28 }}>
           PNG
         </Button>

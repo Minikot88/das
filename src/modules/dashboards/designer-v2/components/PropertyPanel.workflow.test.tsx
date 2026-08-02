@@ -52,7 +52,6 @@ function renderPanel(chartConfig = config(), onSettingsChange = vi.fn()) {
       onSettingsChange={onSettingsChange}
       onSave={vi.fn()}
       onPreview={vi.fn()}
-      onShare={vi.fn()}
       onExportJson={vi.fn()}
       onExportCsv={vi.fn()}
       onExportPng={vi.fn()}
@@ -73,6 +72,7 @@ describe("PropertyPanel workflow", () => {
     expect(screen.getByText("X Axis · city")).toBeInTheDocument();
     expect(screen.getByText("Y Axis · Count(id)")).toBeInTheDocument();
     expect(screen.getAllByText("scopus.sc_affiliations")).toHaveLength(2);
+    expect(screen.queryByLabelText(/แชร์กราฟ/)).not.toBeInTheDocument();
   });
 
   it("switches an automatic axis title to custom and can reset it", async () => {
