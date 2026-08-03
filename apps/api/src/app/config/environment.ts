@@ -86,6 +86,9 @@ export function parseEnvironment(input: NodeJS.ProcessEnv | Record<string, strin
   const authAllowedAlgorithms = String(input.AUTH_ALLOWED_ALGORITHMS || (nodeEnv === 'production' ? '' : 'RS256')).split(',').map(value => value.trim()).filter(Boolean);
   const authClockSkewSeconds = parseBoundedInteger('AUTH_CLOCK_SKEW_SECONDS', input.AUTH_CLOCK_SKEW_SECONDS, 60, 0, 300);
   if (authMode === 'external' && (!authExternalProvider || !authJwksUrl || !authIssuer || !authAudience || !authAllowedAlgorithms.length)) throw new Error('External authentication requires AUTH_EXTERNAL_PROVIDER, AUTH_JWKS_URL, AUTH_ISSUER, AUTH_AUDIENCE, and AUTH_ALLOWED_ALGORITHMS');
+  if (nodeEnv === 'production' && authMode === 'external' && (!input.AUTH_ORGANIZATION_CLAIM?.trim() || (!input.AUTH_ROLES_CLAIM?.trim() && !input.AUTH_SCOPES_CLAIM?.trim()))) {
+    throw new Error('External authentication requires AUTH_ORGANIZATION_CLAIM and AUTH_ROLES_CLAIM or AUTH_SCOPES_CLAIM in production');
+  }
   if (authMode === 'external' && authAllowedAlgorithms.some(value => !/^RS(256|384|512)$/.test(value))) throw new Error('AUTH_ALLOWED_ALGORITHMS must contain only allowed asymmetric RS algorithms');
   if (authJwksUrl) {
     let url: URL;

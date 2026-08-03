@@ -1,25 +1,35 @@
 const USE_MOCK = import.meta.env.VITE_USE_MOCK !== "false";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 const API_TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT_MS || 15000);
-const INTERNAL_SINGLE_USER = import.meta.env.VITE_INTERNAL_SINGLE_USER === "true";
+let accessTokenProvider = null;
 
 export function isMockMode() {
   return USE_MOCK;
 }
 
-export function isInternalSingleUserMode() {
-  return INTERNAL_SINGLE_USER;
+export function setExternalAccessTokenProvider(provider) {
+  if (provider !== null && typeof provider !== "function") {
+    throw new TypeError("External access token provider must be a function or null.");
+  }
+  accessTokenProvider = provider;
 }
 
 export function encodeApiPathSegment(value) {
   return encodeURIComponent(String(value));
 }
 
-export function csrfHeaderForRequest(method = "GET") {
-  if (["GET", "HEAD", "OPTIONS"].includes(String(method).toUpperCase()) || typeof document === "undefined") return {};
-  const entry = String(document.cookie || "").split(";").map((part) => part.trim()).find((part) => part.startsWith("mini_bi_csrf="));
-  const token = entry ? decodeURIComponent(entry.slice("mini_bi_csrf=".length)) : "";
-  return token ? { "X-CSRF-Token": token } : {};
+async function authorizationHeader() {
+  const hostProvider = typeof globalThis.dashboardMiniBiAuth?.getAccessToken === "function"
+    ? () => globalThis.dashboardMiniBiAuth.getAccessToken()
+    : null;
+  const provider = accessTokenProvider || hostProvider;
+  if (!provider) return {};
+  const token = await provider();
+  if (token === null || token === undefined || token === "") return {};
+  if (typeof token !== "string" || token.length > 16_384 || !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(token)) {
+    throw new Error("The external session did not provide a valid JWT.");
+  }
+  return { Authorization: `Bearer ${token}` };
 }
 
 async function parseResponseBody(response) {
@@ -37,16 +47,17 @@ export async function apiRequest(path, options = {}) {
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), API_TIMEOUT_MS);
   const signal = options.signal ? AbortSignal.any([options.signal, controller.signal]) : controller.signal;
-  const headers = {
-    ...(options.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
-    ...csrfHeaderForRequest(options.method),
-    ...options.headers,
-  };
+  const { headers: optionHeaders, signal: _callerSignal, ...fetchOptions } = options;
 
   try {
+    const headers = {
+      ...(options.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
+      ...optionHeaders,
+      ...(await authorizationHeader()),
+    };
     const response = await fetch(`${API_BASE_URL}${path}`, {
-      credentials: "same-origin",
-      ...options,
+      credentials: "omit",
+      ...fetchOptions,
       headers,
       signal,
     });

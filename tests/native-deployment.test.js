@@ -20,6 +20,7 @@ describe('native server deployment tooling', () => {
     expect(deploy).toContain('ln -sfn');
     expect(deploy).toContain('prisma migrate deploy');
     expect(deploy).toContain('VITE_USE_MOCK=false npm run build');
+    expect(deploy).toContain('validate-auth-environment.mjs');
     expect(deploy).toContain('apply-database-grants.sh');
     expect(deploy).toContain('harden-database-owner.sh');
     expect(deploy).toContain('verify-native.sh');
@@ -65,9 +66,11 @@ describe('native server deployment tooling', () => {
     const env = read('.env.native.example');
     expect(env).toContain('APP_ENV=production');
     expect(env).toContain('DEPLOYMENT_ENV=staging');
-    expect(env).toContain('AUTH_PROVIDER=database');
-    expect(env).toContain('COOKIE_SECURE=true');
-    expect(env).toContain('PUBLIC_REGISTRATION_ENABLED=false');
+    expect(env).toContain('AUTH_MODE=external');
+    expect(env).toContain('AUTH_JWKS_URL=');
+    expect(env).toContain('AUTH_ISSUER=');
+    expect(env).toContain('AUTH_AUDIENCE=dashboardmini');
+    expect(env).toContain('VITE_EXTERNAL_SESSION_REQUIRED_URL=');
     expect(env).toContain('SMTP_ENABLED=false');
     expect(env).not.toMatch(/postgresql:\/\/[^:]+:[^<\n]+@/);
   });

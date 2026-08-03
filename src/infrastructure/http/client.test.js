@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { apiRequest, encodeApiPathSegment, csrfHeaderForRequest } from "./client";
+import { apiRequest, encodeApiPathSegment, setExternalAccessTokenProvider } from "./client";
 
 afterEach(() => {
+  setExternalAccessTokenProvider(null);
+  delete globalThis.dashboardMiniBiAuth;
   vi.useRealTimers();
   vi.restoreAllMocks();
 });
@@ -24,20 +26,50 @@ describe("encodeApiPathSegment", () => {
   });
 });
 
-describe("CSRF request protection", () => {
-  it("copies the CSRF cookie into mutation headers but not safe reads", () => {
-    Object.defineProperty(document, "cookie", { configurable: true, writable: true, value: "mini_bi_csrf=csrf%20value; theme=light" });
-    expect(csrfHeaderForRequest("POST")).toEqual({ "X-CSRF-Token": "csrf value" });
-    expect(csrfHeaderForRequest("GET")).toEqual({});
+describe("external bearer transport", () => {
+  it("gets a JWT from the in-memory host adapter without persisting or decoding it", async () => {
+    const token = "eyJhbGciOiJSUzI1NiIsImtpZCI6ImtleS0xIn0.eyJzdWIiOiJ1c2VyLTEifQ.signature";
+    const provider = vi.fn().mockResolvedValue(token);
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ data: { ok: true } }), { status: 200 }));
+    setExternalAccessTokenProvider(provider);
+
+    await apiRequest("/api/session/me");
+
+    expect(provider).toHaveBeenCalledTimes(1);
+    expect(fetchSpy).toHaveBeenCalledWith("/api/session/me", expect.objectContaining({
+      credentials: "omit",
+      headers: expect.objectContaining({ Authorization: `Bearer ${token}` }),
+    }));
+    expect(JSON.stringify(window.localStorage)).not.toContain(token);
+    expect(JSON.stringify(window.sessionStorage)).not.toContain(token);
+  });
+
+  it("rejects malformed host tokens before making a request", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    setExternalAccessTokenProvider(() => "not-a-jwt");
+    await expect(apiRequest("/api/session/me")).rejects.toThrow(/valid JWT/i);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("does not let request options replace the verified host bearer token", async () => {
+    const token = "eyJhbGciOiJSUzI1NiIsImtpZCI6ImtleS0xIn0.eyJzdWIiOiJ1c2VyLTEifQ.signature";
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ data: { ok: true } }), { status: 200 }));
+    setExternalAccessTokenProvider(() => token);
+
+    await apiRequest("/api/session/me", { headers: { Authorization: "Bearer caller-controlled" } });
+
+    expect(fetchSpy).toHaveBeenCalledWith("/api/session/me", expect.objectContaining({
+      headers: expect.objectContaining({ Authorization: `Bearer ${token}` }),
+    }));
   });
 });
 
 describe("HTTP response and cancellation contract", () => {
-  it("unwraps successful envelopes and sends same-origin credentials", async () => {
+  it("unwraps successful envelopes without sending cookie credentials", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ data: { id: "project-1" }, requestId: "request-1" }), { status: 200 }));
 
     await expect(apiRequest("/api/v1/projects")).resolves.toEqual({ id: "project-1" });
-    expect(fetchSpy).toHaveBeenCalledWith("/api/v1/projects", expect.objectContaining({ credentials: "same-origin" }));
+    expect(fetchSpy).toHaveBeenCalledWith("/api/v1/projects", expect.objectContaining({ credentials: "omit" }));
   });
 
   it("maps API errors and broadcasts only authentication expiry", async () => {

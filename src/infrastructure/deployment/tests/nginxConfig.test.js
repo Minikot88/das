@@ -12,22 +12,17 @@ const workflowPath = path.resolve(process.cwd(), ".github/workflows/frontend-che
 const dockerfilePath = path.resolve(process.cwd(), "Dockerfile");
 const dockerignorePath = path.resolve(process.cwd(), ".dockerignore");
 const envExamplePath = path.resolve(process.cwd(), ".env.example");
-const loginPagePath = path.resolve(process.cwd(), "src/modules/auth/pages/LoginPage.jsx");
 const apiDockerfilePath = path.resolve(process.cwd(), "apps/api/Dockerfile");
 const backupScriptPath = path.resolve(process.cwd(), "infrastructure/database/backup.ps1");
 const restoreScriptPath = path.resolve(process.cwd(), "infrastructure/database/restore.ps1");
 
 describe("nginx static frontend configuration", () => {
-  it("keeps the Docker development credential aligned with the login screen", () => {
+  it("does not ship built-in development credentials or login UI", () => {
     const compose = readFileSync(composePath, "utf8");
-    const loginPage = readFileSync(loginPagePath, "utf8");
-    const displayedEmail = loginPage.match(/setEmail\("([^"]+)"\)/)?.[1];
-    const displayedPassword = loginPage.match(/setPassword\("([^"]+)"\)/)?.[1];
-
-    expect(displayedEmail).toBeTruthy();
-    expect(displayedPassword).toBeTruthy();
-    expect(compose).toContain(`DEVELOPMENT_AUTH_EMAIL: \${DEVELOPMENT_AUTH_EMAIL:-${displayedEmail}}`);
-    expect(compose).toContain(`DEVELOPMENT_AUTH_PASSWORD: \${DEVELOPMENT_AUTH_PASSWORD:-${displayedPassword}}`);
+    expect(compose).not.toContain("DEVELOPMENT_AUTH_EMAIL");
+    expect(compose).not.toContain("DEVELOPMENT_AUTH_PASSWORD");
+    expect(compose).toContain("AUTH_MODE:");
+    expect(compose).toContain("INTERNAL_SINGLE_USER_ID:");
   });
 
   it("applies security and cache headers from one inheritable server scope", () => {
@@ -103,6 +98,7 @@ describe("nginx static frontend configuration", () => {
 
     expect(envExample).not.toContain("https://api.example.com");
     expect(envExample).toContain("same-origin");
+    expect(envExample).toContain("VITE_EXTERNAL_SESSION_REQUIRED_URL");
   });
 
   it("pins container base images to immutable manifest digests", () => {

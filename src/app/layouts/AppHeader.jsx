@@ -12,7 +12,7 @@ import {
 } from "@infrastructure/persistence/project-storage/projectStorage";
 import { createBuilderContextForDashboard } from "@modules/dashboards/lib/dashboardWorkspace";
 import { getStorageHealth, subscribeStorageHealth } from "@infrastructure/persistence/workspace-ui/storage";
-import { logout as logoutApi } from "@modules/auth/api/authApi";
+import { useSession } from "@modules/session/sessionContext";
 import {
   API_ACTIVE_PROJECT_KEY,
   getProjects as getApiProjects,
@@ -519,7 +519,7 @@ function RibbonIcon({ name }) {
 export default function AppHeader() {
   const theme = useStore((s) => s.theme);
   const toggleTheme = useStore((s) => s.toggleTheme);
-  const user = useStore((s) => s.user);
+  const { session } = useSession();
   const projects = useStore((s) => s.projects);
   const activeProjectId = useStore((s) => s.activeProjectId);
   const activeSheetId = useStore((s) => s.activeSheetId);
@@ -922,11 +922,6 @@ export default function AppHeader() {
     };
   }, [openCommandPalette]);
 
-  async function handleLogout() {
-    try { await logoutApi(); }
-    finally { navigate("/login", { replace: true }); }
-  }
-
   function handleNewProject() {
     const createButton = document.getElementById("create-project-btn");
     if (createButton) {
@@ -1137,11 +1132,12 @@ export default function AppHeader() {
             >
               <ThemeIcon theme={theme} />
             </button>
-            {user ? (
-              <button type="button" className="appbar-user mini-bi-user" onClick={handleLogout} title="ออกจากระบบ">
-                <div className="avatar-circle">{user.name?.[0]?.toUpperCase() ?? "U"}</div>
+            {session ? (
+              <button type="button" className="appbar-user mini-bi-user" onClick={() => navigateToPage("/settings")} title={`${session.displayName || "User"} · managed by external session`}>
+                <div className="avatar-circle">{session.displayName?.[0]?.toUpperCase() ?? "U"}</div>
               </button>
             ) : null}
+            {import.meta.env.DEV && session?.authMode === "disabled" ? <span className="mini-bi-local-mode">Local mode</span> : null}
             <button type="button" className="mini-bi-primary-cta" onClick={handleNewProject}>
               <span aria-hidden="true">+</span>
               <span>โปรเจกต์ใหม่</span>

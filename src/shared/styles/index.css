@@ -6248,3 +6248,53 @@ body,
     z-index: 1 !important;
   }
 }
+.external-session-state {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--app-bg);
+  color: var(--text);
+}
+
+.external-session-state > section {
+  width: min(100%, 520px);
+  padding: 32px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+}
+
+.external-session-kicker {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.external-session-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.external-session-actions button,
+.external-session-actions a {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: inherit;
+  background: var(--surface);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.mini-bi-local-mode {
+  white-space: nowrap;
+  font-size: 0.75rem;
+  color: var(--muted);
+}

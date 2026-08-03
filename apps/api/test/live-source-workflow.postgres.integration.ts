@@ -26,8 +26,6 @@ describe('live PostgreSQL source workflow', () => {
       DATABASE_URL: process.env.DATABASE_URL,
       EXTERNAL_SOURCE_SCHEMAS: 'scopus',
       CORS_ORIGINS: origin,
-      COOKIE_SECURE: 'false',
-      SESSION_SIGNING_KEY: randomBytes(32).toString('base64'),
       SECRET_MASTER_KEY: randomBytes(32).toString('base64'),
       FILE_STORAGE_PATH: storagePath,
     });

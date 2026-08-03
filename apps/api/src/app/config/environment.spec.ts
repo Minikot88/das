@@ -6,7 +6,8 @@ describe('parseEnvironment', () => {
     NODE_ENV: 'production', AUTH_MODE: 'external', AUTH_EXTERNAL_PROVIDER: 'main-website',
     AUTH_JWKS_URL: 'https://identity.triup-psu.space/.well-known/jwks.json',
     AUTH_ISSUER: 'https://identity.triup-psu.space', AUTH_AUDIENCE: 'dashboardmini',
-    AUTH_ALLOWED_ALGORITHMS: 'RS256', DATABASE_URL: 'postgresql://app:secret@postgres/app',
+    AUTH_ALLOWED_ALGORITHMS: 'RS256', AUTH_ORGANIZATION_CLAIM: 'org_id', AUTH_ROLES_CLAIM: 'roles',
+    DATABASE_URL: 'postgresql://app:secret@postgres/app',
     APP_DOMAIN: 'dashboard.example.test', APP_URL: 'https://dashboard.example.test',
     CORS_ALLOWED_ORIGINS: 'https://dashboard.example.test',
     SECRET_ENCRYPTION_KEY: Buffer.alloc(32, 99).toString('base64'),
@@ -33,6 +34,8 @@ describe('parseEnvironment', () => {
       AUTH_ISSUER: 'https://identity.triup-psu.space',
       AUTH_AUDIENCE: 'dashboardmini',
       AUTH_ALLOWED_ALGORITHMS: 'RS256',
+      AUTH_ORGANIZATION_CLAIM: 'org_id',
+      AUTH_ROLES_CLAIM: 'roles',
     })).toThrow('DATABASE_URL');
   });
 
@@ -72,6 +75,8 @@ describe('parseEnvironment', () => {
     for (const name of ['AUTH_EXTERNAL_PROVIDER', 'AUTH_JWKS_URL', 'AUTH_ISSUER', 'AUTH_AUDIENCE', 'AUTH_ALLOWED_ALGORITHMS'] as const) {
       expect(() => parseEnvironment({ ...base, [name]: undefined })).toThrow(/External authentication requires/);
     }
+    expect(() => parseEnvironment({ ...base, AUTH_ORGANIZATION_CLAIM: undefined })).toThrow(/AUTH_ORGANIZATION_CLAIM/);
+    expect(() => parseEnvironment({ ...base, AUTH_ROLES_CLAIM: undefined, AUTH_SCOPES_CLAIM: undefined })).toThrow(/AUTH_ROLES_CLAIM or AUTH_SCOPES_CLAIM/);
     expect(() => parseEnvironment({ ...base, AUTH_ALLOWED_ALGORITHMS: 'HS256' })).toThrow(/asymmetric RS algorithms/i);
     expect(() => parseEnvironment({ ...base, AUTH_JWKS_URL: 'http://identity.triup-psu.space/jwks' })).toThrow(/HTTPS/i);
     expect(() => parseEnvironment({ ...base, AUTH_ISSUER: 'https://placeholder.example' })).toThrow(/placeholder/i);

@@ -15,6 +15,7 @@ set -a
 # shellcheck disable=SC1090
 source "$project_root/shared/backend.env"
 set +a
+node "$release_dir/scripts/validate-auth-environment.mjs"
 npm --prefix apps/api run prisma:generate
 VITE_USE_MOCK=false npm run build
 npm --prefix apps/api run build

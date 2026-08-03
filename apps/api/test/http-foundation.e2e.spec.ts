@@ -15,7 +15,6 @@ describe('HTTP foundation', () => {
       AUTH_ISSUER: 'https://identity.test.local',
       AUTH_AUDIENCE: 'dashboardmini',
       AUTH_ALLOWED_ALGORITHMS: 'RS256',
-      SESSION_SIGNING_KEY: randomBytes(32).toString('base64'),
       SECRET_MASTER_KEY: randomBytes(32).toString('base64'),
       DATABASE_URL: 'postgresql://dashboard:dashboard@127.0.0.1:5432/dashboard_mini_bi',
     });
