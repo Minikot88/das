@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Inject, Param, Post, Put, Res, UseGuards } from '@nestjs/common';
 import type { FastifyReply } from 'fastify';
 import { CurrentPrincipal } from '../../auth/application/current-principal.js';
 import { SessionGuard } from '../../auth/application/session.guard.js';
@@ -8,7 +8,7 @@ import { WorkspaceDataService } from '../application/workspace-data.service.js';
 @Controller('api')
 @UseGuards(SessionGuard)
 export class LegacyWorkspaceController {
-  constructor(private readonly data: WorkspaceDataService) {}
+  constructor(@Inject(WorkspaceDataService) private readonly data: WorkspaceDataService) {}
   @Get('chart-types') async types(@Res() reply: FastifyReply) { return reply.send(await this.data.getChartTypes()); }
   @Get('chart-templates') async templates(@Res() reply: FastifyReply) { return reply.send(await this.data.getChartTemplates()); }
   @Get('chart-templates/:id') async template(@Param('id') id: string, @Res() reply: FastifyReply) { return reply.send(await this.data.getChartTemplate(id)); }

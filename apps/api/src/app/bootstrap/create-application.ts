@@ -1,5 +1,4 @@
 import 'reflect-metadata';
-import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import multipart from '@fastify/multipart';
@@ -32,7 +31,6 @@ export async function createApplication(input: NodeJS.ProcessEnv | Record<string
     bodyLimit: 6 * 1024 * 1024,
     trustProxy: ['loopback', 'linklocal', 'uniquelocal'],
   }), { logger });
-  await app.register(cookie, { secret: environment.cookieSecret || environment.sessionSigningKey });
   await app.register(helmet, securityHeadersOptions);
   await app.register(cors, { origin: environment.corsOrigins, credentials: true });
   await app.register(rateLimit, { max: 300, timeWindow: '1 minute' });

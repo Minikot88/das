@@ -13,7 +13,11 @@ type JsonObject = Record<string, unknown>;
 
 @Injectable()
 export class SharingService {
-  constructor(private readonly prisma: PrismaService, private readonly authorization: AuthorizationService, private readonly external: ExternalSourcesService) {}
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(AuthorizationService) private readonly authorization: AuthorizationService,
+    @Inject(ExternalSourcesService) private readonly external: ExternalSourcesService,
+  ) {}
 
   private async accessibleDashboard(principal: RequestPrincipal, dashboardId: string) {
     const memberships = (await this.prisma.biProjectMember.findMany({ where: { organizationId: principal.organizationId, userId: principal.userId }, select: { projectId: true } })).map(item => item.projectId);

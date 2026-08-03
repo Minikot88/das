@@ -1,17 +1,22 @@
 const REQUIRED_KEY_BYTES = 32;
 const DEVELOPMENT_MASTER_KEY = Buffer.alloc(32, 97).toString('base64');
-const DEVELOPMENT_SESSION_KEY = Buffer.alloc(32, 98).toString('base64');
 const LOG_LEVELS = ['error', 'warn', 'info', 'debug'] as const;
 
 export type RuntimeEnvironment = {
   nodeEnv: 'development' | 'test' | 'production';
-  authProvider: 'database' | 'development' | 'external';
+  authMode: 'external' | 'disabled';
+  authExternalProvider: string;
+  authJwksUrl?: string;
+  authIssuer?: string;
+  authAudience?: string;
+  authAllowedAlgorithms: string[];
+  authClockSkewSeconds: number;
+  authOrganizationClaim: string;
+  authRolesClaim: string;
+  authScopesClaim: string;
   internalSingleUserId?: string;
   secretMasterKey?: string;
   databaseUrl?: string;
-  developmentAuthEmail?: string;
-  developmentAuthPassword?: string;
-  sessionSigningKey?: string;
   corsOrigins: string[];
   port: number;
   fileStoragePath: string;
@@ -22,16 +27,8 @@ export type RuntimeEnvironment = {
   logLevel: typeof LOG_LEVELS[number];
   connectorNetworkAllowlist: string[];
   externalSourceSchemas: string[];
-  cookieSecure: boolean;
-  publicRegistrationEnabled: boolean;
-  sessionIdleTimeoutSeconds: number;
-  sessionAbsoluteTimeoutSeconds: number;
-  passwordResetTimeoutSeconds: number;
-  invitationTimeoutSeconds: number;
   appDomain?: string;
   appUrl?: string;
-  cookieSecret?: string;
-  csrfSecret?: string;
   smtp: {
     enabled: boolean;
     host?: string;
@@ -73,17 +70,36 @@ function parseBoolean(name: string, rawValue: string | undefined, fallback: bool
 
 export function parseEnvironment(input: NodeJS.ProcessEnv | Record<string, string | undefined>): RuntimeEnvironment {
   const nodeEnv = (input.APP_ENV || input.NODE_ENV || 'development') as RuntimeEnvironment['nodeEnv'];
-  const authProvider = (input.AUTH_PROVIDER || 'development') as RuntimeEnvironment['authProvider'];
+  const authMode = (input.AUTH_MODE || 'disabled') as RuntimeEnvironment['authMode'];
   const internalSingleUserId = input.INTERNAL_SINGLE_USER_ID?.trim();
   const databaseUrlValue = input.DATABASE_URL;
   const secretMasterKeyValue = input.SECRET_ENCRYPTION_KEY || input.SECRET_MASTER_KEY;
-  const sessionSigningKeyValue = input.SESSION_SECRET || input.SESSION_SIGNING_KEY;
   const corsOriginsValue = input.CORS_ALLOWED_ORIGINS || input.CORS_ORIGINS;
 
   if (!['development', 'test', 'production'].includes(nodeEnv)) throw new Error(`Unsupported NODE_ENV: ${nodeEnv}`);
-  if (!['database', 'development', 'external'].includes(authProvider)) throw new Error(`Unsupported AUTH_PROVIDER: ${authProvider}`);
-  if (nodeEnv === 'production' && authProvider === 'development') {
-    throw new Error('Development authentication is forbidden in production');
+  if (!['external', 'disabled'].includes(authMode)) throw new Error(`Unsupported AUTH_MODE: ${authMode}`);
+  if (nodeEnv === 'production' && authMode === 'disabled') throw new Error('AUTH_MODE=disabled is forbidden in production');
+  const authExternalProvider = String(input.AUTH_EXTERNAL_PROVIDER || (nodeEnv === 'production' ? '' : 'main-website')).trim();
+  const authJwksUrl = input.AUTH_JWKS_URL?.trim();
+  const authIssuer = input.AUTH_ISSUER?.trim();
+  const authAudience = input.AUTH_AUDIENCE?.trim() || (nodeEnv === 'production' ? undefined : 'dashboardmini');
+  const authAllowedAlgorithms = String(input.AUTH_ALLOWED_ALGORITHMS || (nodeEnv === 'production' ? '' : 'RS256')).split(',').map(value => value.trim()).filter(Boolean);
+  const authClockSkewSeconds = parseBoundedInteger('AUTH_CLOCK_SKEW_SECONDS', input.AUTH_CLOCK_SKEW_SECONDS, 60, 0, 300);
+  if (authMode === 'external' && (!authExternalProvider || !authJwksUrl || !authIssuer || !authAudience || !authAllowedAlgorithms.length)) throw new Error('External authentication requires AUTH_EXTERNAL_PROVIDER, AUTH_JWKS_URL, AUTH_ISSUER, AUTH_AUDIENCE, and AUTH_ALLOWED_ALGORITHMS');
+  if (authMode === 'external' && authAllowedAlgorithms.some(value => !/^RS(256|384|512)$/.test(value))) throw new Error('AUTH_ALLOWED_ALGORITHMS must contain only allowed asymmetric RS algorithms');
+  if (authJwksUrl) {
+    let url: URL;
+    try { url = new URL(authJwksUrl); } catch { throw new Error('AUTH_JWKS_URL must be a valid URL'); }
+    if (!['http:', 'https:'].includes(url.protocol)) throw new Error('AUTH_JWKS_URL must use HTTP(S)');
+    if (nodeEnv === 'production' && url.protocol !== 'https:') throw new Error('AUTH_JWKS_URL must use HTTPS in production');
+  }
+  if (nodeEnv === 'production' && authIssuer && /example|placeholder|change[-_]?me/i.test(authIssuer)) throw new Error('AUTH_ISSUER cannot use a placeholder value in production');
+  for (const [name, value] of [
+    ['AUTH_ORGANIZATION_CLAIM', input.AUTH_ORGANIZATION_CLAIM || 'org_id'],
+    ['AUTH_ROLES_CLAIM', input.AUTH_ROLES_CLAIM || 'roles'],
+    ['AUTH_SCOPES_CLAIM', input.AUTH_SCOPES_CLAIM || 'scopes'],
+  ]) {
+    if (!/^[A-Za-z_][A-Za-z0-9_.-]{0,79}$/.test(value)) throw new Error(`${name} must be a valid JWT claim name`);
   }
   if (nodeEnv === 'production' && internalSingleUserId) throw new Error('INTERNAL_SINGLE_USER_ID is forbidden in production');
 
@@ -95,7 +111,6 @@ export function parseEnvironment(input: NodeJS.ProcessEnv | Record<string, strin
 
   if (nodeEnv === 'production' && !databaseUrlValue) throw new Error('DATABASE_URL is required in production');
   if (nodeEnv === 'production' && !secretMasterKeyValue) throw new Error('SECRET_MASTER_KEY or SECRET_ENCRYPTION_KEY is required in production');
-  if (nodeEnv === 'production' && !sessionSigningKeyValue) throw new Error('SESSION_SIGNING_KEY or SESSION_SECRET is required in production');
 
   if (databaseUrlValue) {
     let databaseUrl: URL;
@@ -117,14 +132,6 @@ export function parseEnvironment(input: NodeJS.ProcessEnv | Record<string, strin
     }
   }
 
-  const sessionSigningKey = sessionSigningKeyValue;
-  if (sessionSigningKey) {
-    const decoded = Buffer.from(sessionSigningKey, 'base64');
-    if (decoded.length < 32) throw new Error('SESSION_SIGNING_KEY must decode to at least 32 bytes');
-    if (nodeEnv === 'production' && decoded.equals(Buffer.from(DEVELOPMENT_SESSION_KEY, 'base64'))) {
-      throw new Error('The development SESSION_SIGNING_KEY is forbidden in production');
-    }
-  }
   const port = Number(input.PORT || 3000);
   if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('PORT must be a valid TCP port');
 
@@ -133,14 +140,8 @@ export function parseEnvironment(input: NodeJS.ProcessEnv | Record<string, strin
   const logLevel = String(input.LOG_LEVEL || 'info') as RuntimeEnvironment['logLevel'];
   if (!LOG_LEVELS.includes(logLevel)) throw new Error(`LOG_LEVEL must be one of: ${LOG_LEVELS.join(', ')}`);
 
-  const cookieSecure = parseBoolean('COOKIE_SECURE', input.COOKIE_SECURE, nodeEnv === 'production');
-  const publicRegistrationEnabled = parseBoolean('PUBLIC_REGISTRATION_ENABLED', input.PUBLIC_REGISTRATION_ENABLED, false);
-  if (nodeEnv === 'production' && !cookieSecure) throw new Error('Secure cookie is required in production');
-  if (nodeEnv === 'production' && publicRegistrationEnabled) throw new Error('Public registration is forbidden by the production default policy');
   const appDomain = input.APP_DOMAIN?.trim();
   const appUrl = input.APP_URL?.trim();
-  const cookieSecret = input.COOKIE_SECRET;
-  const csrfSecret = input.CSRF_SECRET;
   if (nodeEnv === 'production' && !appDomain) throw new Error('APP_DOMAIN is required in production');
   if (appDomain && !/^[a-z0-9.-]+(?::\d+)?$/i.test(appDomain)) throw new Error('APP_DOMAIN must be a hostname with an optional port');
   if (nodeEnv === 'production' && !appUrl) throw new Error('APP_URL is required in production');
@@ -149,11 +150,6 @@ export function parseEnvironment(input: NodeJS.ProcessEnv | Record<string, strin
     try { parsed = new URL(appUrl); } catch { throw new Error('APP_URL must be a valid URL'); }
     if (nodeEnv === 'production' && parsed.protocol !== 'https:') throw new Error('APP_URL must use HTTPS in production');
     if (appDomain && parsed.host !== appDomain) throw new Error('APP_URL host must match APP_DOMAIN');
-  }
-  if (nodeEnv === 'production') {
-    assertSecret('COOKIE_SECRET', cookieSecret);
-    assertSecret('CSRF_SECRET', csrfSecret);
-    if (new Set([sessionSigningKey, cookieSecret, csrfSecret, secretMasterKey]).size !== 4) throw new Error('Production secrets must be independent');
   }
   const smtpEnabled = parseBoolean('SMTP_ENABLED', input.SMTP_ENABLED, false);
   const smtpSecure = parseBoolean('SMTP_SECURE', input.SMTP_SECURE, false);
@@ -167,19 +163,21 @@ export function parseEnvironment(input: NodeJS.ProcessEnv | Record<string, strin
   const metricsEnabled = parseBoolean('METRICS_ENABLED', input.METRICS_ENABLED, false);
   const metricsToken = input.METRICS_TOKEN;
   if (nodeEnv === 'production' && metricsEnabled) assertSecret('METRICS_TOKEN', metricsToken);
-  const sessionIdleTimeoutSeconds = parseBoundedInteger('SESSION_IDLE_TIMEOUT_SECONDS', input.SESSION_IDLE_TIMEOUT_SECONDS, 1_800, 300, 86_400);
-  const sessionAbsoluteTimeoutSeconds = parseBoundedInteger('SESSION_ABSOLUTE_TIMEOUT_SECONDS', input.SESSION_ABSOLUTE_TIMEOUT_SECONDS, 604_800, 3_600, 2_592_000);
-  if (sessionAbsoluteTimeoutSeconds <= sessionIdleTimeoutSeconds) throw new Error('SESSION_ABSOLUTE_TIMEOUT_SECONDS must exceed SESSION_IDLE_TIMEOUT_SECONDS');
-
   return {
     nodeEnv,
-    authProvider,
+    authMode,
+    authExternalProvider,
+    authJwksUrl,
+    authIssuer,
+    authAudience,
+    authAllowedAlgorithms,
+    authClockSkewSeconds,
+    authOrganizationClaim: String(input.AUTH_ORGANIZATION_CLAIM || 'org_id'),
+    authRolesClaim: String(input.AUTH_ROLES_CLAIM || 'roles'),
+    authScopesClaim: String(input.AUTH_SCOPES_CLAIM || 'scopes'),
     internalSingleUserId,
     secretMasterKey,
     databaseUrl: databaseUrlValue,
-    developmentAuthEmail: input.DEVELOPMENT_AUTH_EMAIL,
-    developmentAuthPassword: input.DEVELOPMENT_AUTH_PASSWORD,
-    sessionSigningKey,
     corsOrigins,
     port,
     fileStoragePath: String(input.FILE_STORAGE_PATH || '/data/uploads'),
@@ -190,16 +188,8 @@ export function parseEnvironment(input: NodeJS.ProcessEnv | Record<string, strin
     logLevel,
     connectorNetworkAllowlist: String(input.CONNECTOR_NETWORK_ALLOWLIST || '').split(',').map(value => value.trim()).filter(Boolean),
     externalSourceSchemas: String(input.EXTERNAL_SOURCE_SCHEMAS || 'scopus').split(',').map(value => value.trim().toLowerCase()).filter(value => /^[a-z_][a-z0-9_]*$/.test(value) && !['public', 'pg_catalog', 'information_schema'].includes(value)),
-    cookieSecure,
-    publicRegistrationEnabled,
-    sessionIdleTimeoutSeconds,
-    sessionAbsoluteTimeoutSeconds,
-    passwordResetTimeoutSeconds: parseBoundedInteger('PASSWORD_RESET_TIMEOUT_SECONDS', input.PASSWORD_RESET_TIMEOUT_SECONDS, 900, 300, 86_400),
-    invitationTimeoutSeconds: parseBoundedInteger('INVITATION_TIMEOUT_SECONDS', input.INVITATION_TIMEOUT_SECONDS, 604_800, 900, 2_592_000),
     appDomain,
     appUrl,
-    cookieSecret,
-    csrfSecret,
     smtp: { enabled: smtpEnabled, host: input.SMTP_HOST, port: smtpPort, user: input.SMTP_USER, password: input.SMTP_PASSWORD, from: input.SMTP_FROM, secure: smtpSecure },
     metricsEnabled,
     metricsToken,

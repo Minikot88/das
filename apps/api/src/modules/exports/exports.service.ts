@@ -15,7 +15,12 @@ type JsonObject = Record<string, unknown>;
 @Injectable()
 export class ExportsService {
   private readonly root: string;
-  constructor(private readonly prisma: PrismaService, @Inject(ENVIRONMENT) environment: RuntimeEnvironment, private readonly authorization: AuthorizationService, private readonly external: ExternalSourcesService) { this.root = resolve(dirname(environment.fileStoragePath), 'exports'); }
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(ENVIRONMENT) environment: RuntimeEnvironment,
+    @Inject(AuthorizationService) private readonly authorization: AuthorizationService,
+    @Inject(ExternalSourcesService) private readonly external: ExternalSourcesService,
+  ) { this.root = resolve(dirname(environment.fileStoragePath), 'exports'); }
 
   private async project(principal: RequestPrincipal, projectId: string) {
     await this.authorization.assertProjectPermission(principal as never, projectId, 'export');

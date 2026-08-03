@@ -1,6 +1,4 @@
-import { Inject, Injectable, Optional } from '@nestjs/common';
-import type { RuntimeEnvironment } from '../../../app/config/environment.js';
-import { ENVIRONMENT } from '../../../app/config/token.js';
+import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database/prisma.service.js';
 import { ApiError } from '../../../shared/http/api-error.js';
 import type { SessionPrincipal } from './auth.service.js';
@@ -15,11 +13,10 @@ const PROJECT_PERMISSIONS: Record<string, ReadonlySet<ProjectPermission>> = {
 
 @Injectable()
 export class AuthorizationService {
-  constructor(private readonly prisma: PrismaService, @Optional() @Inject(ENVIRONMENT) private readonly environment?: RuntimeEnvironment) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async assertOrganizationAdmin(principal: SessionPrincipal, organizationId: string) {
     if (principal.organizationId !== organizationId) throw notFound();
-    if (this.isTestDevelopment(principal)) return;
     const membership = await this.prisma.organizationMember.findUnique({
       where: { organizationId_userId: { organizationId, userId: principal.userId } },
     });
@@ -27,7 +24,6 @@ export class AuthorizationService {
   }
 
   async assertProjectPermission(principal: SessionPrincipal, projectId: string, permission: ProjectPermission) {
-    if (this.isTestDevelopment(principal)) return;
     const project = await this.prisma.biProject.findFirst({ where: { id: projectId, deletedAt: null } });
     if (!project || project.organizationId !== principal.organizationId) throw notFound();
     const organizationMembership = await this.prisma.organizationMember.findUnique({
@@ -39,10 +35,6 @@ export class AuthorizationService {
     });
     const role = project.ownerUserId === principal.userId ? 'project_owner' : projectMembership?.role;
     if (!role || !PROJECT_PERMISSIONS[role]?.has(permission)) throw forbidden();
-  }
-
-  private isTestDevelopment(principal: SessionPrincipal) {
-    return this.environment?.nodeEnv === 'test' && this.environment.authProvider === 'development' && principal.userId === 'user-development';
   }
 }
 

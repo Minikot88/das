@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Inject, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { CurrentPrincipal } from '../../auth/application/current-principal.js';
 import { SessionGuard } from '../../auth/application/session.guard.js';
 import type { RequestPrincipal } from '../../projects/application/project.service.js';
@@ -7,7 +7,7 @@ import { WorkspaceDataService } from '../application/workspace-data.service.js';
 @Controller('api/v1')
 @UseGuards(SessionGuard)
 export class WorkspaceV1Controller {
-  constructor(private readonly data: WorkspaceDataService) {}
+  constructor(@Inject(WorkspaceDataService) private readonly data: WorkspaceDataService) {}
 
   @Get('chart-types') chartTypes() { return this.data.getChartTypes(); }
   @Get('chart-templates') chartTemplates() { return this.data.getChartTemplates(); }

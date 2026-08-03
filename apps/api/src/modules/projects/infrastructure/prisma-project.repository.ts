@@ -1,10 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database/prisma.service.js';
 import type { ProjectRecord, ProjectRepository } from '../application/project.repository.js';
 
 @Injectable()
 export class PrismaProjectRepository implements ProjectRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
   private async accessibleProjectIds(organizationId: string, userId: string) {
     const memberships = await this.prisma.biProjectMember.findMany({ where: { organizationId, userId }, select: { projectId: true } });
     const projects = await this.prisma.biProject.findMany({

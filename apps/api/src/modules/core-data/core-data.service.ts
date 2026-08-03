@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { parse } from 'csv-parse';
 import type { MultipartFile } from '@fastify/multipart';
 import { PrismaService } from '../../infrastructure/database/prisma.service.js';
@@ -14,7 +14,11 @@ type Aggregate = { field: string; operation: string; alias?: string };
 
 @Injectable()
 export class CoreDataService {
-  constructor(private readonly prisma: PrismaService, private readonly authorization: AuthorizationService, private readonly external: ExternalSourcesService = {} as ExternalSourcesService) {}
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(AuthorizationService) private readonly authorization: AuthorizationService,
+    @Inject(ExternalSourcesService) private readonly external: ExternalSourcesService = {} as ExternalSourcesService,
+  ) {}
 
   private async project(principal: RequestPrincipal, projectId: string, permission: ProjectPermission = 'read') {
     await this.authorization.assertProjectPermission(principal as never, projectId, permission);
