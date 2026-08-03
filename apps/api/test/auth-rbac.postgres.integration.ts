@@ -3,13 +3,11 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { createApplication } from '../src/app/bootstrap/create-application.js';
 import { PrismaService } from '../src/infrastructure/database/prisma.service.js';
-import { hashOpaqueToken, hashPassword } from '../src/modules/auth/domain/auth-security.js';
 
 const origin = 'http://localhost:8080';
 const organizationId = `org-integration-${randomUUID()}`;
 const adminUserId = `user-integration-admin-${randomUUID()}`;
 const adminEmail = `integration-admin-${randomUUID()}@example.test`;
-const adminPassword = 'correct horse integration battery';
 
 describe('PostgreSQL authentication and RBAC boundaries', () => {
   let app: NestFastifyApplication;
@@ -18,7 +16,8 @@ describe('PostgreSQL authentication and RBAC boundaries', () => {
   beforeAll(async () => {
     app = await createApplication({
       NODE_ENV: 'development',
-      AUTH_PROVIDER: 'database',
+      AUTH_MODE: 'disabled',
+      INTERNAL_SINGLE_USER_ID: adminUserId,
       DATABASE_URL: process.env.DATABASE_URL,
       CORS_ORIGINS: origin,
       COOKIE_SECURE: 'false',
@@ -34,7 +33,7 @@ describe('PostgreSQL authentication and RBAC boundaries', () => {
         id: adminUserId,
         organizationId,
         externalUserId: adminUserId,
-        externalAuthProvider: 'password',
+        externalAuthProvider: 'technical-test',
         email: adminEmail,
         normalizedEmail: adminEmail,
         displayName: 'Integration Admin',
@@ -43,9 +42,6 @@ describe('PostgreSQL authentication and RBAC boundaries', () => {
         createdAt: now,
         updatedAt: now,
       },
-    });
-    await prisma.userCredential.create({
-      data: { id: `credential-${randomUUID()}`, userId: adminUserId, passwordHash: await hashPassword(adminPassword), passwordChangedAt: now, createdAt: now, updatedAt: now },
     });
     await prisma.organizationMember.create({
       data: { id: `org-member-${randomUUID()}`, organizationId, userId: adminUserId, role: 'organization_admin', createdAt: now, updatedAt: now },
@@ -103,57 +99,28 @@ describe('PostgreSQL authentication and RBAC boundaries', () => {
     await app?.close();
   });
 
-  it('keeps the explicit public allowlist open and rejects anonymous protected routes', async () => {
+  it('opens health and uses only the configured technical principal in disabled integration mode', async () => {
     expect((await app.inject({ method: 'GET', url: '/api/v1/health' })).statusCode).toBe(200);
-    for (const request of [
-      { method: 'GET' as const, url: '/api/v1/auth/me' },
-      { method: 'GET' as const, url: '/api/v1/projects' },
-      { method: 'GET' as const, url: `/api/v1/organizations/${organizationId}/members` },
-      { method: 'GET' as const, url: '/api/v1/projects/unknown/members' },
-      { method: 'GET' as const, url: '/api/projects' },
-      { method: 'GET' as const, url: '/api/chart-types' },
-      { method: 'GET' as const, url: '/api/charts' },
-      { method: 'GET' as const, url: '/api/dashboards/unknown' },
-      { method: 'GET' as const, url: '/api/dataset' },
-      { method: 'POST' as const, url: '/api/dataset/query' },
-      { method: 'GET' as const, url: '/api/v1/datasets' },
-      { method: 'POST' as const, url: '/api/v1/datasets/unknown/query' },
-      { method: 'GET' as const, url: '/api/v1/dashboards' },
-      { method: 'POST' as const, url: '/api/v1/workspace/import' },
-      { method: 'GET' as const, url: '/api/v1/settings/preferences' },
-      { method: 'GET' as const, url: '/api/v1/connections' },
-      { method: 'GET' as const, url: '/api/connections' },
-      { method: 'POST' as const, url: '/api/v1/shares' },
-      { method: 'POST' as const, url: '/api/shares' },
-      { method: 'POST' as const, url: '/api/v1/exports' },
-      { method: 'POST' as const, url: '/api/exports' },
-    ]) {
-      const response = await app.inject(request);
-      expect(response.statusCode, `${request.method} ${request.url}`).toBe(401);
-      expect(response.json()).toMatchObject({ code: 'AUTHENTICATION_REQUIRED' });
-      expect(response.json().requestId).toBeTruthy();
-    }
+    const session = await app.inject({ method: 'GET', url: '/api/session/me' });
+    expect(session.statusCode).toBe(200);
+    expect(session.json().data).toMatchObject({
+      authenticated: true,
+      authMode: 'disabled',
+      actorId: adminUserId,
+      organizationId,
+      roles: ['organization_admin'],
+    });
   });
 
-  it('stores only a session hash, enforces CSRF, and revokes the session on logout', async () => {
-    const login = await loginAs(adminEmail, adminPassword);
-    expect(login.response.statusCode).toBe(200);
-    expect(login.response.body).not.toContain(adminPassword);
-    const rawSession = cookieValue(login.cookies, 'mini_bi_session');
-    const stored = await prisma.authSession.findUnique({ where: { tokenHash: hashOpaqueToken(rawSession) } });
-    expect(stored?.tokenHash).toBe(hashOpaqueToken(rawSession));
-    expect(stored?.tokenHash).not.toBe(rawSession);
-
-    const csrfDenied = await app.inject({ method: 'POST', url: '/api/v1/auth/logout', headers: { cookie: login.cookie } });
-    expect(csrfDenied.statusCode).toBe(403);
-    expect(csrfDenied.json().code).toBe('CSRF_REJECTED');
-
-    const logout = await app.inject({ method: 'POST', url: '/api/v1/auth/logout', headers: login.mutationHeaders });
-    expect(logout.statusCode).toBe(200);
-    expect((await app.inject({ method: 'GET', url: '/api/v1/auth/me', headers: { cookie: login.cookie } })).statusCode).toBe(401);
+  it('does not create cookie sessions and closes the built-in logout endpoint', async () => {
+    expect(await prisma.authSession.count({ where: { userId: adminUserId } })).toBe(0);
+    const logout = await app.inject({ method: 'POST', url: '/api/v1/auth/logout' });
+    expect(logout.statusCode).toBe(410);
+    expect(logout.headers['set-cookie']).toBeUndefined();
+    expect(logout.json()).toMatchObject({ code: 'BUILT_IN_AUTH_REMOVED' });
   });
 
-  it('keeps only one active password-reset token when requests race', async () => {
+  it('does not create password-reset tokens from the removed endpoint', async () => {
     await prisma.passwordResetToken.deleteMany({ where: { userId: adminUserId } });
     const requests = await Promise.all(Array.from({ length: 8 }, (_, index) => app.inject({
       method: 'POST',
@@ -161,14 +128,14 @@ describe('PostgreSQL authentication and RBAC boundaries', () => {
       payload: { email: adminEmail },
       remoteAddress: `192.0.2.${index + 1}`,
     })));
-    expect(requests.every(response => response.statusCode === 200)).toBe(true);
+    expect(requests.every(response => response.statusCode === 410)).toBe(true);
     expect(await prisma.passwordResetToken.count({
       where: { userId: adminUserId, usedAt: null, revokedAt: null, expiresAt: { gt: new Date() } },
-    })).toBe(1);
+    })).toBe(0);
   });
 
   it('uses revision control under concurrent project updates without silent last-write-wins', async () => {
-    const login = await loginAs(adminEmail, adminPassword);
+    const login = await technicalSession();
     const created = await app.inject({ method: 'POST', url: '/api/v1/projects', headers: login.mutationHeaders, payload: { name: 'Concurrent project' } });
     expect(created.statusCode).toBe(201);
     const project = created.json().data;
@@ -182,7 +149,7 @@ describe('PostgreSQL authentication and RBAC boundaries', () => {
   });
 
   it('uses revision control under concurrent dashboard updates without silent last-write-wins', async () => {
-    const login = await loginAs(adminEmail, adminPassword);
+    const login = await technicalSession();
     const project = await app.inject({ method: 'POST', url: '/api/v1/projects', headers: login.mutationHeaders, payload: { name: `Dashboard race ${randomUUID()}` } });
     const dashboard = await app.inject({ method: 'POST', url: '/api/v1/dashboards', headers: login.mutationHeaders, payload: { projectId: project.json().data.id, name: 'Concurrent dashboard' } });
     expect(dashboard.statusCode).toBe(201);
@@ -196,7 +163,7 @@ describe('PostgreSQL authentication and RBAC boundaries', () => {
   });
 
   it('uses revision control under concurrent widget-layout saves without mixing writers', async () => {
-    const login = await loginAs(adminEmail, adminPassword);
+    const login = await technicalSession();
     const project = await app.inject({ method: 'POST', url: '/api/v1/projects', headers: login.mutationHeaders, payload: { name: `Widget race ${randomUUID()}` } });
     const dashboard = await app.inject({ method: 'POST', url: '/api/v1/dashboards', headers: login.mutationHeaders, payload: { projectId: project.json().data.id, name: 'Concurrent layout' } });
     const dashboardId = dashboard.json().data.id;
@@ -234,7 +201,7 @@ describe('PostgreSQL authentication and RBAC boundaries', () => {
   });
 
   it('imports and queries CSV through PostgreSQL, is idempotent, and leaves no partial rows on parser failure', async () => {
-    const login = await loginAs(adminEmail, adminPassword);
+    const login = await technicalSession();
     const created = await app.inject({ method: 'POST', url: '/api/v1/projects', headers: login.mutationHeaders, payload: { name: `Dataset project ${randomUUID()}` } });
     const projectId = created.json().data.id;
     const idempotencyKey = `csv-${randomUUID()}`;
@@ -274,7 +241,7 @@ describe('PostgreSQL authentication and RBAC boundaries', () => {
   });
 
   it('imports a complete workspace atomically, deduplicates it, and rolls back broken references', async () => {
-    const login = await loginAs(adminEmail, adminPassword);
+    const login = await technicalSession();
     const sourceProjectId = `workspace-project-${randomUUID()}`;
     const sourceDatasetId = `workspace-dataset-${randomUUID()}`;
     const sourceChartId = `workspace-chart-${randomUUID()}`;
@@ -324,7 +291,7 @@ describe('PostgreSQL authentication and RBAC boundaries', () => {
   });
 
   it('persists immutable shares and safe exports, and rolls back a failed share snapshot', async () => {
-    const login = await loginAs(adminEmail, adminPassword);
+    const login = await technicalSession();
     const projectId = `share-project-${randomUUID()}`;
     const datasetId = `share-dataset-${randomUUID()}`;
     const dashboardId = `share-dashboard-${randomUUID()}`;
@@ -382,8 +349,8 @@ describe('PostgreSQL authentication and RBAC boundaries', () => {
     }
   });
 
-  it('consumes an invitation once under concurrency and protects the last organization admin', async () => {
-    const login = await loginAs(adminEmail, adminPassword);
+  it('keeps invitation acceptance closed and protects the last organization admin', async () => {
+    const login = await technicalSession();
     const invitedEmail = `invited-${randomUUID()}@example.test`;
     const invitation = await app.inject({
       method: 'POST',
@@ -391,18 +358,16 @@ describe('PostgreSQL authentication and RBAC boundaries', () => {
       headers: login.mutationHeaders,
       payload: { email: invitedEmail, role: 'member' },
     });
-    expect(invitation.statusCode).toBe(201);
-    const token = invitation.json().data.token;
-    const acceptance = () => app.inject({
+    expect(invitation.statusCode).toBe(410);
+    expect(invitation.json()).toMatchObject({ code: 'BUILT_IN_AUTH_REMOVED' });
+    const acceptance = await app.inject({
       method: 'POST',
       url: '/api/v1/auth/accept-invitation',
-      payload: { token, displayName: 'Invited User', password: 'correct horse invitation battery' },
+      payload: { token: 'removed', displayName: 'Invited User', password: 'not-used' },
     });
-    const accepted = await Promise.all([acceptance(), acceptance()]);
-    expect(accepted.map(item => item.statusCode).sort()).toEqual([200, 400]);
+    expect(acceptance.statusCode).toBe(410);
     const invitedUser = await prisma.userProfile.findUnique({ where: { normalizedEmail: invitedEmail } });
-    expect(invitedUser).toBeTruthy();
-    expect(await prisma.organizationMember.count({ where: { organizationId, userId: invitedUser!.id } })).toBe(1);
+    expect(invitedUser).toBeNull();
 
     const downgrade = await app.inject({
       method: 'PATCH',
@@ -414,23 +379,10 @@ describe('PostgreSQL authentication and RBAC boundaries', () => {
     expect(downgrade.json().code).toBe('LAST_ORGANIZATION_ADMIN');
   });
 
-  async function loginAs(email: string, password: string) {
-    const response = await app.inject({ method: 'POST', url: '/api/v1/auth/login', payload: { email, password } });
-    const cookies = Array.isArray(response.headers['set-cookie']) ? response.headers['set-cookie'] : [String(response.headers['set-cookie'] || '')];
-    const cookie = cookies.map(value => value.split(';')[0]).join('; ');
-    return {
-      response,
-      cookies,
-      cookie,
-      mutationHeaders: { cookie, origin, 'x-csrf-token': cookieValue(cookies, 'mini_bi_csrf') },
-    };
+  async function technicalSession() {
+    return { cookie: '', mutationHeaders: {} };
   }
 });
-
-function cookieValue(cookies: string[], name: string) {
-  const cookie = cookies.find(value => value.startsWith(`${name}=`));
-  return decodeURIComponent(cookie?.split(';')[0]?.slice(name.length + 1) || '');
-}
 
 function multipartCsv(projectId: string, filename: string, csv: string, idempotencyKey: string) {
   const boundary = `----dashboard-mini-bi-${randomUUID()}`;

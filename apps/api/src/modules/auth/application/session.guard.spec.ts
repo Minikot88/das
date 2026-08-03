@@ -1,75 +1,107 @@
 import { describe, expect, it, vi } from 'vitest';
-import { hashOpaqueToken } from '../domain/auth-security.js';
 import { SessionGuard } from './session.guard.js';
 
-const csrfToken = 'csrf-token-value';
 const principal = {
-  organizationId: 'org-1', userId: 'user-1', sessionId: 'session-1', roles: ['viewer'],
-  csrfTokenHash: hashOpaqueToken(csrfToken),
+  organizationId: 'org-1',
+  userId: 'user-1',
+  sessionId: 'external-session',
+  roles: ['viewer'],
+  projectScopes: [],
+  authMode: 'external' as const,
 };
-const environment = { corsOrigins: ['https://dashboard.example.test'] } as never;
 
 function context(request: Record<string, unknown>) {
   return { switchToHttp: () => ({ getRequest: () => request }) } as never;
 }
 
-describe('SessionGuard cookie and CSRF protection', () => {
-  it('rejects a missing session cookie without calling the session repository', async () => {
-    const auth = { authenticateSession: vi.fn() };
-    const request = { method: 'GET', cookies: {}, headers: {} };
+describe('SessionGuard verified-principal contract', () => {
+  it('rejects a missing bearer token without consulting identity headers or query parameters', async () => {
+    const auth = { resolveExternalIdentity: vi.fn() };
+    const verifier = { verify: vi.fn() };
+    const request = {
+      method: 'GET',
+      headers: { 'x-user-id': 'forged-admin', 'x-role': 'organization_admin' },
+      query: { userId: 'forged-admin', role: 'organization_admin' },
+    };
 
-    await expect(new SessionGuard(auth as never, environment).canActivate(context(request))).rejects.toMatchObject({ status: 401, code: 'AUTHENTICATION_REQUIRED' });
-    expect(auth.authenticateSession).not.toHaveBeenCalled();
+    await expect(new SessionGuard(auth as never, { authMode: 'external' } as never, verifier as never)
+      .canActivate(context(request))).rejects.toMatchObject({
+      status: 401,
+      code: 'AUTHENTICATION_REQUIRED',
+    });
+    expect(verifier.verify).not.toHaveBeenCalled();
+    expect(auth.resolveExternalIdentity).not.toHaveBeenCalled();
   });
 
-  it('uses the explicitly configured internal principal without a cookie or CSRF token', async () => {
-    const internalPrincipal = { ...principal, sessionId: 'internal-single-user' };
-    const auth = { authenticateSession: vi.fn(), authenticateInternalSingleUser: vi.fn().mockResolvedValue(internalPrincipal) };
-    const request = { method: 'POST', cookies: {}, headers: {} };
-    const singleUserEnvironment = { corsOrigins: [], internalSingleUserId: 'user-1' } as never;
+  it('uses only verifier output to resolve the database principal', async () => {
+    const claims = {
+      provider: 'main-website',
+      issuer: 'https://identity.example.test',
+      externalUserId: 'subject-1',
+      organizationId: 'org-1',
+      roles: [],
+      scopes: [],
+    };
+    const verifier = { verify: vi.fn().mockResolvedValue(claims) };
+    const auth = { resolveExternalIdentity: vi.fn().mockResolvedValue(principal) };
+    const request = {
+      headers: {
+        authorization: 'Bearer signed.jwt.value',
+        'x-user-id': 'forged-admin',
+        'x-role': 'organization_admin',
+      },
+      query: { userId: 'forged-admin' },
+    };
 
-    await expect(new SessionGuard(auth as never, singleUserEnvironment).canActivate(context(request))).resolves.toBe(true);
-    expect(auth.authenticateInternalSingleUser).toHaveBeenCalledWith('user-1');
-    expect(auth.authenticateSession).not.toHaveBeenCalled();
-    expect(request).toMatchObject({ principal: internalPrincipal });
-  });
-
-  it('authenticates safe requests through the database session service', async () => {
-    const auth = { authenticateSession: vi.fn().mockResolvedValue(principal) };
-    const request = { method: 'GET', cookies: { mini_bi_session: 'opaque-session' }, headers: {} };
-
-    await expect(new SessionGuard(auth as never, environment).canActivate(context(request))).resolves.toBe(true);
-    expect(auth.authenticateSession).toHaveBeenCalledWith('opaque-session');
+    await expect(new SessionGuard(auth as never, { authMode: 'external' } as never, verifier as never)
+      .canActivate(context(request))).resolves.toBe(true);
+    expect(verifier.verify).toHaveBeenCalledWith('signed.jwt.value');
+    expect(auth.resolveExternalIdentity).toHaveBeenCalledWith(claims);
     expect(request).toMatchObject({ principal });
   });
 
-  it('rejects state-changing requests without a matching CSRF header and cookie', async () => {
-    const auth = { authenticateSession: vi.fn().mockResolvedValue(principal) };
-    const request = {
-      method: 'POST', cookies: { mini_bi_session: 'opaque-session', mini_bi_csrf: csrfToken },
-      headers: { origin: 'https://dashboard.example.test' },
-    };
+  it('does not translate an authenticated-but-unauthorized identity into a 401', async () => {
+    const verifier = { verify: vi.fn().mockResolvedValue({ externalUserId: 'unknown' }) };
+    const forbidden = Object.assign(new Error('forbidden'), { status: 403, code: 'EXTERNAL_IDENTITY_NOT_AUTHORIZED' });
+    const auth = { resolveExternalIdentity: vi.fn().mockRejectedValue(forbidden) };
+    const request = { headers: { authorization: 'Bearer signed.jwt.value' } };
 
-    await expect(new SessionGuard(auth as never, environment).canActivate(context(request))).rejects.toMatchObject({ status: 403, code: 'CSRF_REJECTED' });
+    await expect(new SessionGuard(auth as never, { authMode: 'external' } as never, verifier as never)
+      .canActivate(context(request))).rejects.toMatchObject({
+      status: 403,
+      code: 'EXTERNAL_IDENTITY_NOT_AUTHORIZED',
+    });
   });
 
-  it('accepts same-origin mutations with matching CSRF proof', async () => {
-    const auth = { authenticateSession: vi.fn().mockResolvedValue(principal) };
+  it('uses only the configured database technical principal in disabled mode', async () => {
+    const internalPrincipal = { ...principal, sessionId: 'internal-single-user', authMode: 'disabled' as const };
+    const auth = {
+      authenticateInternalSingleUser: vi.fn().mockResolvedValue(internalPrincipal),
+      resolveExternalIdentity: vi.fn(),
+    };
+    const verifier = { verify: vi.fn() };
     const request = {
-      method: 'PATCH', cookies: { mini_bi_session: 'opaque-session', mini_bi_csrf: csrfToken },
-      headers: { origin: 'https://dashboard.example.test', 'x-csrf-token': csrfToken },
+      headers: { authorization: 'Bearer ignored', 'x-user-id': 'forged-admin' },
+      query: { userId: 'forged-admin' },
     };
 
-    await expect(new SessionGuard(auth as never, environment).canActivate(context(request))).resolves.toBe(true);
+    await expect(new SessionGuard(auth as never, {
+      authMode: 'disabled',
+      internalSingleUserId: 'technical-user',
+    } as never, verifier as never).canActivate(context(request))).resolves.toBe(true);
+    expect(auth.authenticateInternalSingleUser).toHaveBeenCalledWith('technical-user');
+    expect(auth.resolveExternalIdentity).not.toHaveBeenCalled();
+    expect(verifier.verify).not.toHaveBeenCalled();
+    expect(request).toMatchObject({ principal: internalPrincipal });
   });
 
-  it('rejects a valid token sent from an untrusted origin', async () => {
-    const auth = { authenticateSession: vi.fn().mockResolvedValue(principal) };
-    const request = {
-      method: 'DELETE', cookies: { mini_bi_session: 'opaque-session', mini_bi_csrf: csrfToken },
-      headers: { origin: 'https://evil.example.test', 'x-csrf-token': csrfToken },
-    };
-
-    await expect(new SessionGuard(auth as never, environment).canActivate(context(request))).rejects.toMatchObject({ status: 403, code: 'CSRF_REJECTED' });
+  it('fails closed when disabled mode has no configured technical principal', async () => {
+    const auth = { authenticateInternalSingleUser: vi.fn() };
+    await expect(new SessionGuard(auth as never, { authMode: 'disabled' } as never)
+      .canActivate(context({ headers: {} }))).rejects.toMatchObject({
+      status: 503,
+      code: 'DISABLED_AUTH_PRINCIPAL_MISSING',
+    });
+    expect(auth.authenticateInternalSingleUser).not.toHaveBeenCalled();
   });
 });

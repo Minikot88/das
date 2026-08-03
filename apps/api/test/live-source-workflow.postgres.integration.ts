@@ -4,7 +4,6 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { createApplication } from '../src/app/bootstrap/create-application.js';
 import { PrismaService } from '../src/infrastructure/database/prisma.service.js';
-import { hashPassword } from '../src/modules/auth/domain/auth-security.js';
 
 const origin = 'http://localhost:8080';
 const runId = randomUUID();
@@ -12,7 +11,6 @@ const organizationId = `org-live-source-${runId}`;
 const userId = `user-live-source-${runId}`;
 const sourceId = `source-live-${runId}`;
 const email = `live-source-${runId}@example.test`;
-const password = 'correct horse live source battery';
 const storagePath = `/tmp/dashboardmini-live-source-${runId}/uploads`;
 
 describe('live PostgreSQL source workflow', () => {
@@ -23,7 +21,8 @@ describe('live PostgreSQL source workflow', () => {
     assertTemporaryDatabase(process.env.DATABASE_URL);
     app = await createApplication({
       NODE_ENV: 'development',
-      AUTH_PROVIDER: 'database',
+      AUTH_MODE: 'disabled',
+      INTERNAL_SINGLE_USER_ID: userId,
       DATABASE_URL: process.env.DATABASE_URL,
       EXTERNAL_SOURCE_SCHEMAS: 'scopus',
       CORS_ORIGINS: origin,
@@ -41,7 +40,7 @@ describe('live PostgreSQL source workflow', () => {
       id: userId,
       organizationId,
       externalUserId: userId,
-      externalAuthProvider: 'password',
+        externalAuthProvider: 'technical-test',
       email,
       normalizedEmail: email,
       displayName: 'Live Source Admin',
@@ -50,7 +49,6 @@ describe('live PostgreSQL source workflow', () => {
       createdAt: now,
       updatedAt: now,
     } });
-    await prisma.userCredential.create({ data: { id: `credential-${runId}`, userId, passwordHash: await hashPassword(password), passwordChangedAt: now, createdAt: now, updatedAt: now } });
     await prisma.organizationMember.create({ data: { id: `member-${runId}`, organizationId, userId, role: 'organization_admin', createdAt: now, updatedAt: now } });
     await prisma.dataSourceConnection.create({ data: {
       id: sourceId,
@@ -128,17 +126,13 @@ describe('live PostgreSQL source workflow', () => {
   });
 
   it('creates a live joined dataset, chart, dashboard, share, and export through the API', async () => {
-    const login = await app.inject({ method: 'POST', url: '/api/v1/auth/login', payload: { email, password } });
-    expect(login.statusCode).toBe(200);
-    const cookies = Array.isArray(login.headers['set-cookie']) ? login.headers['set-cookie'] : [String(login.headers['set-cookie'] || '')];
-    const cookie = cookies.map(value => value.split(';')[0]).join('; ');
-    const headers = { cookie, origin, 'x-csrf-token': cookieValue(cookies, 'mini_bi_csrf') };
+    const headers = {};
 
     const projectResponse = await app.inject({ method: 'POST', url: '/api/v1/projects', headers, payload: { name: 'Live source workflow' } });
     expect(projectResponse.statusCode).toBe(201);
     const projectId = projectResponse.json().data.id as string;
 
-    const sourceList = await app.inject({ method: 'GET', url: `/api/v1/external-sources?projectId=${projectId}`, headers: { cookie } });
+    const sourceList = await app.inject({ method: 'GET', url: `/api/v1/external-sources?projectId=${projectId}`, headers });
     expect(sourceList.statusCode).toBe(200);
     expect(sourceList.json().data.items).toEqual([expect.objectContaining({ id: sourceId, schemaName: 'scopus', readOnly: true })]);
 
@@ -209,20 +203,15 @@ describe('live PostgreSQL source workflow', () => {
 
     const exportResponse = await app.inject({ method: 'POST', url: '/api/v1/exports', headers, payload: { projectId, entityType: 'dataset', entityId: dataset.id, format: 'csv' } });
     expect(exportResponse.statusCode).toBe(201);
-    const download = await app.inject({ method: 'GET', url: `/api/v1/exports/${exportResponse.json().data.id}/file`, headers: { cookie } });
+    const download = await app.inject({ method: 'GET', url: `/api/v1/exports/${exportResponse.json().data.id}/file`, headers });
     expect(download.statusCode).toBe(200);
     expect(download.body).toContain('publication_year,journal_title,article_count');
 
-    expect((await app.inject({ method: 'GET', url: `/api/v1/datasets/${dataset.id}`, headers: { cookie } })).statusCode).toBe(200);
-    expect((await app.inject({ method: 'GET', url: `/api/v1/charts/${chartId}`, headers: { cookie } })).statusCode).toBe(200);
-    expect((await app.inject({ method: 'GET', url: `/api/v1/dashboards/${dashboardId}`, headers: { cookie } })).statusCode).toBe(200);
+    expect((await app.inject({ method: 'GET', url: `/api/v1/datasets/${dataset.id}`, headers })).statusCode).toBe(200);
+    expect((await app.inject({ method: 'GET', url: `/api/v1/charts/${chartId}`, headers })).statusCode).toBe(200);
+    expect((await app.inject({ method: 'GET', url: `/api/v1/dashboards/${dashboardId}`, headers })).statusCode).toBe(200);
   });
 });
-
-function cookieValue(cookies: string[], name: string) {
-  const cookie = cookies.find(value => value.startsWith(`${name}=`));
-  return decodeURIComponent(cookie?.split(';')[0]?.slice(name.length + 1) || '');
-}
 
 function assertTemporaryDatabase(databaseUrl: string | undefined) {
   if (!databaseUrl) throw new Error('DATABASE_URL is required for integration tests.');
