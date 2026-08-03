@@ -13,7 +13,7 @@ describe('HTTP foundation', () => {
       AUTH_EXTERNAL_PROVIDER: 'test-provider',
       AUTH_JWKS_URL: 'http://127.0.0.1:1/jwks',
       AUTH_ISSUER: 'https://identity.test.local',
-      AUTH_AUDIENCE: 'dashboardmini',
+      AUTH_AUDIENCE: 'https://dash.triup-psu.space',
       AUTH_ALLOWED_ALGORITHMS: 'RS256',
       SECRET_MASTER_KEY: randomBytes(32).toString('base64'),
       DATABASE_URL: 'postgresql://dashboard:dashboard@127.0.0.1:5432/dashboard_mini_bi',
@@ -32,6 +32,7 @@ describe('HTTP foundation', () => {
   it('sets security headers and only allows configured CORS origins', async () => {
     const allowed = await app.inject({ method: 'GET', url: '/api/v1/health', headers: { origin: 'http://localhost:8080' } });
     expect(allowed.headers['access-control-allow-origin']).toBe('http://localhost:8080');
+    expect(allowed.headers['access-control-allow-credentials']).toBeUndefined();
     expect(allowed.headers['x-content-type-options']).toBe('nosniff');
     expect(allowed.headers['referrer-policy']).toBeTruthy();
     expect(allowed.headers['x-powered-by']).toBeUndefined();

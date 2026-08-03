@@ -82,7 +82,7 @@ export function parseEnvironment(input: NodeJS.ProcessEnv | Record<string, strin
   const authExternalProvider = String(input.AUTH_EXTERNAL_PROVIDER || (nodeEnv === 'production' ? '' : 'main-website')).trim();
   const authJwksUrl = input.AUTH_JWKS_URL?.trim();
   const authIssuer = input.AUTH_ISSUER?.trim();
-  const authAudience = input.AUTH_AUDIENCE?.trim() || (nodeEnv === 'production' ? undefined : 'dashboardmini');
+  const authAudience = input.AUTH_AUDIENCE?.trim() || (nodeEnv === 'production' ? undefined : 'https://dash.triup-psu.space');
   const authAllowedAlgorithms = String(input.AUTH_ALLOWED_ALGORITHMS || (nodeEnv === 'production' ? '' : 'RS256')).split(',').map(value => value.trim()).filter(Boolean);
   const authClockSkewSeconds = parseBoundedInteger('AUTH_CLOCK_SKEW_SECONDS', input.AUTH_CLOCK_SKEW_SECONDS, 60, 0, 300);
   if (authMode === 'external' && (!authExternalProvider || !authJwksUrl || !authIssuer || !authAudience || !authAllowedAlgorithms.length)) throw new Error('External authentication requires AUTH_EXTERNAL_PROVIDER, AUTH_JWKS_URL, AUTH_ISSUER, AUTH_AUDIENCE, and AUTH_ALLOWED_ALGORITHMS');
@@ -95,6 +95,13 @@ export function parseEnvironment(input: NodeJS.ProcessEnv | Record<string, strin
     try { url = new URL(authJwksUrl); } catch { throw new Error('AUTH_JWKS_URL must be a valid URL'); }
     if (!['http:', 'https:'].includes(url.protocol)) throw new Error('AUTH_JWKS_URL must use HTTP(S)');
     if (nodeEnv === 'production' && url.protocol !== 'https:') throw new Error('AUTH_JWKS_URL must use HTTPS in production');
+  }
+  if (authIssuer) {
+    let url: URL;
+    try { url = new URL(authIssuer); } catch { throw new Error('AUTH_ISSUER must be a valid URL'); }
+    if (nodeEnv === 'production' && (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash)) {
+      throw new Error('AUTH_ISSUER must be a credential-free HTTPS URL in production');
+    }
   }
   if (nodeEnv === 'production' && authIssuer && /example|placeholder|change[-_]?me/i.test(authIssuer)) throw new Error('AUTH_ISSUER cannot use a placeholder value in production');
   for (const [name, value] of [
@@ -148,11 +155,20 @@ export function parseEnvironment(input: NodeJS.ProcessEnv | Record<string, strin
   if (nodeEnv === 'production' && !appDomain) throw new Error('APP_DOMAIN is required in production');
   if (appDomain && !/^[a-z0-9.-]+(?::\d+)?$/i.test(appDomain)) throw new Error('APP_DOMAIN must be a hostname with an optional port');
   if (nodeEnv === 'production' && !appUrl) throw new Error('APP_URL is required in production');
+  let parsedAppUrl: URL | undefined;
   if (appUrl) {
-    let parsed: URL;
-    try { parsed = new URL(appUrl); } catch { throw new Error('APP_URL must be a valid URL'); }
-    if (nodeEnv === 'production' && parsed.protocol !== 'https:') throw new Error('APP_URL must use HTTPS in production');
-    if (appDomain && parsed.host !== appDomain) throw new Error('APP_URL host must match APP_DOMAIN');
+    try { parsedAppUrl = new URL(appUrl); } catch { throw new Error('APP_URL must be a valid URL'); }
+    if (nodeEnv === 'production' && parsedAppUrl.protocol !== 'https:') throw new Error('APP_URL must use HTTPS in production');
+    if (parsedAppUrl.pathname !== '/' || parsedAppUrl.search || parsedAppUrl.hash || parsedAppUrl.username || parsedAppUrl.password) {
+      throw new Error('APP_URL must be an exact origin without credentials, path, query, or fragment');
+    }
+    if (appDomain && parsedAppUrl.host !== appDomain) throw new Error('APP_URL host must match APP_DOMAIN');
+  }
+  if (nodeEnv === 'production' && parsedAppUrl) {
+    if (authAudience !== parsedAppUrl.origin) throw new Error('AUTH_AUDIENCE must exactly match the APP_URL origin');
+    if (corsOrigins.length !== 1 || corsOrigins[0] !== parsedAppUrl.origin) throw new Error('CORS_ALLOWED_ORIGINS must contain only the APP_URL origin');
+    if (authIssuer && new URL(authIssuer).origin === parsedAppUrl.origin) throw new Error('AUTH_ISSUER must be issued by the external identity provider, not DashboardMiniBi');
+    if (authJwksUrl && new URL(authJwksUrl).origin === parsedAppUrl.origin) throw new Error('AUTH_JWKS_URL must belong to the external identity provider, not DashboardMiniBi');
   }
   const smtpEnabled = parseBoolean('SMTP_ENABLED', input.SMTP_ENABLED, false);
   const smtpSecure = parseBoolean('SMTP_SECURE', input.SMTP_SECURE, false);

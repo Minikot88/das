@@ -6,7 +6,7 @@ import { ExternalTokenVerifier } from './external-token-verifier.js';
 type SigningKey = Awaited<ReturnType<typeof generateKeyPair>>;
 
 const issuer = 'https://identity.triup-psu.space';
-const audience = 'dashboardmini';
+const audience = 'https://dash.triup-psu.space';
 let server: Server;
 let jwksUrl: string;
 let primary: SigningKey;
@@ -57,7 +57,7 @@ async function token(
   options: {
     kid?: string | null;
     issuer?: string;
-    audience?: string;
+    audience?: string | string[];
     subject?: string | null;
     organization?: unknown;
     roles?: unknown;
@@ -110,6 +110,16 @@ describe('ExternalTokenVerifier JWT/JWKS security contract', () => {
     ]) {
       await expect(verifier.verify(invalid)).rejects.toMatchObject({ status: 401, code: 'EXTERNAL_TOKEN_INVALID' });
     }
+  });
+
+  it('accepts an audience array only when it contains the configured Dashboard public URL', async () => {
+    const verifier = new ExternalTokenVerifier(environment());
+    await expect(verifier.verify(await token(primary, {
+      audience: ['another-service', audience],
+    }))).resolves.toMatchObject({ externalUserId: 'subject-1' });
+    await expect(verifier.verify(await token(primary, {
+      audience: ['another-service', 'https://untrusted.example.invalid'],
+    }))).rejects.toMatchObject({ status: 401, code: 'EXTERNAL_TOKEN_INVALID' });
   });
 
   it('rejects invalid signatures and missing or unknown key ids', async () => {

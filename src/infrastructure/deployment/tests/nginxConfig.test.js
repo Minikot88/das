@@ -41,6 +41,10 @@ describe("nginx static frontend configuration", () => {
 
     expect(config).toMatch(/location\s+=\s+\/api\s*\{[^}]*proxy_pass\s+http:\/\/backend:3000/m);
     expect(config).toMatch(/location\s+\^~\s+\/api\/\s*\{[^}]*proxy_pass\s+http:\/\/backend:3000/m);
+    expect(config).toContain("server_name dash.triup-psu.space;");
+    expect(config).toContain("proxy_set_header Authorization $http_authorization;");
+    expect(config).toContain('proxy_set_header X-User-Id "";');
+    expect(config).toContain('proxy_set_header X-Role "";');
   });
 
   it("never falls back to SPA HTML inside the generated asset namespace", () => {

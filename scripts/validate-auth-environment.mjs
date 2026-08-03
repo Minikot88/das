@@ -1,4 +1,7 @@
 const required = [
+  "APP_DOMAIN",
+  "APP_URL",
+  "CORS_ALLOWED_ORIGINS",
   "AUTH_MODE",
   "AUTH_EXTERNAL_PROVIDER",
   "AUTH_JWKS_URL",
@@ -19,6 +22,9 @@ if (missing.length) {
 if (process.env.AUTH_MODE !== "external") {
   throw new Error("Production authentication requires AUTH_MODE=external");
 }
+if (process.env.AUTH_EXTERNAL_PROVIDER !== "triup-main-website") {
+  throw new Error("AUTH_EXTERNAL_PROVIDER must be triup-main-website");
+}
 if (!String(process.env.AUTH_ALLOWED_ALGORITHMS).split(",").map((value) => value.trim()).filter(Boolean).every((value) => /^RS(256|384|512)$/.test(value))) {
   throw new Error("AUTH_ALLOWED_ALGORITHMS must contain only asymmetric RS algorithms");
 }
@@ -37,6 +43,25 @@ for (const name of ["AUTH_JWKS_URL", "AUTH_ISSUER", "VITE_EXTERNAL_SESSION_REQUI
 for (const name of ["AUTH_EXTERNAL_PROVIDER", "AUTH_AUDIENCE", "AUTH_ORGANIZATION_CLAIM"]) {
   if (/placeholder|change[-_]?me|<|>/i.test(process.env[name])) {
     throw new Error(`${name} must not use a placeholder value`);
+  }
+}
+const publicUrl = new URL(process.env.APP_URL);
+if (
+  publicUrl.protocol !== "https:"
+  || publicUrl.origin !== process.env.APP_URL
+  || publicUrl.host !== process.env.APP_DOMAIN
+) {
+  throw new Error("APP_URL must be the exact HTTPS origin matching APP_DOMAIN");
+}
+if (process.env.AUTH_AUDIENCE !== publicUrl.origin) {
+  throw new Error("AUTH_AUDIENCE must exactly match APP_URL");
+}
+if (process.env.CORS_ALLOWED_ORIGINS !== publicUrl.origin) {
+  throw new Error("CORS_ALLOWED_ORIGINS must contain only APP_URL");
+}
+for (const name of ["AUTH_JWKS_URL", "AUTH_ISSUER", "VITE_EXTERNAL_SESSION_REQUIRED_URL"]) {
+  if (new URL(process.env[name]).origin === publicUrl.origin) {
+    throw new Error(`${name} must belong to the external identity provider, not DashboardMiniBi`);
   }
 }
 console.log("Production authentication environment is complete.");

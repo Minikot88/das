@@ -5,11 +5,11 @@ describe('parseEnvironment', () => {
   const productionBase = {
     NODE_ENV: 'production', AUTH_MODE: 'external', AUTH_EXTERNAL_PROVIDER: 'main-website',
     AUTH_JWKS_URL: 'https://identity.triup-psu.space/.well-known/jwks.json',
-    AUTH_ISSUER: 'https://identity.triup-psu.space', AUTH_AUDIENCE: 'dashboardmini',
+    AUTH_ISSUER: 'https://identity.triup-psu.space', AUTH_AUDIENCE: 'https://dash.triup-psu.space',
     AUTH_ALLOWED_ALGORITHMS: 'RS256', AUTH_ORGANIZATION_CLAIM: 'org_id', AUTH_ROLES_CLAIM: 'roles',
     DATABASE_URL: 'postgresql://app:secret@postgres/app',
-    APP_DOMAIN: 'dashboard.example.test', APP_URL: 'https://dashboard.example.test',
-    CORS_ALLOWED_ORIGINS: 'https://dashboard.example.test',
+    APP_DOMAIN: 'dash.triup-psu.space', APP_URL: 'https://dash.triup-psu.space',
+    CORS_ALLOWED_ORIGINS: 'https://dash.triup-psu.space',
     SECRET_ENCRYPTION_KEY: Buffer.alloc(32, 99).toString('base64'),
   };
 
@@ -32,7 +32,7 @@ describe('parseEnvironment', () => {
       AUTH_EXTERNAL_PROVIDER: 'main-website',
       AUTH_JWKS_URL: 'https://identity.triup-psu.space/.well-known/jwks.json',
       AUTH_ISSUER: 'https://identity.triup-psu.space',
-      AUTH_AUDIENCE: 'dashboardmini',
+      AUTH_AUDIENCE: 'https://dash.triup-psu.space',
       AUTH_ALLOWED_ALGORITHMS: 'RS256',
       AUTH_ORGANIZATION_CLAIM: 'org_id',
       AUTH_ROLES_CLAIM: 'roles',
@@ -43,7 +43,7 @@ describe('parseEnvironment', () => {
     const base = {
       ...productionBase,
       SECRET_ENCRYPTION_KEY: undefined,
-      CORS_ORIGINS: 'https://dashboard.example.test', FILE_STORAGE_PATH: '/data/uploads',
+      CORS_ORIGINS: 'https://dash.triup-psu.space', FILE_STORAGE_PATH: '/data/uploads',
       SECRET_MASTER_KEY: Buffer.alloc(32, 97).toString('base64'),
     };
     expect(() => parseEnvironment(base)).toThrow(/development SECRET_MASTER_KEY/i);
@@ -84,7 +84,11 @@ describe('parseEnvironment', () => {
 
   it('requires an HTTPS application identity', () => {
     expect(() => parseEnvironment({ ...productionBase, APP_DOMAIN: undefined })).toThrow(/APP_DOMAIN/i);
-    expect(() => parseEnvironment({ ...productionBase, APP_URL: 'http://dashboard.example.test' })).toThrow(/APP_URL.*HTTPS/i);
+    expect(() => parseEnvironment({ ...productionBase, APP_URL: 'http://dash.triup-psu.space' })).toThrow(/APP_URL.*HTTPS/i);
+    expect(() => parseEnvironment({ ...productionBase, AUTH_AUDIENCE: 'dashboardmini' })).toThrow(/AUTH_AUDIENCE.*APP_URL/i);
+    expect(() => parseEnvironment({ ...productionBase, CORS_ALLOWED_ORIGINS: 'https://dash.triup-psu.space,https://other.example.test' })).toThrow(/CORS_ALLOWED_ORIGINS.*APP_URL/i);
+    expect(() => parseEnvironment({ ...productionBase, AUTH_ISSUER: 'https://dash.triup-psu.space/issuer' })).toThrow(/external identity provider/i);
+    expect(() => parseEnvironment({ ...productionBase, AUTH_JWKS_URL: 'https://dash.triup-psu.space/jwks' })).toThrow(/external identity provider/i);
   });
 
   it('requires complete SMTP configuration when SMTP delivery is enabled', () => {

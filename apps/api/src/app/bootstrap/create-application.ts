@@ -32,7 +32,7 @@ export async function createApplication(input: NodeJS.ProcessEnv | Record<string
     trustProxy: ['loopback', 'linklocal', 'uniquelocal'],
   }), { logger });
   await app.register(helmet, securityHeadersOptions);
-  await app.register(cors, { origin: environment.corsOrigins, credentials: true });
+  await app.register(cors, { origin: environment.corsOrigins, credentials: false });
   await app.register(rateLimit, { max: 300, timeWindow: '1 minute' });
   await app.register(multipart, { limits: { fileSize: environment.maxUploadSize, files: 1, fields: 20 } });
   registerMetrics(app.getHttpAdapter().getInstance(), environment);
