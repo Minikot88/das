@@ -159,8 +159,6 @@ export default function SharePage() {
           kicker="ลิงก์ไม่พร้อมใช้งาน"
           title="ไม่พบแดชบอร์ด"
           description="ลิงก์ที่แชร์นี้อาจหมดอายุหรือถูกลบแล้ว"
-          linkTo="/login"
-          linkLabel="ไปหน้าเข้าสู่ระบบ"
         />
       </main>
     );
@@ -212,8 +210,6 @@ export default function SharePage() {
             kicker="ยังไม่มีกราฟ"
             title="แดชบอร์ดนี้ยังไม่มีกราฟ"
             description="กลับมาตรวจอีกครั้งหลังจากบันทึกกราฟใหม่แล้ว"
-            linkTo="/login"
-            linkLabel="เข้าสู่ระบบ"
           />
         ) : (
           <div className="share-grid" role="list" aria-label="กราฟที่แชร์">
