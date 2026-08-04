@@ -14,6 +14,7 @@ export type SessionPrincipal = {
   userId: string;
   sessionId: string;
   roles: string[];
+  permissions?: string[];
   projectScopes?: ProjectScope[];
   authMode?: 'external' | 'disabled';
 };
@@ -30,15 +31,19 @@ export class AuthService {
 
   async resolveExternalIdentity(identity: VerifiedExternalClaims): Promise<SessionPrincipal> {
     const providerKey = externalIdentityProviderKey(identity.provider, identity.issuer);
-    const user = await this.prisma.userProfile.findFirst({
+    const users = await this.prisma.userProfile.findMany({
       where: {
-        organizationId: identity.organizationId,
         externalAuthProvider: providerKey,
         externalUserId: identity.externalUserId,
         status: 'active',
         disabledAt: null,
       },
+      take: 2,
     });
+    if (users.length > 1) {
+      throw new ApiError(403, 'EXTERNAL_IDENTITY_AMBIGUOUS', 'This external identity is mapped to more than one organization.');
+    }
+    const user = users[0];
     if (!user) throw externalIdentityForbidden();
     const sessionId = `external-${stableHash(`${providerKey}\0${identity.externalUserId}`).slice(0, 48)}`;
     return this.resolveDatabasePrincipal(user.organizationId, user.id, 'external', sessionId);
@@ -54,8 +59,31 @@ export class AuthService {
       organizationId: user.organizationId,
       name: user.displayName,
       roles: principal.roles,
+      permissions: principal.permissions || [],
       projectScopes: principal.projectScopes,
     };
+  }
+
+  async resolveApplicationSession(input: {
+    organizationId: string;
+    userId: string;
+    sessionId: string;
+  }): Promise<SessionPrincipal> {
+    const user = await this.prisma.userProfile.findUnique({ where: { id: input.userId } });
+    if (
+      !user
+      || user.organizationId !== input.organizationId
+      || user.status !== 'active'
+      || user.disabledAt
+    ) {
+      throw invalidSession();
+    }
+    return this.resolveDatabasePrincipal(
+      input.organizationId,
+      input.userId,
+      'external',
+      input.sessionId,
+    );
   }
 
   private async resolveDatabasePrincipal(
@@ -64,13 +92,26 @@ export class AuthService {
     authMode: NonNullable<SessionPrincipal['authMode']>,
     sessionId: string,
   ): Promise<SessionPrincipal> {
-    const [organizationMembership, projectMemberships] = await Promise.all([
+    const [organizationMembership, projectMemberships, assignedRoles] = await Promise.all([
       this.prisma.organizationMember.findUnique({
         where: { organizationId_userId: { organizationId, userId } },
       }),
       this.prisma.biProjectMember.findMany({
         where: { organizationId, userId },
         select: { projectId: true, role: true },
+      }),
+      this.prisma.userRole.findMany({
+        where: { userId, roles: { organizationId } },
+        select: {
+          roles: {
+            select: {
+              code: true,
+              role_permissions: {
+                select: { permissions: { select: { code: true } } },
+              },
+            },
+          },
+        },
       }),
     ]);
     if (!organizationMembership) {
@@ -81,7 +122,14 @@ export class AuthService {
       organizationId,
       userId,
       sessionId,
-      roles: [...new Set([organizationMembership.role, ...projectMemberships.map(item => item.role)])],
+      roles: [...new Set([
+        organizationMembership.role,
+        ...projectMemberships.map(item => item.role),
+        ...assignedRoles.map(item => item.roles.code),
+      ])],
+      permissions: [...new Set(assignedRoles.flatMap(item => (
+        item.roles.role_permissions.map(rolePermission => rolePermission.permissions.code)
+      )))],
       projectScopes: projectMemberships.map(item => ({ projectId: item.projectId, role: item.role })),
       authMode,
     };

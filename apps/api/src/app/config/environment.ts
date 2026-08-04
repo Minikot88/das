@@ -14,6 +14,19 @@ export type RuntimeEnvironment = {
   authOrganizationClaim: string;
   authRolesClaim: string;
   authScopesClaim: string;
+  oidcAuthorizationUrl?: string;
+  oidcTokenUrl?: string;
+  oidcUserinfoUrl?: string;
+  oidcClientId?: string;
+  oidcClientSecret?: string;
+  oidcRedirectUri?: string;
+  oidcScopes: string[];
+  sessionSecret?: string;
+  sessionCookieName: string;
+  sessionCookieMaxAgeSeconds: number;
+  sessionCookieSecure: boolean;
+  sessionCookieHttpOnly: boolean;
+  sessionCookieSameSite: 'lax';
   internalSingleUserId?: string;
   secretMasterKey?: string;
   databaseUrl?: string;
@@ -79,15 +92,39 @@ export function parseEnvironment(input: NodeJS.ProcessEnv | Record<string, strin
   if (!['development', 'test', 'production'].includes(nodeEnv)) throw new Error(`Unsupported NODE_ENV: ${nodeEnv}`);
   if (!['external', 'disabled'].includes(authMode)) throw new Error(`Unsupported AUTH_MODE: ${authMode}`);
   if (nodeEnv === 'production' && authMode === 'disabled') throw new Error('AUTH_MODE=disabled is forbidden in production');
-  const authExternalProvider = String(input.AUTH_EXTERNAL_PROVIDER || (nodeEnv === 'production' ? '' : 'main-website')).trim();
+  const authExternalProvider = String(input.AUTH_EXTERNAL_PROVIDER || (nodeEnv === 'production' ? '' : 'psu-sso')).trim();
   const authJwksUrl = input.AUTH_JWKS_URL?.trim();
   const authIssuer = input.AUTH_ISSUER?.trim();
   const authAudience = input.AUTH_AUDIENCE?.trim() || (nodeEnv === 'production' ? undefined : 'https://dash.triup-psu.space');
   const authAllowedAlgorithms = String(input.AUTH_ALLOWED_ALGORITHMS || (nodeEnv === 'production' ? '' : 'RS256')).split(',').map(value => value.trim()).filter(Boolean);
   const authClockSkewSeconds = parseBoundedInteger('AUTH_CLOCK_SKEW_SECONDS', input.AUTH_CLOCK_SKEW_SECONDS, 60, 0, 300);
-  if (authMode === 'external' && (!authExternalProvider || !authJwksUrl || !authIssuer || !authAudience || !authAllowedAlgorithms.length)) throw new Error('External authentication requires AUTH_EXTERNAL_PROVIDER, AUTH_JWKS_URL, AUTH_ISSUER, AUTH_AUDIENCE, and AUTH_ALLOWED_ALGORITHMS');
-  if (nodeEnv === 'production' && authMode === 'external' && (!input.AUTH_ORGANIZATION_CLAIM?.trim() || (!input.AUTH_ROLES_CLAIM?.trim() && !input.AUTH_SCOPES_CLAIM?.trim()))) {
-    throw new Error('External authentication requires AUTH_ORGANIZATION_CLAIM and AUTH_ROLES_CLAIM or AUTH_SCOPES_CLAIM in production');
+  const oidcAuthorizationUrl = input.OIDC_AUTHORIZATION_URL?.trim();
+  const oidcTokenUrl = input.OIDC_TOKEN_URL?.trim();
+  const oidcUserinfoUrl = input.OIDC_USERINFO_URL?.trim();
+  const oidcClientId = input.OIDC_CLIENT_ID?.trim();
+  const oidcClientSecret = input.OIDC_CLIENT_SECRET?.trim();
+  const oidcRedirectUri = input.OIDC_REDIRECT_URI?.trim();
+  const oidcScopes = String(input.OIDC_SCOPES || 'openid profile email').split(/\s+/).map(value => value.trim()).filter(Boolean);
+  const sessionSecret = input.SESSION_SECRET?.trim();
+  const sessionCookieName = String(input.SESSION_COOKIE_NAME || 'dashboardmini_session').trim();
+  const sessionCookieMaxAgeSeconds = parseBoundedInteger('SESSION_COOKIE_MAX_AGE_SECONDS', input.SESSION_COOKIE_MAX_AGE_SECONDS, 3_600, 300, 28_800);
+  const sessionCookieSecure = parseBoolean('SESSION_COOKIE_SECURE', input.SESSION_COOKIE_SECURE, nodeEnv === 'production');
+  const sessionCookieHttpOnly = parseBoolean('SESSION_COOKIE_HTTP_ONLY', input.SESSION_COOKIE_HTTP_ONLY, true);
+  const sessionCookieSameSite = String(input.SESSION_COOKIE_SAME_SITE || 'lax').trim().toLowerCase();
+  if (authMode === 'external' && (
+    !authExternalProvider
+    || !authJwksUrl
+    || !authIssuer
+    || !authAudience
+    || !authAllowedAlgorithms.length
+    || !oidcAuthorizationUrl
+    || !oidcTokenUrl
+    || !oidcClientId
+    || !oidcClientSecret
+    || !oidcRedirectUri
+    || !sessionSecret
+  )) {
+    throw new Error('External authentication requires the PSU SSO issuer, JWKS, OIDC client, redirect URI, and application session configuration');
   }
   if (authMode === 'external' && authAllowedAlgorithms.some(value => !/^RS(256|384|512)$/.test(value))) throw new Error('AUTH_ALLOWED_ALGORITHMS must contain only allowed asymmetric RS algorithms');
   if (authJwksUrl) {
@@ -103,6 +140,28 @@ export function parseEnvironment(input: NodeJS.ProcessEnv | Record<string, strin
       throw new Error('AUTH_ISSUER must be a credential-free HTTPS URL in production');
     }
   }
+  for (const [name, value] of [
+    ['OIDC_AUTHORIZATION_URL', oidcAuthorizationUrl],
+    ['OIDC_TOKEN_URL', oidcTokenUrl],
+    ['OIDC_USERINFO_URL', oidcUserinfoUrl],
+    ['OIDC_REDIRECT_URI', oidcRedirectUri],
+  ] as const) {
+    if (!value) continue;
+    let url: URL;
+    try { url = new URL(value); } catch { throw new Error(`${name} must be a valid URL`); }
+    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.hash) throw new Error(`${name} must be a credential-free HTTP(S) URL`);
+    if (nodeEnv === 'production' && url.protocol !== 'https:') throw new Error(`${name} must use HTTPS in production`);
+  }
+  if (authMode === 'external' && !oidcScopes.includes('openid')) throw new Error('OIDC_SCOPES must include openid');
+  if (oidcClientId && (!/^[\x21-\x7e]{1,255}$/.test(oidcClientId) || /placeholder|change[-_]?me|<|>/i.test(oidcClientId))) {
+    throw new Error('OIDC_CLIENT_ID must be a non-placeholder client identifier');
+  }
+  if (authMode === 'external' && oidcClientSecret) assertSecret('OIDC_CLIENT_SECRET', oidcClientSecret);
+  if (authMode === 'external' && sessionSecret) assertSecret('SESSION_SECRET', sessionSecret);
+  if (!/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(sessionCookieName)) throw new Error('SESSION_COOKIE_NAME must be a valid cookie name');
+  if (!sessionCookieHttpOnly) throw new Error('SESSION_COOKIE_HTTP_ONLY must be true');
+  if (sessionCookieSameSite !== 'lax') throw new Error('SESSION_COOKIE_SAME_SITE must be lax');
+  if (nodeEnv === 'production' && !sessionCookieSecure) throw new Error('SESSION_COOKIE_SECURE must be true in production');
   if (nodeEnv === 'production' && authIssuer && /example|placeholder|change[-_]?me/i.test(authIssuer)) throw new Error('AUTH_ISSUER cannot use a placeholder value in production');
   for (const [name, value] of [
     ['AUTH_ORGANIZATION_CLAIM', input.AUTH_ORGANIZATION_CLAIM || 'org_id'],
@@ -165,7 +224,9 @@ export function parseEnvironment(input: NodeJS.ProcessEnv | Record<string, strin
     if (appDomain && parsedAppUrl.host !== appDomain) throw new Error('APP_URL host must match APP_DOMAIN');
   }
   if (nodeEnv === 'production' && parsedAppUrl) {
-    if (authAudience !== parsedAppUrl.origin) throw new Error('AUTH_AUDIENCE must exactly match the APP_URL origin');
+    if (authMode === 'external' && authExternalProvider !== 'psu-sso') throw new Error('AUTH_EXTERNAL_PROVIDER must be psu-sso in production');
+    if (authAudience !== oidcClientId) throw new Error('AUTH_AUDIENCE must exactly match OIDC_CLIENT_ID');
+    if (oidcRedirectUri !== `${parsedAppUrl.origin}/api/auth/callback`) throw new Error('OIDC_REDIRECT_URI must exactly match the Dashboard callback URL');
     if (corsOrigins.length !== 1 || corsOrigins[0] !== parsedAppUrl.origin) throw new Error('CORS_ALLOWED_ORIGINS must contain only the APP_URL origin');
     if (authIssuer && new URL(authIssuer).origin === parsedAppUrl.origin) throw new Error('AUTH_ISSUER must be issued by the external identity provider, not DashboardMiniBi');
     if (authJwksUrl && new URL(authJwksUrl).origin === parsedAppUrl.origin) throw new Error('AUTH_JWKS_URL must belong to the external identity provider, not DashboardMiniBi');
@@ -194,6 +255,19 @@ export function parseEnvironment(input: NodeJS.ProcessEnv | Record<string, strin
     authOrganizationClaim: String(input.AUTH_ORGANIZATION_CLAIM || 'org_id'),
     authRolesClaim: String(input.AUTH_ROLES_CLAIM || 'roles'),
     authScopesClaim: String(input.AUTH_SCOPES_CLAIM || 'scopes'),
+    oidcAuthorizationUrl,
+    oidcTokenUrl,
+    oidcUserinfoUrl,
+    oidcClientId,
+    oidcClientSecret,
+    oidcRedirectUri,
+    oidcScopes,
+    sessionSecret,
+    sessionCookieName,
+    sessionCookieMaxAgeSeconds,
+    sessionCookieSecure,
+    sessionCookieHttpOnly,
+    sessionCookieSameSite,
     internalSingleUserId,
     secretMasterKey,
     databaseUrl: databaseUrlValue,

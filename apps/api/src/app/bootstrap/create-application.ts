@@ -19,6 +19,11 @@ export const securityHeadersOptions = {
   hsts: { includeSubDomains: false, preload: false },
 };
 
+export const corsOptions = (origins: string[]) => ({
+  origin: origins,
+  credentials: true,
+});
+
 export async function createApplication(input: NodeJS.ProcessEnv | Record<string, string | undefined> = process.env): Promise<NestFastifyApplication> {
   const environment = parseEnvironment(input);
   const logger: false | Array<'log' | 'warn' | 'error' | 'debug'> = environment.nodeEnv === 'test'
@@ -30,9 +35,9 @@ export async function createApplication(input: NodeJS.ProcessEnv | Record<string
   const app = await NestFactory.create<NestFastifyApplication>(AppModule.configured(environment), new FastifyAdapter({
     bodyLimit: 6 * 1024 * 1024,
     trustProxy: ['loopback', 'linklocal', 'uniquelocal'],
-  }), { logger });
+  }), { logger, abortOnError: false });
   await app.register(helmet, securityHeadersOptions);
-  await app.register(cors, { origin: environment.corsOrigins, credentials: false });
+  await app.register(cors, corsOptions(environment.corsOrigins));
   await app.register(rateLimit, { max: 300, timeWindow: '1 minute' });
   await app.register(multipart, { limits: { fileSize: environment.maxUploadSize, files: 1, fields: 20 } });
   registerMetrics(app.getHttpAdapter().getInstance(), environment);
