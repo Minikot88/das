@@ -16,14 +16,8 @@ export default defineConfig(({ mode }) => {
     throw new Error("VITE_USE_MOCK must be explicitly set to false for production builds");
   }
   if (productionDeployment) {
-    let parsedSessionUrl;
-    try {
-      parsedSessionUrl = new URL(sessionRequiredUrl);
-    } catch {
-      throw new Error("VITE_EXTERNAL_SESSION_REQUIRED_URL must be a valid HTTPS URL for production builds");
-    }
-    if (parsedSessionUrl.protocol !== "https:" || /placeholder|change[-_]?me|<|>/i.test(sessionRequiredUrl)) {
-      throw new Error("VITE_EXTERNAL_SESSION_REQUIRED_URL must be a non-placeholder HTTPS URL for production builds");
+    if (sessionRequiredUrl !== "/api/auth/login") {
+      throw new Error("VITE_EXTERNAL_SESSION_REQUIRED_URL must be /api/auth/login for production builds");
     }
   }
 
