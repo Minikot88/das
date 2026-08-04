@@ -6,8 +6,8 @@ DashboardMiniBi is a React/Vite and NestJS/PostgreSQL analytics workspace for li
 
 Authentication is server-authoritative. Local/test may use `AUTH_MODE=disabled` with
 an existing configured technical principal. Production requires `AUTH_MODE=external`
-and a verified asymmetric JWT from the main website's JWKS endpoint. The browser
-does not persist or decode access tokens to make authorization decisions.
+and the backend-managed PSU SSO OIDC authorization-code flow. The browser receives
+only an opaque application-session cookie and never persists or decodes provider tokens.
 
 ## Quick Start
 
@@ -47,7 +47,7 @@ The image is HTTP-only and contains no backend. Terminate HTTPS at a trusted out
 - `VITE_API_BASE_URL`: API origin; blank uses same origin.
 - `VITE_API_PROXY_TARGET`: Vite development proxy target.
 - `VITE_API_TIMEOUT_MS`: frontend request timeout.
-- `VITE_EXTERNAL_SESSION_REQUIRED_URL`: main-site recovery URL required by production builds.
+- `VITE_EXTERNAL_SESSION_REQUIRED_URL`: same-origin PSU SSO login endpoint; production requires `/api/auth/login`.
 - `FRONTEND_HOST`: Docker bind address; defaults to `127.0.0.1`.
 - `FRONTEND_PORT`: Docker host port.
 

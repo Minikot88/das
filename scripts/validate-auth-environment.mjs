@@ -8,43 +8,54 @@ const required = [
   "AUTH_ISSUER",
   "AUTH_AUDIENCE",
   "AUTH_ALLOWED_ALGORITHMS",
-  "AUTH_ORGANIZATION_CLAIM",
+  "OIDC_AUTHORIZATION_URL",
+  "OIDC_TOKEN_URL",
+  "OIDC_USERINFO_URL",
+  "OIDC_CLIENT_ID",
+  "OIDC_CLIENT_SECRET",
+  "OIDC_REDIRECT_URI",
+  "OIDC_SCOPES",
+  "SESSION_SECRET",
+  "SESSION_COOKIE_NAME",
+  "SESSION_COOKIE_SECURE",
+  "SESSION_COOKIE_HTTP_ONLY",
+  "SESSION_COOKIE_SAME_SITE",
   "VITE_EXTERNAL_SESSION_REQUIRED_URL",
 ];
 
 const missing = required.filter((name) => !process.env[name]?.trim());
-if (!process.env.AUTH_ROLES_CLAIM?.trim() && !process.env.AUTH_SCOPES_CLAIM?.trim()) {
-  missing.push("AUTH_ROLES_CLAIM or AUTH_SCOPES_CLAIM");
-}
 if (missing.length) {
   throw new Error(`Missing production authentication environment: ${missing.join(", ")}`);
 }
 if (process.env.AUTH_MODE !== "external") {
   throw new Error("Production authentication requires AUTH_MODE=external");
 }
-if (process.env.AUTH_EXTERNAL_PROVIDER !== "triup-main-website") {
-  throw new Error("AUTH_EXTERNAL_PROVIDER must be triup-main-website");
+if (process.env.AUTH_EXTERNAL_PROVIDER !== "psu-sso") {
+  throw new Error("AUTH_EXTERNAL_PROVIDER must be psu-sso");
 }
-if (!String(process.env.AUTH_ALLOWED_ALGORITHMS).split(",").map((value) => value.trim()).filter(Boolean).every((value) => /^RS(256|384|512)$/.test(value))) {
-  throw new Error("AUTH_ALLOWED_ALGORITHMS must contain only asymmetric RS algorithms");
+if (process.env.AUTH_ALLOWED_ALGORITHMS !== "RS256") {
+  throw new Error("AUTH_ALLOWED_ALGORITHMS must be RS256");
 }
-for (const name of ["AUTH_JWKS_URL", "AUTH_ISSUER", "VITE_EXTERNAL_SESSION_REQUIRED_URL"]) {
-  const raw = process.env[name];
+
+const expectedEndpoints = {
+  AUTH_ISSUER: "https://psusso.psu.ac.th/application/o/research-triupact/",
+  AUTH_JWKS_URL: "https://psusso.psu.ac.th/application/o/research-triupact/jwks/",
+  OIDC_AUTHORIZATION_URL: "https://psusso.psu.ac.th/application/o/authorize/",
+  OIDC_TOKEN_URL: "https://psusso.psu.ac.th/application/o/token/",
+  OIDC_USERINFO_URL: "https://psusso.psu.ac.th/application/o/userinfo/",
+};
+for (const [name, expected] of Object.entries(expectedEndpoints)) {
   let url;
   try {
-    url = new URL(raw);
+    url = new URL(process.env[name]);
   } catch {
     throw new Error(`${name} must be a valid HTTPS URL`);
   }
-  if (url.protocol !== "https:" || /placeholder|change[-_]?me|example\.com|<|>/i.test(raw)) {
-    throw new Error(`${name} must be a non-placeholder HTTPS URL`);
+  if (url.protocol !== "https:" || url.href !== expected) {
+    throw new Error(`${name} must match the verified PSU SSO endpoint`);
   }
 }
-for (const name of ["AUTH_EXTERNAL_PROVIDER", "AUTH_AUDIENCE", "AUTH_ORGANIZATION_CLAIM"]) {
-  if (/placeholder|change[-_]?me|<|>/i.test(process.env[name])) {
-    throw new Error(`${name} must not use a placeholder value`);
-  }
-}
+
 const publicUrl = new URL(process.env.APP_URL);
 if (
   publicUrl.protocol !== "https:"
@@ -53,15 +64,42 @@ if (
 ) {
   throw new Error("APP_URL must be the exact HTTPS origin matching APP_DOMAIN");
 }
-if (process.env.AUTH_AUDIENCE !== publicUrl.origin) {
-  throw new Error("AUTH_AUDIENCE must exactly match APP_URL");
-}
 if (process.env.CORS_ALLOWED_ORIGINS !== publicUrl.origin) {
   throw new Error("CORS_ALLOWED_ORIGINS must contain only APP_URL");
 }
-for (const name of ["AUTH_JWKS_URL", "AUTH_ISSUER", "VITE_EXTERNAL_SESSION_REQUIRED_URL"]) {
-  if (new URL(process.env[name]).origin === publicUrl.origin) {
-    throw new Error(`${name} must belong to the external identity provider, not DashboardMiniBi`);
+if (
+  process.env.OIDC_REDIRECT_URI
+  !== `${publicUrl.origin}/api/auth/callback`
+) {
+  throw new Error("OIDC_REDIRECT_URI must exactly match the Dashboard callback URL");
+}
+if (process.env.AUTH_AUDIENCE !== process.env.OIDC_CLIENT_ID) {
+  throw new Error("AUTH_AUDIENCE must exactly match OIDC_CLIENT_ID");
+}
+if (!process.env.OIDC_SCOPES.split(/\s+/).includes("openid")) {
+  throw new Error("OIDC_SCOPES must include openid");
+}
+if (process.env.VITE_EXTERNAL_SESSION_REQUIRED_URL !== "/api/auth/login") {
+  throw new Error("VITE_EXTERNAL_SESSION_REQUIRED_URL must be /api/auth/login");
+}
+if (
+  process.env.SESSION_COOKIE_SECURE !== "true"
+  || process.env.SESSION_COOKIE_HTTP_ONLY !== "true"
+  || process.env.SESSION_COOKIE_SAME_SITE.toLowerCase() !== "lax"
+) {
+  throw new Error("Production session cookies must be Secure, HttpOnly, and SameSite=Lax");
+}
+if (process.env.SESSION_COOKIE_NAME !== "dashboardmini_session") {
+  throw new Error("SESSION_COOKIE_NAME must be dashboardmini_session");
+}
+for (const name of ["OIDC_CLIENT_ID", "OIDC_CLIENT_SECRET", "SESSION_SECRET"]) {
+  const value = process.env[name];
+  if (
+    value.length < 32 && name !== "OIDC_CLIENT_ID"
+    || /placeholder|change[-_]?me|example|<|>/i.test(value)
+  ) {
+    throw new Error(`${name} is missing or invalid`);
   }
 }
-console.log("Production authentication environment is complete.");
+
+console.log("Production PSU SSO environment is complete.");
