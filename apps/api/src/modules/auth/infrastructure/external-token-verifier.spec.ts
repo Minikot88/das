@@ -5,8 +5,8 @@ import { ExternalTokenVerifier } from './external-token-verifier.js';
 
 type SigningKey = Awaited<ReturnType<typeof generateKeyPair>>;
 
-const issuer = 'https://identity.triup-psu.space';
-const audience = 'https://dash.triup-psu.space';
+const issuer = 'https://psusso.psu.ac.th/application/o/research-triupact/';
+const audience = 'dashboardmini-test-client';
 let server: Server;
 let jwksUrl: string;
 let primary: SigningKey;
@@ -40,7 +40,7 @@ afterAll(async () => {
 function environment(url = jwksUrl) {
   return {
     authMode: 'external',
-    authExternalProvider: 'main-website',
+    authExternalProvider: 'psu-sso',
     authJwksUrl: url,
     authIssuer: issuer,
     authAudience: audience,
@@ -87,7 +87,7 @@ async function token(
 describe('ExternalTokenVerifier JWT/JWKS security contract', () => {
   it('verifies signature, kid, issuer, audience, lifetime, subject and organization', async () => {
     await expect(new ExternalTokenVerifier(environment()).verify(await token())).resolves.toEqual({
-      provider: 'main-website',
+      provider: 'psu-sso',
       issuer,
       externalUserId: 'subject-1',
       organizationId: 'org-1',
@@ -112,7 +112,7 @@ describe('ExternalTokenVerifier JWT/JWKS security contract', () => {
     }
   });
 
-  it('accepts an audience array only when it contains the configured Dashboard public URL', async () => {
+  it('accepts an audience array only when it contains the configured OIDC client id', async () => {
     const verifier = new ExternalTokenVerifier(environment());
     await expect(verifier.verify(await token(primary, {
       audience: ['another-service', audience],
@@ -189,5 +189,31 @@ describe('ExternalTokenVerifier JWT/JWKS security contract', () => {
     await expect(new ExternalTokenVerifier(environment(timeoutUrl)).verify(await token()))
       .rejects.toMatchObject({ status: 401, code: 'EXTERNAL_TOKEN_INVALID' });
     expect(Date.now() - startedAt).toBeLessThan(4_000);
+  });
+
+  it('accepts PSU SSO identity claims without organization or roles and enforces the OIDC nonce', async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const idToken = await new SignJWT({ nonce: 'nonce-expected', email: 'display-only@example.invalid' })
+      .setProtectedHeader({ alg: 'RS256', kid: 'primary' })
+      .setIssuer(issuer)
+      .setAudience(audience)
+      .setSubject('psu-subject-1')
+      .setIssuedAt(now)
+      .setExpirationTime(now + 300)
+      .sign(primary.privateKey);
+    const verifier = new ExternalTokenVerifier(environment());
+
+    await expect((verifier.verify as unknown as (value: string, nonce: string) => Promise<unknown>)(
+      idToken,
+      'nonce-expected',
+    )).resolves.toMatchObject({
+      provider: 'psu-sso',
+      externalUserId: 'psu-subject-1',
+      email: 'display-only@example.invalid',
+    });
+    await expect((verifier.verify as unknown as (value: string, nonce: string) => Promise<unknown>)(
+      idToken,
+      'nonce-wrong',
+    )).rejects.toMatchObject({ status: 401, code: 'EXTERNAL_TOKEN_INVALID' });
   });
 });

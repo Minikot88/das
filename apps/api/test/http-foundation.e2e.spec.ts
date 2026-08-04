@@ -10,11 +10,19 @@ describe('HTTP foundation', () => {
     app = await createApplication({
       NODE_ENV: 'test',
       AUTH_MODE: 'external',
-      AUTH_EXTERNAL_PROVIDER: 'test-provider',
+      AUTH_EXTERNAL_PROVIDER: 'psu-sso',
       AUTH_JWKS_URL: 'http://127.0.0.1:1/jwks',
       AUTH_ISSUER: 'https://identity.test.local',
-      AUTH_AUDIENCE: 'https://dash.triup-psu.space',
+      AUTH_AUDIENCE: 'dashboardmini-test-client',
       AUTH_ALLOWED_ALGORITHMS: 'RS256',
+      OIDC_AUTHORIZATION_URL: 'https://identity.test.local/authorize',
+      OIDC_TOKEN_URL: 'https://identity.test.local/token',
+      OIDC_USERINFO_URL: 'https://identity.test.local/userinfo',
+      OIDC_CLIENT_ID: 'dashboardmini-test-client',
+      OIDC_CLIENT_SECRET: 'test-client-secret-value-000000000000',
+      OIDC_REDIRECT_URI: 'http://localhost:8080/api/auth/callback',
+      SESSION_SECRET: 'test-session-secret-value-000000000000',
+      APP_URL: 'http://localhost:8080',
       SECRET_MASTER_KEY: randomBytes(32).toString('base64'),
       DATABASE_URL: 'postgresql://dashboard:dashboard@127.0.0.1:5432/dashboard_mini_bi',
     });
@@ -32,7 +40,7 @@ describe('HTTP foundation', () => {
   it('sets security headers and only allows configured CORS origins', async () => {
     const allowed = await app.inject({ method: 'GET', url: '/api/v1/health', headers: { origin: 'http://localhost:8080' } });
     expect(allowed.headers['access-control-allow-origin']).toBe('http://localhost:8080');
-    expect(allowed.headers['access-control-allow-credentials']).toBeUndefined();
+    expect(allowed.headers['access-control-allow-credentials']).toBe('true');
     expect(allowed.headers['x-content-type-options']).toBe('nosniff');
     expect(allowed.headers['referrer-policy']).toBeTruthy();
     expect(allowed.headers['x-powered-by']).toBeUndefined();
@@ -75,7 +83,7 @@ describe('HTTP foundation', () => {
     expect(response.json()).toMatchObject({ code: 'BUILT_IN_AUTH_REMOVED' });
   });
 
-  it('requires a verified bearer principal for tenant data', async () => {
+  it('requires an opaque application session for tenant data', async () => {
     const denied = await app.inject({ method: 'GET', url: '/api/projects' });
     expect(denied.statusCode).toBe(401);
     expect(denied.json()).toMatchObject({ code: 'AUTHENTICATION_REQUIRED' });

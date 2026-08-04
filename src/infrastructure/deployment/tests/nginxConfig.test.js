@@ -42,7 +42,8 @@ describe("nginx static frontend configuration", () => {
     expect(config).toMatch(/location\s+=\s+\/api\s*\{[^}]*proxy_pass\s+http:\/\/backend:3000/m);
     expect(config).toMatch(/location\s+\^~\s+\/api\/\s*\{[^}]*proxy_pass\s+http:\/\/backend:3000/m);
     expect(config).toContain("server_name dash.triup-psu.space;");
-    expect(config).toContain("proxy_set_header Authorization $http_authorization;");
+    expect(config).toContain('location = /api/auth/callback');
+    expect(config).toMatch(/location\s+=\s+\/api\/auth\/callback\s*\{[^}]*access_log\s+off;/m);
     expect(config).toContain('proxy_set_header X-User-Id "";');
     expect(config).toContain('proxy_set_header X-Role "";');
   });

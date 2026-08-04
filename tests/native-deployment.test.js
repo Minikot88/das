@@ -73,11 +73,18 @@ describe('native server deployment tooling', () => {
     expect(env).toContain('AUTH_JWKS_URL=');
     expect(env).toContain('AUTH_ISSUER=');
     expect(env).toContain('APP_URL=https://dash.triup-psu.space');
-    expect(env).toContain('AUTH_EXTERNAL_PROVIDER=triup-main-website');
-    expect(env).toContain('AUTH_AUDIENCE=https://dash.triup-psu.space');
+    expect(env).toContain('AUTH_EXTERNAL_PROVIDER=psu-sso');
+    expect(env).toContain('AUTH_AUDIENCE=<psu-sso-client-id>');
+    expect(env).toContain('OIDC_REDIRECT_URI=https://dash.triup-psu.space/api/auth/callback');
+    expect(env).toContain('VITE_EXTERNAL_SESSION_REQUIRED_URL=/api/auth/login');
     expect(env).toContain('CORS_ALLOWED_ORIGINS=https://dash.triup-psu.space');
     expect(env).toContain('VITE_EXTERNAL_SESSION_REQUIRED_URL=');
     expect(env).toContain('SMTP_ENABLED=false');
     expect(env).not.toMatch(/postgresql:\/\/[^:]+:[^<\n]+@/);
+  });
+
+  it('preserves the browser process environment when applying Firefox rendering workarounds', () => {
+    const playwright = read('playwright.config.js');
+    expect(playwright).toContain("launchOptions: { env: { ...process.env,");
   });
 });

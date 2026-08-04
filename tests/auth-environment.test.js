@@ -9,14 +9,24 @@ const complete = {
   APP_URL: "https://dash.triup-psu.space",
   CORS_ALLOWED_ORIGINS: "https://dash.triup-psu.space",
   AUTH_MODE: "external",
-  AUTH_EXTERNAL_PROVIDER: "triup-main-website",
-  AUTH_JWKS_URL: "https://identity.triup-psu.space/.well-known/jwks.json",
-  AUTH_ISSUER: "https://identity.triup-psu.space",
-  AUTH_AUDIENCE: "https://dash.triup-psu.space",
+  AUTH_EXTERNAL_PROVIDER: "psu-sso",
+  AUTH_JWKS_URL: "https://psusso.psu.ac.th/application/o/research-triupact/jwks/",
+  AUTH_ISSUER: "https://psusso.psu.ac.th/application/o/research-triupact/",
+  AUTH_AUDIENCE: "dashboardmini-test-client",
   AUTH_ALLOWED_ALGORITHMS: "RS256",
-  AUTH_ORGANIZATION_CLAIM: "org_id",
-  AUTH_ROLES_CLAIM: "roles",
-  VITE_EXTERNAL_SESSION_REQUIRED_URL: "https://triup-psu.space/session-required",
+  OIDC_AUTHORIZATION_URL: "https://psusso.psu.ac.th/application/o/authorize/",
+  OIDC_TOKEN_URL: "https://psusso.psu.ac.th/application/o/token/",
+  OIDC_USERINFO_URL: "https://psusso.psu.ac.th/application/o/userinfo/",
+  OIDC_CLIENT_ID: "dashboardmini-test-client",
+  OIDC_CLIENT_SECRET: "test-client-secret-value-000000000000",
+  OIDC_REDIRECT_URI: "https://dash.triup-psu.space/api/auth/callback",
+  OIDC_SCOPES: "openid profile email",
+  SESSION_SECRET: "test-session-secret-value-000000000000",
+  SESSION_COOKIE_NAME: "dashboardmini_session",
+  SESSION_COOKIE_SECURE: "true",
+  SESSION_COOKIE_HTTP_ONLY: "true",
+  SESSION_COOKIE_SAME_SITE: "lax",
+  VITE_EXTERNAL_SESSION_REQUIRED_URL: "/api/auth/login",
 };
 
 function run(overrides = {}) {
@@ -30,9 +40,18 @@ function run(overrides = {}) {
     "AUTH_ISSUER",
     "AUTH_AUDIENCE",
     "AUTH_ALLOWED_ALGORITHMS",
-    "AUTH_ORGANIZATION_CLAIM",
-    "AUTH_ROLES_CLAIM",
-    "AUTH_SCOPES_CLAIM",
+    "OIDC_AUTHORIZATION_URL",
+    "OIDC_TOKEN_URL",
+    "OIDC_USERINFO_URL",
+    "OIDC_CLIENT_ID",
+    "OIDC_CLIENT_SECRET",
+    "OIDC_REDIRECT_URI",
+    "OIDC_SCOPES",
+    "SESSION_SECRET",
+    "SESSION_COOKIE_NAME",
+    "SESSION_COOKIE_SECURE",
+    "SESSION_COOKIE_HTTP_ONLY",
+    "SESSION_COOKIE_SAME_SITE",
     "VITE_EXTERNAL_SESSION_REQUIRED_URL",
   ];
   const env = { ...process.env };
@@ -42,7 +61,7 @@ function run(overrides = {}) {
 }
 
 describe("production external-auth environment gate", () => {
-  it("accepts a complete asymmetric JWT/JWKS contract", () => {
+  it("accepts a complete PSU SSO authorization-code contract", () => {
     expect(run().status).toBe(0);
   });
 
@@ -59,12 +78,13 @@ describe("production external-auth environment gate", () => {
     expect(run({ AUTH_JWKS_URL: "https://placeholder.example/jwks" }).status).not.toBe(0);
   });
 
-  it("binds audience and CORS to the exact Dashboard public origin", () => {
-    expect(run({ AUTH_AUDIENCE: "dashboardmini" }).status).not.toBe(0);
+  it("binds the audience to the client and callback/CORS to the Dashboard origin", () => {
+    expect(run({ AUTH_AUDIENCE: "another-client" }).status).not.toBe(0);
     expect(run({ CORS_ALLOWED_ORIGINS: "*" }).status).not.toBe(0);
     expect(run({ APP_URL: "https://dash.triup-psu.space/path" }).status).not.toBe(0);
     expect(run({ AUTH_ISSUER: "https://dash.triup-psu.space/issuer" }).status).not.toBe(0);
     expect(run({ AUTH_JWKS_URL: "https://dash.triup-psu.space/jwks" }).status).not.toBe(0);
-    expect(run({ VITE_EXTERNAL_SESSION_REQUIRED_URL: "https://dash.triup-psu.space/login" }).status).not.toBe(0);
+    expect(run({ OIDC_REDIRECT_URI: "https://dash.triup-psu.space/other" }).status).not.toBe(0);
+    expect(run({ VITE_EXTERNAL_SESSION_REQUIRED_URL: "https://external.example/login" }).status).not.toBe(0);
   });
 });

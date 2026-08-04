@@ -3,10 +3,18 @@ import { parseEnvironment } from './environment.js';
 
 describe('parseEnvironment', () => {
   const productionBase = {
-    NODE_ENV: 'production', AUTH_MODE: 'external', AUTH_EXTERNAL_PROVIDER: 'main-website',
-    AUTH_JWKS_URL: 'https://identity.triup-psu.space/.well-known/jwks.json',
-    AUTH_ISSUER: 'https://identity.triup-psu.space', AUTH_AUDIENCE: 'https://dash.triup-psu.space',
-    AUTH_ALLOWED_ALGORITHMS: 'RS256', AUTH_ORGANIZATION_CLAIM: 'org_id', AUTH_ROLES_CLAIM: 'roles',
+    NODE_ENV: 'production', AUTH_MODE: 'external', AUTH_EXTERNAL_PROVIDER: 'psu-sso',
+    AUTH_JWKS_URL: 'https://psusso.psu.ac.th/application/o/research-triupact/jwks/',
+    AUTH_ISSUER: 'https://psusso.psu.ac.th/application/o/research-triupact/', AUTH_AUDIENCE: 'dashboardmini-production-client',
+    AUTH_ALLOWED_ALGORITHMS: 'RS256',
+    OIDC_AUTHORIZATION_URL: 'https://psusso.psu.ac.th/application/o/authorize/',
+    OIDC_TOKEN_URL: 'https://psusso.psu.ac.th/application/o/token/',
+    OIDC_USERINFO_URL: 'https://psusso.psu.ac.th/application/o/userinfo/',
+    OIDC_CLIENT_ID: 'dashboardmini-production-client',
+    OIDC_CLIENT_SECRET: 'production-client-secret-value-00000000',
+    OIDC_REDIRECT_URI: 'https://dash.triup-psu.space/api/auth/callback',
+    OIDC_SCOPES: 'openid profile email',
+    SESSION_SECRET: 'production-session-secret-value-32-bytes',
     DATABASE_URL: 'postgresql://app:secret@postgres/app',
     APP_DOMAIN: 'dash.triup-psu.space', APP_URL: 'https://dash.triup-psu.space',
     CORS_ALLOWED_ORIGINS: 'https://dash.triup-psu.space',
@@ -27,15 +35,9 @@ describe('parseEnvironment', () => {
 
   it('requires database and cryptographic keys in production', () => {
     expect(() => parseEnvironment({
-      NODE_ENV: 'production',
-      AUTH_MODE: 'external',
-      AUTH_EXTERNAL_PROVIDER: 'main-website',
-      AUTH_JWKS_URL: 'https://identity.triup-psu.space/.well-known/jwks.json',
-      AUTH_ISSUER: 'https://identity.triup-psu.space',
-      AUTH_AUDIENCE: 'https://dash.triup-psu.space',
-      AUTH_ALLOWED_ALGORITHMS: 'RS256',
-      AUTH_ORGANIZATION_CLAIM: 'org_id',
-      AUTH_ROLES_CLAIM: 'roles',
+      ...productionBase,
+      DATABASE_URL: undefined,
+      SECRET_ENCRYPTION_KEY: undefined,
     })).toThrow('DATABASE_URL');
   });
 
@@ -72,11 +74,21 @@ describe('parseEnvironment', () => {
 
   it('requires a complete asymmetric external authentication contract', () => {
     const base = { ...productionBase };
-    for (const name of ['AUTH_EXTERNAL_PROVIDER', 'AUTH_JWKS_URL', 'AUTH_ISSUER', 'AUTH_AUDIENCE', 'AUTH_ALLOWED_ALGORITHMS'] as const) {
+    for (const name of [
+      'AUTH_EXTERNAL_PROVIDER',
+      'AUTH_JWKS_URL',
+      'AUTH_ISSUER',
+      'AUTH_AUDIENCE',
+      'AUTH_ALLOWED_ALGORITHMS',
+      'OIDC_AUTHORIZATION_URL',
+      'OIDC_TOKEN_URL',
+      'OIDC_CLIENT_ID',
+      'OIDC_CLIENT_SECRET',
+      'OIDC_REDIRECT_URI',
+      'SESSION_SECRET',
+    ] as const) {
       expect(() => parseEnvironment({ ...base, [name]: undefined })).toThrow(/External authentication requires/);
     }
-    expect(() => parseEnvironment({ ...base, AUTH_ORGANIZATION_CLAIM: undefined })).toThrow(/AUTH_ORGANIZATION_CLAIM/);
-    expect(() => parseEnvironment({ ...base, AUTH_ROLES_CLAIM: undefined, AUTH_SCOPES_CLAIM: undefined })).toThrow(/AUTH_ROLES_CLAIM or AUTH_SCOPES_CLAIM/);
     expect(() => parseEnvironment({ ...base, AUTH_ALLOWED_ALGORITHMS: 'HS256' })).toThrow(/asymmetric RS algorithms/i);
     expect(() => parseEnvironment({ ...base, AUTH_JWKS_URL: 'http://identity.triup-psu.space/jwks' })).toThrow(/HTTPS/i);
     expect(() => parseEnvironment({ ...base, AUTH_ISSUER: 'https://placeholder.example' })).toThrow(/placeholder/i);
@@ -85,10 +97,21 @@ describe('parseEnvironment', () => {
   it('requires an HTTPS application identity', () => {
     expect(() => parseEnvironment({ ...productionBase, APP_DOMAIN: undefined })).toThrow(/APP_DOMAIN/i);
     expect(() => parseEnvironment({ ...productionBase, APP_URL: 'http://dash.triup-psu.space' })).toThrow(/APP_URL.*HTTPS/i);
-    expect(() => parseEnvironment({ ...productionBase, AUTH_AUDIENCE: 'dashboardmini' })).toThrow(/AUTH_AUDIENCE.*APP_URL/i);
+    expect(() => parseEnvironment({ ...productionBase, AUTH_AUDIENCE: 'dashboardmini' })).toThrow(/AUTH_AUDIENCE.*OIDC_CLIENT_ID/i);
     expect(() => parseEnvironment({ ...productionBase, CORS_ALLOWED_ORIGINS: 'https://dash.triup-psu.space,https://other.example.test' })).toThrow(/CORS_ALLOWED_ORIGINS.*APP_URL/i);
     expect(() => parseEnvironment({ ...productionBase, AUTH_ISSUER: 'https://dash.triup-psu.space/issuer' })).toThrow(/external identity provider/i);
     expect(() => parseEnvironment({ ...productionBase, AUTH_JWKS_URL: 'https://dash.triup-psu.space/jwks' })).toThrow(/external identity provider/i);
+  });
+
+  it('enforces secure application-session cookie policy in production', () => {
+    expect(() => parseEnvironment({ ...productionBase, SESSION_COOKIE_SECURE: 'false' })).toThrow(/SESSION_COOKIE_SECURE/i);
+    expect(() => parseEnvironment({ ...productionBase, SESSION_COOKIE_HTTP_ONLY: 'false' })).toThrow(/SESSION_COOKIE_HTTP_ONLY/i);
+    expect(() => parseEnvironment({ ...productionBase, SESSION_COOKIE_SAME_SITE: 'none' })).toThrow(/SESSION_COOKIE_SAME_SITE/i);
+    expect(parseEnvironment(productionBase)).toMatchObject({
+      sessionCookieSecure: true,
+      sessionCookieHttpOnly: true,
+      sessionCookieSameSite: 'lax',
+    });
   });
 
   it('requires complete SMTP configuration when SMTP delivery is enabled', () => {
@@ -103,5 +126,33 @@ describe('parseEnvironment', () => {
 
   it('requires a non-placeholder metrics token when production metrics are enabled', () => {
     expect(() => parseEnvironment({ ...productionBase, METRICS_ENABLED: 'true' })).toThrow(/METRICS_TOKEN/i);
+  });
+
+  it('uses the PSU SSO client id as the OIDC audience without requiring organization or role claims', () => {
+    const environment = parseEnvironment({
+      ...productionBase,
+      AUTH_EXTERNAL_PROVIDER: 'psu-sso',
+      AUTH_ISSUER: 'https://psusso.psu.ac.th/application/o/research-triupact/',
+      AUTH_JWKS_URL: 'https://psusso.psu.ac.th/application/o/research-triupact/jwks/',
+      AUTH_AUDIENCE: 'dashboardmini-production-client',
+      AUTH_ORGANIZATION_CLAIM: undefined,
+      AUTH_ROLES_CLAIM: undefined,
+      AUTH_SCOPES_CLAIM: undefined,
+      OIDC_AUTHORIZATION_URL: 'https://psusso.psu.ac.th/application/o/authorize/',
+      OIDC_TOKEN_URL: 'https://psusso.psu.ac.th/application/o/token/',
+      OIDC_USERINFO_URL: 'https://psusso.psu.ac.th/application/o/userinfo/',
+      OIDC_CLIENT_ID: 'dashboardmini-production-client',
+      OIDC_CLIENT_SECRET: 'production-client-secret-value-00000000',
+      OIDC_REDIRECT_URI: 'https://dash.triup-psu.space/api/auth/callback',
+      OIDC_SCOPES: 'openid profile email',
+      SESSION_SECRET: 'production-session-secret-value-32-bytes',
+    });
+
+    expect(environment).toMatchObject({
+      authExternalProvider: 'psu-sso',
+      authAudience: 'dashboardmini-production-client',
+      oidcClientId: 'dashboardmini-production-client',
+      oidcRedirectUri: 'https://dash.triup-psu.space/api/auth/callback',
+    });
   });
 });

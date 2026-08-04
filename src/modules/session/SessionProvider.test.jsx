@@ -67,4 +67,28 @@ describe("SessionProvider", () => {
     expect(await screen.findByRole("heading", { name: "Session service unavailable" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
   });
+
+  it("offers the same-origin PSU SSO login endpoint when the application session is missing", async () => {
+    apiRequest.mockRejectedValue(Object.assign(new Error("Authentication is required."), { status: 401 }));
+    render(
+      <SessionProvider>
+        <SessionGate fallback={<span>Loading</span>}><span>Protected</span></SessionGate>
+      </SessionProvider>,
+    );
+
+    const login = await screen.findByRole("link", { name: "เข้าสู่ระบบด้วย PSU SSO" });
+    expect(login).toHaveAttribute("href", "/api/auth/login");
+  });
+
+  it("shows access denied without offering another login for an authenticated 403", async () => {
+    apiRequest.mockRejectedValue(Object.assign(new Error("This identity has no DashboardMiniBi access."), { status: 403 }));
+    render(
+      <SessionProvider>
+        <SessionGate fallback={<span>Loading</span>}><span>Protected</span></SessionGate>
+      </SessionProvider>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "ยังไม่ได้รับสิทธิ์ใช้งาน" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "เข้าสู่ระบบด้วย PSU SSO" })).not.toBeInTheDocument();
+  });
 });
