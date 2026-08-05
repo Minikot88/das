@@ -68,6 +68,30 @@ describe('structured external query builder', () => {
     }, metadata)).toThrowError(expect.objectContaining({ code: 'MISSING_JOIN' }));
   });
 
+  it('rejects join cycles instead of emitting a duplicate table alias', () => {
+    expect(() => buildStructuredExternalQuery({
+      sourceSchema: 'scopus',
+      baseTable: 'sc_articles',
+      selectedTables: [
+        { schema: 'scopus', table: 'sc_articles', alias: 'articles' },
+        { schema: 'scopus', table: 'sc_journals', alias: 'journals' },
+      ],
+      selectedFields: [],
+      joins: [
+        {
+          left: { schema: 'scopus', table: 'sc_articles', alias: 'articles', column: 'journal_id' },
+          right: { schema: 'scopus', table: 'sc_journals', alias: 'journals', column: 'id' },
+          joinType: 'left',
+        },
+        {
+          left: { schema: 'scopus', table: 'sc_journals', alias: 'journals', column: 'id' },
+          right: { schema: 'scopus', table: 'sc_articles', alias: 'articles', column: 'journal_id' },
+          joinType: 'inner',
+        },
+      ],
+    }, metadata)).toThrowError(expect.objectContaining({ code: 'JOIN_CYCLE' }));
+  });
+
   it('rejects incompatible manual join column types', () => {
     expect(() => buildStructuredExternalQuery({
       sourceSchema: 'scopus',

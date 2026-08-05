@@ -1,6 +1,6 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
-import { MemoryRouter, Outlet } from "react-router-dom";
+import { MemoryRouter, Outlet } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@infrastructure/http/client", () => ({

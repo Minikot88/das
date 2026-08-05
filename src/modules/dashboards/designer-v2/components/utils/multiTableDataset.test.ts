@@ -29,7 +29,7 @@ describe("multi-table dataset helpers", () => {
       id: "articles_id",
       name: "articles.id",
       physicalType: "bigint",
-      semanticType: "category",
+      semanticType: "identifier",
       defaultAggregation: "Count",
       sourceAlias: "articles",
     });

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router";
 import { useStore } from "@app/store/useStore";
 import CommandPaletteModal from "@app/components/command-palette/CommandPaletteModal";
 import DatasetExplorerModal from "@modules/datasets/components/DatasetExplorerModal";

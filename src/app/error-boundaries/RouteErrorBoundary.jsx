@@ -1,5 +1,5 @@
 import React from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation } from "react-router";
 
 class RouteErrorBoundaryInner extends React.Component {
   constructor(props) {

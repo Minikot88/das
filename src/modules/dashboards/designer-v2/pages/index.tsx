@@ -1,7 +1,7 @@
 import React, { Suspense, lazy } from "react";
 import { Alert, Box, Button, CssBaseline, Drawer, GlobalStyles, Skeleton, Snackbar, Stack, ThemeProvider, useMediaQuery } from "@mui/material";
 import { shouldRenderDesignerPreview } from "@modules/dashboards/designer-v2/components/utils/designerLayout";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { DndProvider } from "react-dnd";
 import BottomStatus from "@modules/dashboards/designer-v2/components/BottomStatus";
@@ -11,7 +11,6 @@ import FeaturePreviewDialog from "@modules/dashboards/designer-v2/components/Fea
 import FieldMapping from "@modules/dashboards/designer-v2/components/FieldMapping";
 import MultiTableContext from "@modules/dashboards/designer-v2/components/MultiTableContext";
 import PresentationBar from "@modules/dashboards/designer-v2/components/PresentationBar";
-import ShareDialog from "@modules/dashboards/designer-v2/components/ShareDialog";
 import SqlQueryPanel from "@modules/dashboards/designer-v2/components/SqlQueryPanel";
 import TemplateDialog from "@modules/dashboards/designer-v2/components/TemplateDialog";
 import { getFutureFeature } from "@modules/dashboards/designer-v2/components/demo/futureFeatures";
@@ -84,7 +83,6 @@ function DashboardDesignerContent() {
   const closeTransientOverlays = React.useCallback(() => {
     setTemplateOpen(false);
     setFeaturePreviewId(null);
-    actions.setShareOpen(false);
     actions.setSqlPanelOpen(false);
   }, [actions]);
   const returnDashboardPath = React.useMemo(() => {
@@ -152,7 +150,7 @@ function DashboardDesignerContent() {
         return;
       }
       if (detail.command === "share") {
-        actions.setShareOpen(true);
+        actions.showMessage("การแชร์กราฟจากตัวออกแบบยังไม่รองรับ ให้เพิ่มกราฟลง Dashboard ก่อนแล้วจึงแชร์จากหน้า Dashboard");
         return;
       }
       if (detail.command === "export") {
@@ -190,7 +188,6 @@ function DashboardDesignerContent() {
           onExit={actions.togglePreviewMode}
           onDeviceChange={actions.setDeviceMode}
           onZoomChange={actions.setZoom}
-          onShare={() => actions.setShareOpen(true)}
           onExportPng={() => {
             void actions.exportPng();
           }}
@@ -503,7 +500,6 @@ function DashboardDesignerContent() {
               onThemePresetChange={actions.applyThemePreset}
               onSave={handleSaveChart}
               onPreview={actions.togglePreviewMode}
-              onShare={() => actions.setShareOpen(true)}
               onExportJson={actions.exportJson}
               onExportCsv={actions.exportCsv}
               onExportPng={actions.exportPng}
@@ -536,7 +532,6 @@ function DashboardDesignerContent() {
                 onThemePresetChange={actions.applyThemePreset}
                 onSave={handleSaveChart}
                 onPreview={actions.togglePreviewMode}
-                onShare={() => actions.setShareOpen(true)}
                 onExportJson={actions.exportJson}
                 onExportCsv={actions.exportCsv}
                 onExportPng={actions.exportPng}
@@ -560,23 +555,6 @@ function DashboardDesignerContent() {
         activeFilterCount={countActiveFilters(state.config.filters)}
         saveStatus={state.saveStatus}
         lastSavedAt={state.lastSavedAt}
-      />
-
-      <ShareDialog
-        open={state.shareOpen}
-        access={state.shareAccess}
-        copyFallback={state.shareCopyFallback}
-        onAccessChange={(access) => {
-          actions.setShareAccess(access);
-          if (access === "team") setFeaturePreviewId("team-workspace");
-        }}
-        onClose={() => actions.setShareOpen(false)}
-        onCopy={() => {
-          void actions.copyShareLink();
-        }}
-        onCopyEmbed={() => {
-          void actions.copyShareEmbed();
-        }}
       />
 
       <TemplateDialog

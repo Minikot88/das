@@ -124,7 +124,7 @@ function findCrossModuleBoundaryViolations() {
 
 function findDomainBoundaryViolations() {
   const domainRoot = path.join(SOURCE_ROOT, "domain");
-  const forbiddenImports = /^(?:react(?:\/|$)|react-router-dom$|@app\/|@modules\/|@infrastructure\/)/;
+  const forbiddenImports = /^(?:react(?:\/|$)|react-router$|@app\/|@modules\/|@infrastructure\/)/;
   const forbiddenGlobals = /\b(?:localStorage|sessionStorage)\b|\b(?:window|globalThis)\s*\./;
   const violations = [];
 

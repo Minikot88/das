@@ -1,15 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
 import process from "node:process";
-
-const ADVISORY = "GHSA-qwww-vcr4-c8h2";
-const exemptionCheck = fileURLToPath(new URL("./check-react-router-rsc-exemption.mjs", import.meta.url));
-
-const architecture = spawnSync(process.execPath, [exemptionCheck], { encoding: "utf8" });
-if (architecture.status !== 0) {
-  process.stderr.write(architecture.stderr || architecture.stdout);
-  process.exit(architecture.status || 1);
-}
 
 const npmCli = process.env.npm_execpath;
 if (!npmCli) {
@@ -30,14 +20,8 @@ try {
 const highOrCritical = Object.values(report.vulnerabilities ?? {}).filter((entry) =>
   entry.severity === "high" || entry.severity === "critical",
 );
-const unapproved = highOrCritical.filter((entry) => {
-  if (entry.name === "react-router-dom" && entry.via.includes("react-router")) return false;
-  if (!["react-router", "react-router-dom"].includes(entry.name)) return true;
-  return !entry.via.some((via) => typeof via === "object" && via.url?.endsWith(ADVISORY));
-});
-
-if (unapproved.length > 0) {
-  throw new Error(`Production audit has unapproved High/Critical findings: ${unapproved.map((entry) => entry.name).join(", ")}`);
+if (highOrCritical.length > 0) {
+  throw new Error(`Production audit has High/Critical findings: ${highOrCritical.map((entry) => entry.name).join(", ")}`);
 }
 
-console.log(`Production audit gate passed: ${highOrCritical.length} temporary ${ADVISORY} finding(s), no other High/Critical findings.`);
+console.log("Production audit gate passed: no High/Critical findings.");

@@ -24,8 +24,8 @@ import ExpandMoreRoundedIcon from "@mui/icons-material/ExpandMoreRounded";
 import type { DataField, DatasetJoin, DatasetTable } from "./types";
 
 const semanticTypes = [
-  "category", "quantity", "currency", "percentage", "date", "year",
-  "boolean", "location",
+  "identifier", "category", "text", "integer", "decimal", "quantity", "currency", "percentage",
+  "date", "datetime", "year", "duration", "boolean", "url", "location",
 ] as const;
 
 type Props = {

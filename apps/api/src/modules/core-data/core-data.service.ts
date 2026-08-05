@@ -326,7 +326,7 @@ export class CoreDataService {
   }
   async externalTables(principal: RequestPrincipal, projectId: string, schemaName: string) { await this.project(principal, projectId); return this.external.tables(schemaName); }
   async externalColumns(principal: RequestPrincipal, projectId: string, schemaName: string, tableName: string) { await this.project(principal, projectId); return this.external.columns(schemaName, tableName); }
-  async externalRelationships(principal: RequestPrincipal, projectId: string, schemaName: string, tableName: string) { await this.project(principal, projectId); return this.external.relationships(schemaName, tableName); }
+  async externalRelationships(principal: RequestPrincipal, projectId: string, schemaName: string, tableName: string, targetTable?: string) { await this.project(principal, projectId); return this.external.relationships(schemaName, tableName, targetTable); }
   async externalMetadata(principal: RequestPrincipal, projectId: string, schemaName: string, tableName: string) { await this.project(principal, projectId); return this.external.metadata(schemaName, tableName); }
   async previewExternal(principal: RequestPrincipal, input: JsonObject) { await this.project(principal, String(input.projectId || '')); return this.external.preview(input); }
   async createExternalDataset(principal: RequestPrincipal, input: JsonObject) {

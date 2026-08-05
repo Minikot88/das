@@ -44,7 +44,7 @@ type PropertyPanelProps = {
   onSortChange?: (sort: SortMode) => void;
   onSave: () => void;
   onPreview: () => void;
-  onShare: () => void;
+  onShare?: () => void;
   onExportJson: () => void;
   onExportCsv: () => void;
   onExportPng: () => void;
@@ -258,7 +258,7 @@ function PropertyPanel({
         <Stack direction="row" spacing={0.5} sx={{ mt: 0.5 }}>
           <Button variant="contained" startIcon={<SaveRoundedIcon />} onClick={onSave} aria-label="บันทึกกราฟ" size="small">บันทึก</Button>
           <Button variant="outlined" startIcon={<VisibilityRoundedIcon />} onClick={onPreview} aria-label="พรีวิวกราฟ" size="small">พรีวิว</Button>
-          <IconButton onClick={onShare} aria-label="แชร์กราฟ" size="small"><ShareRoundedIcon /></IconButton>
+          {onShare ? <IconButton onClick={onShare} aria-label="แชร์กราฟ" size="small"><ShareRoundedIcon /></IconButton> : null}
           <IconButton onClick={(event) => setExportAnchor(event.currentTarget)} aria-label="ส่งออกกราฟ" aria-haspopup="menu" aria-expanded={Boolean(exportAnchor)} size="small"><DownloadRoundedIcon /></IconButton>
           <Menu anchorEl={exportAnchor} open={Boolean(exportAnchor)} onClose={() => setExportAnchor(null)}>
             <MenuItem onClick={() => { setExportAnchor(null); onExportJson(); }}>ส่งออก JSON</MenuItem>

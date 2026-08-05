@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router";
 import { useStore } from "@app/store/useStore";
 import { PageContainer, WorkspaceLayout } from "@app/layouts/Layout";
 import { autoArrangeDashboardLayout, DASHBOARD_GRID_MARGIN, DASHBOARD_ROW_HEIGHT } from "@modules/dashboards/lib/layoutUtils";

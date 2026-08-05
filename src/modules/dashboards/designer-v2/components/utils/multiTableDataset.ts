@@ -9,6 +9,7 @@ type ExternalColumn = {
 };
 
 type ExternalRelation = {
+  name?: string;
   columnName: string;
   referencedSchema: string;
   referencedTable: string;
@@ -42,7 +43,7 @@ function fieldType(physicalType: string): DataField["type"] {
 }
 
 function semanticType(type: DataField["type"], primaryKey: boolean): SemanticType {
-  if (primaryKey) return "category";
+  if (primaryKey) return "identifier";
   if (type === "date") return "date";
   if (type === "number") return "quantity";
   if (type === "boolean") return "boolean";

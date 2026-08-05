@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useEffect } from "react";
-import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
+import { Navigate, Outlet, Route, Routes, useLocation } from "react-router";
 import { MainLayout } from "@app/layouts/Layout";
 import RouteErrorBoundary from "@app/error-boundaries/RouteErrorBoundary";
 import { useStore } from "@app/store/useStore";

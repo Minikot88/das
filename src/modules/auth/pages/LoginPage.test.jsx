@@ -14,4 +14,12 @@ describe("login redirect target", () => {
     expect(resolveLoginRedirect({ pathname: "//example.test/phish" })).toBe("/dashboard");
     expect(resolveLoginRedirect(null)).toBe("/dashboard");
   });
+
+  it("rejects encoded and backslash redirect payloads that can be interpreted as external", () => {
+    expect(resolveLoginRedirect({ pathname: "javascript:alert(1)" })).toBe("/dashboard");
+    expect(resolveLoginRedirect({ pathname: "https://example.test/phish" })).toBe("/dashboard");
+    expect(resolveLoginRedirect({ pathname: "/\\\\example.test/phish" })).toBe("/dashboard");
+    expect(resolveLoginRedirect({ pathname: "/%2f%2fexample.test/phish" })).toBe("/dashboard");
+    expect(resolveLoginRedirect({ pathname: "/%5cexample.test/phish" })).toBe("/dashboard");
+  });
 });
