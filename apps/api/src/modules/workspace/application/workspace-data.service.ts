@@ -16,7 +16,11 @@ type MemoryWidget = { id: string; organizationId: string; dashboardId: string; c
 export class WorkspaceDataService {
   private readonly charts: MemoryChart[] = [];
   private readonly widgets: MemoryWidget[] = [];
-  constructor(private readonly prisma: PrismaService, @Inject(ENVIRONMENT) private readonly environment: RuntimeEnvironment, private readonly authorization: AuthorizationService) {}
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(ENVIRONMENT) private readonly environment: RuntimeEnvironment,
+    @Inject(AuthorizationService) private readonly authorization: AuthorizationService,
+  ) {}
   private get memory() { return this.environment.nodeEnv === 'test'; }
 
   private async accessibleProjectIds(principal: RequestPrincipal) {

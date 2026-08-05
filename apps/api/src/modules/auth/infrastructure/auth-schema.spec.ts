@@ -5,11 +5,19 @@ describe('production authentication database schema', () => {
   it('defines credential, opaque session, recovery, invitation, membership, and audit models', () => {
     const schema = readFileSync('prisma/schema.prisma', 'utf8');
 
-    for (const model of ['UserCredential', 'AuthSession', 'PasswordResetToken', 'Invitation', 'OrganizationMember', 'AuthenticationAuditLog']) {
+    for (const model of ['UserCredential', 'AuthSession', 'OidcLoginTransaction', 'PasswordResetToken', 'Invitation', 'OrganizationMember', 'AuthenticationAuditLog']) {
       expect(schema).toMatch(new RegExp(`model ${model} \\{`));
     }
     expect(schema).toContain('normalizedEmail');
     expect(schema).toContain('tokenHash');
+  });
+
+  it('stores only expiring OIDC transaction state and never provider tokens', () => {
+    const migration = readFileSync('prisma/postgres-migrations/0010_oidc_application_sessions/migration.sql', 'utf8');
+    expect(migration).toContain('"dashboard_core"."oidc_login_transactions"');
+    expect(migration).toContain('"state_hash" char(64)');
+    expect(migration).toContain('"expires_at"');
+    expect(migration).not.toMatch(/access_token|refresh_token|id_token|authorization_code/i);
   });
 
   it('adds authentication tables in a new PostgreSQL migration without altering the baseline migration', () => {

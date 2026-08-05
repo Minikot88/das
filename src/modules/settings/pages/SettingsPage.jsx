@@ -3,7 +3,6 @@ import { PageContainer, PageHeader } from "@app/layouts/Layout";
 import { useStore } from "@app/store/useStore";
 import { isMockMode } from "@infrastructure/http/client";
 import { loadPreferences, savePreferences } from "@modules/settings/api/settingsApi";
-import AccountSecurityPanel from "@modules/settings/components/AccountSecurityPanel";
 
 const SETTINGS_OPTIONS = {
   theme: [
@@ -230,7 +229,6 @@ export default function SettingsPage() {
           </div>
         </section>
       </div>
-      <AccountSecurityPanel />
       {!isMockMode() ? (
         <p className="settings-sync-status" role="status" aria-live="polite">
           {syncError || (syncState === "saving" ? "กำลังบันทึกการตั้งค่า..." : syncState === "ready" ? "บันทึกการตั้งค่าแล้ว" : "กำลังโหลดการตั้งค่า...")}

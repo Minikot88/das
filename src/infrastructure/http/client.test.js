@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { apiRequest, encodeApiPathSegment, csrfHeaderForRequest } from "./client";
+import { apiRequest, encodeApiPathSegment } from "./client";
 
 afterEach(() => {
+  delete globalThis.dashboardMiniBiAuth;
   vi.useRealTimers();
   vi.restoreAllMocks();
 });
@@ -24,16 +25,8 @@ describe("encodeApiPathSegment", () => {
   });
 });
 
-describe("CSRF request protection", () => {
-  it("copies the CSRF cookie into mutation headers but not safe reads", () => {
-    Object.defineProperty(document, "cookie", { configurable: true, writable: true, value: "mini_bi_csrf=csrf%20value; theme=light" });
-    expect(csrfHeaderForRequest("POST")).toEqual({ "X-CSRF-Token": "csrf value" });
-    expect(csrfHeaderForRequest("GET")).toEqual({});
-  });
-});
-
 describe("HTTP response and cancellation contract", () => {
-  it("unwraps successful envelopes and sends same-origin credentials", async () => {
+  it("unwraps successful envelopes using only same-origin application-session credentials", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ data: { id: "project-1" }, requestId: "request-1" }), { status: 200 }));
 
     await expect(apiRequest("/api/v1/projects")).resolves.toEqual({ id: "project-1" });
@@ -68,5 +61,32 @@ describe("HTTP response and cancellation contract", () => {
     expect(requestSignal.aborted).toBe(true);
     expect(external.signal.aborted).toBe(false);
     await rejection;
+  });
+
+  it("uses same-origin application-session cookies without adding a browser bearer token", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ data: { authenticated: true } }), { status: 200 }),
+    );
+
+    await apiRequest("/api/session/me");
+
+    const [, options] = fetchSpy.mock.calls[0];
+    expect(options.credentials).toBe("same-origin");
+    expect(options.headers).not.toHaveProperty("Authorization");
+  });
+
+  it("adds the double-submit CSRF token only to unsafe same-origin requests", async () => {
+    Object.defineProperty(document, "cookie", {
+      configurable: true,
+      value: "dashboardmini_csrf=csrf_token_123456789012345678901234567890",
+    });
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ data: { saved: true } }), { status: 200 }),
+    );
+
+    await apiRequest("/api/v1/projects", { method: "POST", body: "{}" });
+
+    const [, options] = fetchSpy.mock.calls[0];
+    expect(options.headers["X-CSRF-Token"]).toBe("csrf_token_123456789012345678901234567890");
   });
 });

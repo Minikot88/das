@@ -1,43 +1,28 @@
 import React from "react";
-import { act, render } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({
-  loadCurrentUser: vi.fn(),
-  setAuthAnonymous: vi.fn(),
-}));
+const apiRequest = vi.fn().mockResolvedValue({
+  authenticated: true,
+  authMode: "disabled",
+  actorId: "technical-user",
+  displayName: "Technical User",
+  organizationId: "org-1",
+  roles: ["organization_admin"],
+  projectScopes: [],
+});
 
-vi.mock("@modules/auth/api/authApi", () => ({ loadCurrentUser: mocks.loadCurrentUser }));
-vi.mock("@infrastructure/http/client", () => ({ isMockMode: () => false }));
+vi.mock("@infrastructure/http/client", () => ({ apiRequest }));
 vi.mock("@shared/lib/themeMode", () => ({ applyThemeMode: vi.fn() }));
 vi.mock("@app/router/AppRoutes", () => ({ default: () => <div>Routes ready</div> }));
-vi.mock("@app/store/useStore", () => {
-  const useStore = (selector) => selector({ theme: "light" });
-  useStore.getState = () => ({ setAuthAnonymous: mocks.setAuthAnonymous });
-  return { useStore };
-});
+vi.mock("@app/store/useStore", () => ({ useStore: (selector) => selector({ theme: "light" }) }));
 
 const { default: App } = await import("./App");
 
-describe("authentication bootstrap lifecycle", () => {
-  beforeEach(() => {
-    mocks.loadCurrentUser.mockReset();
-    mocks.setAuthAnonymous.mockReset();
-  });
-
-  it("removes the session-expired listener and ignores a late bootstrap failure after unmount", async () => {
-    let rejectBootstrap;
-    mocks.loadCurrentUser.mockReturnValue(new Promise((_resolve, reject) => { rejectBootstrap = reject; }));
-    const view = render(<App />);
-    expect(mocks.loadCurrentUser).toHaveBeenCalledTimes(1);
-
-    window.dispatchEvent(new CustomEvent("mini-bi:session-expired"));
-    expect(mocks.setAuthAnonymous).toHaveBeenCalledTimes(1);
-    view.unmount();
-    window.dispatchEvent(new CustomEvent("mini-bi:session-expired"));
-    expect(mocks.setAuthAnonymous).toHaveBeenCalledTimes(1);
-
-    await act(async () => rejectBootstrap(new Error("network unavailable")));
-    expect(mocks.setAuthAnonymous).toHaveBeenCalledTimes(1);
+describe("external session bootstrap", () => {
+  it("loads the server-authoritative session without using a local auth store", async () => {
+    render(<App />);
+    expect(await screen.findByText("Routes ready")).toBeInTheDocument();
+    expect(apiRequest).toHaveBeenCalledWith("/api/session/me");
   });
 });

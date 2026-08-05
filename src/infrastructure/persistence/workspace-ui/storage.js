@@ -186,8 +186,6 @@ export function createWorkspaceSnapshot(state) {
     activeDashboardId: state.activeDashboardId,
     theme: state.theme,
     locale: state.locale,
-    user: state.user,
-    isAuthenticated: state.isAuthenticated,
     filters: state.filters,
     dashboardFilters: state.dashboardFilters,
     dashboardInteractions: state.dashboardInteractions,
@@ -204,18 +202,7 @@ export function createWorkspaceSnapshot(state) {
 }
 
 export function createWorkspaceUiSnapshot(state = {}) {
-  const user = state.user && typeof state.user === "object"
-    ? {
-        id: state.user.id ?? null,
-        email: state.user.email ?? "",
-        name: state.user.name ?? "",
-        role: state.user.role ?? "",
-        lastLoginAt: state.user.lastLoginAt ?? "",
-      }
-    : null;
   return sanitizeUiValue({
-    user,
-    isAuthenticated: Boolean(state.isAuthenticated),
     filters: state.filters ?? {},
     dashboardFilters: state.dashboardFilters ?? {},
     dashboardInteractions: state.dashboardInteractions ?? {},
@@ -236,12 +223,18 @@ function ensureWorkspaceRepository() {
 
 export function loadWorkspaceState() {
   const legacyState = readJson(WORKSPACE_STORAGE_KEY);
-  if (!ensureWorkspaceRepository()) return legacyState;
+  if (!ensureWorkspaceRepository()) return withoutAuthenticationState(legacyState);
   const persistedUi = readJson(UI_STORAGE_KEY);
   const uiState = persistedUi && typeof persistedUi === "object"
     ? persistedUi
     : createWorkspaceUiSnapshot(legacyState ?? {});
-  return toZustandWorkspaceSnapshot(workspaceRepository.getSnapshot(), uiState);
+  return withoutAuthenticationState(toZustandWorkspaceSnapshot(workspaceRepository.getSnapshot(), uiState));
+}
+
+function withoutAuthenticationState(state) {
+  if (!state || typeof state !== "object") return state;
+  const { user: _user, isAuthenticated: _isAuthenticated, authStatus: _authStatus, ...safe } = state;
+  return safe;
 }
 
 export function saveWorkspaceState(state) {

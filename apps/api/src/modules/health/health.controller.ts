@@ -10,7 +10,7 @@ import { ApiError } from '../../shared/http/api-error.js';
 @Controller('api/v1')
 export class HealthController {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(ENVIRONMENT) private readonly environment: RuntimeEnvironment,
   ) {}
   @Get('health')

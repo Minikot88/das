@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Inject, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
 import { CurrentPrincipal } from '../auth/application/current-principal.js';
 import { SessionGuard } from '../auth/application/session.guard.js';
@@ -9,7 +9,7 @@ import { CoreDataService } from './core-data.service.js';
 @Controller('api/v1')
 @UseGuards(SessionGuard)
 export class CoreDataController {
-  constructor(private readonly data: CoreDataService) {}
+  constructor(@Inject(CoreDataService) private readonly data: CoreDataService) {}
   @Get('datasets') datasets(@CurrentPrincipal() p: RequestPrincipal, @Query('projectId') projectId: string, @Query('page') page?: string, @Query('pageSize') pageSize?: string) { return this.data.listDatasets(p, String(projectId || ''), Number(page || 1), Number(pageSize || 50)); }
   @Get('datasets/:id') dataset(@CurrentPrincipal() p: RequestPrincipal, @Param('id') id: string) { return this.data.dataset(p, id); }
   @Get('datasets/:id/fields') fields(@CurrentPrincipal() p: RequestPrincipal, @Param('id') id: string) { return this.data.fields(p, id); }

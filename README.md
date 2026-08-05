@@ -1,18 +1,13 @@
 # DashboardMiniBi
 
-DashboardMiniBi is a frontend-only React/Vite analytics workspace for importing local CSV data, designing charts, arranging dashboards, and opening read-only Local share/embed views.
+DashboardMiniBi is a React/Vite and NestJS/PostgreSQL analytics workspace for live datasets, chart design, dashboards, and read-only share/embed views.
 
 ## Runtime Boundary
 
-The default mode is an explicit local simulation:
-
-- mock authentication;
-- canonical `mini-bi-workspace-v1` browser persistence;
-- non-destructive migration from legacy workspace keys;
-- same-browser read-only share snapshots;
-- metadata-only connection profiles with simulated connection tests.
-
-It is production-hardened for local/demo evaluation, not secure multi-user hosting. Local share links are not server authorization. Passwords, tokens, certificates, and private keys are transient and are never persisted or exported.
+Authentication is server-authoritative. Local/test may use `AUTH_MODE=disabled` with
+an existing configured technical principal. Production requires `AUTH_MODE=external`
+and the backend-managed PSU SSO OIDC authorization-code flow. The browser receives
+only an opaque application-session cookie and never persists or decodes provider tokens.
 
 ## Quick Start
 
@@ -23,7 +18,7 @@ npm ci
 npm run dev
 ```
 
-Mock login: `demo@dataviz.bi` / `demo1234`. Any non-empty credentials may also work in mock mode.
+There is no built-in login or registration screen.
 
 ## Quality Gate
 
@@ -39,10 +34,8 @@ The aggregate gate runs ESLint, strict TypeScript, Vitest/Testing Library/axe-co
 docker compose -f docker-compose.yml -f docker-compose.local.yml up --build
 ```
 
-The local override enables the backend's internal single-user session used by
-the default local frontend configuration. Starting only `docker-compose.yml`
-while `VITE_INTERNAL_SINGLE_USER=true` leaves protected API requests
-unauthenticated.
+The local override enables `AUTH_MODE=disabled`; set `INTERNAL_SINGLE_USER_ID`
+to an existing authorized technical principal before starting the stack.
 
 The frontend listens on `http://127.0.0.1:8080` by default. `FRONTEND_PORT` changes the port; `FRONTEND_HOST` changes the bind address. Keep the loopback default for local/demo data. nginx provides SPA fallback, immutable hashed-asset caching, HTML revalidation, security headers, and a deliberate same-origin frame policy.
 
@@ -50,10 +43,11 @@ The image is HTTP-only and contains no backend. Terminate HTTPS at a trusted out
 
 ## Environment
 
-- `VITE_USE_MOCK`: local/mock API mode; defaults to `true`.
-- `VITE_API_BASE_URL`: future API origin when mock mode is disabled.
+- `VITE_USE_MOCK`: must be `false` for the integrated API-backed stack.
+- `VITE_API_BASE_URL`: API origin; blank uses same origin.
 - `VITE_API_PROXY_TARGET`: Vite development proxy target.
 - `VITE_API_TIMEOUT_MS`: frontend request timeout.
+- `VITE_EXTERNAL_SESSION_REQUIRED_URL`: same-origin PSU SSO login endpoint; production requires `/api/auth/login`.
 - `FRONTEND_HOST`: Docker bind address; defaults to `127.0.0.1`.
 - `FRONTEND_PORT`: Docker host port.
 

@@ -15,6 +15,8 @@ function readEnvironment(file) {
   }));
 }
 
+const runtimeEnvironment = readEnvironment(envPath);
+
 module.exports = {
   apps: [{
     name: 'dashboardmini-api',
@@ -23,7 +25,7 @@ module.exports = {
     interpreter: process.execPath,
     instances: 1,
     exec_mode: 'fork',
-    env: readEnvironment(envPath),
+    env: runtimeEnvironment,
     max_memory_restart: '768M',
     restart_delay: 3000,
     kill_timeout: 15000,
@@ -31,6 +33,23 @@ module.exports = {
     time: true,
     out_file: path.join(sharedRoot, 'logs', 'api-out.log'),
     error_file: path.join(sharedRoot, 'logs', 'api-error.log'),
+    merge_logs: true,
+  }, {
+    name: 'dashboardmini-web',
+    cwd: path.join(projectRoot, 'current'),
+    script: 'scripts/native-web-server.mjs',
+    interpreter: process.execPath,
+    instances: 1,
+    exec_mode: 'fork',
+    env: {
+      ...runtimeEnvironment,
+      DASHBOARDMINI_WEB_PORT: process.env.DASHBOARDMINI_WEB_PORT || '4021',
+    },
+    max_memory_restart: '256M',
+    restart_delay: 3000,
+    time: true,
+    out_file: path.join(sharedRoot, 'logs', 'web-out.log'),
+    error_file: path.join(sharedRoot, 'logs', 'web-error.log'),
     merge_logs: true,
   }],
 };

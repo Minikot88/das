@@ -5,10 +5,12 @@ import { resolve } from 'node:path';
 const read = path => readFileSync(resolve(path), 'utf8');
 
 describe('native server deployment tooling', () => {
-  it('runs only the project API through PM2 with persistent logs and production safeguards', () => {
+  it('runs the project API and hardened static web service through PM2 with persistent logs', () => {
     const ecosystem = read('ecosystem.config.cjs');
     expect(ecosystem).toContain("name: 'dashboardmini-api'");
+    expect(ecosystem).toContain("name: 'dashboardmini-web'");
     expect(ecosystem).toContain("script: 'dist/main.js'");
+    expect(ecosystem).toContain("script: 'scripts/native-web-server.mjs'");
     expect(ecosystem).toContain("shared/backend.env");
     expect(ecosystem).toContain('max_memory_restart');
     expect(ecosystem).not.toMatch(/docker|password\s*:/i);
@@ -20,9 +22,11 @@ describe('native server deployment tooling', () => {
     expect(deploy).toContain('ln -sfn');
     expect(deploy).toContain('prisma migrate deploy');
     expect(deploy).toContain('VITE_USE_MOCK=false npm run build');
+    expect(deploy).toContain('validate-auth-environment.mjs');
     expect(deploy).toContain('apply-database-grants.sh');
     expect(deploy).toContain('harden-database-owner.sh');
     expect(deploy).toContain('verify-native.sh');
+    expect(deploy).not.toContain('pm2 serve');
     expect(deploy).not.toContain('git reset --hard');
     expect(deploy).not.toContain('docker compose');
   });
@@ -65,10 +69,22 @@ describe('native server deployment tooling', () => {
     const env = read('.env.native.example');
     expect(env).toContain('APP_ENV=production');
     expect(env).toContain('DEPLOYMENT_ENV=staging');
-    expect(env).toContain('AUTH_PROVIDER=database');
-    expect(env).toContain('COOKIE_SECURE=true');
-    expect(env).toContain('PUBLIC_REGISTRATION_ENABLED=false');
+    expect(env).toContain('AUTH_MODE=external');
+    expect(env).toContain('AUTH_JWKS_URL=');
+    expect(env).toContain('AUTH_ISSUER=');
+    expect(env).toContain('APP_URL=https://dash.triup-psu.space');
+    expect(env).toContain('AUTH_EXTERNAL_PROVIDER=psu-sso');
+    expect(env).toContain('AUTH_AUDIENCE=<psu-sso-client-id>');
+    expect(env).toContain('OIDC_REDIRECT_URI=https://dash.triup-psu.space/api/auth/callback');
+    expect(env).toContain('VITE_EXTERNAL_SESSION_REQUIRED_URL=/api/auth/login');
+    expect(env).toContain('CORS_ALLOWED_ORIGINS=https://dash.triup-psu.space');
+    expect(env).toContain('VITE_EXTERNAL_SESSION_REQUIRED_URL=');
     expect(env).toContain('SMTP_ENABLED=false');
     expect(env).not.toMatch(/postgresql:\/\/[^:]+:[^<\n]+@/);
+  });
+
+  it('preserves the browser process environment when applying Firefox rendering workarounds', () => {
+    const playwright = read('playwright.config.js');
+    expect(playwright).toContain("launchOptions: { env: { ...process.env,");
   });
 });

@@ -326,7 +326,7 @@ export default function DatabaseConnectionPage() {
     return (
       <div className="db-tab-panel">
         <div className="db-form-grid">
-            <Field label="Host" error={errors.host} helper="เช่น localhost หรือ db.company.local">
+          <Field label="Host" error={errors.host} helper="เช่น db.company.internal">
               <input value={form.host} onChange={(event) => patchForm({ host: event.target.value })} />
             </Field>
             <Field label="Port" error={errors.port}>

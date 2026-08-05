@@ -1,5 +1,4 @@
 ﻿import React from "react";
-import { Link } from "react-router";
 
 function Stat({ label, value }) {
   return (
@@ -54,9 +53,6 @@ export default function ReadOnlyDashboardHeader({
           <Stat label="ชุดข้อมูล" value={primaryDataset ?? "ไม่พบข้อมูล"} />
           <Stat label="สิทธิ์" value="อ่านอย่างเดียว" />
         </div>
-        <Link to="/login" className="share-signin-link readonly-signin-link">
-          เข้าสู่ระบบ
-        </Link>
       </div>
     </header>
   );

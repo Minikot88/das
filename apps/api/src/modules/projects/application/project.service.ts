@@ -8,7 +8,10 @@ export type RequestPrincipal = { organizationId: string; userId: string; session
 
 @Injectable()
 export class ProjectService {
-  constructor(@Inject(PROJECT_REPOSITORY) private readonly repository: ProjectRepository, private readonly authorization: AuthorizationService) {}
+  constructor(
+    @Inject(PROJECT_REPOSITORY) private readonly repository: ProjectRepository,
+    @Inject(AuthorizationService) private readonly authorization: AuthorizationService,
+  ) {}
 
   list(principal: RequestPrincipal) { return this.repository.list(principal.organizationId, principal.userId); }
 

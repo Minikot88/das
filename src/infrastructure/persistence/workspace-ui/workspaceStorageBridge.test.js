@@ -24,7 +24,7 @@ describe("workspace storage bridge", () => {
     seedLegacyStorage();
   });
 
-  it("loads canonical domain data with safe legacy UI/auth state", async () => {
+  it("loads canonical domain data without restoring legacy authentication state", async () => {
     const original = window.localStorage.getItem("mini-bi-v8-workspace");
     const storage = await import("@infrastructure/persistence/workspace-ui/storage");
 
@@ -32,8 +32,8 @@ describe("workspace storage bridge", () => {
 
     expect(loaded.activeProjectId).toBe("project-1");
     expect(loaded.projects[0].name).toBe("Current workspace");
-    expect(loaded.user).toMatchObject({ id: "demo-user", email: "demo@example.test" });
-    expect(loaded.isAuthenticated).toBe(true);
+    expect(loaded).not.toHaveProperty("user");
+    expect(loaded).not.toHaveProperty("isAuthenticated");
     expect(window.localStorage.getItem(CANONICAL_WORKSPACE_KEY)).not.toBeNull();
     expect(window.localStorage.getItem("mini-bi-v8-workspace")).toBe(original);
   });
@@ -43,19 +43,13 @@ describe("workspace storage bridge", () => {
     const storage = await import("@infrastructure/persistence/workspace-ui/storage");
     const loaded = storage.loadWorkspaceState();
     loaded.projects[0].name = "Renamed through Zustand";
-    loaded.user = {
-      ...loaded.user,
-      token: "SYNTHETIC_TOKEN_SENTINEL",
-      password: "SYNTHETIC_PASSWORD_SENTINEL",
-    };
-
     storage.saveWorkspaceState(loaded);
 
     const canonical = window.localStorage.getItem(CANONICAL_WORKSPACE_KEY);
     const uiState = window.localStorage.getItem("mini-bi-ui-v1");
     expect(canonical).toContain("Renamed through Zustand");
     expect(canonical).not.toContain("SYNTHETIC_TOKEN_SENTINEL");
-    expect(uiState).toContain("demo-user");
+    expect(uiState).not.toContain("demo-user");
     expect(uiState).not.toContain("SYNTHETIC_TOKEN_SENTINEL");
     expect(uiState).not.toContain("SYNTHETIC_PASSWORD_SENTINEL");
     expect(window.localStorage.getItem("mini-bi-v8-workspace")).toBe(original);
@@ -74,7 +68,7 @@ describe("workspace storage bridge", () => {
 
     expect(reloaded.projects[0].name).toBe("Persisted canonical name");
     expect(reloaded.sidebarCollapsed).toBe(true);
-    expect(reloaded.isAuthenticated).toBe(true);
+    expect(reloaded).not.toHaveProperty("isAuthenticated");
   });
 
   it("redacts credential material when canonical persistence falls back to the legacy key", async () => {

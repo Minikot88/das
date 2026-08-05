@@ -30,7 +30,7 @@ describe('dashboard_core database architecture', () => {
       WHERE table_schema = 'dashboard_core'
         AND table_type = 'BASE TABLE'
     `);
-    expect(result.rows[0]?.count).toBe('58');
+    expect(result.rows[0]?.count).toBe('59');
   });
 
   it('keeps Scopus read-only and unchanged', async () => {

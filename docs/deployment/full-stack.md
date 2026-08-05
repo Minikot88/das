@@ -9,12 +9,14 @@
 3. Run `docker compose config` and inspect the resolved configuration.
 4. Run `docker compose up --build -d`.
 5. Verify `/healthz`, `/api/v1/health`, and `/api/v1/ready`.
-6. Exercise login, project create, dataset empty state/import, chart save, dashboard widget save, refresh, share, and logout.
+6. Exercise session bootstrap, project create, dataset preview, chart save, dashboard widget save, refresh, and share.
 
-The checked-in credentials and keys are local-development defaults only. Production must set `NODE_ENV=production`, `AUTH_PROVIDER=external`, a TLS-facing origin, unique secrets, and a reviewed external authentication adapter. Do not publish the development-auth compose defaults.
+Production must set `AUTH_MODE=external` with real issuer, JWKS, audience,
+organization and roles/scopes claims. The release validator rejects disabled mode,
+placeholder URLs and non-RS algorithms.
 
 ## Cutover
 
-The default source development mode remains local/mock unless `VITE_USE_MOCK=false` is supplied. The compose deployment now defaults to HTTP mode. This preserves offline/local fallback while making the integrated stack exercise real persistence.
-
-Roll out in stages: internal test server, controlled real-account cohort, then default HTTP mode. Keep the two localStorage keys unchanged during the transition; they are not silently migrated or deleted.
+The integrated stack requires `VITE_USE_MOCK=false`. External identity is mapped
+by provider, issuer, subject and organization; project authorization continues to
+come from PostgreSQL memberships.

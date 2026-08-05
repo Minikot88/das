@@ -20,13 +20,13 @@ http {
 
   server {
     listen 8080;
-    server_name _;
+    server_name ${HTTPS_REDIRECT_AUTHORITY};
     return 308 https://${HTTPS_REDIRECT_AUTHORITY}$request_uri;
   }
 
   server {
     listen 8443 ssl;
-    server_name _;
+    server_name ${HTTPS_REDIRECT_AUTHORITY};
     ssl_certificate /etc/nginx/tls/tls.crt;
     ssl_certificate_key /etc/nginx/tls/tls.key;
     ssl_protocols TLSv1.2 TLSv1.3;
@@ -44,6 +44,24 @@ http {
     location ~ /\. { deny all; }
     location ~* \.(?:bak|old|tmp|sql|dump|env|map)$ { deny all; }
 
+    # Authorization codes are query parameters and must never enter access logs.
+    location = /api/auth/callback {
+      access_log off;
+      proxy_pass http://backend:3000;
+      proxy_http_version 1.1;
+      proxy_set_header Host $host;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto https;
+      proxy_set_header X-Request-ID $request_id;
+      proxy_set_header X-User-Id "";
+      proxy_set_header X-Role "";
+      proxy_connect_timeout 5s;
+      proxy_send_timeout 30s;
+      proxy_read_timeout 30s;
+      add_header Cache-Control "no-store" always;
+    }
+
     location ^~ /api/ {
       proxy_pass http://backend:3000;
       proxy_http_version 1.1;
@@ -52,6 +70,9 @@ http {
       proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
       proxy_set_header X-Forwarded-Proto https;
       proxy_set_header X-Request-ID $request_id;
+      proxy_set_header Authorization $http_authorization;
+      proxy_set_header X-User-Id "";
+      proxy_set_header X-Role "";
       proxy_set_header Upgrade $http_upgrade;
       proxy_set_header Connection $connection_upgrade;
       proxy_connect_timeout 5s;
