@@ -6,6 +6,8 @@ afterEach(() => {
   delete globalThis.dashboardMiniBiAuth;
   vi.useRealTimers();
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
+  vi.resetModules();
 });
 
 describe("encodeApiPathSegment", () => {
@@ -88,5 +90,25 @@ describe("HTTP response and cancellation contract", () => {
 
     const [, options] = fetchSpy.mock.calls[0];
     expect(options.headers["X-CSRF-Token"]).toBe("csrf_token_123456789012345678901234567890");
+  });
+});
+
+describe("HTTP client runtime mode", () => {
+  it("does not enable mock data when VITE_USE_MOCK is omitted", async () => {
+    vi.stubEnv("VITE_USE_MOCK", "");
+    vi.resetModules();
+
+    const { isMockMode } = await import("./client.js");
+
+    expect(isMockMode()).toBe(false);
+  });
+
+  it("enables mock data only when explicitly requested in development or test", async () => {
+    vi.stubEnv("VITE_USE_MOCK", "true");
+    vi.resetModules();
+
+    const { isMockMode } = await import("./client.js");
+
+    expect(isMockMode()).toBe(true);
   });
 });

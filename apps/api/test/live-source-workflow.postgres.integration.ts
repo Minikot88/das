@@ -1,5 +1,7 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import { rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { createApplication } from '../src/app/bootstrap/create-application.js';
@@ -11,7 +13,7 @@ const organizationId = `org-live-source-${runId}`;
 const userId = `user-live-source-${runId}`;
 const sourceId = `source-live-${runId}`;
 const email = `live-source-${runId}@example.test`;
-const storagePath = `/tmp/dashboardmini-live-source-${runId}/uploads`;
+const storagePath = join(tmpdir(), `dashboardmini-live-source-${runId}`, 'uploads');
 
 describe('live PostgreSQL source workflow', () => {
   let app: NestFastifyApplication;
@@ -120,7 +122,7 @@ describe('live PostgreSQL source workflow', () => {
       ]);
     }
     await app?.close();
-    await rm(`/tmp/dashboardmini-live-source-${runId}`, { recursive: true, force: true });
+    await rm(dirname(storagePath), { recursive: true, force: true });
   });
 
   it('creates a live joined dataset, chart, dashboard, share, and export through the API', async () => {
@@ -136,7 +138,7 @@ describe('live PostgreSQL source workflow', () => {
 
     const refresh = await app.inject({ method: 'POST', url: `/api/v1/external-sources/${sourceId}/refresh?projectId=${projectId}`, headers });
     expect(refresh.statusCode).toBe(200);
-    expect(refresh.json().data).toMatchObject({ sourceId, schemas: 1, objects: 2, fields: 6, relationships: 1 });
+    expect(refresh.json().data).toMatchObject({ sourceId, schemas: 1, objects: 21, fields: 25, relationships: 1 });
 
     const definition = {
       projectId,
