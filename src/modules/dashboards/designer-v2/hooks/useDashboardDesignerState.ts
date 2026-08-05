@@ -177,12 +177,17 @@ function toDesignerFields(fields: Array<Record<string, unknown>>, table = "datas
     const isPrimaryKey = field.primaryKey === true || /(^id$|_id$|^id_)/i.test(name);
     const isMeasure = type === "number";
     const storedSemantic = String(field.semanticType || "").toLowerCase();
+    const semanticType = storedSemantic === "number"
+      ? "quantity"
+      : storedSemantic === "string"
+        ? "category"
+        : storedSemantic;
     return {
       id: String(field.id || name),
       name,
       label: String(field.label || field.name || field.fieldKey || name),
       type,
-      semanticType: (storedSemantic || (type === "date" ? "date" : isMeasure ? "quantity" : type === "boolean" ? "boolean" : "category")) as DataField["semanticType"],
+      semanticType: (semanticType || (type === "date" ? "date" : isMeasure ? "quantity" : type === "boolean" ? "boolean" : "category")) as DataField["semanticType"],
       table,
       description: "",
       sampleValues: [],
@@ -194,6 +199,26 @@ function toDesignerFields(fields: Array<Record<string, unknown>>, table = "datas
       nullable: field.nullable !== false,
     };
   });
+}
+
+export function physicalSelectedFields(
+  tables: DatasetTable[],
+  fields: DataField[],
+  casts: Record<string, "numeric" | "date" | "text">,
+) {
+  const physicalAliases = new Set(tables.map((table) => table.alias));
+  return fields
+    .filter((field) => field.sourceAlias && physicalAliases.has(field.sourceAlias))
+    .map((field) => {
+      const column = field.name.includes(".") ? field.name.split(".").at(-1) : field.label.split(".").at(-1);
+      const castTarget = casts[`${field.sourceAlias}.${field.label.split(".").at(-1)}`];
+      return {
+        tableAlias: field.sourceAlias,
+        column,
+        alias: `${field.sourceAlias}_${field.label.split(".").at(-1)}`,
+        cast: castTarget ? { targetType: castTarget } : undefined,
+      };
+    });
 }
 
 function toRemoteDatasource(item: Record<string, unknown>): DemoDatasource {
@@ -1435,14 +1460,7 @@ export function useDashboardDesignerState() {
     calculations = calculatedFields,
   ) => {
     if (!resolvedProjectId || !tables.length) return;
-    const selectedFields = nextFields.map((field) => ({
-      tableAlias: field.sourceAlias,
-      column: field.name.includes(".") ? field.name.split(".").at(-1) : field.label.split(".").at(-1),
-      alias: `${field.sourceAlias}_${field.label.split(".").at(-1)}`,
-      cast: casts[`${field.sourceAlias}.${field.label.split(".").at(-1)}`]
-        ? { targetType: casts[`${field.sourceAlias}.${field.label.split(".").at(-1)}`] }
-        : undefined,
-    }));
+    const selectedFields = physicalSelectedFields(tables, nextFields, casts);
     const definition = {
       projectId: resolvedProjectId,
       name: tables.map((table) => table.alias).join(" + "),

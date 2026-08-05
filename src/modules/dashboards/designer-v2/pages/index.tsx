@@ -69,7 +69,7 @@ function DashboardDesignerContent() {
   const laptop = useMediaQuery("(min-width:821px) and (max-width:1360px)");
   const activeDatasource = state.datasources.find((datasource) => datasource.id === state.activeDatasourceId) ?? state.datasources[0];
   const mobilePreviewOnly = !state.previewMode && mobileTab === "preview";
-  const centerRows = state.previewMode ? "minmax(0, 1fr)" : "minmax(150px, auto) minmax(78px, auto) minmax(0, 1fr)";
+  const centerRows = state.previewMode ? "minmax(0, 1fr)" : "auto auto minmax(240px, 1fr)";
   const mobileCenterRows = state.previewMode || mobilePreviewOnly ? "minmax(0, 1fr)" : "minmax(156px, auto) minmax(78px, auto)";
   const currentPresets = state.chartPresets.filter((preset) => !state.config.chartType || preset.chartTypes.includes(state.config.chartType));
   const featurePreview = getFutureFeature(featurePreviewId);
@@ -403,6 +403,9 @@ function DashboardDesignerContent() {
             gridTemplateColumns: "minmax(0, 1fr)",
             gridTemplateRows: { xs: mobileCenterRows, md: centerRows },
             gap: "10px",
+            overflowY: "auto",
+            overflowX: "hidden",
+            alignContent: "start",
             transition: `grid-template-rows ${tokens.motion.base}`,
             "@media (max-width: 820px)": {
               gap: "8px",

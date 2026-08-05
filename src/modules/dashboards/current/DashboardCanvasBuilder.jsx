@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from "react-router";
 import ChartPreview from "@modules/dashboards/designer-v2/components/components/charts/ChartPreview";
 import { chartWidgetDensity } from "./chartWidgetDensity";
 import { normalizeDashboardChartFields, toDashboardMappingSlots } from "./chartMappingAdapter";
-import { buildSavedChartConfigInput, savedChartSourceDiffers } from "./savedChartAdapter";
+import { buildSavedChartConfigInput, chartLibraryAfterAdd, savedChartSourceDiffers } from "./savedChartAdapter";
 import { createDefaultConfig, dataFields, defaultChartSettings } from "@modules/dashboards/designer-v2/components/mockData";
 import { getDatasetRows } from "@modules/dashboards/designer-v2/components/services/datasetService";
 import { loadDataset } from "@modules/datasets/public/api";
@@ -2303,8 +2303,8 @@ export default function DashboardCanvasBuilder() {
     commitWidgets((current) => [...current, nextWidget], message);
     setSelectedWidgetId(nextWidget.id);
     window.requestAnimationFrame(() => window.dispatchEvent(new Event("resize")));
-    setSavedCharts(readSavedCharts());
-  }, [commitWidgets]);
+    setSavedCharts((current) => chartLibraryAfterAdd(mockMode, current, readSavedCharts));
+  }, [commitWidgets, mockMode]);
 
   const arrangeAllWidgets = useCallback(() => {
     const currentWidgets = widgetsRef.current;

@@ -30,3 +30,7 @@ export function savedChartSourceDiffers(copiedConfig, savedConfig) {
   return copiedConfig.datasetId !== savedConfig.datasetId
     || copiedConfig.sourceType !== savedConfig.sourceType;
 }
+
+export function chartLibraryAfterAdd(mockMode, currentCharts, readLocalCharts) {
+  return mockMode ? readLocalCharts() : currentCharts;
+}

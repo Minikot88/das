@@ -36,7 +36,7 @@ const loadDataset = vi.fn(async (datasetId: string) => datasetId === "dataset-sc
   name: "scopus.sc_authors",
   sourceConfigJson: { schemaName: "scopus", tableName: "sc_authors" },
   fields: [
-    { id: "field-year", fieldKey: "publication_year", name: "publication_year", dataType: "integer" },
+    { id: "field-year", fieldKey: "publication_year", name: "publication_year", dataType: "integer", semanticType: "number" },
     { id: "field-author", fieldKey: "author_name", name: "author_name", dataType: "text" },
   ],
   rows: [{ publication_year: 2025, author_name: "Ada" }],
@@ -105,6 +105,22 @@ function WrapperSavedChart({ children }: PropsWithChildren) {
 }
 
 describe("useDashboardDesignerState API source", () => {
+  it("excludes calculated result fields from physical selected fields on later joins", async () => {
+    const { physicalSelectedFields } = await import("@modules/dashboards/designer-v2/hooks/useDashboardDesignerState");
+    const selected = physicalSelectedFields(
+      [{ schema: "scopus", table: "sc_articles", alias: "articles" }],
+      [
+        { sourceAlias: "articles", name: "articles_id", label: "articles.id" },
+        { name: "article_ratio", label: "article_ratio", resultType: "number" },
+      ] as never,
+      {},
+    );
+
+    expect(selected).toEqual([
+      expect.objectContaining({ tableAlias: "articles", column: "id", alias: "articles_id" }),
+    ]);
+  });
+
   it("hydrates saved multi-table joins, semantic overrides, casts, and calculated fields", async () => {
     const { persistedMultiTableState } = await import("@modules/dashboards/designer-v2/hooks/useDashboardDesignerState");
     expect(persistedMultiTableState({
@@ -151,6 +167,9 @@ describe("useDashboardDesignerState API source", () => {
       expect.objectContaining({ schema: "scopus", table: "sc_articles" }),
     ]));
     expect(result.current.state.rows).toEqual([{ publication_year: 2025, title: "Real source row" }]);
+    expect(result.current.state.fields).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: "field-year", semanticType: "quantity" }),
+    ]));
     await waitFor(() => expect(result.current.state.externalSchemaCatalog).toEqual([
       expect.objectContaining({ schemaName: "scopus", tables: expect.arrayContaining([expect.objectContaining({ name: "sc_articles" }), expect.objectContaining({ name: "sc_authors" })]) }),
     ]));

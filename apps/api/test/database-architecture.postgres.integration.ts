@@ -63,4 +63,16 @@ describe('dashboard_core database architecture', () => {
     `);
     expect(invalid.rows[0]?.count).toBe('0');
   });
+
+  it('allows the runtime role to verify migrations without modifying them', async () => {
+    const privileges = await database.query<{ can_read: boolean; can_write: boolean }>(`
+      SELECT
+        has_table_privilege('dashboardmini_app', 'public._prisma_migrations', 'SELECT') AS can_read,
+        has_table_privilege('dashboardmini_app', 'public._prisma_migrations', 'INSERT')
+          OR has_table_privilege('dashboardmini_app', 'public._prisma_migrations', 'UPDATE')
+          OR has_table_privilege('dashboardmini_app', 'public._prisma_migrations', 'DELETE')
+          OR has_table_privilege('dashboardmini_app', 'public._prisma_migrations', 'TRUNCATE') AS can_write
+    `);
+    expect(privileges.rows[0]).toEqual({ can_read: true, can_write: false });
+  });
 });

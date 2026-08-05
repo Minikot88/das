@@ -1,7 +1,15 @@
-import { describe, expect, it } from "vitest";
-import { buildSavedChartConfigInput, savedChartSourceDiffers } from "./savedChartAdapter";
+import { describe, expect, it, vi } from "vitest";
+import { buildSavedChartConfigInput, chartLibraryAfterAdd, savedChartSourceDiffers } from "./savedChartAdapter";
 
 describe("buildSavedChartConfigInput", () => {
+  it("keeps server-backed charts after adding one to the canvas", () => {
+    const charts = [{ id: "chart-api", title: "Server chart" }];
+    const readLocalCharts = vi.fn(() => []);
+
+    expect(chartLibraryAfterAdd(false, charts, readLocalCharts)).toBe(charts);
+    expect(readLocalCharts).not.toHaveBeenCalled();
+  });
+
   it("adapts a persisted Chart.js donut to the live dashboard contract", () => {
     const config = buildSavedChartConfigInput({
       chartType: "doughnut",
