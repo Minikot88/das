@@ -10,14 +10,16 @@ export class SessionController {
   async me(@CurrentPrincipal() principal: SessionPrincipal) {
     const user = await this.auth.me(principal);
     return {
-      authenticated: true,
-      authMode: principal.authMode,
-      actorId: user.id,
-      displayName: user.name,
-      organizationId: user.organizationId,
-      roles: user.roles,
-      permissions: user.permissions || [],
-      projectScopes: user.projectScopes || [],
+      data: {
+        authenticated: true,
+        authMode: principal.authMode,
+        actorId: user.id,
+        displayName: user.name,
+        organizationId: user.organizationId,
+        roles: user.roles,
+        permissions: user.permissions || [],
+        projectScopes: user.projectScopes || [],
+      },
     };
   }
 }
