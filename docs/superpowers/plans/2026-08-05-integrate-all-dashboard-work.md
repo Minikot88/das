@@ -41,25 +41,26 @@ Expected: only branches with unique, relevant, non-backup patches are INCLUDE.
 Run: `git branch backup/pre-integration-<source>-<timestamp> <source>` and `git switch -c codex/integrate-all-dashboard-work main`.
 Expected: source SHAs remain unchanged and work continues off `main`.
 
-### Task 2: Integrate Database Runtime and Migration Work
+### Task 2: Classify Native Runtime Work Against Current Database Architecture
 
 **Files:**
-- Modify only files touched by `deploy/native-server-staging` merge conflicts.
-- Test: `apps/api/prisma/postgres-migration-chain.spec.ts`
+- Inspect: `apps/api/prisma/postgres-migrations/`
+- Inspect: `scripts/apply-database-grants.sh`
+- Inspect: `vite.config.js`
 
 **Interfaces:**
-- Consumes: PostgreSQL migration chain 0001–0009 and Prisma `dashboard_core` mappings.
-- Produces: single PostgreSQL migration source of truth and runtime grants that cannot write `scopus`.
+- Consumes: PostgreSQL migration chain 0001–0009, Prisma `dashboard_core` mappings, and the three staging-only patches.
+- Produces: an evidence-backed INCLUDE or OBSOLETE decision that cannot regress grants to `public` or create duplicate migration numbers.
 
-- [ ] **Step 1: Merge the native staging branch**
+- [x] **Step 1: Inspect the native staging branch against main**
 
-Run: `git merge --no-ff deploy/native-server-staging`.
-Expected: conflicts, if any, are resolved per migration ownership rather than by file-wide side selection.
+Run: `git cherry -v main deploy/native-server-staging`, inspect all three patches, and compare them with current migration/grant/mock-mode controls.
+Observed: the branch's migration source-of-truth and production mock guard are already superseded on main; its runtime migration grants business writes in `public`, duplicates migration number `0005`, and is superseded by the current `dashboard_core` plus read-only `scopus` grant script.
 
-- [ ] **Step 2: Validate database invariants**
+- [x] **Step 2: Abort the uncommitted exploratory merge and classify the branch**
 
-Run focused Prisma schema, migration-chain, schema-manifest, fresh-install, and read-only-source tests.
-Expected: `dashboard_core` remains the application schema, `public` contains no business tables, and `scopus` write grants remain absent.
+Run: `git merge --abort`.
+Observed: the integration branch returned cleanly to its pre-merge commit. Classify `deploy/native-server-staging` as OBSOLETE/ALREADY_INCLUDED by current architecture and do not merge it.
 
 ### Task 3: Integrate Multi-table and Chart Work
 
