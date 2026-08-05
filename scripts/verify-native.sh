@@ -21,6 +21,12 @@ test "$(stat -c '%a' "$project_root/shared/backend.env")" = "600"
 wait_for_url "http://127.0.0.1:${api_port}/api/v1/health"
 wait_for_url "http://127.0.0.1:${api_port}/api/v1/ready"
 wait_for_url "http://127.0.0.1:${web_port}/"
+web_headers="$(curl --silent --show-error --head --max-time 3 "http://127.0.0.1:${web_port}/")"
+grep -qi '^content-security-policy:' <<< "$web_headers"
+if grep -qi '^access-control-allow-origin:' <<< "$web_headers"; then
+  echo 'Native web service must not emit CORS headers.' >&2
+  exit 1
+fi
 if find -L "$project_root/current/dist" -type f -name '*.map' -print -quit | grep -q .; then
   echo 'Public frontend source maps are forbidden.' >&2
   exit 1

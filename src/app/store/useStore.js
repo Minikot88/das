@@ -676,13 +676,7 @@ function _getActiveDashboard(s) {
 }
 
 
-const CLIENT_MOCK_AUTH = import.meta.env.VITE_USE_MOCK !== "false";
-
 export const useStore = create((set, get) => ({
-
-  user:            CLIENT_MOCK_AUTH ? (saved?.user ?? null) : null,
-  isAuthenticated: CLIENT_MOCK_AUTH ? (saved?.isAuthenticated ?? false) : false,
-  authStatus:       CLIENT_MOCK_AUTH ? (saved?.isAuthenticated ? "authenticated" : "anonymous") : "loading",
 
   projects:          saved?.projects?.length ? saved.projects : [defaultProject()],
   activeProjectId:   saved?.activeProjectId   ?? "project-1",
@@ -724,55 +718,6 @@ export const useStore = create((set, get) => ({
   previewChart:      null,
   builderNavigationContext: defaultBuilderNavigationContext,
   builderDraft:      savedBuilderDraft ?? null,
-
-  setAuthenticatedUser: (user) => set((s) => {
-    if (!user) return {};
-    saveState({ ...s, user, isAuthenticated: true });
-    return { user, isAuthenticated: true, authStatus: "authenticated" };
-  }),
-
-  setAuthAnonymous: () => set({ user: null, isAuthenticated: false, authStatus: "anonymous" }),
-
-  login: (email, password, name) => set((s) => {
-    const trimmedEmail = String(email ?? "").trim();
-    if (!trimmedEmail || !password) {
-      throw new Error("Email and password are required.");
-    }
-    const user = {
-      id: `user-${Date.now()}`,
-      email: trimmedEmail,
-      name: name?.trim() || trimmedEmail.split("@")[0],
-      role: "owner",
-      lastLoginAt: new Date().toISOString(),
-    };
-    saveState({ ...s, user, isAuthenticated: true });
-    return { user, isAuthenticated: true, authStatus: "authenticated" };
-  }),
-
-  register: (email, password, name) => set((s) => {
-    const trimmedEmail = String(email ?? "").trim();
-    if (!trimmedEmail || !password) {
-      throw new Error("Email and password are required.");
-    }
-    if (String(password).length < 6) {
-      throw new Error("Password must be at least 6 characters.");
-    }
-    const user = {
-      id: `user-${Date.now()}`,
-      email: trimmedEmail,
-      name: name?.trim() || trimmedEmail.split("@")[0],
-      role: "owner",
-      createdAt: new Date().toISOString(),
-    };
-    saveState({ ...s, user, isAuthenticated: true });
-    return { user, isAuthenticated: true, authStatus: "authenticated" };
-  }),
-
-  logout: () => set((s) => {
-    saveState({ ...s, user: null, isAuthenticated: false });
-    clearBuilderDraft();
-    return { user: null, isAuthenticated: false, authStatus: "anonymous", aiInsights: [], builderState: defaultBuilderState, builderDraft: null };
-  }),
 
   createProject: (name) => set((s) => {
     const id      = createEntityId("project");

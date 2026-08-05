@@ -1,9 +1,8 @@
 import React, { Suspense, lazy, useEffect } from "react";
-import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
+import { Navigate, Outlet, Route, Routes } from "react-router";
 import { MainLayout } from "@app/layouts/Layout";
 import RouteErrorBoundary from "@app/error-boundaries/RouteErrorBoundary";
-import { useStore } from "@app/store/useStore";
-import { isInternalSingleUserMode } from "@infrastructure/http/client";
+import { SessionGate } from "@modules/session/SessionProvider";
 
 const ROUTE_LOADERS = {
   "/builder": () => import("@modules/charts/pages/Builder.jsx"),
@@ -16,8 +15,6 @@ const ROUTE_LOADERS = {
   "/connections": () => import("@modules/connections/pages/DatabaseConnectionPage.jsx"),
   "/datasets": () => import("@modules/datasets/pages/DatasetsPage.jsx"),
   "/home": () => import("@modules/projects/pages/HomePage.jsx"),
-  "/login": () => import("@modules/auth/pages/LoginPage"),
-  "/register": () => import("@modules/auth/pages/RegisterPage"),
   "/settings": () => import("@modules/settings/pages/SettingsPage.jsx"),
   "/share": () => import("@modules/sharing/pages/SharePage"),
 };
@@ -35,8 +32,6 @@ const DashboardPublicPage = lazy(ROUTE_LOADERS["/dashboard-public"]);
 const DatabaseConnectionPage = lazy(ROUTE_LOADERS["/connections"]);
 const DatasetsPage = lazy(ROUTE_LOADERS["/datasets"]);
 const HomePage = lazy(ROUTE_LOADERS["/home"]);
-const LoginPage = lazy(ROUTE_LOADERS["/login"]);
-const RegisterPage = lazy(ROUTE_LOADERS["/register"]);
 const SettingsPage = lazy(ROUTE_LOADERS["/settings"]);
 const SharePage = lazy(ROUTE_LOADERS["/share"]);
 
@@ -59,30 +54,7 @@ function RouteFallback() {
 }
 
 function ProtectedRoute() {
-  const location = useLocation();
-  const isAuthenticated = useStore((state) => state.isAuthenticated);
-  const authStatus = useStore((state) => state.authStatus);
-
-  if (authStatus === "loading") return <RouteFallback />;
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace state={{ from: location }} />;
-  }
-
-  return <Outlet />;
-}
-
-function PublicAuthRoute({ children }) {
-  const isAuthenticated = useStore((state) => state.isAuthenticated);
-  const authStatus = useStore((state) => state.authStatus);
-
-  if (authStatus === "loading") return <RouteFallback />;
-
-  if (isInternalSingleUserMode() && isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  return children;
+  return <SessionGate fallback={<RouteFallback />}><Outlet /></SessionGate>;
 }
 
 function withRouteBoundary(element) {
@@ -103,8 +75,10 @@ export default function AppRoutes() {
   return (
     <Suspense fallback={<RouteFallback />}>
       <Routes>
-        <Route path="/login" element={<PublicAuthRoute>{withRouteBoundary(<LoginPage />)}</PublicAuthRoute>} />
-        <Route path="/register" element={<PublicAuthRoute>{withRouteBoundary(<RegisterPage />)}</PublicAuthRoute>} />
+        <Route path="/login" element={<Navigate to="/dashboard-v2" replace />} />
+        <Route path="/register" element={<Navigate to="/dashboard-v2" replace />} />
+        <Route path="/forgot-password" element={<Navigate to="/dashboard-v2" replace />} />
+        <Route path="/reset-password" element={<Navigate to="/dashboard-v2" replace />} />
         <Route path="/share/:sheetId" element={withRouteBoundary(<SharePage />)} />
         <Route path="/dashboard/:dashboardId/view" element={withRouteBoundary(<DashboardPublicPage />)} />
         <Route path="/dashboard/:dashboardId/embed" element={withRouteBoundary(<DashboardPublicPage />)} />

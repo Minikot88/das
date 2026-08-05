@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import FieldMapping from "@modules/dashboards/designer-v2/components/FieldMapping";
+import { getAggregationOptions } from "@modules/dashboards/designer-v2/components/utils/fieldAggregation";
 import type { DataField, MappingSlot } from "@modules/dashboards/designer-v2/components/types";
 
 vi.mock("react-dnd", () => ({
@@ -34,6 +35,18 @@ const mappings: MappingSlot[] = [
 ];
 
 describe("FieldMapping keyboard assignment", () => {
+  it("recommends count distinct for an identifier instead of numeric summation", () => {
+    const identifierSlot: MappingSlot = {
+      id: "yAxis",
+      label: "Value",
+      helper: "Choose a value",
+      fields: [{ ...revenueField, id: "article_id", name: "articles.id", label: "articles.id", semanticType: "identifier", isPrimaryKey: true, isMeasure: false, defaultAggregation: "Count Distinct" }],
+      aggregation: "Count Distinct",
+    };
+
+    expect(getAggregationOptions(identifierSlot)).toEqual(["Count", "Count Distinct"]);
+  });
+
   it("lets a keyboard user assign the selected field to a mapping target", async () => {
     const user = userEvent.setup();
     const onDropField = vi.fn();

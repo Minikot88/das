@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Navigate, useParams } from "react-router-dom";
+import { Navigate, useParams } from "react-router";
 import { useStore } from "@app/store/useStore";
 import { normalizeLocalShareRecord, resolveLocalShare, validateLocalShare } from "@domain/shares/localShareContract";
 import { useWorkspaceSelector } from "@app/store/useWorkspaceSelector";
@@ -159,8 +159,6 @@ export default function SharePage() {
           kicker="ลิงก์ไม่พร้อมใช้งาน"
           title="ไม่พบแดชบอร์ด"
           description="ลิงก์ที่แชร์นี้อาจหมดอายุหรือถูกลบแล้ว"
-          linkTo="/login"
-          linkLabel="ไปหน้าเข้าสู่ระบบ"
         />
       </main>
     );
@@ -212,8 +210,6 @@ export default function SharePage() {
             kicker="ยังไม่มีกราฟ"
             title="แดชบอร์ดนี้ยังไม่มีกราฟ"
             description="กลับมาตรวจอีกครั้งหลังจากบันทึกกราฟใหม่แล้ว"
-            linkTo="/login"
-            linkLabel="เข้าสู่ระบบ"
           />
         ) : (
           <div className="share-grid" role="list" aria-label="กราฟที่แชร์">

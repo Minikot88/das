@@ -11,8 +11,14 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, __dirname, "");
   const productionDeployment = (env.APP_ENV || process.env.APP_ENV) === "production";
   const mockMode = env.VITE_USE_MOCK || process.env.VITE_USE_MOCK;
+  const sessionRequiredUrl = env.VITE_EXTERNAL_SESSION_REQUIRED_URL || process.env.VITE_EXTERNAL_SESSION_REQUIRED_URL;
   if (productionDeployment && mockMode !== "false") {
     throw new Error("VITE_USE_MOCK must be explicitly set to false for production builds");
+  }
+  if (productionDeployment) {
+    if (sessionRequiredUrl !== "/api/auth/login") {
+      throw new Error("VITE_EXTERNAL_SESSION_REQUIRED_URL must be /api/auth/login for production builds");
+    }
   }
 
   return {

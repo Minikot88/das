@@ -1,13 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
-import type { RuntimeEnvironment } from '../../../app/config/environment.js';
-import { ENVIRONMENT } from '../../../app/config/token.js';
 import { PrismaService } from '../../../infrastructure/database/prisma.service.js';
 import { ApiError } from '../../../shared/http/api-error.js';
-import { hashOpaqueToken, hashPassword, issueOpaqueToken, normalizeEmail, validatePasswordPolicy } from '../domain/auth-security.js';
 import type { SessionPrincipal } from './auth.service.js';
 import { AuthorizationService } from './authorization.service.js';
-import { MAIL_PROVIDER, type MailProvider } from './mail-provider.js';
 
 const ORGANIZATION_ROLES = new Set(['organization_admin', 'member']);
 const PROJECT_ROLES = new Set(['project_owner', 'editor', 'viewer']);
@@ -15,114 +11,9 @@ const PROJECT_ROLES = new Set(['project_owner', 'editor', 'viewer']);
 @Injectable()
 export class MembershipService {
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly authorization: AuthorizationService,
-    @Inject(ENVIRONMENT) private readonly environment: RuntimeEnvironment,
-    @Inject(MAIL_PROVIDER) private readonly mail: MailProvider,
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(AuthorizationService) private readonly authorization: AuthorizationService,
   ) {}
-
-  async createInvitation(principal: SessionPrincipal, organizationId: string, input: { email?: string; role?: string; projectId?: string }) {
-    await this.authorization.assertOrganizationAdmin(principal, organizationId);
-    const normalizedEmail = normalizeEmail(String(input.email || ''));
-    if (!normalizedEmail || !normalizedEmail.includes('@')) throw new ApiError(422, 'VALIDATION_ERROR', 'A valid email is required.');
-    const projectId = input.projectId ? String(input.projectId) : null;
-    const role = String(input.role || (projectId ? 'viewer' : 'member'));
-    if (projectId) {
-      await this.authorization.assertProjectPermission(principal, projectId, 'manage_members');
-      if (!PROJECT_ROLES.has(role)) throw invalidRole();
-    } else if (!ORGANIZATION_ROLES.has(role)) throw invalidRole();
-    const issued = issueOpaqueToken();
-    const now = new Date();
-    const invitation = await this.prisma.invitation.create({
-      data: {
-        id: `invitation-${randomUUID()}`,
-        organizationId,
-        projectId,
-        email: String(input.email || '').trim(),
-        normalizedEmail,
-        role,
-        tokenHash: issued.tokenHash,
-        expiresAt: new Date(now.getTime() + this.environment.invitationTimeoutSeconds * 1_000),
-        createdBy: principal.userId,
-        createdAt: now,
-      },
-    });
-    await this.mail.sendInvitation(invitation.email, issued.token);
-    return { ...safeInvitation(invitation), token: issued.token };
-  }
-
-  async listInvitations(principal: SessionPrincipal, organizationId: string) {
-    await this.authorization.assertOrganizationAdmin(principal, organizationId);
-    const invitations = await this.prisma.invitation.findMany({ where: { organizationId }, orderBy: [{ createdAt: 'desc' }, { id: 'asc' }] });
-    return invitations.map(safeInvitation);
-  }
-
-  async revokeInvitation(principal: SessionPrincipal, organizationId: string, invitationId: string) {
-    await this.authorization.assertOrganizationAdmin(principal, organizationId);
-    const result = await this.prisma.invitation.updateMany({
-      where: { id: invitationId, organizationId, acceptedAt: null, revokedAt: null },
-      data: { revokedAt: new Date() },
-    });
-    if (result.count !== 1) throw new ApiError(404, 'INVITATION_NOT_FOUND', 'Invitation was not found.');
-    return { success: true };
-  }
-
-  async acceptInvitation(token: string, displayName: string, password: string) {
-    const invitation = token ? await this.prisma.invitation.findUnique({ where: { tokenHash: hashOpaqueToken(token) } }) : null;
-    const now = new Date();
-    if (!invitation || invitation.acceptedAt || invitation.revokedAt || invitation.expiresAt <= now) throw invalidInvitation();
-    const name = String(displayName || '').trim();
-    if (!name) throw new ApiError(422, 'VALIDATION_ERROR', 'Display name is required.');
-    if (await this.prisma.userProfile.findUnique({ where: { normalizedEmail: invitation.normalizedEmail } })) {
-      throw new ApiError(409, 'ACCOUNT_EXISTS', 'An account already exists for this email.');
-    }
-    validatePasswordPolicy(password, invitation.email, name);
-    const passwordHash = await hashPassword(password);
-    const userId = `user-${randomUUID()}`;
-    await this.prisma.$transaction(async tx => {
-      const consumed = await tx.invitation.updateMany({
-        where: { id: invitation.id, acceptedAt: null, revokedAt: null },
-        data: { acceptedAt: now },
-      });
-      if (consumed.count !== 1) throw invalidInvitation();
-      await tx.userProfile.create({
-        data: {
-          id: userId,
-          organizationId: invitation.organizationId,
-          externalUserId: userId,
-          externalAuthProvider: 'password',
-          email: invitation.email,
-          normalizedEmail: invitation.normalizedEmail,
-          displayName: name,
-          status: 'active',
-          emailVerifiedAt: now,
-          createdAt: now,
-          updatedAt: now,
-        },
-      });
-      await tx.userCredential.create({
-        data: { id: `credential-${randomUUID()}`, userId, passwordHash, passwordChangedAt: now, createdAt: now, updatedAt: now },
-      });
-      await tx.organizationMember.create({
-        data: {
-          id: `org-member-${randomUUID()}`,
-          organizationId: invitation.organizationId,
-          userId,
-          role: invitation.projectId ? 'member' : invitation.role,
-          createdAt: now,
-          updatedAt: now,
-        },
-      });
-      if (invitation.projectId) {
-        await tx.biProjectMember.upsert({
-          where: { projectId_userId: { projectId: invitation.projectId, userId } },
-          create: { id: `member-${randomUUID()}`, organizationId: invitation.organizationId, projectId: invitation.projectId, userId, role: invitation.role },
-          update: { role: invitation.role },
-        });
-      }
-    });
-    return { id: userId, organizationId: invitation.organizationId, email: invitation.email, name, roles: [invitation.projectId ? invitation.role : invitation.role] };
-  }
 
   async updateOrganizationMember(principal: SessionPrincipal, organizationId: string, userId: string, role: string) {
     await this.authorization.assertOrganizationAdmin(principal, organizationId);
@@ -194,22 +85,6 @@ export class MembershipService {
     return { success: true };
   }
 
-  async createPasswordReset(principal: SessionPrincipal, organizationId: string, userId: string) {
-    await this.authorization.assertOrganizationAdmin(principal, organizationId);
-    const profile = await this.prisma.userProfile.findUnique({ where: { id: userId } });
-    if (!profile || profile.organizationId !== organizationId || profile.status !== 'active' || profile.disabledAt) {
-      throw new ApiError(404, 'MEMBER_NOT_FOUND', 'Member was not found.');
-    }
-    const issued = issueOpaqueToken();
-    const now = new Date();
-    const expiresAt = new Date(now.getTime() + this.environment.passwordResetTimeoutSeconds * 1_000);
-    await this.prisma.$transaction(async tx => {
-      await tx.passwordResetToken.updateMany({ where: { userId, usedAt: null, revokedAt: null }, data: { revokedAt: now } });
-      await tx.passwordResetToken.create({ data: { id: `reset-${randomUUID()}`, userId, tokenHash: issued.tokenHash, expiresAt, createdAt: now } });
-    });
-    return { token: issued.token, expiresAt };
-  }
-
   async listProjectMembers(principal: SessionPrincipal, projectId: string) {
     await this.authorization.assertProjectPermission(principal, projectId, 'manage_members');
     const project = await this.prisma.biProject.findFirst({ where: { id: projectId, organizationId: principal.organizationId, deletedAt: null } });
@@ -253,24 +128,6 @@ export class MembershipService {
     await this.prisma.authSession.updateMany({ where: { userId, revokedAt: null }, data: { revokedAt: new Date() } });
     return { success: true };
   }
-}
-
-function safeInvitation(invitation: Record<string, any>) {
-  return {
-    id: invitation.id,
-    organizationId: invitation.organizationId,
-    projectId: invitation.projectId,
-    email: invitation.email,
-    role: invitation.role,
-    expiresAt: invitation.expiresAt,
-    acceptedAt: invitation.acceptedAt,
-    revokedAt: invitation.revokedAt,
-    createdAt: invitation.createdAt,
-  };
-}
-
-function invalidInvitation() {
-  return new ApiError(400, 'INVALID_INVITATION', 'The invitation is invalid or expired.');
 }
 
 function invalidRole() {

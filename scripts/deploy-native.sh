@@ -15,6 +15,7 @@ set -a
 # shellcheck disable=SC1090
 source "$project_root/shared/backend.env"
 set +a
+node "$release_dir/scripts/validate-auth-environment.mjs"
 npm --prefix apps/api run prisma:generate
 VITE_USE_MOCK=false npm run build
 npm --prefix apps/api run build
@@ -32,9 +33,5 @@ fi
 ln -sfn "$release_dir" "$project_root/current"
 
 DASHBOARDMINI_ROOT="$project_root" pm2 startOrReload "$project_root/current/ecosystem.config.cjs" --update-env
-if pm2 describe dashboardmini-web >/dev/null 2>&1; then
-  pm2 delete dashboardmini-web >/dev/null
-fi
-pm2 serve "$project_root/current/dist" "${DASHBOARDMINI_WEB_PORT:-4021}" --name dashboardmini-web --spa
 pm2 save
 "$project_root/current/scripts/verify-native.sh"

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Resizable } from "react-resizable";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router";
 import { PageContainer, WorkspaceLayout } from "@app/layouts/Layout";
 import { useStore } from "@app/store/useStore";
 import {

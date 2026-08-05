@@ -5,6 +5,7 @@ import {
   type StructuredExternalQuery,
   type StructuredQueryMetadata,
 } from '../external-sources/structured-query.js';
+import { findShortestRelationshipPaths, type ForeignKeyEdge } from '../external-sources/relationship-graph.js';
 import type { ConnectorCapabilities, DataSourceConnector } from './connector.js';
 
 type PostgresqlConnectorOptions = {
@@ -169,7 +170,7 @@ export class PostgresqlConnector implements DataSourceConnector {
     }
   }
 
-  async listRelationships(schemaName: string, objectName: string) {
+  async listRelationships(schemaName: string, objectName: string, targetTable?: string) {
     const schema = this.schema(schemaName);
     const table = await this.table(schema, objectName);
     const database = this.pool();
@@ -218,7 +219,38 @@ export class PostgresqlConnector implements DataSourceConnector {
           AND target_table.relname = $2
         ORDER BY name, "columnName"
       `, [schema, table]);
-      return { schemaName: schema, tableName: table, items: result.rows };
+      if (!targetTable) return { schemaName: schema, tableName: table, items: result.rows };
+      const target = await this.table(schema, targetTable);
+      const graph = await database.query<ForeignKeyEdge>(`
+        SELECT constraint_record.conname AS name,
+          source_schema.nspname AS "sourceSchema",
+          source_table.relname AS "sourceTable",
+          source_column.attname AS "sourceColumn",
+          target_schema.nspname AS "targetSchema",
+          target_table.relname AS "targetTable",
+          target_column.attname AS "targetColumn"
+        FROM pg_constraint constraint_record
+        JOIN pg_class source_table ON source_table.oid = constraint_record.conrelid
+        JOIN pg_namespace source_schema ON source_schema.oid = source_table.relnamespace
+        JOIN pg_class target_table ON target_table.oid = constraint_record.confrelid
+        JOIN pg_namespace target_schema ON target_schema.oid = target_table.relnamespace
+        JOIN LATERAL unnest(constraint_record.conkey, constraint_record.confkey)
+          WITH ORDINALITY AS key_pair(source_attnum, target_attnum, ordinal_position) ON true
+        JOIN pg_attribute source_column
+          ON source_column.attrelid = source_table.oid AND source_column.attnum = key_pair.source_attnum
+        JOIN pg_attribute target_column
+          ON target_column.attrelid = target_table.oid AND target_column.attnum = key_pair.target_attnum
+        WHERE constraint_record.contype = 'f'
+          AND source_schema.nspname = $1
+          AND target_schema.nspname = $1
+        ORDER BY constraint_record.conname, key_pair.ordinal_position
+      `, [schema]);
+      return {
+        schemaName: schema,
+        tableName: table,
+        items: result.rows,
+        paths: findShortestRelationshipPaths(graph.rows, schema, table, target),
+      };
     } finally {
       await database.end();
     }

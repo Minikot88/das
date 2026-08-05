@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router";
 
 const HISTORY_KEY = "mini-bi-navigation-history-v1";
 const FALLBACK_ROUTE = "/home";

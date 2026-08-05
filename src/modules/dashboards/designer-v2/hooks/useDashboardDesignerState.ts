@@ -40,7 +40,7 @@ import {
   consumeStorageRecoveryMessage,
   safeSetLocalStorage,
 } from "@infrastructure/persistence/project-storage/projectStorage";
-import { useLocation } from "react-router-dom";
+import { useLocation } from "react-router";
 import { isMockMode } from "@infrastructure/http/client";
 import { getChartById, createChart, updateChart } from "@modules/charts/public/api";
 import {
@@ -177,12 +177,17 @@ function toDesignerFields(fields: Array<Record<string, unknown>>, table = "datas
     const isPrimaryKey = field.primaryKey === true || /(^id$|_id$|^id_)/i.test(name);
     const isMeasure = type === "number";
     const storedSemantic = String(field.semanticType || "").toLowerCase();
+    const semanticType = storedSemantic === "number"
+      ? "quantity"
+      : storedSemantic === "string"
+        ? "category"
+        : storedSemantic;
     return {
       id: String(field.id || name),
       name,
       label: String(field.label || field.name || field.fieldKey || name),
       type,
-      semanticType: (storedSemantic || (type === "date" ? "date" : isMeasure ? "quantity" : type === "boolean" ? "boolean" : "category")) as DataField["semanticType"],
+      semanticType: (semanticType || (type === "date" ? "date" : isMeasure ? "quantity" : type === "boolean" ? "boolean" : "category")) as DataField["semanticType"],
       table,
       description: "",
       sampleValues: [],
@@ -194,6 +199,26 @@ function toDesignerFields(fields: Array<Record<string, unknown>>, table = "datas
       nullable: field.nullable !== false,
     };
   });
+}
+
+export function physicalSelectedFields(
+  tables: DatasetTable[],
+  fields: DataField[],
+  casts: Record<string, "numeric" | "date" | "text">,
+) {
+  const physicalAliases = new Set(tables.map((table) => table.alias));
+  return fields
+    .filter((field) => field.sourceAlias && physicalAliases.has(field.sourceAlias))
+    .map((field) => {
+      const column = field.name.includes(".") ? field.name.split(".").at(-1) : field.label.split(".").at(-1);
+      const castTarget = casts[`${field.sourceAlias}.${field.label.split(".").at(-1)}`];
+      return {
+        tableAlias: field.sourceAlias,
+        column,
+        alias: `${field.sourceAlias}_${field.label.split(".").at(-1)}`,
+        cast: castTarget ? { targetType: castTarget } : undefined,
+      };
+    });
 }
 
 function toRemoteDatasource(item: Record<string, unknown>): DemoDatasource {
@@ -1435,14 +1460,7 @@ export function useDashboardDesignerState() {
     calculations = calculatedFields,
   ) => {
     if (!resolvedProjectId || !tables.length) return;
-    const selectedFields = nextFields.map((field) => ({
-      tableAlias: field.sourceAlias,
-      column: field.name.includes(".") ? field.name.split(".").at(-1) : field.label.split(".").at(-1),
-      alias: `${field.sourceAlias}_${field.label.split(".").at(-1)}`,
-      cast: casts[`${field.sourceAlias}.${field.label.split(".").at(-1)}`]
-        ? { targetType: casts[`${field.sourceAlias}.${field.label.split(".").at(-1)}`] }
-        : undefined,
-    }));
+    const selectedFields = physicalSelectedFields(tables, nextFields, casts);
     const definition = {
       projectId: resolvedProjectId,
       name: tables.map((table) => table.alias).join(" + "),
@@ -1621,7 +1639,7 @@ export function useDashboardDesignerState() {
         const nextTable: DatasetTable = { schema: schemaName, table: tableName, alias };
         const [columnResult, relationResults] = await Promise.all([
           listExternalColumns(schemaName, tableName, resolvedProjectId),
-          Promise.all(selectedTables.map((table) => listExternalRelationships(table.schema, table.table, resolvedProjectId))),
+          Promise.all(selectedTables.map((table) => listExternalRelationships(table.schema, table.table, resolvedProjectId, tableName))),
         ]);
         const newFields = toQualifiedFields(nextTable, columnResult?.items ?? []);
         const candidates = relationResults.flatMap((result, index) =>
@@ -1629,6 +1647,12 @@ export function useDashboardDesignerState() {
             relationToJoin(selectedTables[index], nextTable, relation)).filter(Boolean)) as DatasetJoin[];
         const nextTables = [...selectedTables, nextTable];
         const nextFields = [...fields, ...newFields];
+        const discoveredPaths = candidates.length ? [] : relationResults.flatMap((result, index) => {
+          const paths = Array.isArray(result?.paths) ? result.paths : [];
+          return paths.map((path: Array<Parameters<typeof relationToJoin>[2]>) => ({ start: selectedTables[index], path }));
+        });
+        const shortestPathLength = discoveredPaths.reduce((shortest, candidate) => Math.min(shortest, candidate.path.length), Number.POSITIVE_INFINITY);
+        const pathCandidates = discoveredPaths.filter((candidate) => candidate.path.length === shortestPathLength);
         setSelectedTables(nextTables);
         setFields(nextFields);
         setSelectedTable(tableName);
@@ -1636,6 +1660,37 @@ export function useDashboardDesignerState() {
           const nextJoins = [...datasetJoins, candidates[0]];
           setDatasetJoins(nextJoins);
           await materializeMultiTable(nextTables, nextJoins, nextFields);
+        } else if (pathCandidates.length === 1) {
+          const path = pathCandidates[0];
+          const aliases = nextTables.map((table) => table.alias);
+          let currentTable = path.start;
+          const pathTables: DatasetTable[] = [];
+          const pathJoins: DatasetJoin[] = [];
+          const pathFields: DataField[] = [];
+          for (const relation of path.path) {
+            const isTarget = relation.referencedTable === tableName && relation.referencedSchema === schemaName;
+            const pathTable: DatasetTable = isTarget
+              ? nextTable
+              : { schema: relation.referencedSchema, table: relation.referencedTable, alias: createTableAlias(relation.referencedTable, aliases) };
+            if (!isTarget) aliases.push(pathTable.alias);
+            const join = relationToJoin(currentTable, pathTable, relation);
+            if (!join) throw new Error("ไม่สามารถสร้าง Join path จาก Foreign Key metadata ได้");
+            pathJoins.push(join);
+            if (!isTarget) {
+              const pathColumns = await listExternalColumns(pathTable.schema, pathTable.table, resolvedProjectId);
+              pathTables.push(pathTable);
+              pathFields.push(...toQualifiedFields(pathTable, pathColumns?.items ?? []));
+            }
+            currentTable = pathTable;
+          }
+          const tablesWithPath = [...selectedTables, ...pathTables, nextTable];
+          const fieldsWithPath = [...fields, ...pathFields, ...newFields];
+          const joinsWithPath = [...datasetJoins, ...pathJoins];
+          setSelectedTables(tablesWithPath);
+          setFields(fieldsWithPath);
+          setDatasetJoins(joinsWithPath);
+          await materializeMultiTable(tablesWithPath, joinsWithPath, fieldsWithPath);
+          setSnackbar(`เชื่อม ${tableName} ผ่าน Foreign Key path ${path.path.map((item: Parameters<typeof relationToJoin>[2]) => item.name).join(" → ")}`);
         } else {
           setSnackbar(candidates.length > 1
             ? `พบหลายความสัมพันธ์สำหรับ ${alias} กรุณาเลือก Join`

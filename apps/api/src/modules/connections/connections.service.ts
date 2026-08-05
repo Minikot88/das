@@ -18,7 +18,11 @@ type ConnectionSecret = { host: string; port: number; database: string; user: st
 @Injectable()
 export class ConnectionsService {
   private readonly secrets: EncryptedSecretStore;
-  constructor(private readonly prisma: PrismaService, @Inject(ENVIRONMENT) private readonly environment: RuntimeEnvironment, private readonly authorization: AuthorizationService) { this.secrets = new EncryptedSecretStore(environment.secretMasterKey || ''); }
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(ENVIRONMENT) private readonly environment: RuntimeEnvironment,
+    @Inject(AuthorizationService) private readonly authorization: AuthorizationService,
+  ) { this.secrets = new EncryptedSecretStore(environment.secretMasterKey || ''); }
 
   private async project(principal: RequestPrincipal, projectId: string, permission: ProjectPermission = 'read') {
     await this.authorization.assertProjectPermission(principal as never, projectId, permission);

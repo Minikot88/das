@@ -2,7 +2,7 @@ services:
   backend:
     environment:
       CORS_ORIGINS: http://127.0.0.1:8080,http://127.0.0.1:5173,http://127.0.0.1:5174
-      PUBLIC_REGISTRATION_ENABLED: "true"
+      AUTH_MODE: disabled
       INTERNAL_SINGLE_USER_ID: user-development
     ports:
       - "127.0.0.1:${BACKEND_HOST_PORT:-3001}:3000"

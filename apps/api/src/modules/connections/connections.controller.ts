@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Inject, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
 import { ensureRequestId } from '../../shared/http/request-id.js';
 import { CurrentPrincipal } from '../auth/application/current-principal.js';
@@ -9,7 +9,7 @@ import { ConnectionsService } from './connections.service.js';
 @Controller(['api/v1/connections', 'api/connections'])
 @UseGuards(SessionGuard)
 export class ConnectionsController {
-  constructor(private readonly connections: ConnectionsService) {}
+  constructor(@Inject(ConnectionsService) private readonly connections: ConnectionsService) {}
   @Get() list(@CurrentPrincipal() p: RequestPrincipal, @Query('projectId') projectId: string) { return this.connections.list(p, String(projectId || '')); }
   @Post() create(@CurrentPrincipal() p: RequestPrincipal, @Body() body: Record<string, unknown>) { return this.connections.create(p, body || {}); }
   @Post('test') @HttpCode(HttpStatus.OK) testCredentials(@Body() body: Record<string, unknown>) { return this.connections.testCredentials(body || {}); }

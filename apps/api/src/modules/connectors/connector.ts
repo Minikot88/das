@@ -22,7 +22,7 @@ export interface DataSourceConnector {
   listSchemas(): Promise<unknown>;
   listObjects(schemaName: string): Promise<unknown>;
   listColumns(schemaName: string, objectName: string): Promise<unknown>;
-  listRelationships(schemaName: string, objectName: string): Promise<unknown>;
+  listRelationships(schemaName: string, objectName: string, targetTable?: string): Promise<unknown>;
   preview(input: Record<string, unknown>): Promise<unknown>;
   executeStructuredQuery(input: Record<string, unknown>): Promise<unknown>;
   estimateRowCount(schemaName: string, objectName: string): Promise<number>;

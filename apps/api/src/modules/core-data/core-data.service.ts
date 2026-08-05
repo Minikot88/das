@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { parse } from 'csv-parse';
 import type { MultipartFile } from '@fastify/multipart';
 import { PrismaService } from '../../infrastructure/database/prisma.service.js';
@@ -14,7 +14,11 @@ type Aggregate = { field: string; operation: string; alias?: string };
 
 @Injectable()
 export class CoreDataService {
-  constructor(private readonly prisma: PrismaService, private readonly authorization: AuthorizationService, private readonly external: ExternalSourcesService = {} as ExternalSourcesService) {}
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(AuthorizationService) private readonly authorization: AuthorizationService,
+    @Inject(ExternalSourcesService) private readonly external: ExternalSourcesService = {} as ExternalSourcesService,
+  ) {}
 
   private async project(principal: RequestPrincipal, projectId: string, permission: ProjectPermission = 'read') {
     await this.authorization.assertProjectPermission(principal as never, projectId, permission);
@@ -326,7 +330,7 @@ export class CoreDataService {
   }
   async externalTables(principal: RequestPrincipal, projectId: string, schemaName: string) { await this.project(principal, projectId); return this.external.tables(schemaName); }
   async externalColumns(principal: RequestPrincipal, projectId: string, schemaName: string, tableName: string) { await this.project(principal, projectId); return this.external.columns(schemaName, tableName); }
-  async externalRelationships(principal: RequestPrincipal, projectId: string, schemaName: string, tableName: string) { await this.project(principal, projectId); return this.external.relationships(schemaName, tableName); }
+  async externalRelationships(principal: RequestPrincipal, projectId: string, schemaName: string, tableName: string, targetTable?: string) { await this.project(principal, projectId); return this.external.relationships(schemaName, tableName, targetTable); }
   async externalMetadata(principal: RequestPrincipal, projectId: string, schemaName: string, tableName: string) { await this.project(principal, projectId); return this.external.metadata(schemaName, tableName); }
   async previewExternal(principal: RequestPrincipal, input: JsonObject) { await this.project(principal, String(input.projectId || '')); return this.external.preview(input); }
   async createExternalDataset(principal: RequestPrincipal, input: JsonObject) {

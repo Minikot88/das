@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import axe from 'axe-core';
 
-test('anonymous authentication shell is accessible and responsive', async ({ page }) => {
+test('anonymous requests stop at the external session boundary', async ({ page }) => {
   const errors = [];
   const authStatuses = [];
   const unexpectedUnauthorized = [];
@@ -9,13 +9,13 @@ test('anonymous authentication shell is accessible and responsive', async ({ pag
   page.on('pageerror', error => errors.push(error.message));
   page.on('response', response => {
     if (response.status() !== 401) return;
-    if (response.url().includes('/api/v1/auth/me')) authStatuses.push(response.status());
+    if (response.url().includes('/api/session/me')) authStatuses.push(response.status());
     else unexpectedUnauthorized.push(response.url());
   });
   await page.goto('/login');
-  await expect(page).toHaveURL(/\/login/);
-  await expect(page.locator('#login-email')).toBeVisible();
-  await expect(page.locator('#login-password')).toBeVisible();
+  await expect(page).toHaveURL(/\/dashboard-v2/);
+  await expect(page.getByRole('heading', { name: 'External session required' })).toBeVisible();
+  await expect(page.locator('input[type="password"]')).toHaveCount(0);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
   expect(overflow).toBe(false);
   const results = await page.evaluate(source => {
@@ -30,6 +30,7 @@ test('anonymous authentication shell is accessible and responsive', async ({ pag
 
 test('protected routes do not render before session bootstrap', async ({ page }) => {
   await page.goto('/dashboard');
-  await expect(page).toHaveURL(/\/login(?:\?|$)/);
-  await expect(page.locator('#login-email')).toBeVisible();
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page.getByRole('heading', { name: 'External session required' })).toBeVisible();
+  await expect(page.locator('input[type="password"]')).toHaveCount(0);
 });

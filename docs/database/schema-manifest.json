@@ -12,6 +12,7 @@
     { "name": "authentication_audit_logs", "module": "MOD-AUTH", "classification": "P0_CORE", "approvalStatus": "APPROVED", "migration": "0002_production_auth_rbac", "mergedInto": null },
     { "name": "invitations", "module": "MOD-AUTH", "classification": "P0_CORE", "approvalStatus": "APPROVED", "migration": "0002_production_auth_rbac", "mergedInto": null },
     { "name": "organization_members", "module": "MOD-AUTH", "classification": "P0_CORE", "approvalStatus": "APPROVED", "migration": "0002_production_auth_rbac", "mergedInto": null },
+    { "name": "oidc_login_transactions", "module": "MOD-AUTH", "classification": "P0_CORE", "approvalStatus": "APPROVED", "migration": "0010_oidc_application_sessions", "mergedInto": null },
     { "name": "password_reset_tokens", "module": "MOD-AUTH", "classification": "P0_CORE", "approvalStatus": "APPROVED", "migration": "0002_production_auth_rbac", "mergedInto": null },
     { "name": "user_credentials", "module": "MOD-AUTH", "classification": "P0_CORE", "approvalStatus": "APPROVED", "migration": "0002_production_auth_rbac", "mergedInto": null },
     {

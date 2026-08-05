@@ -12,7 +12,12 @@ export type {
 export type FieldType = "date" | "number" | "text" | "boolean" | "currency" | "percentage" | "geography";
 
 export type SemanticType =
+  | "identifier"
+  | "text"
+  | "integer"
+  | "decimal"
   | "date"
+  | "datetime"
   | "month"
   | "quarter"
   | "year"
@@ -24,7 +29,9 @@ export type SemanticType =
   | "quantity"
   | "percentage"
   | "score"
+  | "duration"
   | "boolean"
+  | "url"
   | "ohlc"
   | "network"
   | "flow";
