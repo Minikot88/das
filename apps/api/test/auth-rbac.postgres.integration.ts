@@ -1,4 +1,7 @@
 import { randomBytes, randomUUID } from 'node:crypto';
+import { rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { createApplication } from '../src/app/bootstrap/create-application.js';
@@ -8,6 +11,7 @@ const origin = 'http://localhost:8080';
 const organizationId = `org-integration-${randomUUID()}`;
 const adminUserId = `user-integration-admin-${randomUUID()}`;
 const adminEmail = `integration-admin-${randomUUID()}@example.test`;
+const storagePath = join(tmpdir(), `dashboardmini-auth-rbac-${randomUUID()}`, 'uploads');
 
 describe('PostgreSQL authentication and RBAC boundaries', () => {
   let app: NestFastifyApplication;
@@ -21,7 +25,7 @@ describe('PostgreSQL authentication and RBAC boundaries', () => {
       DATABASE_URL: process.env.DATABASE_URL,
       CORS_ORIGINS: origin,
       SECRET_MASTER_KEY: randomBytes(32).toString('base64'),
-      FILE_STORAGE_PATH: '/tmp/uploads',
+      FILE_STORAGE_PATH: storagePath,
     });
     prisma = app.get(PrismaService);
     const now = new Date();
@@ -95,6 +99,7 @@ describe('PostgreSQL authentication and RBAC boundaries', () => {
       ]);
     }
     await app?.close();
+    await rm(dirname(storagePath), { recursive: true, force: true });
   });
 
   it('opens health and uses only the configured technical principal in disabled integration mode', async () => {
